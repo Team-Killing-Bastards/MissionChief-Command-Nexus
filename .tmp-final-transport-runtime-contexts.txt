@@ -1,0 +1,3049 @@
+
+===== context-1 [205-330] =====
+000205: const RADIO_HISTORY_LIMIT = 40;
+000206: const AFFINITY_HISTORY_LIMIT = 50;
+000207: const POST_TRANSPORT_REHOOK_DELAY_MS = 300;
+000208: const TRANSPORT_ASSIST_DELAY_MS = 8000;
+000209: const PRISONER_ASSIST_DELAY_MS = TRANSPORT_ASSIST_DELAY_MS;
+000210: const PRISONER_ASSIST_CLICK_COOLDOWN_MS = 8000;
+000211: const PATIENT_ASSIST_DELAY_MS = TRANSPORT_ASSIST_DELAY_MS;
+000212: const PATIENT_ASSIST_CLICK_COOLDOWN_MS = 5000;
+000213: const TRANSPORT_SERVICE_SETTLE_MS = 180;
+000214: const TRANSPORT_SERVICE_MAX_MS = 18000;
+000215: const TRANSPORT_SERVICE_RETRY_COOLDOWN_MS = 30000;
+000216: const TRANSPORT_SERVICE_HISTORY_LIMIT = 60;
+000217: const RECOVERABLE_SHORTAGE_SKIP_ADVANCES = 20;
+000218: const ZERO_SELECTION_SKIP_ADVANCES = RECOVERABLE_SHORTAGE_SKIP_ADVANCES;
+000219: const GENERIC_RECOVERABLE_STOP_SKIP_ADVANCES = RECOVERABLE_SHORTAGE_SKIP_ADVANCES;
+000220: const AUTO_RECOVERY_WATCHDOG_MS = 12000;
+000221: const AUTO_RECOVERY_TERMINAL_WATCHDOG_MS = 3000;
+000222: const AUTO_RECOVERY_HISTORY_LIMIT = 80;
+000223: const QUEUE_FAST_RELEASE_STABLE_MS = 650;
+000224: const QUEUE_FAST_RELEASE_TRANSITION_WINDOW_MS = 10000;
+000225: const QUEUE_FAST_RELEASE_HISTORY_LIMIT = 60;
+000226: const POST_DISPATCH_SOFT_RECOVERY_MS = 5000;
+000227: const POST_DISPATCH_HARD_RECOVERY_MS = 16000;
+000228: const POST_DISPATCH_RECOVERY_WINDOW_MS = 120000;
+000229: const POST_DISPATCH_RECOVERY_HISTORY_LIMIT = 50;
+000230: const PIPELINE_PRELOAD_COUNT = 1;
+000231: const PIPELINE_SYNC_MS = 650;
+000232: const PIPELINE_PUMP_MS = 450;
+000233: const PIPELINE_READY_AUDIT_MS = 1800;
+000234: const PIPELINE_SIGNATURE_EDGE_IDS = 12;
+000235: const PIPELINE_READY_STABLE_MS = 750;
+000236: const PIPELINE_LOAD_CLICK_COOLDOWN_MS = 900;
+000237: const PIPELINE_LOAD_PROGRESS_TIMEOUT_MS = 6500;
+000238: const PIPELINE_PROGRESS_SETTLE_MS = 450;
+000239: const PIPELINE_BRIDGE_TIMEOUT_MS = 3500;
+000240: const PIPELINE_PROMOTION_MAX_AGE_MS = 60000;
+000241: const PIPELINE_MAX_LOAD_CLICKS = 0;
+000242: const PIPELINE_HISTORY_LIMIT = 100;
+000243: const PIPELINE_TARGET_ROTATION_GRACE_MS = 6000;
+000244: const PIPELINE_READY_HANDOFF_GRACE_MS = 15000;
+000245: const ACTIVE_BOOTSTRAP_RESCUE_AFTER_MS = 6500;
+000246: const ACTIVE_BOOTSTRAP_RESCUE_LIMIT_PER_MISSION = 1;
+000247: const STALE_CANONICAL_MISSION_SETTLE_MS = 1200;
+000248: const ACTIVE_CONTROL_DROPOUT_RESCUE_MS = 12000;
+000249: const ACTIVE_CONTROL_PROGRESS_GRACE_MS = 20000;
+000250: const ACTIVE_CONTROL_DROPOUT_WINDOW_MS = 120000;
+000251: const ACTIVE_CONTROL_DROPOUT_CIRCUIT_BREAKER_COUNT = 2;
+000252: const ACTIVE_CONTROL_DROPOUT_HISTORY_LIMIT = 40;
+000253: const AUTO_STATE_DROPOUT_WINDOW_MS = 120000;
+000254: const AUTO_STATE_DROPOUT_CIRCUIT_BREAKER_COUNT = 2;
+000255: const AUTO_STATE_DROPOUT_HISTORY_LIMIT = 50;
+000256: const AUTO_STATE_DROPOUT_RELOAD_LIMIT_AFTER_ACTIVE_ONLY = 1;
+000257: const OWNERSHIP_BOOTSTRAP_HISTORY_LIMIT = 50;
+000258: const SLEEP_GAP_RECOVERY_THRESHOLD_MS = 20000;
+000259: const SLEEP_GAP_HISTORY_LIMIT = 30;
+000260: const V2_QUEUE_WAIT_ACTIVE_FLAG = 'mf_queue_wait_active_v10';
+000261: const V2_FINAL_QUEUE_DISPATCH_FLAG = 'mf_final_queue_dispatch_clicked_v10';
+000262: const V2_QUEUE_OPENING_MISSION_FLAG = 'mf_queue_opening_mission_v10';
+000263: const V2_MAIN_MISSION_OPEN_LOCK_KEY = 'mf_main_mission_open_lock_until_v10_3_9v';
+000264: const V2_MAIN_MISSION_OPEN_REASON_KEY = 'mf_main_mission_open_reason_v10_3_9v';
+000265: const V2_MAIN_MISSION_PENDING_UNTIL_KEY = 'mf_main_mission_pending_until_v10_3_9zc';
+000266: const V2_MAIN_MISSION_PENDING_TARGET_KEY = 'mf_main_mission_pending_target_v10_3_9zc';
+000267: const V2_MAIN_MISSION_PENDING_REASON_KEY = 'mf_main_mission_pending_reason_v10_3_9zc';
+000268: const V2_AUTO_MODE_RUNNING_KEY = 'mf_auto_mode_running';
+000269: const V2_AUTO_STOP_RECORD_KEY = 'mf_auto_stop_record_v10_6_153';
+000270: const V2_SESSION_STATS_KEY = 'mf_session_stats_v1';
+000271: const V2_STAFFING_FAILURE_HISTORY_KEY = 'mf_staffing_failure_history_v1';
+000272: const V2_STAFFING_QUARANTINE_KEY = 'mf_staffing_vehicle_quarantine_v1';
+000273: const V2_UNIT_FINDER_DIAGNOSTICS_KEY = 'mf_unit_finder_diagnostics_v1';
+000274: const V2_FRAME_RUNTIME_RECONCILE_EVENT = 'missionchief-nexus-frame-runtime-reconcile-v1074';
+000275: const V2_DORMANT_PRELOAD_BRIDGE_KEY = '__MCN_V2_DORMANT_PRELOAD_BRIDGE__';
+000276: const MISSION_SKIP_HISTORY_LIMIT = 80;
+000277: const AIRFIELD_SUPERVISOR_REQUIRED_TEXT = 'Airfield Operations Supervisors';
+000278: const AIRFIELD_SUPERVISOR_VEHICLE_TEXT = 'Airfield Operations Supervisor';
+000279: const AIRFIELD_ALIAS_HISTORY_LIMIT = 30;
+000280: const AIRFIELD_SUPERVISOR_TYPE_ID = '80';
+000281: const AIRFIELD_SUPERVISOR_ASSIST_DELAY_MS = 900;
+000282: const SEARCH_DOG_UNIT_TYPE_ID = '102';
+000283: const RESCUE_DOG_ASSIST_DELAY_MS = 900;
+000284: const RESCUE_DOG_ASSIST_HISTORY_LIMIT = 40;
+000285: const MASS_CASUALTY_EQUIPMENT_TYPE_ID = '33';
+000286: const NORMAL_AMBULANCE_TYPE_ID = '5';
+000287: const MASS_CASUALTY_AMBULANCE_THRESHOLD = 20;
+000288: const VEHICLE_RULE_HISTORY_LIMIT = 40;
+000289: const PRISONER_RELEASE_SUCCESS_REHOOK_DELAY_MS = 650;
+000290: const PRISONER_RELEASE_HISTORY_LIMIT = 30;
+000291: const ZERO_SELECTION_HISTORY_LIMIT = 40;
+000292: const MISSION_TIMING_HISTORY_LIMIT = 160;
+000293: const MISSION_TIMING_SAMPLE_LIMIT = 5000;
+000294: const RUN_MISSION_ID_HISTORY_LIMIT = 5000;
+000295: const MINIMUM_ACTIONABLE_MISSIONS = 2;
+000296: const LOW_QUEUE_RESUME_STABLE_MS = 1500;
+000297: const LOW_QUEUE_REQUEST_MAX_AGE_MS = 10 * 60 * 1000;
+000298: const CONTROLLER_RUNTIME_RECYCLE_ADVANCES = 12;
+000299: const CONTROLLER_RUNTIME_RECYCLE_MAX_AGE_MS = 8 * 60 * 1000;
+000300: const CONTROLLER_PRESSURE_RECYCLE_ADVANCES = 8;
+000301: const CONTROLLER_PRESSURE_RECYCLE_MAX_AGE_MS = 4 * 60 * 1000;
+000302: const CONTROLLER_MEMORY_PRESSURE_BYTES = 768 * 1024 * 1024;
+000303: const CONTROLLER_MEMORY_GROWTH_BYTES = 192 * 1024 * 1024;
+000304: const CONTROLLER_MEMORY_WARMUP_MS = 60 * 1000;
+000305: const CONTROLLER_MEMORY_SUSTAIN_MS = 15 * 1000;
+000306: const CONTROLLER_MEMORY_SAMPLE_MS = 5 * 1000;
+000307: const CONTROLLER_MEMORY_RELEASE_SUSTAIN_MS = 60 * 1000;
+000308: const CONTROLLER_MEMORY_RELEASE_CEILING_BYTES = 640 * 1024 * 1024;
+000309: const CONTROLLER_MEMORY_RELEASE_GROWTH_BYTES = 96 * 1024 * 1024;
+000310: const CONTROLLER_RESUME_HANDOFF_MAX_AGE_MS = 15 * 1000;
+000311: const CONTROLLER_RECYCLE_RESTART_DELAY_MS = 900;
+000312: const CONTROLLER_RUNTIME_RECYCLE_HISTORY_LIMIT = 40;
+000313: const CONTROLLER_FULL_PAGE_RECYCLE_EVERY_RUNTIME_CYCLES = 3;
+000314: const CONTROLLER_IDENTITY_CACHE_LIMIT = 400;
+000315: const CONTROLLER_EVENT_KEY_CACHE_LIMIT = 120;
+000316: const ALLIANCE_RADIO_IGNORED_KEY_CACHE_LIMIT = 4000;
+000317: const RADIO_SCAN_INTERVAL_MS = 1000;
+000318: const LOG_LIMIT = 360;
+000319: const state = {
+000320: wanted: false,
+000321: running: false,
+000322: stopping: false,
+000323: phase: 'IDLE',
+000324: status: 'Ready',
+000325: detail: 'Auto Mode is stopped.',
+000326: worker: null,
+000327: workerGeneration: 0,
+000328: workerLoadTimer: null,
+000329: nexusDiscoveryTimer: null,
+000330: watcherTimer: null,
+
+===== context-2 [3002-3144] =====
+003002: }
+003003: function pipelineRecord(event, data = {}) {
+003004: const record = { at: nowIso(), event, ...data };
+003005: state.pipelineHistory.push(record);
+003006: if (state.pipelineHistory.length > PIPELINE_HISTORY_LIMIT) {
+003007: state.pipelineHistory.splice(0, state.pipelineHistory.length - PIPELINE_HISTORY_LIMIT);
+003008: }
+003009: return record;
+003010: }
+003011: function persistedPipelineTargets() {
+003012: const raw = sessionGet(SESSION_PIPELINE_TARGETS);
+003013: if (!raw) return [];
+003014: try {
+003015: const values = JSON.parse(raw);
+003016: if (!Array.isArray(values)) return [];
+003017: return values.map(value => {
+003018: const url = sameOriginUrl(value?.url || value);
+003019: const missionId = String(value?.missionId || missionIdFromUrl(url?.href || ''));
+003020: if (!url || !missionId || !isMissionUrl(url.href)) return null;
+003021: return {
+003022: missionId,
+003023: url: url.href,
+003024: caption: cleanMissionCaption(value?.caption || missionNameForId(missionId)),
+003025: actionKind: value?.actionKind || 'NEW',
+003026: };
+003027: }).filter(Boolean).slice(0, PIPELINE_PRELOAD_COUNT);
+003028: } catch {
+003029: return [];
+003030: }
+003031: }
+003032: function persistPipelineTargets(targets = state.pipelineSlots) {
+003033: const values = [];
+003034: for (const item of targets || []) {
+003035: const missionId = String(item?.missionId || '');
+003036: const url = sameOriginUrl(item?.url || '');
+003037: if (!missionId || !url || !isMissionUrl(url.href)) continue;
+003038: values.push({
+003039: missionId,
+003040: url: url.href,
+003041: caption: cleanMissionCaption(item?.caption || item?.missionName || missionNameForId(missionId)),
+003042: actionKind: item?.actionKind || 'NEW',
+003043: });
+003044: if (values.length >= PIPELINE_PRELOAD_COUNT) break;
+003045: }
+003046: sessionSet(SESSION_PIPELINE_TARGETS, values.length ? JSON.stringify(values) : '');
+003047: }
+003048: function pipelineActionableCandidates() {
+003049: pruneRecentlyNativeAdvanced();
+003050: const candidates = collectMissionCandidates();
+003051: for (const candidate of candidates) {
+003052: if (!candidate.allianceLike && candidate.rendered) recordMissionRuleSignature(candidate);
+003053: }
+003054: return candidates.filter(candidate =>
+003055: !candidate.allianceLike &&
+003056: candidate.rendered &&
+003057: candidate.actionKind !== 'OTHER' &&
+003058: !isMissionTemporarilySkipped(candidate.missionId) &&
+003059: !(candidate.actionKind === 'NEW' && state.recentlyNativeAdvanced.has(candidate.missionId))
+003060: );
+003061: }
+003062: function actionableMissionSupply({ excludeMissionId = '' } = {}) {
+003063: const excluded = String(excludeMissionId || '');
+003064: const candidates = pipelineActionableCandidates().filter(candidate =>
+003065: !excluded || String(candidate?.missionId || '') !== excluded
+003066: );
+003067: return {
+003068: count: candidates.length,
+003069: candidates,
+003070: missionIds: candidates.map(candidate => String(candidate.missionId || '')).filter(Boolean),
+003071: };
+003072: }
+003073: function clearLowQueuePauseRequest() {
+003074: sessionSet(SESSION_LOW_QUEUE_PAUSE_REQUEST, '');
+003075: }
+003076: function readLowQueuePauseRequest() {
+003077: const raw = sessionGet(SESSION_LOW_QUEUE_PAUSE_REQUEST);
+003078: if (!raw) return null;
+003079: try {
+003080: const value = JSON.parse(raw);
+003081: const requestedAt = Number(value?.requestedAt || 0);
+003082: const ageMs = Date.now() - requestedAt;
+003083: const remainingCount = Number(value?.remainingCount);
+003084: if (
+003085: !requestedAt ||
+003086: !Number.isFinite(ageMs) ||
+003087: ageMs < 0 ||
+003088: ageMs > LOW_QUEUE_REQUEST_MAX_AGE_MS ||
+003089: !Number.isFinite(remainingCount) ||
+003090: remainingCount < 0 ||
+003091: remainingCount >= MINIMUM_ACTIONABLE_MISSIONS ||
+003092: Number(value?.minimumMissions || 0) !== MINIMUM_ACTIONABLE_MISSIONS
+003093: ) {
+003094: clearLowQueuePauseRequest();
+003095: return null;
+003096: }
+003097: return {
+003098: requestedAt,
+003099: missionId: String(value?.missionId || ''),
+003100: missionName: cleanMissionCaption(value?.missionName || ''),
+003101: remainingCount,
+003102: minimumMissions: MINIMUM_ACTIONABLE_MISSIONS,
+003103: reason: normaliseText(value?.reason || 'actionable mission supply fell below two'),
+003104: };
+003105: } catch {
+003106: clearLowQueuePauseRequest();
+003107: return null;
+003108: }
+003109: }
+003110: function recordLowQueueLifecycle(event, data = {}) {
+003111: const record = { at: nowIso(), event, ...data };
+003112: state.lowQueueHistory.push(record);
+003113: if (state.lowQueueHistory.length > STATUS_HISTORY_LIMIT) {
+003114: state.lowQueueHistory.splice(0, state.lowQueueHistory.length - STATUS_HISTORY_LIMIT);
+003115: }
+003116: return record;
+003117: }
+003118: function completeLowQueuePauseAggregate(durationMs) {
+003119: const safeDurationMs = Math.max(0, Math.round(Number(durationMs || 0)));
+003120: if (!safeDurationMs) return 0;
+003121: state.lowQueueCompletedPauses += 1;
+003122: state.lowQueueTotalPausedMs += safeDurationMs;
+003123: state.lowQueueLongestPauseMs = Math.max(state.lowQueueLongestPauseMs, safeDurationMs);
+003124: return safeDurationMs;
+003125: }
+003126: function compactControllerEphemeralMemory() {
+003127: trimOldestMapEntries(state.missionNames, CONTROLLER_IDENTITY_CACHE_LIMIT);
+003128: trimOldestMapEntries(state.missionRowSignatures, CONTROLLER_IDENTITY_CACHE_LIMIT);
+003129: trimOldestMapEntries(state.missionSkipRecords, MISSION_SKIP_HISTORY_LIMIT);
+003130: trimOldestMapEntries(state.transportRecoveryAttempts, TRANSPORT_RECOVERY_HISTORY_LIMIT);
+003131: trimOldestSetEntries(state.allianceRadioIgnoredKeys, ALLIANCE_RADIO_IGNORED_KEY_CACHE_LIMIT);
+003132: trimOldestSetEntries(state.prisonerReleaseHandledKeys, CONTROLLER_EVENT_KEY_CACHE_LIMIT);
+003133: pruneRecentlyNativeAdvanced();
+003134: }
+003135: function controllerUsedHeapBytes() {
+003136: try {
+003137: const used = Number(performance.memory?.usedJSHeapSize || 0);
+003138: return Number.isFinite(used) ? used : 0;
+003139: } catch { return 0; }
+003140: }
+003141: function controllerMemoryPressureReleaseLimit() {
+003142: const adaptiveLimit = state.pipelineMemoryBaselineBytes > 0
+003143: ? state.pipelineMemoryBaselineBytes + CONTROLLER_MEMORY_RELEASE_GROWTH_BYTES
+003144: : CONTROLLER_MEMORY_RELEASE_CEILING_BYTES;
+
+===== context-3 [3425-3670] =====
+003425: return true;
+003426: }
+003427: window.setTimeout(() => {
+003428: if (!state.wanted || state.stopping || state.lowQueuePaused || state.worker?.isConnected) return;
+003429: createWorker(url.href);
+003430: }, CONTROLLER_RECYCLE_RESTART_DELAY_MS);
+003431: return true;
+003432: }
+003433: function desiredPipelineTargets() {
+003434: const activeMissionId = missionIdFromUrl(getWorkerHref()) || state.currentMissionId;
+003435: const candidates = pipelineActionableCandidates();
+003436: let source = candidates;
+003437: if (!source.length) source = persistedPipelineTargets();
+003438: const seen = new Set([String(activeMissionId || ''), String(state.transportServiceMissionId || '')]);
+003439: const result = [];
+003440: for (const candidate of source) {
+003441: const missionId = String(candidate?.missionId || '');
+003442: if (!missionId || seen.has(missionId) || isMissionTemporarilySkipped(missionId)) continue;
+003443: seen.add(missionId);
+003444: result.push({
+003445: missionId,
+003446: url: candidate.url,
+003447: caption: cleanMissionCaption(candidate.caption || missionNameForId(missionId)),
+003448: actionKind: candidate.actionKind || 'NEW',
+003449: });
+003450: if (result.length >= PIPELINE_PRELOAD_COUNT) break;
+003451: }
+003452: return result;
+003453: }
+003454: function pipelineSlotForFrame(frame) {
+003455: return state.pipelineSlots.find(slot => slot?.frame === frame) || null;
+003456: }
+003457: function pipelineSlotForMission(missionId) {
+003458: const id = String(missionId || '');
+003459: return state.pipelineSlots.find(slot => slot?.missionId === id && slot.frame?.isConnected) || null;
+003460: }
+003461: function compactPipelineSlot(slot) {
+003462: if (!slot) return null;
+003463: return {
+003464: index: slot.index,
+003465: missionId: slot.missionId,
+003466: missionName: slot.missionName,
+003467: url: slot.url,
+003468: status: slot.status,
+003469: loaded: Boolean(slot.loaded),
+003470: ready: Boolean(slot.ready),
+003471: vehicleCount: slot.vehicleCount || 0,
+003472: vehicleRows: slot.vehicleRows || 0,
+003473: loadClicks: slot.loadClicks || 0,
+003474: bridgeReady: Boolean(slot.bridgeReady),
+003475: v2DormantBridgeReady: Boolean(slot.v2DormantBridgeReady),
+003476: v2DormantBridgeVersion: slot.v2DormantBridgeVersion || '',
+003477: v2DormantLightweight: Boolean(slot.v2DormantLightweight),
+003478: dormantGuardReady: Boolean(slot.dormantGuardReady),
+003479: dormantInteractionsBlocked: slot.dormantInteractionsBlocked || 0,
+003480: dormantLastBlockedType: slot.dormantLastBlockedType || '',
+003481: nexusMounted: Boolean(slot.nexusMounted),
+003482: autoControlPresent: Boolean(slot.autoControlPresent),
+003483: autoControlText: slot.autoControlText || '',
+003484: undesiredSince: slot.undesiredSince ? new Date(slot.undesiredSince).toISOString() : '',
+003485: lastClickedControlToken: slot.lastClickedControlToken || '',
+003486: signatureAtLastClick: slot.signatureAtLastClick || '',
+003487: createdAt: slot.createdAt ? new Date(slot.createdAt).toISOString() : '',
+003488: loadedAt: slot.loadedAt ? new Date(slot.loadedAt).toISOString() : '',
+003489: readyAt: slot.readyAt ? new Date(slot.readyAt).toISOString() : '',
+003490: lastAuditAt: slot.lastAuditAt ? new Date(slot.lastAuditAt).toISOString() : '',
+003491: };
+003492: }
+003493: function disposeManagedFrameRuntime(frame, reason = 'managed-frame-release') {
+003494: if (!frame) return false;
+003495: try {
+003496: const loadHandler = frame.__mcnV3LoadHandler;
+003497: if (loadHandler) frame.removeEventListener('load', loadHandler);
+003498: frame.__mcnV3LoadHandler = null;
+003499: try { frame.contentWindow?.stop?.(); } catch {}
+003500: const doc = frame.contentDocument || frame.contentWindow?.document || null;
+003501: if (!doc) return false;
+003502: const RuntimeEvent = doc.defaultView?.CustomEvent || CustomEvent;
+003503: doc.dispatchEvent(new RuntimeEvent(V2_FRAME_RUNTIME_RECONCILE_EVENT, {
+003504: detail: {
+003505: removed: true,
+003506: reason: String(reason || 'managed-frame-release'),
+003507: },
+003508: }));
+003509: state.managedRuntimeDisposals += 1;
+003510: return true;
+003511: } catch {
+003512: return false;
+003513: }
+003514: }
+003515: function bindManagedFrameLoad(frame, handler) {
+003516: if (frame.__mcnV3LoadHandler) frame.removeEventListener('load', frame.__mcnV3LoadHandler);
+003517: frame.__mcnV3LoadHandler = handler;
+003518: frame.addEventListener('load', handler);
+003519: }
+003520: function removePipelineSlot(slot, reason = 'removed', removeFrame = true) {
+003521: if (!slot) return;
+003522: state.pipelineSlots = state.pipelineSlots.filter(item => item !== slot);
+003523: const frame = slot.frame || null;
+003524: if (removeFrame && frame) {
+003525: setFrameOwnership(frame, false, `preload-remove:${reason}`);
+003526: disposeManagedFrameRuntime(frame, `preload-remove:${reason}`);
+003527: try { frame.removeAttribute('srcdoc'); } catch {}
+003528: try { frame.src = 'about:blank'; } catch {}
+003529: try { frame.remove(); } catch {}
+003530: }
+003531: pipelineRecord('preload-removed', {
+003532: missionId: slot.missionId,
+003533: missionName: slot.missionName,
+003534: status: slot.status,
+003535: reason,
+003536: });
+003537: slot.frame = null;
+003538: }
+003539: function removeAllPipelinePreloads(reason = 'pipeline-stop') {
+003540: for (const slot of state.pipelineSlots.slice()) removePipelineSlot(slot, reason, true);
+003541: state.pipelineSlots = [];
+003542: }
+003543: function pausePipelineController(reason = 'pipeline-paused', removePreloads = true) {
+003544: clearTimer('pipelineSyncTimer', window.clearInterval);
+003545: clearTimer('pipelinePumpTimer', window.clearInterval);
+003546: state.pipelineLastSyncAt = 0;
+003547: if (removePreloads) removeAllPipelinePreloads(reason);
+003548: }
+003549: function enterActiveOnlyMode(reason = 'pipeline-circuit-breaker', data = {}) {
+003550: const firstEntry = !state.pipelineActiveOnly;
+003551: state.pipelineActiveOnly = true;
+003552: state.pipelineActiveOnlyReason = normaliseText(reason || 'pipeline-circuit-breaker');
+003553: if (!state.pipelineActiveOnlySince) state.pipelineActiveOnlySince = Date.now();
+003554: pausePipelineController(state.pipelineActiveOnlyReason, true);
+003555: if (firstEntry) {
+003556: pipelineRecord('pipeline-active-only-circuit-breaker', {
+003557: reason: state.pipelineActiveOnlyReason,
+003558: ...data,
+003559: });
+003560: log('Three-worker pipeline circuit breaker opened; continuing with reliable Worker A only.', {
+003561: reason: state.pipelineActiveOnlyReason,
+003562: ...data,
+003563: });
+003564: }
+003565: return firstEntry;
+003566: }
+003567: function createPipelinePreload(target, index) {
+003568: if (state.pipelineActiveOnly || !state.wanted || state.stopping || !document.body || !target?.missionId || !target?.url) return null;
+003569: if (pipelineSlotForMission(target.missionId)) return pipelineSlotForMission(target.missionId);
+003570: if (state.pipelineSlots.filter(slot => slot.frame?.isConnected).length >= PIPELINE_PRELOAD_COUNT) return null;
+003571: const frame = document.createElement('iframe');
+003572: const token = `${index + 1}-${target.missionId}-${Date.now()}`;
+003573: frame.id = `mcn-v3-pipeline-preload-${token}`;
+003574: frame.name = `${PIPELINE_PRELOAD_NAME_PREFIX}${token}`;
+003575: frame.src = target.url;
+003576: frame.setAttribute('aria-hidden', 'true');
+003577: frame.setAttribute('tabindex', '-1');
+003578: frame.setAttribute('data-mcn-v3-pipeline-preload', 'true');
+003579: frame.style.cssText = [
+003580: 'position:fixed', 'left:-10000px', 'top:-10000px', `width:${WORKER_WIDTH}px`, `height:${WORKER_HEIGHT}px`,
+003581: 'display:block', 'visibility:hidden', 'opacity:0', 'pointer-events:none', 'border:0',
+003582: 'margin:0', 'padding:0', 'z-index:-2147483646', 'background:#0b1220'
+003583: ].join(';');
+003584: const now = Date.now();
+003585: const slot = {
+003586: index,
+003587: missionId: String(target.missionId),
+003588: missionName: cleanMissionCaption(target.caption || missionNameForId(target.missionId)),
+003589: caption: cleanMissionCaption(target.caption || ''),
+003590: actionKind: target.actionKind || 'NEW',
+003591: url: target.url,
+003592: frame,
+003593: createdAt: now,
+003594: loadedAt: 0,
+003595: readyAt: 0,
+003596: loaded: false,
+003597: ready: false,
+003598: bridgeReady: false,
+003599: v2DormantBridgeReady: false,
+003600: v2DormantBridgeVersion: '',
+003601: v2DormantLightweight: false,
+003602: dormantGuardReady: false,
+003603: dormantGuardObservedCount: 0,
+003604: dormantInteractionsBlocked: 0,
+003605: dormantLastBlockedType: '',
+003606: nexusMounted: false,
+003607: autoControlPresent: false,
+003608: autoControlText: '',
+003609: status: 'OPENING',
+003610: vehicleCount: 0,
+003611: vehicleRows: 0,
+003612: signature: '',
+003613: stableSince: now,
+003614: loadClicks: 0,
+003615: loadClickPending: false,
+003616: lastLoadClickAt: 0,
+003617: lastProgressAt: now,
+003618: lastAuditAt: 0,
+003619: lastClickedControlToken: '',
+003620: signatureAtLastClick: '',
+003621: countAtLastClick: 0,
+003622: rowsAtLastClick: 0,
+003623: lastDuplicateSuppressionKey: '',
+003624: undesiredSince: 0,
+003625: handoffRetentionLogged: false,
+003626: };
+003627: state.pipelineSlots.push(slot);
+003628: state.pipelinePreloadCreates += 1;
+003629: bindManagedFrameLoad(frame, () => onPipelinePreloadLoad(frame));
+003630: document.body.appendChild(frame);
+003631: pipelineRecord('preload-created', {
+003632: index,
+003633: missionId: slot.missionId,
+003634: missionName: slot.missionName,
+003635: });
+003636: return slot;
+003637: }
+003638: function frameHref(frame) {
+003639: if (!frame?.isConnected) return '';
+003640: try { return frame.contentWindow.location.href || ''; } catch { return ''; }
+003641: }
+003642: function synchroniseManagedFrameName(frame, requestedName) {
+003643: const name = normaliseText(requestedName);
+003644: const result = {
+003645: requestedName: name,
+003646: elementName: '',
+003647: browsingContextName: '',
+003648: elementUpdated: false,
+003649: browsingContextUpdated: false,
+003650: matched: false,
+003651: };
+003652: if (!frame || !name) return result;
+003653: try {
+003654: frame.name = name;
+003655: frame.setAttribute?.('name', name);
+003656: result.elementName = normaliseText(frame.name || frame.getAttribute?.('name') || '');
+003657: result.elementUpdated = result.elementName === name;
+003658: } catch {}
+003659: try {
+003660: if (frame.contentWindow?.location?.origin === location.origin) {
+003661: frame.contentWindow.name = name;
+003662: }
+003663: result.browsingContextName = normaliseText(frame.contentWindow?.name || '');
+003664: result.browsingContextUpdated = result.browsingContextName === name;
+003665: } catch {}
+003666: result.matched = result.elementUpdated && result.browsingContextUpdated;
+003667: return result;
+003668: }
+003669: function pipelineAccessibleDocuments(frame) {
+003670: if (!frame?.isConnected) return [];
+
+===== context-4 [4197-4322] =====
+004197: }
+004198: if (!slot.undesiredSince) {
+004199: slot.undesiredSince = now;
+004200: state.pipelineHandoffRetentions += 1;
+004201: }
+004202: const graceMs = slot.ready ? PIPELINE_READY_HANDOFF_GRACE_MS : PIPELINE_TARGET_ROTATION_GRACE_MS;
+004203: if (!slot.handoffRetentionLogged) {
+004204: slot.handoffRetentionLogged = true;
+004205: pipelineRecord('preload-retained-for-handoff', {
+004206: missionId: slot.missionId,
+004207: ready: Boolean(slot.ready),
+004208: graceMs,
+004209: });
+004210: }
+004211: if (now - slot.undesiredSince >= graceMs) removePipelineSlot(slot, 'target-rotated-after-grace', true);
+004212: }
+004213: desired.forEach((target, index) => {
+004214: const existing = pipelineSlotForMission(target.missionId);
+004215: if (existing) {
+004216: existing.index = index;
+004217: existing.actionKind = target.actionKind || existing.actionKind;
+004218: existing.undesiredSince = 0;
+004219: existing.handoffRetentionLogged = false;
+004220: return;
+004221: }
+004222: if (state.pipelineSlots.filter(slot => slot.frame?.isConnected).length >= PIPELINE_PRELOAD_COUNT) return;
+004223: createPipelinePreload(target, index);
+004224: });
+004225: state.pipelineSlots.sort((a, b) => a.index - b.index);
+004226: persistPipelineTargets(desired);
+004227: }
+004228: function startPipelineController() {
+004229: if (state.pipelineActiveOnly || state.pipelineMemoryPressureActive || !state.wanted || state.stopping) return;
+004230: if (!state.pipelineSyncTimer) {
+004231: state.pipelineSyncTimer = window.setInterval(() => syncPipelinePreloads(false), PIPELINE_SYNC_MS);
+004232: }
+004233: if (!state.pipelinePumpTimer) {
+004234: state.pipelinePumpTimer = window.setInterval(pumpPipelinePreloads, PIPELINE_PUMP_MS);
+004235: }
+004236: syncPipelinePreloads(true);
+004237: pumpPipelinePreloads();
+004238: }
+004239: function promotePipelineMission(missionId, reason = 'mission-transition', metadata = {}) {
+004240: const id = String(missionId || '');
+004241: if (
+004242: state.pipelineActiveOnly ||
+004243: state.pipelineMemoryPressureActive ||
+004244: !id ||
+004245: isMissionTemporarilySkipped(id) ||
+004246: !state.wanted ||
+004247: state.stopping ||
+004248: state.transportServiceActive
+004249: ) return false;
+004250: const slot = pipelineSlotForMission(id);
+004251: if (!slot?.loaded || !slot.ready || !slot.frame?.isConnected) return false;
+004252: const href = frameHref(slot.frame);
+004253: if (missionIdFromUrl(href) !== id) return false;
+004254: const preloadAgeMs = Date.now() - Number(slot.loadedAt || slot.createdAt || 0);
+004255: if (preloadAgeMs > PIPELINE_PROMOTION_MAX_AGE_MS) {
+004256: state.pipelinePromotionFallbacks += 1;
+004257: pipelineRecord('preload-promotion-fallback', {
+004258: missionId: id,
+004259: missionName: slot.missionName,
+004260: reason,
+004261: preloadAgeMs,
+004262: fallbackReason: 'preload-too-old',
+004263: fallback: 'active-worker-navigation',
+004264: });
+004265: removePipelineSlot(slot, 'promotion-preload-too-old', true);
+004266: return false;
+004267: }
+004268: const bridge = pipelineBridge(slot);
+004269: if (!bridge?.isPreload?.()) return false;
+004270: const dormantStatus = readV2DormantPreloadStatus(slot);
+004271: if (
+004272: !slot.v2DormantBridgeReady ||
+004273: dormantStatus?.protocolVersion < 1 ||
+004274: !dormantStatus?.dormant ||
+004275: dormantStatus.promoted ||
+004276: dormantStatus.missionId !== id
+004277: ) {
+004278: failPipelineIsolation(slot, 'v2-native-dormant-promotion-gate-failed', {
+004279: dormantStatus: dormantStatus ? {
+004280: protocolVersion: dormantStatus.protocolVersion,
+004281: missionFinderVersion: dormantStatus.missionFinderVersion,
+004282: missionId: dormantStatus.missionId,
+004283: dormant: dormantStatus.dormant,
+004284: promoted: dormantStatus.promoted,
+004285: } : null,
+004286: });
+004287: enterActiveOnlyMode('v2-native-dormant-promotion-gate-failed', {
+004288: missionId: id,
+004289: });
+004290: return false;
+004291: }
+004292: const snapshot = pipelineVehicleSnapshot(slot);
+004293: slot.nexusMounted = Boolean(snapshot.doc?.querySelector?.('#mission-finder-wrapper, #control-panel'));
+004294: slot.autoControlPresent = Boolean(snapshot.autoControl);
+004295: slot.autoControlText = snapshot.autoControl ? elementLabel(snapshot.autoControl) : '';
+004296: if (
+004297: slot.nexusMounted ||
+004298: snapshot.autoControl ||
+004299: (snapshot.control && slot.loadClicks < PIPELINE_MAX_LOAD_CLICKS)
+004300: ) {
+004301: failPipelineIsolation(slot, 'promotion-preload-not-stable-and-dormant', {
+004302: nexusMounted: slot.nexusMounted,
+004303: autoControl: elementLabel(snapshot.autoControl),
+004304: vehicleLoadControl: pipelineLoadControlToken(snapshot.control),
+004305: });
+004306: return false;
+004307: }
+004308: const oldFrame = state.worker;
+004309: const oldBridge = frameOwnershipBridge(oldFrame);
+004310: if (oldFrame?.isConnected && (!oldBridge || !frameOwnsOperationalState(oldFrame))) {
+004311: state.pipelinePromotionFallbacks += 1;
+004312: enterActiveOnlyMode('active-owner-bridge-missing', {
+004313: missionId: state.currentMissionId,
+004314: promotionTargetMissionId: id,
+004315: });
+004316: return false;
+004317: }
+004318: const oldFrameStyle = oldFrame?.style?.cssText || '';
+004319: const oldFrameName = String(oldFrame?.name || '');
+004320: const oldBrowsingContextName = (() => {
+004321: try { return String(oldFrame?.contentWindow?.name || ''); } catch { return ''; }
+004322: })();
+
+===== context-5 [8148-8273] =====
+008148: wanted: state.wanted,
+008149: running: state.running,
+008150: stopping: state.stopping,
+008151: phase: state.phase,
+008152: status: state.status,
+008153: detail: state.detail,
+008154: lowQueuePaused: state.lowQueuePaused,
+008155: lowQueuePauseSince: state.lowQueuePauseSince
+008156: ? new Date(state.lowQueuePauseSince).toISOString()
+008157: : '',
+008158: lowQueueObservedCount: state.lowQueueObservedCount,
+008159: lowQueueTriggerMissionId: state.lowQueueTriggerMissionId,
+008160: lowQueueResumeCandidateSince: state.lowQueueResumeCandidateSince
+008161: ? new Date(state.lowQueueResumeCandidateSince).toISOString()
+008162: : '',
+008163: minimumActionableMissions: MINIMUM_ACTIONABLE_MISSIONS,
+008164: runtimeRecycleLastAt: state.runtimeRecycleLastAt
+008165: ? new Date(state.runtimeRecycleLastAt).toISOString()
+008166: : '',
+008167: runtimeRecycleAdvanceBaseline: state.runtimeRecycleAdvanceBaseline,
+008168: runtimeRecycles: state.runtimeRecycles,
+008169: managedRuntimeDisposals: state.managedRuntimeDisposals,
+008170: runtimeRecycleEveryAdvances: CONTROLLER_RUNTIME_RECYCLE_ADVANCES,
+008171: runtimeRecycleMaximumAgeMs: CONTROLLER_RUNTIME_RECYCLE_MAX_AGE_MS,
+008172: usedJSHeapSize: controllerUsedHeapBytes(),
+008173: pipelinePreloadLimit: PIPELINE_PRELOAD_COUNT,
+008174: pipelineMemoryPressureActive: state.pipelineMemoryPressureActive,
+008175: pipelineMemoryPressureSince: state.pipelineMemoryPressureSince,
+008176: pipelineMemoryPressureHeapBytes: state.pipelineMemoryPressureHeapBytes,
+008177: pipelineMemoryPressureActivations: state.pipelineMemoryPressureActivations,
+008178: pipelineMemoryPressureReleases: state.pipelineMemoryPressureReleases,
+008179: pipelineMemoryPressureReason: state.pipelineMemoryPressureReason,
+008180: pipelineMemoryBaselineBytes: state.pipelineMemoryBaselineBytes,
+008181: pipelineMemoryLastBytes: state.pipelineMemoryLastBytes,
+008182: pipelineMemoryPeakBytes: state.pipelineMemoryPeakBytes,
+008183: pipelineMemoryCandidateSince: state.pipelineMemoryCandidateSince,
+008184: pipelineMemoryPressureBelowSince: state.pipelineMemoryPressureBelowSince,
+008185: pipelineMemoryHardCeilingBytes: CONTROLLER_MEMORY_PRESSURE_BYTES,
+008186: pipelineMemoryReleaseCeilingBytes: CONTROLLER_MEMORY_RELEASE_CEILING_BYTES,
+008187: pipelineMemoryReleaseLimitBytes: controllerMemoryPressureReleaseLimit(),
+008188: pipelineMemoryReleaseSustainMs: CONTROLLER_MEMORY_RELEASE_SUSTAIN_MS,
+008189: pipelineMemoryGrowthAllowanceBytes: CONTROLLER_MEMORY_GROWTH_BYTES,
+008190: pipelineMemoryWarmupMs: CONTROLLER_MEMORY_WARMUP_MS,
+008191: pipelineMemorySustainMs: CONTROLLER_MEMORY_SUSTAIN_MS,
+008192: ephemeralCacheSizes: {
+008193: missionNames: state.missionNames.size,
+008194: missionRowSignatures: state.missionRowSignatures.size,
+008195: allianceRadioIgnoredKeys: state.allianceRadioIgnoredKeys.size,
+008196: prisonerReleaseHandledKeys: state.prisonerReleaseHandledKeys.size,
+008197: recentlyNativeAdvanced: state.recentlyNativeAdvanced.size,
+008198: radioRequestFirstSeenAt: state.radioRequestFirstSeenAt.size,
+008199: airfieldObservers: state.airfieldObservers.size,
+008200: },
+008201: currentMissionId: state.currentMissionId,
+008202: currentMissionName: state.currentMissionName || workerSnapshot.missionName || '',
+008203: currentMissionDisplay: missionDisplay(
+008204: state.currentMissionId,
+008205: state.currentMissionName || workerSnapshot.missionName || ''
+008206: ),
+008207: currentIsTopMission: Boolean(
+008208: state.topMission?.missionId &&
+008209: state.currentMissionId === state.topMission.missionId &&
+008210: !state.transportServiceActive
+008211: ),
+008212: currentMissionPath: href ? new URL(href).pathname : (workerSnapshot.path || ''),
+008213: autoStartIssued: state.autoStartIssued,
+008214: watcherActive: Boolean(state.watcherTimer),
+008215: workerDocumentSerial: state.workerDocumentSerial,
+008216: autoStartDocumentSerial: state.autoStartDocumentSerial,
+008217: autoRunningConfirmedDocumentSerial: state.autoRunningConfirmedDocumentSerial,
+008218: autoRunningConfirmedAt: state.autoRunningConfirmedAt
+008219: ? new Date(state.autoRunningConfirmedAt).toISOString()
+008220: : '',
+008221: autoStartAttempts: state.autoStartAttempts,
+008222: promotedDocumentSerial: state.promotedDocumentSerial,
+008223: promotedWorkStartedAt: state.promotedWorkStartedAt
+008224: ? new Date(state.promotedWorkStartedAt).toISOString()
+008225: : '',
+008226: promotedWorkEvidenceAt: state.promotedWorkEvidenceAt
+008227: ? new Date(state.promotedWorkEvidenceAt).toISOString()
+008228: : '',
+008229: promotedWorkEvidenceText: state.promotedWorkEvidenceText,
+008230: promotedWorkAwaitingEvidence: promotedWorkAwaitingEvidence(),
+008231: promotionWorkStallRecoveries: state.promotionWorkStallRecoveries,
+008232: promotionRecoveryPendingMissionId: state.promotionRecoveryPendingMissionId,
+008233: v2AutoStopRecord,
+008234: autoControlFound: Boolean(autoControl) || Boolean(workerSnapshot.autoControlFound),
+008235: autoControlText: autoControl ? elementLabel(autoControl) : (workerSnapshot.autoControlText || state.autoControlText),
+008236: autoLooksRunning: autoControl ? autoControlLooksRunning(autoControl) : Boolean(workerSnapshot.autoLooksRunning),
+008237: autoStopWarned: state.autoStopWarned,
+008238: autoRecoverySkips: state.autoRecoverySkips,
+008239: autoRecoveryWatchdog: state.autoRecoveryCandidateKey ? {
+008240: missionId: state.autoRecoveryCandidateMissionId,
+008241: category: state.autoRecoveryCandidateCategory,
+008242: reason: state.autoRecoveryCandidateReason,
+008243: elapsedMs: Math.max(0, Date.now() - state.autoRecoveryCandidateSince),
+008244: waitMs: state.autoRecoveryCandidateWaitMs || AUTO_RECOVERY_WATCHDOG_MS,
+008245: } : null,
+008246: zeroSelectionRecoveries: state.zeroSelectionRecoveries,
+008247: topPageResumes: state.topPageResumes,
+008248: resumedFromTopNavigation: state.resumedFromTopNavigation,
+008249: persistedBackgroundWanted: persistedBackgroundWanted(),
+008250: storedResumeMissionUrl: storedResumeMissionUrl(),
+008251: transportKind: state.transportKind,
+008252: transportIdentity: state.transportIdentity,
+008253: transportSeconds: state.transportSince ? Math.round((Date.now() - state.transportSince) / 1000) : 0,
+008254: transportHardRecoveries: state.transportHardRecoveries,
+008255: transportRecoveryCircuitBreakers: state.transportRecoveryCircuitBreakers,
+008256: lastError: state.lastError,
+008257: topMission: state.topMission ? { ...state.topMission } : null,
+008258: visualTopMission: state.visualTopMission ? { ...state.visualTopMission } : null,
+008259: activeMissionSkips: activeMissionSkipRecords(),
+008260: recoverableMissionSkips: state.recoverableMissionSkips,
+008261: airfieldAliasRewrites: state.airfieldAliasRewrites,
+008262: airfieldSupervisorAssistAttempts: state.airfieldSupervisorAssistAttempts,
+008263: rescueDogAssistAttempts: state.rescueDogAssistAttempts,
+008264: massCasualtyThresholdAttempts: state.massCasualtyThresholdAttempts,
+008265: massCasualtyThresholdLastMissionId: state.massCasualtyThresholdLastMissionId,
+008266: massCasualtyThresholdLastAmbulanceCount: state.massCasualtyThresholdLastAmbulanceCount,
+008267: prisonerReleaseSuccessRehooks: state.prisonerReleaseSuccessRehooks,
+008268: queueFastReleases: state.queueFastReleases,
+008269: postTransportGuardFastReleases: state.postTransportGuardFastReleases,
+008270: postDispatchSoftRecoveries: state.postDispatchSoftRecoveries,
+008271: postDispatchHardRecoveries: state.postDispatchHardRecoveries,
+008272: postDispatchCircuitBreakers: state.postDispatchCircuitBreakers,
+008273: postDispatchWatchdog: state.postDispatchWatchdog ? {
+
+===== context-6 [8744-8869] =====
+008744: ).completedDispatches} sent | ${state.runUniqueMissionCount} seen | ${state.nativeMissionAdvances} advances`;
+008745: state.ui.transportCount.textContent =
+008746: `P${state.runPatientTransports} | R${state.runPrisonerTransports} | cleared ${state.transportServiceCleared}`;
+008747: const visualTop = state.visualTopMission;
+008748: const visualTopSkipRemaining = visualTop?.missionId ? missionSkipRemaining(visualTop.missionId) : 0;
+008749: state.ui.topMission.textContent = visualTopSkipRemaining > 0
+008750: ? `${missionDisplay(visualTop.missionId, visualTop.caption)} | SKIP ${visualTopSkipRemaining} -> ${top ? missionDisplay(top.missionId, top.caption) : 'waiting'}`
+008751: : (top
+008752: ? `${missionDisplay(top.missionId, top.caption)}${top.actionKind && top.actionKind !== 'OTHER' ? ` | ${top.actionKind}` : ''}`
+008753: : '-');
+008754: if (state.ui.pipeline) {
+008755: const slots = state.pipelineSlots.slice().sort((a, b) => a.index - b.index);
+008756: const activeLabel = state.transportServiceActive
+008757: ? 'A: clearing transport'
+008758: : state.lowQueuePaused
+008759: ? 'A: released for RAM'
+008760: : `A: ${state.running ? 'active' : 'starting'} ${compactMissionIdLabel(state.currentMissionId)}`;
+008761: const labels = [activeLabel];
+008762: if (state.lowQueuePaused) {
+008763: labels.push('B: released');
+008764: } else if (state.pipelineMemoryPressureActive) {
+008765: labels.push('B: off (RAM protection)');
+008766: } else if (state.pipelineActiveOnly) {
+008767: labels.push('B: off (safe A-only)');
+008768: } else {
+008769: for (let i = 0; i < PIPELINE_PRELOAD_COUNT; i += 1) {
+008770: const slot = slots.find(item => item.index === i) || null;
+008771: const letter = 'B';
+008772: labels.push(slot
+008773: ? `${letter}: ${readablePipelineSlotStatus(slot)} ${compactMissionIdLabel(slot.missionId)}`
+008774: : `${letter}: waiting`);
+008775: }
+008776: }
+008777: state.ui.pipeline.textContent = labels.join(' | ');
+008778: }
+008779: const nextRadio = state.radioTransportRequests[0] || null;
+008780: state.ui.radio.textContent = nextRadio
+008781: ? `${state.radioTransportRequests.length} pending | next ${compactMissionIdLabel(nextRadio.missionId)}`
+008782: : (state.runAllianceRadioIgnored ? `0 personal | ${state.runAllianceRadioIgnored} alliance ignored` : '0');
+008783: const skips = activeMissionSkipRecords();
+008784: state.ui.skips.textContent = skips.length
+008785: ? skips.map(record => `${missionDisplay(record.missionId, record.missionName)} | retry in ${record.remaining}`).join(' | ')
+008786: : '0';
+008787: if (state.ui.ruleAssists) {
+008788: state.ui.ruleAssists.textContent =
+008789: `warm handoffs ${state.pipelineReadyPromotions}/${state.pipelinePromotions} | dormant B ${state.pipelineV2DormantReady} | RAM guard ${state.pipelineMemoryPressureActive ? 'A-only' : 'normal'} | cycles ${state.runtimeRecycles} | cleanups ${state.managedRuntimeDisposals} | recovery ${state.postDispatchSoftRecoveries}/${state.postDispatchHardRecoveries} | transport ${state.transportServiceCleared}/${state.transportServiceAttempts}`;
+008790: }
+008791: state.ui.startButton.disabled = state.wanted || state.stopping;
+008792: state.ui.stopButton.disabled = (!state.wanted && !state.worker) || state.stopping;
+008793: state.ui.retryButton.disabled = state.stopping || (!state.currentMissionUrl && !collectMissionCandidates().length);
+008794: }
+008795: function resumePersistedBackground() {
+008796: if (!persistedBackgroundWanted() || state.stopping || state.worker?.isConnected) return false;
+008797: restoreRunContinuity();
+008798: state.wanted = true;
+008799: state.running = false;
+008800: state.lastError = '';
+008801: resetAutoStartTracking();
+008802: clearSharedV2AutoRunning('visible-page-resume-bootstrap');
+008803: state.resumedFromTopNavigation = true;
+008804: const persistedStart = sessionGet(SESSION_RUN_STARTED_AT);
+008805: state.runStartedAt = persistedStart || state.runStartedAt || nowIso();
+008806: persistRunStart(state.runStartedAt);
+008807: if (!state.runtimeRecycleLastAt) {
+008808: state.runtimeRecycleLastAt = Date.now();
+008809: state.runtimeRecycleAdvanceBaseline = state.nativeMissionAdvances;
+008810: }
+008811: const previousResumes = Math.max(0, Number(sessionGet(SESSION_TOP_PAGE_RESUMES) || 0));
+008812: state.topPageResumes = previousResumes + 1;
+008813: sessionSet(SESSION_TOP_PAGE_RESUMES, String(state.topPageResumes));
+008814: const resume = () => {
+008815: if (!state.wanted || !persistedBackgroundWanted() || state.worker?.isConnected) return;
+008816: if (!document.body) {
+008817: window.setTimeout(resume, 80);
+008818: return;
+008819: }
+008820: const supply = actionableMissionSupply({
+008821: excludeMissionId: state.lowQueuePaused ? state.lowQueueTriggerMissionId : '',
+008822: });
+008823: if (state.lowQueuePaused || supply.count < MINIMUM_ACTIONABLE_MISSIONS) {
+008824: if (!state.lowQueuePaused) {
+008825: enterLowQueuePause('visible-page-resume-below-minimum-supply');
+008826: } else {
+008827: setPhase(
+008828: 'LOW_QUEUE_PAUSED',
+008829: 'Paused - waiting for 2 missions',
+008830: `The persisted low-queue pause was restored with ${supply.count} actionable personal mission${supply.count === 1 ? '' : 's'}. A/B remain released.`
+008831: );
+008832: beginMissionRescan();
+008833: }
+008834: return;
+008835: }
+008836: const request = transportServiceRequest(refreshRadioTransportRequests());
+008837: if (request && startTransportOnlyWorker(request, 'visible-page-resume')) return;
+008838: const topTarget = choosePriorityTarget();
+008839: const storedUrl = storedResumeMissionUrl();
+008840: const mission = topTarget || (storedUrl ? { url: storedUrl } : null) || chooseBootstrapMission();
+008841: if (mission?.url) {
+008842: persistResumeMission(mission.url);
+008843: setPhase(
+008844: 'RESUMING',
+008845: 'Restoring background Auto Mode',
+008846: `Visible page ${location.pathname} remains under player control while the hidden worker is re-created.`
+008847: );
+008848: log('Visible-page navigation handoff restored the hidden Auto Mode worker.', {
+008849: pathname: location.pathname,
+008850: resumeCount: state.topPageResumes,
+008851: missionId: missionIdFromUrl(mission.url),
+008852: });
+008853: pausePipelineController('visible-page-resume-active-bootstrap', true);
+008854: createWorker(mission.url);
+008855: return;
+008856: }
+008857: setPhase(
+008858: 'WAITING_MISSION',
+008859: 'Background Auto Mode waiting',
+008860: `The visible page remains available. Nexus will re-create the hidden worker when an actionable personal mission becomes available.`
+008861: );
+008862: beginMissionRescan();
+008863: };
+008864: if (document.readyState === 'loading') {
+008865: document.addEventListener('DOMContentLoaded', resume, { once: true });
+008866: window.setTimeout(resume, 1200);
+008867: } else {
+008868: resume();
+008869: }
+
+===== context-7 [19080-19220] =====
+019080:             window.clearInterval(
+019081:                 mfEventCollectibleScanTimer
+019082:             );
+019083:             mfEventCollectibleScanTimer = null;
+019084:         }
+019085:         mfEventCollectibleScanRunning = false;
+019086:         mfEventCollectibleClaimTimes.clear();
+019087:     }
+019088:     const MF_IS_TOP_WINDOW = (() => {
+019089:         try {
+019090:             return window.top === window.self;
+019091:         } catch (error) {
+019092:             return true;
+019093:         }
+019094:     })();
+019095:     function isMissionPage() {
+019096:         return !!document.querySelector('#mission_general_info');
+019097:     }
+019098:     if (window.missionFinder2026Initialized) return;
+019099:     window.missionFinder2026Initialized = true;
+019100:     window.missionFinderInitialized = true;
+019101:     globalThis.__MCN_BOOT_MARK__?.('mission-finder-module-entered');
+019102:     if (!mfV3DormantPreload) {
+019103:         startMissionEventCollectibleCollector();
+019104:     }
+019105:     let autoModeRunning =
+019106:         !mfV3DormantPreload &&
+019107:         (
+019108:             sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
+019109:             localStorage.getItem('mf_auto_mode_running') === 'true'
+019110:         );
+019111:     let autoModeLoopActive = false;
+019112:     const MF_FINAL_QUEUE_DISPATCH_FLAG = 'mf_final_queue_dispatch_clicked_v10';
+019113:     const MF_QUEUE_WAIT_ACTIVE_FLAG = 'mf_queue_wait_active_v10';
+019114:     const MF_QUEUE_OPENING_MISSION_FLAG = 'mf_queue_opening_mission_v10';
+019115:     let mfQueueRestartEnabled = localStorage.getItem('mf_next_queue_restart_enabled_v10') !== 'false';
+019116:     let mfQueueRestartThreshold = parseInt(localStorage.getItem('mf_next_queue_restart_threshold_v10_1_3') || '20', 10);
+019117:     let mfQueueRestartWaiting = false;
+019118:     let mfSilentQueueWatcherTimer = null;
+019119:     let mfSilentQueueOpening = false;
+019120:     let mfGlobalTransportWatcherTimer = null;
+019121:     let mfGlobalTransportClicking = false;
+019122:     let mfLastTransportFingerprint = '';
+019123:     let mfLastTransportClickAt = 0;
+019124:     let mfBruteApproachWatcherTimer = null;
+019125:     let mfBruteApproachClicking = false;
+019126:     let mfBruteLastFingerprint = '';
+019127:     let mfBruteLastClickAt = 0;
+019128:     let mfTransportApproachClicking = false;
+019129:     let mfTransportLastClickAt = 0;
+019130:     let mfTransportSequenceActive = false;
+019131:     let mfTransportContinuationRunning = false;
+019132:     let mfPostTransportRehookTimer = null;
+019133:     let mfPostTransportOpening = false;
+019134:     let mfTransportOwnerModal = null;
+019135:     let mfTransportOwnerApproachGoneAt = 0;
+019136:     let mfTransportOwnerCloseAttemptedAt = 0;
+019137:     let mfTransportMainStableAt = 0;
+019138:     let mfMissionUpdateFirstPassRequired = true;
+019139:     let mfMissionUpdateFirstPassMissionKey = '';
+019140:     let mfMissionUpdateFirstPassCompletedAt = 0;
+019141:     let mfLastQueueThresholdStatusAt = 0;
+019142:     let mfLastQueueThresholdStatusKey = '';
+019143:     const MF_MANUAL_AUTO_STOP_FLAG = 'mf_manual_auto_stop_v10_3_9u';
+019144:     const MF_AUTO_STOP_RECORD_KEY =
+019145:         'mf_auto_stop_record_v10_6_153';
+019146:     const MF_MAIN_MISSION_OPEN_LOCK_KEY = 'mf_main_mission_open_lock_until_v10_3_9v';
+019147:     const MF_MAIN_MISSION_OPEN_REASON_KEY = 'mf_main_mission_open_reason_v10_3_9v';
+019148:     const MF_TRANSPORT_REHOOK_LOCK_KEY = 'mf_transport_rehook_lock_until_v10_3_9x';
+019149:     const MF_TRANSPORT_REHOOK_REASON_KEY = 'mf_transport_rehook_reason_v10_3_9x';
+019150:     const MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY = 'mf_transport_rehook_recent_until_v10_3_9y';
+019151:     const MF_MAIN_MISSION_PENDING_UNTIL_KEY = 'mf_main_mission_pending_until_v10_3_9zc';
+019152:     const MF_MAIN_MISSION_PENDING_TARGET_KEY = 'mf_main_mission_pending_target_v10_3_9zc';
+019153:     const MF_MAIN_MISSION_PENDING_REASON_KEY = 'mf_main_mission_pending_reason_v10_3_9zc';
+019154:     const MF_TRANSPORT_CLICK_LOCK_UNTIL_KEY = 'mf_transport_click_lock_until_v10_3_9zd';
+019155:     const MF_TRANSPORT_LAST_CLICK_AT_KEY = 'mf_transport_last_click_at_v10_3_9zd';
+019156:     const MF_TRANSPORT_LAST_CLICK_REASON_KEY = 'mf_transport_last_click_reason_v10_3_9zd';
+019157:     const MF_TRANSPORT_SHELL_WAIT_MS = 7000;
+019158:     const MF_TRANSPORT_MAIN_STABLE_MS = 3000;
+019159:     const MF_UPDATE_FIRST_MIN_WAIT_MS = 500;
+019160:     const MF_UPDATE_FIRST_MAX_WAIT_MS = 2200;
+019161:     const MF_UPDATE_FIRST_STABLE_MS = 250;
+019162:     const MF_AUTO_UPGRADE_PENDING_KEY =
+019163:         'mf_auto_upgrade_pending_v10_6_13';
+019164:     const MF_AUTO_ADVANCE_AFTER_DISPATCH_KEY =
+019165:         'mf_advance_after_dispatch_v10_6_24_share_only';
+019166:     const MF_AUTO_ADVANCE_MAX_AGE_MS =
+019167:         60000;
+019168:     let mfAutoAdvanceResumeActive = false;
+019169:     let mfAutoSelectionMissionId = '';
+019170:     let mfAutoSelectionCompletedAt = 0;
+019171:     function clearAutoSelectionMissionGuard(
+019172:         reason = ''
+019173:     ) {
+019174:         mfAutoSelectionMissionId = '';
+019175:         mfAutoSelectionCompletedAt = 0;
+019176:         if (
+019177:             reason &&
+019178:             mfDebugEnabled
+019179:         ) {
+019180:             debugLog(
+019181:                 'AUTO SELECTION GUARD',
+019182:                 `Cleared | ${reason}`
+019183:             );
+019184:         }
+019185:     }
+019186:     function markAutoSelectionCompletedForCurrentMission(
+019187:         reason = ''
+019188:     ) {
+019189:         const missionId =
+019190:             getCurrentMissionIdForQueueRestart();
+019191:         mfAutoSelectionMissionId =
+019192:             missionId ||
+019193:             '';
+019194:         mfAutoSelectionCompletedAt =
+019195:             Date.now();
+019196:         if (mfDebugEnabled) {
+019197:             debugLog(
+019198:                 'AUTO SELECTION GUARD',
+019199:                 `Completed | mission=${missionId || 'unknown'} | reason=${reason || 'unknown'}`
+019200:             );
+019201:         }
+019202:         return !!missionId;
+019203:     }
+019204:     function isAutoSelectionValidForCurrentMission() {
+019205:         const missionId =
+019206:             getCurrentMissionIdForQueueRestart();
+019207:         return !!(
+019208:             missionId &&
+019209:             mfAutoSelectionMissionId &&
+019210:             missionId ===
+019211:                 mfAutoSelectionMissionId &&
+019212:             mfAutoSelectionCompletedAt > 0
+019213:         );
+019214:     }
+019215:     const MF_AUTO_UPGRADE_PENDING_MAX_AGE_MS =
+019216:         90000;
+019217:     const MF_AUTO_UPGRADE_WAIT_MS =
+019218:         4000;
+019219:     const MF_AUTO_UPGRADE_MAX_PASSES =
+019220:         4;
+
+===== context-8 [20954-21196] =====
+020954:         let heap = null;
+020955:         try {
+020956:             const memory = performance.memory;
+020957:             if (memory) {
+020958:                 heap = {
+020959:                     usedJSHeapSize:
+020960:                         Number(memory.usedJSHeapSize || 0),
+020961:                     totalJSHeapSize:
+020962:                         Number(memory.totalJSHeapSize || 0),
+020963:                     jsHeapSizeLimit:
+020964:                         Number(memory.jsHeapSizeLimit || 0)
+020965:                 };
+020966:             }
+020967:         } catch (_error) {}
+020968:         const cachedVehicleNodes = Array.isArray(
+020969:             mfVehicleCheckboxCache?.nodes
+020970:         )
+020971:             ? mfVehicleCheckboxCache.nodes
+020972:             : [];
+020973:         return {
+020974:             capturedAt: new Date().toISOString(),
+020975:             heap,
+020976:             runtime: {
+020977:                 isTopWindow: MF_IS_TOP_WINDOW,
+020978:                 autoModeRunning:
+020979:                     autoModeRunning === true,
+020980:                 eventCollectorTimerActive:
+020981:                     mfEventCollectibleScanTimer !== null,
+020982:                 eventCollectorScanRunning:
+020983:                     mfEventCollectibleScanRunning === true,
+020984:                 eventCollectorTrackedClaims:
+020985:                     mfEventCollectibleClaimTimes.size,
+020986:                 mainMutationObserverActive:
+020987:                     mfMainMutationObserver !== null,
+020988:                 backgroundSupervisorActive:
+020989:                     mfBackgroundWatcherSupervisorTimer !== null,
+020990:                 sessionRuntimeTickerActive:
+020991:                     sessionRuntimeTicker !== null,
+020992:                 runtimeSuspendedForPageHide:
+020993:                     mfRuntimeSuspendedForPageHide === true,
+020994:                 runtimeSuspendedForInactiveFrame:
+020995:                     mfRuntimeSuspendedForInactiveFrame === true,
+020996:                 memoryMaintenanceTimerActive:
+020997:                     mfRuntimeMemoryMaintenanceTimer !== null,
+020998:                 memoryOperationDepth:
+020999:                     mfRuntimeMemoryOperationDepth,
+021000:                 memorySoftFlushCount:
+021001:                     mfRuntimeMemorySoftFlushCount,
+021002:                 memoryLastSoftFlushAt:
+021003:                     mfRuntimeMemoryLastSoftFlushAt,
+021004:                 memoryInactiveSuspendCount:
+021005:                     mfRuntimeMemoryInactiveSuspendCount,
+021006:                 memoryLastActivityAt:
+021007:                     mfRuntimeMemoryLastActivityAt,
+021008:                 memoryLastMutationAt:
+021009:                     mfRuntimeMemoryLastMutationAt,
+021010:                 memoryLastReason:
+021011:                     mfRuntimeMemoryLastReason,
+021012:                 storageMaintenance:
+021013:                     { ...mfRuntimeStorageMaintenanceState },
+021014:                 autoMemoryRecycle:
+021015:                     getAutoMemoryRecycleDiagnosticState()
+021016:             },
+021017:             caches: {
+021018:                 liveTrainingVerifyEntries:
+021019:                     mfLiveTrainingVerifyCache.size,
+021020:                 vehicleMatchCandidateEntries:
+021021:                     mfVehicleMatchCandidateCache.size,
+021022:                 cachedVehicleCheckboxes:
+021023:                     cachedVehicleNodes.length,
+021024:                 detachedCachedVehicleCheckboxes:
+021025:                     cachedVehicleNodes.filter(node =>
+021026:                         node?.isConnected === false
+021027:                     ).length,
+021028:                 missionDocuments:
+021029:                     mfMissionDocumentCache.documents.length,
+021030:                 missionContexts:
+021031:                     mfMissionContextCache.contexts.length,
+021032:                 transportDocuments:
+021033:                     mfTransportDocumentCache.documents.length,
+021034:                 transportScopes:
+021035:                     mfTransportScopeCache.scopes.length,
+021036:                 iphoneNativePickerDocuments:
+021037:                     mfIphoneNativePickerDocuments.size
+021038:             },
+021039:             documents: {
+021040:                 accessibleCount: documents.length,
+021041:                 sampledCount: documentSnapshots.length,
+021042:                 totalElements: documentSnapshots.reduce(
+021043:                     (total, item) =>
+021044:                         total + item.elementCount,
+021045:                     0
+021046:                 ),
+021047:                 totalVehicleCheckboxes:
+021048:                     documentSnapshots.reduce(
+021049:                         (total, item) =>
+021050:                             total + item.vehicleCheckboxCount,
+021051:                         0
+021052:                     ),
+021053:                 hiddenOwnerFrames:
+021054:                     documentSnapshots.filter(item =>
+021055:                         !item.ownerFrameVisible
+021056:                     ).length,
+021057:                 detachedOwnerFrames:
+021058:                     documentSnapshots.filter(item =>
+021059:                         !item.ownerFrameConnected
+021060:                     ).length,
+021061:                 samples: documentSnapshots
+021062:             }
+021063:         };
+021064:     }
+021065:     function mfBuildUnitFinderDiagnosticSnapshot(reason) {
+021066:         let liveRows = [];
+021067:         try {
+021068:             liveRows = readMissionUpdateRows({ silent: true });
+021069:         } catch (_error) {}
+021070:         const selectedVehicles =
+021071:             mfGetDiagnosticSelectedVehicles();
+021072:         const diagnosticBoxes = getVehicleCheckboxSnapshot(true);
+021073:         return {
+021074:             schema: 'missionchief-unit-finder-diagnostics',
+021075:             schemaVersion: 1,
+021076:             capturedAt: new Date().toISOString(),
+021077:             capturedAtUnix: Date.now(),
+021078:             reason: String(reason || 'manual-export'),
+021079:             versions: {
+021080:                 commandNexus: '3.0.34',
+021081:                 missionFinder: 'V10.6.177',
+021082:                 personnelAssignment: '1.3.8'
+021083:             },
+021084:             mission: {
+021085:                 missionId:
+021086:                     getCurrentMissionIdForQueueRestart() || '',
+021087:                 missionKey:
+021088:                     getLocalMissionInstanceKey() || '',
+021089:                 missionName:
+021090:                     getCurrentMissionName() || '',
+021091:                 pageUrl: String(window.location.href || ''),
+021092:                 host: String(window.location.host || '')
+021093:             },
+021094:             execution: {
+021095:                 autoModeRunning:
+021096:                     autoModeRunning === true ||
+021097:                     sessionStorage.getItem(
+021098:                         'mf_auto_mode_running'
+021099:                     ) === 'true',
+021100:                 ready: vehicleLoadState.ready === true,
+021101:                 staffingBlockActive:
+021102:                     mfStaffingBlockActive === true,
+021103:                 staffingBlockText:
+021104:                     String(mfStaffingBlockText || ''),
+021105:                 ambulanceOfficerThresholdEnabled:
+021106:                     mfAmbulanceOfficerThresholdEnabled,
+021107:                 ambulanceOfficerThreshold:
+021108:                     mfAmbulanceOfficerThreshold,
+021109:                 alwaysSendAmbulanceToHighRiskMissingPerson:
+021110:                     mfAlwaysSendAmbulanceToHighRiskMissingPerson === true,
+021111:                 highRiskMissingPersonMission:
+021112:                     isConfiguredHighRiskMissingPersonMission(),
+021113:                 processedSelectionKeys:
+021114:                     Array.from(processedSelectionKeys || [])
+021115:             },
+021116:             requirementContext: {
+021117:                 ...mfUnitFinderDiagnosticContext,
+021118:                 missionDefinitionRawRows:
+021119:                     mfLastMissionDefinitionRawRows.map(row => ({
+021120:                         label: String(row.label || ''),
+021121:                         value: String(row.value || '')
+021122:                     })),
+021123:                 currentLiveRequirementRows:
+021124:                     mfSerialiseDiagnosticRequirementRows(liveRows),
+021125:                 visibleAlerts:
+021126:                     mfGetDiagnosticVisibleAlerts()
+021127:             },
+021128:             selectionSummary: {
+021129:                 vehicleInventory: {total: diagnosticBoxes.length,searchDogType102: diagnosticBoxes.filter(isSearchDogUnitVehicleCheckbox).length,availableSearchDogType102: diagnosticBoxes.filter(input => !input.disabled && !input.checked && isSearchDogUnitVehicleCheckbox(input)).length,loadControlVisible: isVehicleListLoadControlVisible(),loadingIndicatorVisible: isVehicleListLoadingIndicatorVisible()},
+021130:                 vehicleLoadState: {
+021131:                     rows: vehicleLoadState.rows.map(row => ({
+021132:                         originalName: String(row.originalName || ''),
+021133:                         mappedName: String(row.mappedName || ''),
+021134:                         required: Math.max(
+021135:                             0,
+021136:                             parseInt(row.required, 10) || 0
+021137:                         ),
+021138:                         selected: Math.max(
+021139:                             0,
+021140:                             parseInt(row.selected, 10) || 0
+021141:                         ),
+021142:                         status: String(row.status || '')
+021143:                     })),
+021144:                     patients: Math.max(
+021145:                         0,
+021146:                         parseInt(vehicleLoadState.patients, 10) || 0
+021147:                     ),
+021148:                     ambulances: Math.max(
+021149:                         0,
+021150:                         parseInt(vehicleLoadState.ambulances, 10) || 0
+021151:                     ),
+021152:                     ready: vehicleLoadState.ready === true
+021153:                 },
+021154:                 selectedVehicles,
+021155:                 knownUnstaffedAmbulanceExclusions:
+021156:                     mfKnownUnstaffedAmbulanceExclusions
+021157:                         .slice(0, 40)
+021158:                         .map(vehicle => ({ ...vehicle }))
+021159:             },
+021160:             environment: {
+021161:                 language: String(navigator.language || ''),
+021162:                 userAgent: String(navigator.userAgent || '')
+021163:             }
+021164:         };
+021165:     }
+021166:     function mfPersistUnitFinderDiagnostic(reason) {
+021167:         const snapshot =
+021168:             mfBuildUnitFinderDiagnosticSnapshot(reason);
+021169:         const hasUsefulData = !!(
+021170:             snapshot.requirementContext.updatedAt ||
+021171:             snapshot.requirementContext.suppliedRows.length ||
+021172:             snapshot.requirementContext.processedRows.length ||
+021173:             snapshot.requirementContext.currentLiveRequirementRows.length ||
+021174:             snapshot.requirementContext.visibleAlerts.length ||
+021175:             snapshot.selectionSummary.vehicleLoadState.rows.length ||
+021176:             snapshot.selectionSummary.selectedVehicles.length ||
+021177:             snapshot.selectionSummary.knownUnstaffedAmbulanceExclusions.length
+021178:         );
+021179:         if (!hasUsefulData) return snapshot;
+021180:         const emptyMissionUpdateSnapshot =
+021181:             reason === 'not-ready' &&
+021182:             snapshot.requirementContext.mode === 'mission-update' &&
+021183:             snapshot.requirementContext.suppliedRows.length === 0 &&
+021184:             snapshot.requirementContext.processedRows.length === 0 &&
+021185:             snapshot.requirementContext.currentLiveRequirementRows.length === 0 &&
+021186:             snapshot.requirementContext.visibleAlerts.length === 0 &&
+021187:             snapshot.selectionSummary.vehicleLoadState.rows.length === 0;
+021188:         if (emptyMissionUpdateSnapshot) return snapshot;
+021189:         const signature = JSON.stringify({
+021190:             mission: snapshot.mission.missionKey || snapshot.mission.missionId,
+021191:             reason: snapshot.reason,
+021192:             mode: snapshot.requirementContext.mode,
+021193:             source: snapshot.requirementContext.sourceLabel,
+021194:             ready: snapshot.execution.ready,
+021195:             rows: snapshot.selectionSummary.vehicleLoadState.rows,
+021196:             selected: snapshot.selectionSummary.selectedVehicles
+
+===== context-9 [45612-45737] =====
+045612:                             'href'
+045613:                         )
+045614:                     )
+045615:                     : ''
+045616:             );
+045617:         if (helpId) return helpId;
+045618:         const missionInfo =
+045619:             getActiveVisibleMissionInfo();
+045620:         if (missionInfo) {
+045621:             const attrs = ['data-mission-id', 'data-id', 'mission_id', 'data-mission'];
+045622:             for (const attr of attrs) {
+045623:                 const value = missionInfo.getAttribute(attr);
+045624:                 if (value && /^\d+$/.test(String(value))) return String(value);
+045625:             }
+045626:             const missionLink = missionInfo.querySelector && missionInfo.querySelector('a[href*="/missions/"], a[href*="mission_id="]');
+045627:             const linkId = parseMissionIdFromHrefForQueueRestart(missionLink ? (missionLink.href || missionLink.getAttribute('href')) : '');
+045628:             if (linkId) return linkId;
+045629:         }
+045630:         return parseMissionIdFromHrefForQueueRestart(window.location.href);
+045631:     }
+045632:     function isSilentQueueWatchActive() {
+045633:         if (!MF_IS_TOP_WINDOW) return false;
+045634:         if (isManualAutoStopActive()) return false;
+045635:         if (!mfQueueRestartEnabled) return false;
+045636:         const autoActive =
+045637:             autoModeRunning === true ||
+045638:             sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
+045639:             localStorage.getItem('mf_auto_mode_running') === 'true';
+045640:         if (!autoActive) return false;
+045641:         if (
+045642:             isPostTransportRehookPending() ||
+045643:             wasTransportSequenceActive() ||
+045644:             getTransportRehookLockRemaining() > 0
+045645:         ) {
+045646:             return false;
+045647:         }
+045648:         const normalQueueWait =
+045649:             sessionStorage.getItem(MF_QUEUE_WAIT_ACTIVE_FLAG) === 'true';
+045650:         const mainScreenFallback =
+045651:             !isMissionPage() &&
+045652:             !isMissionScreenVisibleForQueueRestart();
+045653:         return normalQueueWait || mainScreenFallback;
+045654:     }
+045655:     function safeQueueStatus(message) {
+045656:         try {
+045657:             updateStatusBox(message);
+045658:         } catch (error) {}
+045659:     }
+045660:     async function waitForSpecificQueueMissionToOpen(
+045661:         targetMissionId,
+045662:         previousMissionId,
+045663:         modalCountBeforeClick
+045664:     ) {
+045665:         const started = Date.now();
+045666:         const beforeCount = Number.isFinite(modalCountBeforeClick)
+045667:             ? modalCountBeforeClick
+045668:             : 0;
+045669:         while (Date.now() - started < 30000) {
+045670:             const currentMissionId = getCurrentMissionIdForQueueRestart();
+045671:             const missionScreenVisible = isMissionScreenVisibleForQueueRestart();
+045672:             const missionPage = isMissionPage();
+045673:             const modalCount = getVisibleQueueOpenModals().length;
+045674:             const urlMissionId = parseMissionIdFromHrefForQueueRestart(
+045675:                 window.location.href
+045676:             );
+045677:             if (mfDebugEnabled) {
+045678:                 debugLog(
+045679:                     'NEXT QUEUE OPEN',
+045680:                     `target=${targetMissionId || 'unknown'} | previous=${previousMissionId || 'unknown'} | current=${currentMissionId || 'unknown'} | url=${urlMissionId || 'unknown'} | missionPage=${missionPage ? 'yes' : 'no'} | missionVisible=${missionScreenVisible ? 'yes' : 'no'} | modals=${modalCount}`
+045681:                 );
+045682:             }
+045683:             if (
+045684:                 targetMissionId &&
+045685:                 (
+045686:                     currentMissionId === targetMissionId ||
+045687:                     urlMissionId === targetMissionId
+045688:                 ) &&
+045689:                 (
+045690:                     missionPage ||
+045691:                     missionScreenVisible ||
+045692:                     modalCount > beforeCount
+045693:                 )
+045694:             ) {
+045695:                 return true;
+045696:             }
+045697:             if (
+045698:                 currentMissionId &&
+045699:                 currentMissionId !== previousMissionId &&
+045700:                 (missionPage || missionScreenVisible)
+045701:             ) {
+045702:                 return true;
+045703:             }
+045704:             if (modalCount > beforeCount) {
+045705:                 if (mfDebugEnabled) {
+045706:                     debugLog(
+045707:                         'NEXT QUEUE OPEN',
+045708:                         `Loading modal appeared (${beforeCount} -> ${modalCount}). Treating mission as opened and blocking further Dispatch clicks.`
+045709:                     );
+045710:                 }
+045711:                 return true;
+045712:             }
+045713:             await wait(400);
+045714:         }
+045715:         return false;
+045716:     }
+045717:     function startSilentQueueWatcher() {
+045718:         if (!MF_IS_TOP_WINDOW) return;
+045719:         if (mfSilentQueueWatcherTimer) return;
+045720:         mfSilentQueueWatcherTimer = setInterval(async () => {
+045721:             if (isManualAutoStopActive()) return;
+045722:             if (!isSilentQueueWatchActive()) return;
+045723:             if (mfSilentQueueOpening) return;
+045724:             if (isMainMissionOpeningPending('silent-queue-watch')) return;
+045725:             if (sessionStorage.getItem(MF_QUEUE_OPENING_MISSION_FLAG) === 'true') return;
+045726:             if (hasVisibleQueueOpenModal('silent-queue-watch')) return;
+045727:             if (!canOpenMainMissionFromMainList('silent-queue-watch')) return;
+045728:             if (isMissionScreenVisibleForQueueRestart()) return;
+045729:             const queueCountState =
+045730:                 getQueueRestartCountState();
+045731:             if (mfDebugEnabled) {
+045732:                 debugLog(
+045733:                     'SILENT QUEUE',
+045734:                     `active=yes | unattendedFound=${queueCountState.found ? 'yes' : 'no'} | count=${queueCountState.found ? queueCountState.count : 'n/a'} | threshold=${queueCountState.threshold} | reached=${queueCountState.reached ? 'yes' : 'no'} | queueWait=${sessionStorage.getItem(MF_QUEUE_WAIT_ACTIVE_FLAG) || 'false'} | transportPending=${isPostTransportRehookPending() ? 'yes' : 'no'} | mainFallback=${(!isMissionPage() && !isMissionScreenVisibleForQueueRestart()) ? 'yes' : 'no'}`
+045735:                 );
+045736:             }
+045737:             if (!queueCountState.reached) {
+
+===== context-10 [45792-45917] =====
+045792:             return false;
+045793:         }
+045794:         const firstMissionHref =
+045795:             firstMissionButton.getAttribute('href') ||
+045796:             firstMissionButton.href ||
+045797:             '';
+045798:         const targetMissionId =
+045799:             parseMissionIdFromHrefForQueueRestart(firstMissionHref);
+045800:         const previousMissionId = getCurrentMissionIdForQueueRestart();
+045801:         const modalCountBeforeClick = getVisibleQueueOpenModals().length;
+045802:         if (modalCountBeforeClick > 0) return false;
+045803:         if (!acquireMainMissionOpenLock(`silent-open-${reason}`, 45000)) {
+045804:             return false;
+045805:         }
+045806:         markMainMissionOpeningPending(
+045807:             targetMissionId,
+045808:             `silent-open-${reason}`,
+045809:             45000
+045810:         );
+045811:         if (mfDebugEnabled) {
+045812:             debugLog(
+045813:                 'SILENT QUEUE',
+045814:                 `${reason}: opening ONE exact Dispatch ${firstMissionHref || 'unknown href'} | target=${targetMissionId || 'unknown'} | previous=${previousMissionId || 'unknown'}`
+045815:             );
+045816:         }
+045817:         autoModeRunning = true;
+045818:         sessionStorage.setItem('mf_auto_mode_running', 'true');
+045819:         localStorage.setItem('mf_auto_mode_running', 'true');
+045820:         sessionStorage.removeItem(MF_QUEUE_WAIT_ACTIVE_FLAG);
+045821:         sessionStorage.removeItem(MF_FINAL_QUEUE_DISPATCH_FLAG);
+045822:         mfQueueRestartWaiting = false;
+045823:         const clicked = realClickForQueueRestart(firstMissionButton);
+045824:         if (!clicked) {
+045825:             clearMainMissionOpeningPending(
+045826:                 `silent-open-${reason}-click-failed`
+045827:             );
+045828:             return false;
+045829:         }
+045830:         const opened = await waitForSpecificQueueMissionToOpen(
+045831:             targetMissionId,
+045832:             previousMissionId,
+045833:             modalCountBeforeClick
+045834:         );
+045835:         if (!opened) {
+045836:             if (hasVisibleQueueOpenModal(`silent-timeout-${reason}`)) {
+045837:                 clearMainMissionOpeningPending(
+045838:                     `silent-open-${reason}-loading-modal`
+045839:                 );
+045840:                 await resumeAutoAfterMainMissionOpen(
+045841:                     `silent-open-${reason}-loading-modal`
+045842:                 );
+045843:                 return true;
+045844:             }
+045845:             clearMainMissionOpeningPending(
+045846:                 `silent-open-${reason}-not-confirmed`
+045847:             );
+045848:             safeQueueStatus(
+045849:                 'Mission open was not confirmed. No second mission was opened.'
+045850:             );
+045851:             return false;
+045852:         }
+045853:         clearMainMissionOpeningPending(
+045854:             `silent-open-${reason}-opened`
+045855:         );
+045856:         await resumeAutoAfterMainMissionOpen(
+045857:             `silent-open-${reason}`
+045858:         );
+045859:         return true;
+045860:     }
+045861:     function clearQueueWaitFlags(reason) {
+045862:         const hadQueueWait = sessionStorage.getItem(MF_QUEUE_WAIT_ACTIVE_FLAG) === 'true';
+045863:         const hadFinalDispatch = sessionStorage.getItem(MF_FINAL_QUEUE_DISPATCH_FLAG) === 'true';
+045864:         const hadOpening = sessionStorage.getItem(MF_QUEUE_OPENING_MISSION_FLAG) === 'true';
+045865:         sessionStorage.removeItem(MF_QUEUE_WAIT_ACTIVE_FLAG);
+045866:         sessionStorage.removeItem(MF_FINAL_QUEUE_DISPATCH_FLAG);
+045867:         sessionStorage.removeItem(MF_QUEUE_OPENING_MISSION_FLAG);
+045868:         sessionStorage.removeItem(MF_MAIN_MISSION_PENDING_UNTIL_KEY);
+045869:         sessionStorage.removeItem(MF_MAIN_MISSION_PENDING_TARGET_KEY);
+045870:         sessionStorage.removeItem(MF_MAIN_MISSION_PENDING_REASON_KEY);
+045871:         mfQueueRestartWaiting = false;
+045872:         mfSilentQueueOpening = false;
+045873:         releaseMainMissionOpenLock(reason || 'clearQueueWaitFlags');
+045874:         if (reason && String(reason).toLowerCase().includes('stopped')) {
+045875:             releaseTransportRehookLock(reason || 'clearQueueWaitFlags');
+045876:         }
+045877:         if (mfDebugEnabled && (hadQueueWait || hadFinalDispatch || hadOpening)) {
+045878:             debugLog('NEXT QUEUE', `Cleared queue flags. reason=${reason || 'unknown'} | queueWait=${hadQueueWait ? 'yes' : 'no'} | finalDispatch=${hadFinalDispatch ? 'yes' : 'no'} | opening=${hadOpening ? 'yes' : 'no'}`);
+045879:         }
+045880:     }
+045881:     function installManualMissionClickFlagClearer() {
+045882:         if (window.mfManualMissionClickFlagClearerInstalled) return;
+045883:         window.mfManualMissionClickFlagClearerInstalled = true;
+045884:         document.addEventListener('click', function(event) {
+045885:             if (!event.isTrusted) return;
+045886:             const target = event.target && event.target.closest
+045887:                 ? event.target.closest(
+045888:                     'a.mission-alarm-button[id^="alarm_button_"][href*="/missions/"]'
+045889:                 )
+045890:                 : null;
+045891:             if (!target) return;
+045892:             const href = target.getAttribute('href') || target.href || '';
+045893:             const targetMissionId =
+045894:                 parseMissionIdFromHrefForQueueRestart(href);
+045895:             releaseMainMissionOpenLock('manual dispatch replacing old lock');
+045896:             markMainMissionOpeningPending(
+045897:                 targetMissionId,
+045898:                 'trusted manual Dispatch click',
+045899:                 45000
+045900:             );
+045901:             if (mfDebugEnabled) {
+045902:                 debugLog(
+045903:                     'MISSION OPEN OWNER',
+045904:                     `Trusted manual Dispatch click owns the open | target=${targetMissionId || 'unknown'}`
+045905:                 );
+045906:             }
+045907:             setTimeout(async () => {
+045908:                 const opened = await waitForSpecificQueueMissionToOpen(
+045909:                     targetMissionId,
+045910:                     '',
+045911:                     0
+045912:                 );
+045913:                 clearMainMissionOpeningPending(
+045914:                     opened
+045915:                         ? 'trusted manual Dispatch opened'
+045916:                         : 'trusted manual Dispatch timeout'
+045917:                 );
+
+===== context-11 [45938-46063] =====
+045938:     function startAutoMode() {
+045939:         clearPersistentAutoStopRecord();
+045940:         clearManualAutoStop('auto mode manually started');
+045941:         if (!isMissionPage()) {
+045942:             updateStatusBox('Open a mission first, then start Auto Mode.');
+045943:             return;
+045944:         }
+045945:         clearQueueWaitFlags('auto mode manually started');
+045946:         clearAllTransportAutomationFlags('auto mode manually started');
+045947:         clearAutoPostDispatchUpgradeState(
+045948:             'auto mode manually started'
+045949:         );
+045950:         const existingAdvanceState =
+045951:             readAutoAdvanceAfterDispatchState();
+045952:         if (
+045953:             existingAdvanceState?.mode === 'auto'
+045954:         ) {
+045955:             clearAutoAdvanceAfterDispatchState(
+045956:                 'auto mode manually started'
+045957:             );
+045958:         }
+045959:         clearAutoSelectionMissionGuard(
+045960:             'Auto Mode manually started'
+045961:         );
+045962:         resetVehicleLoadState();
+045963:         autoModeRunning = true;
+045964:         sessionStorage.setItem('mf_auto_mode_running', 'true');
+045965:         localStorage.setItem('mf_auto_mode_running', 'true');
+045966:         updateAutoModeButton();
+045967:         updateStatusBox('Auto Mode started.');
+045968:         startSilentQueueWatcher();
+045969:         startGlobalTransportApproachWatcher();
+045970:         startBruteApproachTransportWatcher();
+045971:         startPostTransportRehookWatcher();
+045972:         runAutoModeLoop();
+045973:     }
+045974:     function stopAutoMode(
+045975:         message,
+045976:         options
+045977:     ) {
+045978:         const automatic =
+045979:             options?.automatic !== false;
+045980:         const stopReason =
+045981:             normaliseAutoStopReason(message);
+045982:         if (automatic) {
+045983:             persistAutomaticAutoStopRecord(
+045984:                 stopReason
+045985:             );
+045986:         } else {
+045987:             clearPersistentAutoStopRecord();
+045988:         }
+045989:         clearAutoPostDispatchUpgradeState(
+045990:             stopReason
+045991:         );
+045992:         clearAutoAdvanceAfterDispatchState(
+045993:             stopReason
+045994:         );
+045995:         clearAutoSelectionMissionGuard(
+045996:             stopReason
+045997:         );
+045998:         resetVehicleLoadState();
+045999:         setManualAutoStop(
+046000:             stopReason
+046001:         );
+046002:         updateAutoModeButton();
+046003:         if (automatic) {
+046004:             updateStatusBox(
+046005:                 'Start Auto Mode again to clear this warning.'
+046006:             );
+046007:         } else {
+046008:             updateStatusBox(stopReason);
+046009:         }
+046010:     }
+046011:     function getNextMissionQueueState() {
+046012:         const button = document.querySelector('#mission_next_mission_btn');
+046013:         if (!button) {
+046014:             return {
+046015:                 exists: false,
+046016:                 count: null,
+046017:                 title: '',
+046018:                 text: '',
+046019:                 href: '',
+046020:                 className: ''
+046021:             };
+046022:         }
+046023:         const title = button.getAttribute('title') || '';
+046024:         const text = (button.textContent || '').replace(/\s+/g, ' ').trim();
+046025:         const href = button.getAttribute('href') || '';
+046026:         const className = button.className || '';
+046027:         const titleMatch = title.match(/Next Mission\s*\((\d+)\)/i);
+046028:         const textMatches = text.match(/\d+/g);
+046029:         const titleCount = titleMatch ? parseInt(titleMatch[1], 10) : null;
+046030:         const textCount = textMatches && textMatches.length ? parseInt(textMatches[textMatches.length - 1], 10) : null;
+046031:         const count = Number.isFinite(titleCount)
+046032:             ? titleCount
+046033:             : Number.isFinite(textCount)
+046034:                 ? textCount
+046035:                 : null;
+046036:         return {
+046037:             exists: true,
+046038:             count,
+046039:             title,
+046040:             text,
+046041:             href,
+046042:             className
+046043:         };
+046044:     }
+046045:     function isV3LowQueuePauseSignal(queueState) {
+046046:         return isMfV3ManagedActiveFrame()
+046047:             && !!queueState
+046048:             && queueState.exists
+046049:             && queueState.count !== null
+046050:             && Number.isFinite(Number(queueState.count))
+046051:             && Number(queueState.count) <
+046052:                 MF_V3_MINIMUM_ACTIONABLE_MISSIONS;
+046053:     }
+046054:     function isFinalQueueSignal(queueState) {
+046055:         if (isV3LowQueuePauseSignal(queueState)) {
+046056:             return true;
+046057:         }
+046058:         return !!mfQueueRestartEnabled
+046059:             && !!queueState
+046060:             && queueState.exists
+046061:             && queueState.count === 0;
+046062:     }
+046063:     function requestV3LowQueuePause(
+
+===== context-12 [46150-46311] =====
+046150:         try {
+046151:             return isVisibleForQueueRestart(element);
+046152:         } catch (error) {
+046153:             try {
+046154:                 return !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
+046155:             } catch (innerError) {
+046156:                 return false;
+046157:             }
+046158:         }
+046159:     }
+046160:     function isManualAutoStopActive() {
+046161:         return sessionStorage.getItem(MF_MANUAL_AUTO_STOP_FLAG) === 'true' ||
+046162:             localStorage.getItem(MF_MANUAL_AUTO_STOP_FLAG) === 'true';
+046163:     }
+046164:     function clearManualAutoStop(reason) {
+046165:         const hadStop = isManualAutoStopActive();
+046166:         sessionStorage.removeItem(MF_MANUAL_AUTO_STOP_FLAG);
+046167:         localStorage.removeItem(MF_MANUAL_AUTO_STOP_FLAG);
+046168:         if (hadStop && mfDebugEnabled) {
+046169:             debugLog('AUTO STOP GUARD', `Manual stop cleared. reason=${reason || 'unknown'}`);
+046170:         }
+046171:     }
+046172:     function stopAllBackgroundAutomationTimers(reason) {
+046173:         const timers = [
+046174:             ['silentQueue', 'mfSilentQueueWatcherTimer'],
+046175:             ['globalTransport', 'mfGlobalTransportWatcherTimer'],
+046176:             ['bruteTransport', 'mfBruteApproachWatcherTimer'],
+046177:             ['postTransport', 'mfPostTransportRehookTimer']
+046178:         ];
+046179:         if (mfSilentQueueWatcherTimer) {
+046180:             clearInterval(mfSilentQueueWatcherTimer);
+046181:             mfSilentQueueWatcherTimer = null;
+046182:         }
+046183:         if (mfGlobalTransportWatcherTimer) {
+046184:             clearInterval(mfGlobalTransportWatcherTimer);
+046185:             mfGlobalTransportWatcherTimer = null;
+046186:         }
+046187:         if (mfBruteApproachWatcherTimer) {
+046188:             clearInterval(mfBruteApproachWatcherTimer);
+046189:             mfBruteApproachWatcherTimer = null;
+046190:         }
+046191:         if (mfPostTransportRehookTimer) {
+046192:             clearInterval(mfPostTransportRehookTimer);
+046193:             mfPostTransportRehookTimer = null;
+046194:         }
+046195:         mfTransportSequenceActive = false;
+046196:         mfTransportContinuationRunning = false;
+046197:         mfPostTransportOpening = false;
+046198:         mfGlobalTransportClicking = false;
+046199:         mfBruteApproachClicking = false;
+046200:         mfTransportApproachClicking = false;
+046201:         mfSilentQueueOpening = false;
+046202:         releaseMainMissionOpenLock(reason || 'stop timers');
+046203:         releaseTransportRehookLock(reason || 'stop timers');
+046204:         if (mfDebugEnabled) {
+046205:             debugLog('AUTO STOP GUARD', `Stopped background timers. reason=${reason || 'unknown'}`);
+046206:         }
+046207:     }
+046208:     function setManualAutoStop(reason) {
+046209:         sessionStorage.setItem(MF_MANUAL_AUTO_STOP_FLAG, 'true');
+046210:         localStorage.setItem(MF_MANUAL_AUTO_STOP_FLAG, 'true');
+046211:         autoModeRunning = false;
+046212:         autoModeLoopActive = false;
+046213:         sessionStorage.setItem('mf_auto_mode_running', 'false');
+046214:         localStorage.setItem('mf_auto_mode_running', 'false');
+046215:         clearQueueWaitFlags(reason || 'manual stop');
+046216:         clearAllTransportAutomationFlags(reason || 'manual stop');
+046217:         stopAllBackgroundAutomationTimers(reason || 'manual stop');
+046218:         if (mfDebugEnabled) {
+046219:             debugLog('AUTO STOP GUARD', `Manual stop set. reason=${reason || 'unknown'}`);
+046220:         }
+046221:     }
+046222:     function getCurrentMissionAlertScopes() {
+046223:         return Array.from(
+046224:             new Set(
+046225:                 getActiveMissionRequirementContexts()
+046226:                     .map(
+046227:                         context =>
+046228:                             context.root
+046229:                     )
+046230:             )
+046231:         );
+046232:     }
+046233:     function areCurrentMissionUpdateRowsFullySelected() {
+046234:         const rows =
+046235:             readMissionUpdateRows({
+046236:                 silent: true
+046237:             });
+046238:         if (
+046239:             !Array.isArray(rows) ||
+046240:             rows.length === 0
+046241:         ) {
+046242:             return false;
+046243:         }
+046244:         return rows.every(row => {
+046245:             if (
+046246:                 row
+046247:                     .isTrainedPersonnelRequirement
+046248:             ) {
+046249:                 return areTrainedPersonnelRequirementsSatisfied(
+046250:                     row.personnelTrainingRequirements
+046251:                 );
+046252:             }
+046253:             const needed =
+046254:                 Math.max(
+046255:                     0,
+046256:                     parseInt(
+046257:                         row.stillNeeded,
+046258:                         10
+046259:                     ) || 0
+046260:                 );
+046261:             if (needed <= 0) {
+046262:                 return true;
+046263:             }
+046264:             const mappedName =
+046265:                 resolveUnitName(
+046266:                     row.unitName
+046267:                 );
+046268:             return (
+046269:                 countSelectedMatchingVehicles(
+046270:                     row.unitName,
+046271:                     mappedName
+046272:                 ) >= needed
+046273:             );
+046274:         });
+046275:     }
+046276:     function getVisibleInlineProblemAlertText() {
+046277:         const scopes = getCurrentMissionAlertScopes();
+046278:         if (!scopes.length) return '';
+046279:         const alerts = [];
+046280:         scopes.forEach(scope => {
+046281:             scope.querySelectorAll(
+046282:                 '#missing_text.alert-danger, .alert-missing-vehicles, .alert-danger[id^="missing_"], .alert-danger'
+046283:             ).forEach(alert => {
+046284:                 if (!alerts.includes(alert)) alerts.push(alert);
+046285:             });
+046286:         });
+046287:         for (const alert of alerts) {
+046288:             try {
+046289:                 if (!isElementVisible(alert)) continue;
+046290:             } catch (error) {}
+046291:             const text = (alert.innerText || alert.textContent || '').replace(/\s+/g, ' ').trim();
+046292:             if (!text) continue;
+046293:             const lower = text.toLowerCase();
+046294:             if (
+046295:                 lower.includes('missing personnel:') &&
+046296:                 hasSupportedMissingPersonnelUpdate(text) &&
+046297:                 !lower.includes('missing vehicles:')
+046298:             ) {
+046299:                 continue;
+046300:             }
+046301:             const isActionableMissionUpdateAlert =
+046302:                 lower.includes(
+046303:                     'missing vehicles:'
+046304:                 ) ||
+046305:                 lower.includes(
+046306:                     'missing vehicle:'
+046307:                 ) ||
+046308:                 lower.includes(
+046309:                     'we need:'
+046310:                 ) ||
+046311:                 (
+
+===== context-13 [46733-46858] =====
+046733:         }
+046734:     }
+046735:     function clearMainMissionOpeningPending(reason) {
+046736:         const hadPending =
+046737:             !!sessionStorage.getItem(MF_MAIN_MISSION_PENDING_UNTIL_KEY) ||
+046738:             sessionStorage.getItem(MF_QUEUE_OPENING_MISSION_FLAG) === 'true';
+046739:         sessionStorage.removeItem(MF_MAIN_MISSION_PENDING_UNTIL_KEY);
+046740:         sessionStorage.removeItem(MF_MAIN_MISSION_PENDING_TARGET_KEY);
+046741:         sessionStorage.removeItem(MF_MAIN_MISSION_PENDING_REASON_KEY);
+046742:         sessionStorage.removeItem(MF_QUEUE_OPENING_MISSION_FLAG);
+046743:         mfSilentQueueOpening = false;
+046744:         releaseMainMissionOpenLock(reason || 'clear mission opening pending');
+046745:         if (hadPending && mfDebugEnabled) {
+046746:             debugLog(
+046747:                 'MISSION OPEN OWNER',
+046748:                 `RELEASED | reason=${reason || 'unknown'}`
+046749:             );
+046750:         }
+046751:     }
+046752:     async function resumeAutoAfterMainMissionOpen(reason) {
+046753:         const started = Date.now();
+046754:         while (Date.now() - started < 45000) {
+046755:             if (isManualAutoStopActive()) return false;
+046756:             if (isMissionPage() && isMissionScreenVisibleForQueueRestart()) {
+046757:                 await waitForMissionReady();
+046758:                 autoModeRunning = true;
+046759:                 sessionStorage.setItem('mf_auto_mode_running', 'true');
+046760:                 localStorage.setItem('mf_auto_mode_running', 'true');
+046761:                 try {
+046762:                     updateStatusBox('Mission opened. Auto Mode continuing...');
+046763:                 } catch (error) {}
+046764:                 if (!autoModeLoopActive) {
+046765:                     setTimeout(() => {
+046766:                         if (
+046767:                             autoModeRunning &&
+046768:                             !autoModeLoopActive &&
+046769:                             !isManualAutoStopActive()
+046770:                         ) {
+046771:                             runAutoModeLoop();
+046772:                         }
+046773:                     }, 100);
+046774:                 }
+046775:                 return true;
+046776:             }
+046777:             if (hasVisibleQueueOpenModal(`resume-${reason}`)) {
+046778:                 await wait(500);
+046779:                 continue;
+046780:             }
+046781:             if (/\/missions\/\d+/i.test(window.location.pathname)) {
+046782:                 await wait(500);
+046783:                 continue;
+046784:             }
+046785:             await wait(500);
+046786:         }
+046787:         if (mfDebugEnabled) {
+046788:             debugLog(
+046789:                 'MISSION OPEN OWNER',
+046790:                 `${reason || 'unknown'} | mission content did not become ready within 45 seconds`
+046791:             );
+046792:         }
+046793:         return false;
+046794:     }
+046795:     function canOpenMainMissionFromMainList(reason) {
+046796:         if (isManualAutoStopActive()) return false;
+046797:         if (isMainMissionOpeningPending(reason || 'main-list-open')) return false;
+046798:         if (isMainMissionOpenLockActive(reason || 'main-list-open')) return false;
+046799:         if (shouldBlockOpeningNewMissionForTransport(reason || 'main-list-open')) return false;
+046800:         if (hasVisibleQueueOpenModal(reason || 'main-list-open')) {
+046801:             return false;
+046802:         }
+046803:         if (isCurrentMissionWindowOpenStrict(reason || 'main-list-open')) {
+046804:             try {
+046805:                 recordIssueEvent('MAIN LIST OPEN BLOCKED', {
+046806:                     reason: reason || 'unknown',
+046807:                     problemAlert: getVisibleInlineProblemAlertText(),
+046808:                     finalFlag: sessionStorage.getItem(MF_FINAL_QUEUE_DISPATCH_FLAG),
+046809:                     queueOpening: sessionStorage.getItem(MF_QUEUE_OPENING_MISSION_FLAG)
+046810:                 }, true);
+046811:             } catch (error) {}
+046812:             return false;
+046813:         }
+046814:         return true;
+046815:     }
+046816:     function invalidateTransportCaches() {
+046817:         mfTransportDocumentCache = {
+046818:             expiresAt: 0,
+046819:             documents: []
+046820:         };
+046821:         mfTransportScopeCache = {
+046822:             expiresAt: 0,
+046823:             scopes: []
+046824:         };
+046825:     }
+046826:     function mfGetAccessibleDocumentsForTransport(forceRefresh = false) {
+046827:         const now = Date.now();
+046828:         const cachedDocuments = mfTransportDocumentCache.documents;
+046829:         if (
+046830:             !forceRefresh &&
+046831:             now < mfTransportDocumentCache.expiresAt &&
+046832:             cachedDocuments.every(isCachedMissionDocumentUsable)
+046833:         ) {
+046834:             return cachedDocuments;
+046835:         }
+046836:         const docs = [document];
+046837:         Array.from(document.querySelectorAll('iframe')).forEach(iframe => {
+046838:             try {
+046839:                 const doc =
+046840:                     iframe.contentDocument ||
+046841:                     iframe.contentWindow?.document;
+046842:                 if (doc?.body && !docs.includes(doc)) {
+046843:                     docs.push(doc);
+046844:                 }
+046845:             } catch (_error) {
+046846:             }
+046847:         });
+046848:         mfTransportDocumentCache = {
+046849:             expiresAt: now + 500,
+046850:             documents: docs
+046851:         };
+046852:         return docs;
+046853:     }
+046854:     function mfHasPotentialTransportUi() {
+046855:         for (const candidateDocument of mfGetAccessibleDocumentsForTransport()) {
+046856:             try {
+046857:                 const path = candidateDocument.location?.pathname || '';
+046858:                 if (path.startsWith('/vehicles/')) {
+
+===== context-14 [48930-49103] =====
+048930:         clearTransportSequenceActive();
+048931:         sessionStorage.removeItem('mf_post_transport_rehook_pending_v1');
+048932:         localStorage.removeItem('mf_post_transport_rehook_pending_v1');
+048933:         mfClearTransportOwner('post-transport complete');
+048934:     }
+048935:     function isRecentTransportRehookWindowActive() {
+048936:         if (isManualAutoStopActive()) return false;
+048937:         const until = Math.max(
+048938:             parseInt(sessionStorage.getItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY) || '0', 10) || 0,
+048939:             parseInt(localStorage.getItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY) || '0', 10) || 0
+048940:         );
+048941:         if (until > Date.now()) return true;
+048942:         sessionStorage.removeItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY);
+048943:         localStorage.removeItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY);
+048944:         return false;
+048945:     }
+048946:     function isPostTransportRehookPending() {
+048947:         if (isManualAutoStopActive()) return false;
+048948:         return sessionStorage.getItem('mf_post_transport_rehook_pending_v1') === 'true' ||
+048949:             localStorage.getItem('mf_post_transport_rehook_pending_v1') === 'true' ||
+048950:             wasTransportSequenceActive() ||
+048951:             isRecentTransportRehookWindowActive();
+048952:     }
+048953:     function isAutoModeActiveFlagSet() {
+048954:         if (isManualAutoStopActive()) return false;
+048955:         return autoModeRunning === true ||
+048956:             sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
+048957:             localStorage.getItem('mf_auto_mode_running') === 'true';
+048958:     }
+048959:     function isTransportAutomationAllowed() {
+048960:         if (isManualAutoStopActive()) return false;
+048961:         return isAutoModeActiveFlagSet() || isPostTransportRehookPending();
+048962:     }
+048963:     function clearAllTransportAutomationFlags(reason) {
+048964:         mfTransportSequenceActive = false;
+048965:         mfTransportContinuationRunning = false;
+048966:         mfPostTransportOpening = false;
+048967:         mfGlobalTransportClicking = false;
+048968:         mfBruteApproachClicking = false;
+048969:         mfTransportApproachClicking = false;
+048970:         sessionStorage.removeItem('mf_transport_sequence_active_v1');
+048971:         sessionStorage.removeItem('mf_post_transport_rehook_pending_v1');
+048972:         sessionStorage.removeItem('mf_brute_transport_sent_v1');
+048973:         sessionStorage.removeItem('mf_transport_sent_in_vehicle_modal_v1');
+048974:         localStorage.removeItem('mf_post_transport_rehook_pending_v1');
+048975:         sessionStorage.removeItem(MF_TRANSPORT_CLICK_LOCK_UNTIL_KEY);
+048976:         sessionStorage.removeItem(MF_TRANSPORT_LAST_CLICK_AT_KEY);
+048977:         sessionStorage.removeItem(MF_TRANSPORT_LAST_CLICK_REASON_KEY);
+048978:         mfClearTransportOwner(reason || 'transport flags cleared');
+048979:         const clearRecentRehook =
+048980:             String(reason || '').toLowerCase().includes('manual') ||
+048981:             String(reason || '').toLowerCase().includes('stopped');
+048982:         if (clearRecentRehook) {
+048983:             sessionStorage.removeItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY);
+048984:             localStorage.removeItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY);
+048985:         }
+048986:         if (mfDebugEnabled) {
+048987:             debugLog('AUTO GUARD', `Cleared all transport automation flags. reason=${reason || 'unknown'}`);
+048988:         }
+048989:     }
+048990:     function hasVisibleApproachButtonForTransportRehook() {
+048991:         return !!(
+048992:             (typeof mfFindAnyVisibleApproachButtonDeep === 'function' && mfFindAnyVisibleApproachButtonDeep()) ||
+048993:             (typeof mfFindAnyVisibleApproachButtonInModal === 'function' && mfFindAnyVisibleApproachButtonInModal())
+048994:         );
+048995:     }
+048996:     function forceAutoModeBackOnForTransportRehook() {
+048997:         if (isManualAutoStopActive()) {
+048998:             if (mfDebugEnabled) {
+048999:                 debugLog('AUTO STOP GUARD', 'Blocked forceAutoModeBackOnForTransportRehook because Auto Mode was manually stopped.');
+049000:             }
+049001:             return false;
+049002:         }
+049003:         autoModeRunning = true;
+049004:         autoModeLoopActive = false;
+049005:         sessionStorage.setItem('mf_auto_mode_running', 'true');
+049006:         localStorage.setItem('mf_auto_mode_running', 'true');
+049007:         return true;
+049008:     }
+049009:     function findAnyMainScreenMissionOpenButton() {
+049010:         return findFirstMissionButtonForQueueRestart();
+049011:     }
+049012:     async function hardOpenFirstMissionFromMainAfterTransport(reason) {
+049013:         if (!MF_IS_TOP_WINDOW) return false;
+049014:         if (isManualAutoStopActive()) return false;
+049015:         if (!isTransportAutomationAllowed()) return false;
+049016:         if (!mfTransportShellReadyForRehook(`hard-${reason}`)) return false;
+049017:         if (!acquireTransportRehookLock(`hard-rehook-${reason}`, 28000)) return false;
+049018:         try {
+049019:             if (shouldBlockOpeningNewMissionForTransport(`hard-rehook-${reason}`)) {
+049020:                 return false;
+049021:             }
+049022:             if (isCurrentMissionWindowStillOpenForSafeOpen(`hard-rehook-${reason}`)) {
+049023:                 if (mfDebugEnabled) {
+049024:                     debugLog('TRANSPORT REHOOK', `${reason}: mission window still open; waiting for next rehook tick.`);
+049025:                 }
+049026:                 return false;
+049027:             }
+049028:             if (!forceAutoModeBackOnForTransportRehook()) return false;
+049029:             if (mfDebugEnabled) {
+049030:                 debugLog('TRANSPORT REHOOK', `${reason}: hard main-screen open attempt started.`);
+049031:             }
+049032:             if (window.location.pathname.startsWith('/vehicles/')) {
+049033:                 if (mfDebugEnabled) {
+049034:                     debugLog('TRANSPORT REHOOK', `${reason}: on vehicle page after transport, loading main page for mission count.`);
+049035:                 }
+049036:                 sessionStorage.setItem('mf_post_transport_rehook_pending_v1', 'true');
+049037:                 localStorage.setItem('mf_post_transport_rehook_pending_v1', 'true');
+049038:                 const rehookUntil = Date.now() + 120000;
+049039:                 sessionStorage.setItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY, String(rehookUntil));
+049040:                 localStorage.setItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY, String(rehookUntil));
+049041:                 window.location.href = '/';
+049042:                 return false;
+049043:             }
+049044:             const started = Date.now();
+049045:             let filterClickedAt = 0;
+049046:             while (Date.now() - started < 120000) {
+049047:                 if (isManualAutoStopActive()) return false;
+049048:                 if (!mfTransportShellReadyForRehook(`hard-loop-${reason}`)) {
+049049:                     await wait(800);
+049050:                     continue;
+049051:                 }
+049052:                 if (hasVisibleApproachButtonForTransportRehook()) {
+049053:                     if (mfDebugEnabled) {
+049054:                         debugLog('TRANSPORT REHOOK', `${reason}: Approach visible again; pausing rehook.`);
+049055:                     }
+049056:                     return false;
+049057:                 }
+049058:                 if (isCurrentMissionWindowStillOpenForSafeOpen(`hard-rehook-${reason}`)) {
+049059:                     if (mfDebugEnabled) {
+049060:                         debugLog('TRANSPORT REHOOK', `${reason}: current mission window still open; retrying shortly.`);
+049061:                     }
+049062:                     await wait(1000);
+049063:                     continue;
+049064:                 }
+049065:                 if (isMissionPage() && isMissionScreenVisibleForQueueRestart()) {
+049066:                     clearPostTransportRehookPending();
+049067:                     if (mfDebugEnabled) {
+049068:                         debugLog('TRANSPORT REHOOK', `${reason}: mission modal visible; restarting Auto Mode.`);
+049069:                     }
+049070:                     forceAutoModeBackOnForTransportRehook();
+049071:                     setTimeout(() => {
+049072:                         if (autoModeRunning && !autoModeLoopActive) runAutoModeLoop();
+049073:                     }, 1000);
+049074:                     return true;
+049075:                 }
+049076:                 if (hasVisibleQueueOpenModal(`hard-rehook-${reason}`)) {
+049077:                     await wait(800);
+049078:                     continue;
+049079:                 }
+049080:                 const queueCountState =
+049081:                     getQueueRestartCountState();
+049082:                 if (!queueCountState.reached) {
+049083:                     reportQueueRestartCountWait(
+049084:                         queueCountState,
+049085:                         `transport-rehook-${reason}`
+049086:                     );
+049087:                     await wait(1200);
+049088:                     continue;
+049089:                 }
+049090:                 if (
+049091:                     !filterClickedAt ||
+049092:                     Date.now() - filterClickedAt > 5000
+049093:                 ) {
+049094:                     clickUnattendedMissionFilterForQueueRestart();
+049095:                     filterClickedAt = Date.now();
+049096:                     if (mfDebugEnabled) {
+049097:                         debugLog(
+049098:                             'TRANSPORT REHOOK',
+049099:                             `${reason}: threshold reached ${queueCountState.count}/${queueCountState.threshold}; unattended filter ready.`
+049100:                         );
+049101:                     }
+049102:                 }
+049103:                 await wait(900);
+
+===== context-15 [49301-49426] =====
+049301:         mfLastTransportClickAt = now;
+049302:         mfTransportLastClickAt = now;
+049303:         markTransportSequenceActive();
+049304:         try {
+049305:             const row = button.closest('tr');
+049306:             const rowText = row ? (row.innerText || '').replace(/\s+/g, ' ').trim() : '';
+049307:             const text = (button.textContent || 'Approach').replace(/\s+/g, ' ').trim();
+049308:             if (mfDebugEnabled) {
+049309:                 debugLog('GLOBAL TRANSPORT', `${reason}: clicking "${text}" | row="${rowText}"`);
+049310:             }
+049311:             try {
+049312:                 updateStatusBox(`Transport handoff: clicking ${text}...`);
+049313:             } catch (error) {}
+049314:             sessionStorage.setItem('mf_transport_sent_in_vehicle_modal_v1', 'true');
+049315:             realClickForQueueRestart(button);
+049316:             await wait(4000);
+049317:             return true;
+049318:         } finally {
+049319:             mfGlobalTransportClicking = false;
+049320:             mfTransportApproachClicking = false;
+049321:         }
+049322:     }
+049323:     function isAutoModeSessionActiveForTransportWatcher() {
+049324:         return isTransportAutomationAllowed();
+049325:     }
+049326:     function startGlobalTransportApproachWatcher() {
+049327:         return;
+049328:     }
+049329:     function mfBruteNormaliseText(value) {
+049330:         return String(value || '').replace(/\s+/g, ' ').trim();
+049331:     }
+049332:     function mfFindAnyVisibleApproachButtonInModal() {
+049333:         const deepButton = mfFindAnyVisibleApproachButtonDeep();
+049334:         if (deepButton) return deepButton;
+049335:         const modals = Array.from(document.querySelectorAll(
+049336:             '.vm--modal, .modal, .lightbox, .vehicle-window, .redesign-wrapper[type="vehicle"]'
+049337:         )).filter(modal => {
+049338:             try {
+049339:                 return mfIsVisibleInOwnDocument(modal);
+049340:             } catch (error) {
+049341:                 return false;
+049342:             }
+049343:         });
+049344:         for (const modal of modals) {
+049345:             const button = mfChoosePreferredApproachButton(modal);
+049346:             if (button) return button;
+049347:         }
+049348:         return null;
+049349:     }
+049350:     function mfIsApproachTransportVisible() {
+049351:         return !!mfFindAnyVisibleApproachButtonInModal();
+049352:     }
+049353:     function mfBruteFindVehicleTransportModal() {
+049354:         const simpleButton = mfFindAnyVisibleApproachButtonInModal();
+049355:         if (simpleButton) {
+049356:             return simpleButton.closest('.vm--modal, .modal, .lightbox, .vehicle-window, body') || null;
+049357:         }
+049358:         const scopes = mfGetTransportActiveScopes();
+049359:         if (scopes.length) {
+049360:             return scopes[0];
+049361:         }
+049362:         const modals = Array.from(document.querySelectorAll('.vm--modal'));
+049363:         for (const modal of modals) {
+049364:             const modalText = mfBruteNormaliseText(modal.innerText).toLowerCase();
+049365:             const hasVehicleWindow = !!modal.querySelector('.vehicle-window, .redesign-wrapper[type="vehicle"]');
+049366:             const hasTransportWords =
+049367:                 modalText.includes('hospital') ||
+049368:                 modalText.includes('free beds') ||
+049369:                 modalText.includes('patient') ||
+049370:                 modalText.includes('handoff') ||
+049371:                 modalText.includes('prisoner') ||
+049372:                 modalText.includes('police cell') ||
+049373:                 modalText.includes('cell') ||
+049374:                 modalText.includes('custody') ||
+049375:                 modalText.includes('transport');
+049376:             if ((hasVehicleWindow && hasTransportWords) || modalText.includes('approach')) {
+049377:                 return modal;
+049378:             }
+049379:         }
+049380:         return null;
+049381:     }
+049382:     function mfBruteFindFirstApproachButton() {
+049383:         const exactPatientAnchor = mfFindExactPatientTransportAnchorDeep();
+049384:         if (exactPatientAnchor) return exactPatientAnchor;
+049385:         const simpleButton = mfFindAnyVisibleApproachButtonInModal();
+049386:         if (simpleButton) return simpleButton;
+049387:         const modal = mfBruteFindVehicleTransportModal();
+049388:         if (!modal) return null;
+049389:         const rowButtons = Array.from(
+049390:             modal.querySelectorAll(
+049391:                 'table tbody tr button.btn.btn-success, ' +
+049392:                 'table tbody tr button.btn-success'
+049393:             )
+049394:         );
+049395:         for (const button of rowButtons) {
+049396:             const text = mfBruteNormaliseText(button.textContent).toLowerCase();
+049397:             if (text === 'approach') {
+049398:                 return button;
+049399:             }
+049400:         }
+049401:         const buttons = Array.from(
+049402:             modal.querySelectorAll(
+049403:                 'button.btn.btn-success, button.btn-success'
+049404:             )
+049405:         );
+049406:         for (const button of buttons) {
+049407:             const text = mfBruteNormaliseText(button.textContent).toLowerCase();
+049408:             if (text === 'approach') {
+049409:                 return button;
+049410:             }
+049411:         }
+049412:         return null;
+049413:     }
+049414:     function mfBruteTransportFingerprint(button) {
+049415:         if (!button) return '';
+049416:         const modal = button.closest('.vm--modal');
+049417:         const row = button.closest('tr');
+049418:         const title = modal ? mfBruteNormaliseText(modal.querySelector('h1')?.innerText || '') : '';
+049419:         const currentMission = modal ? mfBruteNormaliseText(modal.querySelector('a[href*="/missions/"]')?.innerText || '') : '';
+049420:         const rowText = row ? mfBruteNormaliseText(row.innerText) : mfBruteNormaliseText(button.textContent);
+049421:         return `${title}|${currentMission}|${rowText}`;
+049422:     }
+049423:     function mfBruteClickElement(element) {
+049424:         if (!element) return false;
+049425:         try {
+049426:             element.scrollIntoView({ block: 'center', inline: 'center' });
+
+===== context-16 [49615-49740] =====
+049615:         if (
+049616:             requestV3LowQueuePause(
+049617:                 getNextMissionQueueState(),
+049618:                 `final dispatch reached V3 controller handoff (${reason})`,
+049619:                 { finalDispatch: true }
+049620:             )
+049621:         ) {
+049622:             updateStatusBox(
+049623:                 'V3 final dispatch confirmed. Waiting for the controller to recycle Worker A safely...'
+049624:             );
+049625:             return false;
+049626:         }
+049627:         mfQueueRestartWaiting = true;
+049628:         try {
+049629:             sessionStorage.setItem(
+049630:                 MF_QUEUE_WAIT_ACTIVE_FLAG,
+049631:                 'true'
+049632:             );
+049633:             sessionStorage.removeItem(
+049634:                 MF_QUEUE_OPENING_MISSION_FLAG
+049635:             );
+049636:             sessionStorage.removeItem(
+049637:                 MF_FINAL_QUEUE_DISPATCH_FLAG
+049638:             );
+049639:             sessionStorage.setItem('mf_auto_mode_running', 'true');
+049640:             autoModeRunning = true;
+049641:             updateStatusBox(`End of queue reached (${reason}). Closing mission and handing over to silent queue watcher...`);
+049642:             if (mfDebugEnabled) {
+049643:                 debugLog('SILENT QUEUE', `handover started. reason=${reason}`);
+049644:             }
+049645:             startSilentQueueWatcher();
+049646:             const closed = await closeMissionScreenForQueueRestart();
+049647:             if (mfDebugEnabled) {
+049648:                 debugLog('SILENT QUEUE', `Close clicked=${closed ? 'yes' : 'no'} | missionVisible=${isMissionScreenVisibleForQueueRestart() ? 'yes' : 'no'}`);
+049649:             }
+049650:             await wait(1000);
+049651:             updateStatusBox(
+049652:                 `Silent queue watcher active. Waiting for ${getConfiguredQueueRestartThreshold()} unattended missions.`
+049653:             );
+049654:             return false;
+049655:         } finally {
+049656:             mfQueueRestartWaiting = false;
+049657:         }
+049658:     }
+049659:     function readAutoAdvanceAfterDispatchState() {
+049660:         let state = null;
+049661:         try {
+049662:             state = JSON.parse(
+049663:                 sessionStorage.getItem(
+049664:                     MF_AUTO_ADVANCE_AFTER_DISPATCH_KEY
+049665:                 ) ||
+049666:                 localStorage.getItem(
+049667:                     MF_AUTO_ADVANCE_AFTER_DISPATCH_KEY
+049668:                 ) ||
+049669:                 'null'
+049670:             );
+049671:         } catch (error) {
+049672:             state = null;
+049673:         }
+049674:         if (
+049675:             !state ||
+049676:             typeof state !== 'object'
+049677:         ) {
+049678:             return null;
+049679:         }
+049680:         const age =
+049681:             Date.now() -
+049682:             Number(
+049683:                 state.clickedAt ||
+049684:                 state.createdAt ||
+049685:                 0
+049686:             );
+049687:         if (
+049688:             !Number.isFinite(age) ||
+049689:             age < 0 ||
+049690:             age > MF_AUTO_ADVANCE_MAX_AGE_MS
+049691:         ) {
+049692:             clearAutoAdvanceAfterDispatchState(
+049693:                 'stale advance state'
+049694:             );
+049695:             return null;
+049696:         }
+049697:         return state;
+049698:     }
+049699:     function writeAutoAdvanceAfterDispatchState(
+049700:         state
+049701:     ) {
+049702:         if (
+049703:             !state ||
+049704:             typeof state !== 'object'
+049705:         ) {
+049706:             return false;
+049707:         }
+049708:         const encoded =
+049709:             JSON.stringify(state);
+049710:         try {
+049711:             sessionStorage.setItem(
+049712:                 MF_AUTO_ADVANCE_AFTER_DISPATCH_KEY,
+049713:                 encoded
+049714:             );
+049715:         } catch (error) {}
+049716:         try {
+049717:             localStorage.setItem(
+049718:                 MF_AUTO_ADVANCE_AFTER_DISPATCH_KEY,
+049719:                 encoded
+049720:             );
+049721:         } catch (error) {}
+049722:         return true;
+049723:     }
+049724:     function clearAutoAdvanceAfterDispatchState(
+049725:         reason = ''
+049726:     ) {
+049727:         try {
+049728:             sessionStorage.removeItem(
+049729:                 MF_AUTO_ADVANCE_AFTER_DISPATCH_KEY
+049730:             );
+049731:         } catch (error) {}
+049732:         try {
+049733:             localStorage.removeItem(
+049734:                 MF_AUTO_ADVANCE_AFTER_DISPATCH_KEY
+049735:             );
+049736:         } catch (error) {}
+049737:         if (
+049738:             reason &&
+049739:             mfDebugEnabled
+049740:         ) {
+
+===== context-17 [52142-52291] =====
+052142:         cancelTrainedPersonnelPanelRefresh();
+052143:         cleanupMissionFinderIphoneNativePickerSurfaces();
+052144:         if (mfDebugRenderFrame !== null) {
+052145:             try {
+052146:                 cancelAnimationFrame(mfDebugRenderFrame);
+052147:             } catch (_error) {}
+052148:             clearTimeout(mfDebugRenderFrame);
+052149:             mfDebugRenderFrame = null;
+052150:         }
+052151:         if (mfVehicleLoadRenderFrame !== null) {
+052152:             try {
+052153:                 cancelAnimationFrame(mfVehicleLoadRenderFrame);
+052154:             } catch (_error) {}
+052155:             clearTimeout(mfVehicleLoadRenderFrame);
+052156:             mfVehicleLoadRenderFrame = null;
+052157:         }
+052158:         invalidateVehicleCheckboxCache();
+052159:         invalidateMissionContextCaches();
+052160:         invalidatePatientCountCache();
+052161:         if (mfDebugEnabled && reason) {
+052162:             debugLog('PANEL LIFECYCLE', `Removed after mission closed | ${reason}`);
+052163:         }
+052164:     }
+052165:     function stopBackgroundWatcherIntervalsOnly() {
+052166:         stopSilentQueueWatcher();
+052167:         if (mfGlobalTransportWatcherTimer) {
+052168:             clearInterval(mfGlobalTransportWatcherTimer);
+052169:             mfGlobalTransportWatcherTimer = null;
+052170:         }
+052171:         stopBruteApproachTransportWatcher();
+052172:         stopPostTransportRehookWatcher();
+052173:     }
+052174:     function stopSilentQueueWatcher() {
+052175:         if (!mfSilentQueueWatcherTimer) return;
+052176:         clearInterval(mfSilentQueueWatcherTimer);
+052177:         mfSilentQueueWatcherTimer = null;
+052178:     }
+052179:     function stopBruteApproachTransportWatcher() {
+052180:         if (!mfBruteApproachWatcherTimer) return;
+052181:         clearInterval(mfBruteApproachWatcherTimer);
+052182:         mfBruteApproachWatcherTimer = null;
+052183:     }
+052184:     function stopPostTransportRehookWatcher() {
+052185:         if (!mfPostTransportRehookTimer) return;
+052186:         clearInterval(mfPostTransportRehookTimer);
+052187:         mfPostTransportRehookTimer = null;
+052188:     }
+052189:     function syncBackgroundAutomationWatchers() {
+052190:         if (!MF_IS_TOP_WINDOW) return;
+052191:         autoModeRunning =
+052192:             !isManualAutoStopActive() &&
+052193:             (
+052194:                 sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
+052195:                 localStorage.getItem('mf_auto_mode_running') === 'true'
+052196:             );
+052197:         mfQueueRestartEnabled =
+052198:             localStorage.getItem(
+052199:                 'mf_next_queue_restart_enabled_v10'
+052200:             ) !== 'false';
+052201:         const silentQueueRequired = Boolean(
+052202:             sessionStorage.getItem(
+052203:                 MF_QUEUE_WAIT_ACTIVE_FLAG
+052204:             ) === 'true' ||
+052205:             sessionStorage.getItem(
+052206:                 MF_FINAL_QUEUE_DISPATCH_FLAG
+052207:             ) === 'true'
+052208:         );
+052209:         const transportWatcherRequired =
+052210:             isTransportAutomationAllowed();
+052211:         const postTransportWatcherRequired = Boolean(
+052212:             isPostTransportRehookPending() ||
+052213:             isRecentTransportRehookWindowActive()
+052214:         );
+052215:         if (silentQueueRequired) {
+052216:             startSilentQueueWatcher();
+052217:         } else {
+052218:             stopSilentQueueWatcher();
+052219:         }
+052220:         if (transportWatcherRequired) {
+052221:             startBruteApproachTransportWatcher();
+052222:         } else {
+052223:             stopBruteApproachTransportWatcher();
+052224:         }
+052225:         if (postTransportWatcherRequired) {
+052226:             startPostTransportRehookWatcher();
+052227:         } else {
+052228:             stopPostTransportRehookWatcher();
+052229:         }
+052230:     }
+052231:     function installBackgroundWatcherSupervisor() {
+052232:         if (!MF_IS_TOP_WINDOW) return;
+052233:         if (!mfBackgroundStorageHandler) {
+052234:             mfBackgroundStorageHandler = function(event) {
+052235:                 const key = String(event?.key || '');
+052236:                 if (
+052237:                     !key ||
+052238:                     key.startsWith('mf_')
+052239:                 ) {
+052240:                     syncBackgroundAutomationWatchers();
+052241:                 }
+052242:             };
+052243:             window.addEventListener(
+052244:                 'storage',
+052245:                 mfBackgroundStorageHandler
+052246:             );
+052247:         }
+052248:         if (!mfBackgroundWatcherSupervisorTimer) {
+052249:             mfBackgroundWatcherSupervisorTimer = setInterval(
+052250:                 () => {
+052251:                     syncBackgroundAutomationWatchers();
+052252:                     reconcileMissionFinderFrameRuntimesFromTop();
+052253:                 },
+052254:                 15 * 1000
+052255:             );
+052256:         }
+052257:         syncBackgroundAutomationWatchers();
+052258:         reconcileMissionFinderFrameRuntimesFromTop();
+052259:     }
+052260:     function scheduleAutoModeLoopResume(reason = 'mutation observer') {
+052261:         if (mfAutoLoopResumeTimer) return;
+052262:         mfAutoLoopResumeTimer = setTimeout(() => {
+052263:             mfAutoLoopResumeTimer = null;
+052264:             if (
+052265:                 autoModeRunning &&
+052266:                 isMissionPage() &&
+052267:                 !autoModeLoopActive &&
+052268:                 !mfAutoAdvanceResumeActive &&
+052269:                 !mfAutoUpgradeResumeActive &&
+052270:                 !readAutoPostDispatchUpgradeState() &&
+052271:                 !readAutoAdvanceAfterDispatchState() &&
+052272:                 !isManualAutoStopActive()
+052273:             ) {
+052274:                 if (mfDebugEnabled) {
+052275:                     debugLog(
+052276:                         'AUTO RESUME COALESCED',
+052277:                         reason
+052278:                     );
+052279:                 }
+052280:                 runAutoModeLoop();
+052281:             }
+052282:         }, 200);
+052283:     }
+052284:     function flushMissionFinderMutationWork() {
+052285:         mfMainMutationFlushTimer = null;
+052286:         const flags = { ...mfMainMutationFlags };
+052287:         resetMainMutationFlags();
+052288:         if (flags.vehicleListChanged) {
+052289:             invalidateVehicleCheckboxCache();
+052290:             mfDispatchReadinessExpensiveCache.expiresAt = 0;
+052291:         }
+
+===== context-18 [52347-52587] =====
+052347:         if (
+052348:             missionPage &&
+052349:             wrapper &&
+052350:             shouldRefreshTrainedPersonnelPanel
+052351:         ) {
+052352:             invalidateLiveTrainedPersonnelDisplayCache();
+052353:             scheduleTrainedPersonnelPanelRefresh();
+052354:         }
+052355:         if (autoModeRunning && missionPage && flags.relevant) {
+052356:             scheduleAutoModeLoopResume(
+052357:                 'filtered/coalesced DOM mutation'
+052358:             );
+052359:         }
+052360:     }
+052361:     function scheduleMissionFinderMutationWork(records = []) {
+052362:         const flags = classifyMissionFinderMutations(records);
+052363:         if (!flags.relevant) return;
+052364:         mfRuntimeMemoryLastMutationAt = Date.now();
+052365:         mergeMainMutationFlags(flags);
+052366:         if (mfMainMutationFlushTimer) return;
+052367:         mfMainMutationFlushTimer = setTimeout(
+052368:             flushMissionFinderMutationWork,
+052369:             200
+052370:         );
+052371:     }
+052372:     function shouldKeepMissionFinderObserverForCurrentFrame() {
+052373:         if (MF_IS_TOP_WINDOW) return true;
+052374:         if (!document.body || !isMissionPage()) return false;
+052375:         if (isMfV3ManagedActiveWorker()) return true;
+052376:         try {
+052377:             return getPrimaryMissionRequirementDocument() === document;
+052378:         } catch (_error) {
+052379:             return true;
+052380:         }
+052381:     }
+052382:     function suspendMissionFinderRuntimeForInactiveFrame(
+052383:         reason = ''
+052384:     ) {
+052385:         if (MF_IS_TOP_WINDOW) return false;
+052386:         if (mfMainMutationObserver) {
+052387:             mfMainMutationObserver.disconnect();
+052388:             mfMainMutationObserver = null;
+052389:         }
+052390:         if (mfMainMutationFlushTimer) {
+052391:             clearTimeout(mfMainMutationFlushTimer);
+052392:             mfMainMutationFlushTimer = null;
+052393:         }
+052394:         if (mfAutoLoopResumeTimer) {
+052395:             clearTimeout(mfAutoLoopResumeTimer);
+052396:             mfAutoLoopResumeTimer = null;
+052397:         }
+052398:         if (mfDebugRenderFrame !== null) {
+052399:             try {
+052400:                 cancelAnimationFrame(mfDebugRenderFrame);
+052401:             } catch (_error) {}
+052402:             clearTimeout(mfDebugRenderFrame);
+052403:             mfDebugRenderFrame = null;
+052404:         }
+052405:         if (mfVehicleLoadRenderFrame !== null) {
+052406:             try {
+052407:                 cancelAnimationFrame(mfVehicleLoadRenderFrame);
+052408:             } catch (_error) {}
+052409:             clearTimeout(mfVehicleLoadRenderFrame);
+052410:             mfVehicleLoadRenderFrame = null;
+052411:         }
+052412:         if (mfIphoneNativePickerSyncTimer) {
+052413:             clearTimeout(mfIphoneNativePickerSyncTimer);
+052414:             mfIphoneNativePickerSyncTimer = null;
+052415:         }
+052416:         mfMissingUnitRetryIntervals.forEach(intervalId => {
+052417:             clearInterval(intervalId);
+052418:         });
+052419:         mfMissingUnitRetryIntervals.clear();
+052420:         stopSessionRuntimeTicker();
+052421:         stopMissionFinderRuntimeMemoryMaintenance();
+052422:         cancelTrainedPersonnelPanelRefresh();
+052423:         removeMissionFinderRuntimeMemoryActivityTracking();
+052424:         cleanupMissionFinderIphoneNativePickerSurfaces();
+052425:         releaseMissionFinderLargeEphemeralState(reason);
+052426:         document.getElementById(
+052427:             'mission-finder-wrapper'
+052428:         )?.remove();
+052429:         invalidateVehicleCheckboxCache();
+052430:         invalidateMissionContextCaches();
+052431:         invalidatePatientCountCache();
+052432:         invalidateTransportCaches();
+052433:         mfVehicleMatchCandidateCache.clear();
+052434:         pruneLiveTrainingVerifyCache();
+052435:         resetMainMutationFlags();
+052436:         if (!mfRuntimeSuspendedForInactiveFrame) {
+052437:             mfRuntimeMemoryInactiveSuspendCount += 1;
+052438:         }
+052439:         mfRuntimeSuspendedForInactiveFrame = true;
+052440:         mfRuntimeMemoryLastReason =
+052441:             String(reason || 'inactive mission frame');
+052442:         return true;
+052443:     }
+052444:     function reconcileMissionFinderFrameRuntime(
+052445:         reason = 'top-window ownership check'
+052446:     ) {
+052447:         if (MF_IS_TOP_WINDOW) return;
+052448:         if (!shouldKeepMissionFinderObserverForCurrentFrame()) {
+052449:             suspendMissionFinderRuntimeForInactiveFrame(reason);
+052450:             return;
+052451:         }
+052452:         const wasSuspended =
+052453:             mfRuntimeSuspendedForInactiveFrame;
+052454:         mfRuntimeSuspendedForInactiveFrame = false;
+052455:         if (!mfMainMutationObserver) {
+052456:             startMissionFinderObserver();
+052457:         }
+052458:         if (
+052459:             wasSuspended &&
+052460:             isMissionPage() &&
+052461:             !document.getElementById(
+052462:                 'mission-finder-wrapper'
+052463:             )
+052464:         ) {
+052465:             initialize();
+052466:         }
+052467:         startMissionFinderRuntimeMemoryMaintenance();
+052468:     }
+052469:     function dispatchMissionFinderFrameRuntimeEvent(
+052470:         candidateDocument,
+052471:         detail = {}
+052472:     ) {
+052473:         try {
+052474:             if (!candidateDocument?.documentElement) return;
+052475:             const ownerWindow =
+052476:                 candidateDocument.defaultView || window;
+052477:             const EventConstructor =
+052478:                 ownerWindow.CustomEvent || CustomEvent;
+052479:             candidateDocument.dispatchEvent(
+052480:                 new EventConstructor(
+052481:                     MF_FRAME_RUNTIME_RECONCILE_EVENT,
+052482:                     { detail }
+052483:                 )
+052484:             );
+052485:         } catch (_error) {}
+052486:     }
+052487:     function reconcileMissionFinderFrameRuntimesFromTop() {
+052488:         if (!MF_IS_TOP_WINDOW) return;
+052489:         try {
+052490:             getMissionAccessibleDocuments(false)
+052491:                 .forEach(candidateDocument => {
+052492:                     if (candidateDocument === document) return;
+052493:                     dispatchMissionFinderFrameRuntimeEvent(
+052494:                         candidateDocument,
+052495:                         {
+052496:                             reason:
+052497:                                 'top-window ownership supervisor'
+052498:                         }
+052499:                     );
+052500:                 });
+052501:         } catch (_error) {}
+052502:     }
+052503:     function releaseRemovedMissionFinderFrameRuntimes(
+052504:         records = []
+052505:     ) {
+052506:         if (!MF_IS_TOP_WINDOW) return;
+052507:         const frames = new Set();
+052508:         const addFrames = node => {
+052509:             if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+052510:                 return;
+052511:             }
+052512:             if (node.matches?.('iframe')) {
+052513:                 frames.add(node);
+052514:             }
+052515:             try {
+052516:                 node.querySelectorAll?.('iframe')
+052517:                     .forEach(frame => frames.add(frame));
+052518:             } catch (_error) {}
+052519:         };
+052520:         records.forEach(record => {
+052521:             record.removedNodes?.forEach(addFrames);
+052522:         });
+052523:         frames.forEach(frame => {
+052524:             try {
+052525:                 const candidateDocument =
+052526:                     frame.contentDocument ||
+052527:                     frame.contentWindow?.document;
+052528:                 dispatchMissionFinderFrameRuntimeEvent(
+052529:                     candidateDocument,
+052530:                     {
+052531:                         removed: true,
+052532:                         reason:
+052533:                             'owner document removed mission iframe'
+052534:                     }
+052535:                 );
+052536:             } catch (_error) {}
+052537:         });
+052538:     }
+052539:     function installMissionFinderFrameRuntimeReconciliation() {
+052540:         if (mfFrameRuntimeReconcileHandler) return;
+052541:         mfFrameRuntimeReconcileHandler = event => {
+052542:             if (event?.detail?.removed === true) {
+052543:                 cleanupMissionFinderRuntime();
+052544:                 return;
+052545:             }
+052546:             reconcileMissionFinderFrameRuntime(
+052547:                 event?.detail?.reason ||
+052548:                     'top-window ownership check'
+052549:             );
+052550:         };
+052551:         document.addEventListener(
+052552:             MF_FRAME_RUNTIME_RECONCILE_EVENT,
+052553:             mfFrameRuntimeReconcileHandler
+052554:         );
+052555:     }
+052556:     function suspendMissionFinderRuntimeForPageHide(
+052557:         reason = ''
+052558:     ) {
+052559:         if (mfMainMutationObserver) {
+052560:             mfMainMutationObserver.disconnect();
+052561:             mfMainMutationObserver = null;
+052562:         }
+052563:         if (mfIssueRecorderObserver) {
+052564:             mfIssueRecorderObserver.disconnect();
+052565:             mfIssueRecorderObserver = null;
+052566:         }
+052567:         if (mfMainMutationFlushTimer) {
+052568:             clearTimeout(mfMainMutationFlushTimer);
+052569:             mfMainMutationFlushTimer = null;
+052570:         }
+052571:         if (mfAutoLoopResumeTimer) {
+052572:             clearTimeout(mfAutoLoopResumeTimer);
+052573:             mfAutoLoopResumeTimer = null;
+052574:         }
+052575:         if (mfIssueRecorderMutationTimer) {
+052576:             clearTimeout(mfIssueRecorderMutationTimer);
+052577:             mfIssueRecorderMutationTimer = null;
+052578:         }
+052579:         if (mfDebugRenderFrame !== null) {
+052580:             try {
+052581:                 cancelAnimationFrame(mfDebugRenderFrame);
+052582:             } catch (_error) {}
+052583:             clearTimeout(mfDebugRenderFrame);
+052584:             mfDebugRenderFrame = null;
+052585:         }
+052586:         if (mfVehicleLoadRenderFrame !== null) {
+052587:             try {
+
+===== context-19 [52834-53084] =====
+052834:             );
+052835:             return;
+052836:         }
+052837:         mfRuntimeSuspendedForInactiveFrame = false;
+052838:         installIssueRecorderWatchers();
+052839:         installPersonnelRegistryUpdateHandler();
+052840:         installMissionFinderRuntimeMemoryActivityTracking();
+052841:         if (MF_IS_TOP_WINDOW) {
+052842:             installManualMissionClickFlagClearer();
+052843:             installBackgroundWatcherSupervisor();
+052844:             compactMissionFinderPersistentStorage();
+052845:             if (
+052846:                 localStorage.getItem(
+052847:                     'mf_post_transport_rehook_pending_v1'
+052848:                 ) === 'true' ||
+052849:                 isRecentTransportRehookWindowActive()
+052850:             ) {
+052851:                 forceAutoModeBackOnForTransportRehook();
+052852:                 setTimeout(() => {
+052853:                     openFirstMissionAfterTransportAutoClose(
+052854:                         'startup-pending-rehook'
+052855:                     );
+052856:                 }, 2500);
+052857:             }
+052858:         }
+052859:         if (isMissionPage()) initialize();
+052860:         globalThis.__MCN_BOOT_MARK__?.('mission-observer-active');
+052861:         mfMainMutationObserver = new MutationObserver(records => {
+052862:             releaseRemovedMissionFinderFrameRuntimes(records);
+052863:             scheduleMissionFinderMutationWork(records);
+052864:         });
+052865:         mfMainMutationObserver.observe(document.body, {
+052866:             childList: true,
+052867:             subtree: true
+052868:         });
+052869:         if (isMissionPage()) {
+052870:             startMissionFinderRuntimeMemoryMaintenance();
+052871:         }
+052872:         scheduleAutoMemoryRecycleResume();
+052873:     }
+052874:     function getMfV3DormantPreloadMissionId() {
+052875:         try {
+052876:             const match = String(
+052877:                 window.location.pathname || ''
+052878:             ).match(/^\/missions\/(\d+)(?:\/|$)/i);
+052879:             return match ? match[1] : '';
+052880:         } catch (_error) {
+052881:             return '';
+052882:         }
+052883:     }
+052884:     function getMfV3OperationalOwnershipBridge() {
+052885:         try {
+052886:             return (
+052887:                 window.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__ ||
+052888:                 window.__MCN_V3_PIPELINE_PRELOAD_BRIDGE__ ||
+052889:                 null
+052890:             );
+052891:         } catch (_error) {
+052892:             return null;
+052893:         }
+052894:     }
+052895:     function installMfV3DormantPreloadBridge() {
+052896:         if (!mfV3DormantPreload) return null;
+052897:         try {
+052898:             const existing =
+052899:                 window[MF_V3_DORMANT_PRELOAD_BRIDGE_KEY];
+052900:             if (existing) return existing;
+052901:             const bridge = Object.freeze({
+052902:                 protocolVersion() {
+052903:                     return 1;
+052904:                 },
+052905:                 missionFinderVersion() {
+052906:                     return '10.6.177';
+052907:                 },
+052908:                 isDormant() {
+052909:                     return mfV3DormantPreload;
+052910:                 },
+052911:                 isPromoted() {
+052912:                     return mfV3DormantPreloadPromoted;
+052913:                 },
+052914:                 missionId() {
+052915:                     return getMfV3DormantPreloadMissionId();
+052916:                 },
+052917:                 status() {
+052918:                     const ownershipBridge =
+052919:                         getMfV3OperationalOwnershipBridge();
+052920:                     let ownsOperationalState = false;
+052921:                     try {
+052922:                         ownsOperationalState =
+052923:                             ownershipBridge?.isActive?.() === true;
+052924:                     } catch (_error) {}
+052925:                     return {
+052926:                         protocolVersion: 1,
+052927:                         missionFinderVersion: '10.6.177',
+052928:                         dormant: mfV3DormantPreload,
+052929:                         promoted: mfV3DormantPreloadPromoted,
+052930:                         promotedAt: mfV3DormantPreloadPromotedAt,
+052931:                         promotionSource:
+052932:                             mfV3DormantPreloadPromotionSource,
+052933:                         missionId:
+052934:                             getMfV3DormantPreloadMissionId(),
+052935:                         frameName: String(window.name || ''),
+052936:                         ownsOperationalState,
+052937:                         observerStarted:
+052938:                             Boolean(mfMainMutationObserver)
+052939:                     };
+052940:                 },
+052941:                 promote(payload = {}) {
+052942:                     const expectedMissionId = String(
+052943:                         payload.expectedMissionId || ''
+052944:                     ).trim();
+052945:                     const activationToken = String(
+052946:                         payload.activationToken || ''
+052947:                     ).trim();
+052948:                     const currentMissionId =
+052949:                         getMfV3DormantPreloadMissionId();
+052950:                     const frameName = String(window.name || '');
+052951:                     const ownershipBridge =
+052952:                         getMfV3OperationalOwnershipBridge();
+052953:                     let ownsOperationalState = false;
+052954:                     try {
+052955:                         ownsOperationalState =
+052956:                             ownershipBridge?.isActive?.() === true;
+052957:                     } catch (_error) {}
+052958:                     if (mfV3DormantPreloadPromoted) {
+052959:                         return Boolean(
+052960:                             !mfV3DormantPreload &&
+052961:                             currentMissionId &&
+052962:                             (!expectedMissionId ||
+052963:                                 expectedMissionId === currentMissionId)
+052964:                         );
+052965:                     }
+052966:                     if (
+052967:                         !mfV3DormantPreload ||
+052968:                         !activationToken ||
+052969:                         !currentMissionId ||
+052970:                         expectedMissionId !== currentMissionId ||
+052971:                         !frameName.startsWith(
+052972:                             MF_V3_ACTIVE_NAME_PREFIX
+052973:                         ) ||
+052974:                         !ownsOperationalState
+052975:                     ) {
+052976:                         return false;
+052977:                     }
+052978:                     mfV3DormantPreload = false;
+052979:                     mfV3DormantPreloadPromoted = true;
+052980:                     mfV3DormantPreloadPromotedAt = Date.now();
+052981:                     mfV3DormantPreloadPromotionSource = String(
+052982:                         payload.source || 'v3-promotion'
+052983:                     ).slice(0, 120);
+052984:                     autoModeRunning = false;
+052985:                     try {
+052986:                         installMissionFinderAlertOverride();
+052987:                         if (document.body) {
+052988:                             startMissionFinderObserver();
+052989:                         } else {
+052990:                             document.addEventListener(
+052991:                                 'DOMContentLoaded',
+052992:                                 startMissionFinderObserver,
+052993:                                 { once: true }
+052994:                             );
+052995:                         }
+052996:                         return true;
+052997:                     } catch (error) {
+052998:                         try {
+052999:                             cleanupMissionFinderRuntime();
+053000:                         } catch (_cleanupError) {}
+053001:                         try {
+053002:                             document.getElementById(
+053003:                                 'mission-finder-wrapper'
+053004:                             )?.remove();
+053005:                         } catch (_cleanupError) {}
+053006:                         mfV3DormantPreload = true;
+053007:                         mfV3DormantPreloadPromoted = false;
+053008:                         mfV3DormantPreloadPromotedAt = 0;
+053009:                         mfV3DormantPreloadPromotionSource = '';
+053010:                         return false;
+053011:                     }
+053012:                 }
+053013:             });
+053014:             window[MF_V3_DORMANT_PRELOAD_BRIDGE_KEY] = bridge;
+053015:             return bridge;
+053016:         } catch (_error) {
+053017:             return null;
+053018:         }
+053019:     }
+053020:     if (mfV3DormantPreload) {
+053021:         installMfV3DormantPreloadBridge();
+053022:     } else if (document.body) {
+053023:         startMissionFinderObserver();
+053024:     } else {
+053025:         document.addEventListener(
+053026:             'DOMContentLoaded',
+053027:             startMissionFinderObserver,
+053028:             { once: true }
+053029:         );
+053030:     }
+053031: })();
+053032:     } catch (error) {
+053033:         bootError('mission-finder-startup', error);
+053034:         console.error('[MissionChief Complete Tools] Mission Finder module startup failed:', error);
+053035:     }
+053036: })();
+053037: return true;
+053038: };
+053039: const dormantPreload = String(window.name || '').startsWith('mcn-v3-pipeline-preload-');
+053040: if (dormantPreload) {
+053041: window.__MCN_HEAVY_RUNTIME_LOADED__ = false;
+053042: globalThis.__MCN_BOOT_MARK__?.('dormant-preload-admitted');
+053043: let promoted = false;
+053044: let promotedAt = 0;
+053045: let promotionSource = '';
+053046: const missionId = () => String(location.pathname || '').match(/^\/missions\/(\d+)/i)?.[1] || '';
+053047: const ownership = () => window.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__ || window.__MCN_V3_PIPELINE_PRELOAD_BRIDGE__ || null;
+053048: const bridge = Object.freeze({
+053049: protocolVersion: () => 1,
+053050: missionFinderVersion: () => '10.6.177',
+053051: isDormant: () => !promoted,
+053052: isPromoted: () => promoted,
+053053: missionId,
+053054: status() {
+053055: return {
+053056: protocolVersion: 1,
+053057: missionFinderVersion: '10.6.177',
+053058: dormant: !promoted,
+053059: promoted,
+053060: promotedAt,
+053061: promotionSource,
+053062: missionId: missionId(),
+053063: frameName: String(window.name || ''),
+053064: ownsOperationalState: ownership()?.isActive?.() === true,
+053065: observerStarted: heavyStarted,
+053066: lightweight: !heavyStarted,
+053067: };
+053068: },
+053069: promote(payload = {}) {
+053070: const expected = String(payload.expectedMissionId || '');
+053071: if (!payload.activationToken || expected !== missionId() || !String(window.name || '').startsWith('mcn-v3-active-worker-') || ownership()?.isActive?.() !== true) return false;
+053072: promoted = true;
+053073: promotedAt = Date.now();
+053074: promotionSource = String(payload.source || 'v3-lightweight-promotion').slice(0, 120);
+053075: if (!startHeavyCommandNexusRuntime() || window.missionFinder2026Initialized !== true) {
+053076: promoted = false;
+053077: return false;
+053078: }
+053079: return true;
+053080: },
+053081: });
+053082: window.__MCN_V2_DORMANT_PRELOAD_BRIDGE__ = bridge;
+053083: } else if (shouldStartHeavyCommandNexusRuntime()) {
+053084: globalThis.__MCN_BOOT_MARK__?.('heavy-runtime-admitted');

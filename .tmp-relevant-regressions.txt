@@ -1,0 +1,527 @@
+===== scripts/check-v3-adaptive-memory-pressure.mjs =====
+#!/usr/bin/env node
+
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
+
+const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
+
+function extractFunction(name) {
+  const start = source.indexOf(`function ${name}(`);
+  assert.ok(start >= 0, `function ${name} must exist`);
+  const signatureEnd = source.indexOf(') {', start);
+  const brace = signatureEnd >= 0 ? signatureEnd + 2 : source.indexOf('{', start);
+  let depth = 0;
+  let quote = '';
+  let escaped = false;
+  let lineComment = false;
+  let blockComment = false;
+  for (let index = brace; index < source.length; index += 1) {
+    const character = source[index];
+    const next = source[index + 1] || '';
+    if (lineComment) {
+      if (character === '\n') lineComment = false;
+      continue;
+    }
+    if (blockComment) {
+      if (character === '*' && next === '/') {
+        blockComment = false;
+        index += 1;
+      }
+      continue;
+    }
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (character === '\\') escaped = true;
+      else if (character === quote) quote = '';
+      continue;
+    }
+    if (character === '/' && next === '/') {
+      lineComment = true;
+      index += 1;
+      continue;
+    }
+    if (character === '/' && next === '*') {
+      blockComment = true;
+      index += 1;
+      continue;
+    }
+    if (character === "'" || character === '"' || character === '`') {
+      quote = character;
+      continue;
+    }
+    if (character === '{') depth += 1;
+    if (character === '}' && --depth === 0) return source.slice(start, index + 1);
+  }
+  assert.fail(`function ${name} is unterminated`);
+}
+
+assert.match(source, /const PIPELINE_PRELOAD_COUNT = 1;/);
+assert.match(source, /const CONTROLLER_MEMORY_PRESSURE_BYTES = 768 \* 1024 \* 1024;/);
+assert.match(source, /const CONTROLLER_MEMORY_GROWTH_BYTES = 192 \* 1024 \* 1024;/);
+assert.match(source, /const CONTROLLER_MEMORY_WARMUP_MS = 60 \* 1000;/);
+assert.match(source, /const CONTROLLER_MEMORY_SUSTAIN_MS = 15 \* 1000;/);
+assert.match(source, /const CONTROLLER_MEMORY_SAMPLE_MS = 5 \* 1000;/);
+assert.match(source, /const CONTROLLER_MEMORY_RELEASE_SUSTAIN_MS = 60 \* 1000;/);
+assert.match(source, /const CONTROLLER_MEMORY_RELEASE_CEILING_BYTES = 640 \* 1024 \* 1024;/);
+assert.match(source, /const CONTROLLER_MEMORY_RELEASE_GROWTH_BYTES = 96 \* 1024 \* 1024;/);
+assert.match(source, /const CONTROLLER_PRESSURE_RECYCLE_ADVANCES = 8;/);
+assert.match(source, /const CONTROLLER_PRESSURE_RECYCLE_MAX_AGE_MS = 4 \* 60 \* 1000;/);
+assert.match(source, /const CONTROLLER_RECYCLE_RESTART_DELAY_MS = 900;/);
+assert.match(source, /const CONTROLLER_FULL_PAGE_RECYCLE_EVERY_RUNTIME_CYCLES = 3;/);
+
+const disconnectObservers = extractFunction('disconnectAirfieldOperationsSupervisorObservers');
+const installObservers = extractFunction('installAirfieldOperationsSupervisorObservers');
+const rootDocument = { body: {} };
+const nestedFrame = { isConnected: true };
+const nestedDocument = { body: {}, defaultView: { frameElement: nestedFrame } };
+const observerInstances = [];
+class FakeMutationObserver {
+  constructor(callback) {
+    this.callback = callback;
+    this.disconnected = false;
+    observerInstances.push(this);
+  }
+  observe() {}
+  disconnect() { this.disconnected = true; }
+}
+const observerState = { wanted: true, airfieldObservers: new Map() };
+const observerContext = vm.createContext({
+  state: observerState,
+  MutationObserver: FakeMutationObserver,
+  accessibleWorkerDocuments: () => [rootDocument, nestedDocument],
+  applyAirfieldOperationsSupervisorCrossRef() {},
+});
+vm.runInContext(`${disconnectObservers}\n${installObservers}`, observerContext);
+observerContext.installAirfieldOperationsSupervisorObservers(rootDocument);
+assert.equal(observerState.airfieldObservers.size, 2);
+observerContext.installAirfieldOperationsSupervisorObservers(rootDocument);
+assert.equal(observerInstances.length, 2, 'the same mission documents must not gain duplicate observers');
+nestedFrame.isConnected = false;
+observerContext.accessibleWorkerDocuments = () => [rootDocument];
+observerContext.installAirfieldOperationsSupervisorObservers(rootDocument);
+assert.equal(observerState.airfieldObservers.size, 1);
+assert.equal(observerInstances[1].disconnected, true, 'a detached nested mission document must be released');
+observerContext.disconnectAirfieldOperationsSupervisorObservers();
+assert.equal(observerState.airfieldObservers.size, 0);
+assert.equal(observerInstances[0].disconnected, true, 'Worker A teardown must disconnect its root observer');
+
+const forgetDocument = extractFunction('forgetWorkerDocument');
+assert.ok(
+  forgetDocument.indexOf('disconnectAirfieldOperationsSupervisorObservers()') <
+    forgetDocument.indexOf('state.workerDocument = null'),
+  'observer teardown must happen before the controller drops Worker A document identity'
+);
+
+const heapSnapshot = extractFunction('controllerUsedHeapBytes');
+const pressureReleaseLimit = extractFunction('controllerMemoryPressureReleaseLimit');
+const activatePressure = extractFunction('activateControllerMemoryPressure');
+const pressureState = {
+  pipelineMemoryPressureActive: false,
+  pipelineMemoryPressureSince: 0,
+  pipelineMemoryPressureHeapBytes: 0,
+  pipelineMemoryPressureActivations: 0,
+  pipelineMemoryRecyclePending: false,
+  pipelineMemoryBaselineBytes: 0,
+  pipelineMemoryLastBytes: 0,
+  pipelineMemoryPeakBytes: 0,
+  pipelineMemoryCandidateSince: 0,
+  pipelineMemoryPressureReason: '',
+  pipelineMemoryPressureBelowSince: 0,
+  pipelineMemoryPressureReleases: 0,
+  pipelineMemoryLastSampleAt: 0,
+  runStartedAt: '',
+  wanted: true,
+  running: true,
+  stopping: false,
+  lowQueuePaused: false,
+  transportKind: '',
+  transportServiceActive: false,
+};
+let pipelinePauses = 0;
+let pipelineRestarts = 0;
+let now = Date.now();
+class FakeDate extends Date {
+  static now() { return now; }
+}
+pressureState.runStartedAt = new Date(now).toISOString();
+const pressureContext = vm.createContext({
+  state: pressureState,
+  performance: { memory: { usedJSHeapSize: 537 * 1024 * 1024 } },
+  CONTROLLER_MEMORY_PRESSURE_BYTES: 768 * 1024 * 1024,
+  CONTROLLER_MEMORY_GROWTH_BYTES: 192 * 1024 * 1024,
+  CONTROLLER_MEMORY_WARMUP_MS: 60 * 1000,
+  CONTROLLER_MEMORY_SUSTAIN_MS: 15 * 1000,
+  CONTROLLER_MEMORY_SAMPLE_MS: 5 * 1000,
+  CONTROLLER_MEMORY_RELEASE_SUSTAIN_MS: 60 * 1000,
+  CONTROLLER_MEMORY_RELEASE_CEILING_BYTES: 640 * 1024 * 1024,
+  CONTROLLER_MEMORY_RELEASE_GROWTH_BYTES: 96 * 1024 * 1024,
+  Date: FakeDate,
+  Math,
+  window: { setTimeout(callback) { callback(); } },
+  pausePipelineController() { pipelinePauses += 1; },
+  startPipelineController() { pipelineRestarts += 1; },
+  compactControllerEphemeralMemory() {},
+  pipelineRecord() {},
+  log() {},
+  result: null,
+});
+vm.runInContext(
+  `${heapSnapshot}\n${pressureReleaseLimit}\n${activatePressure}\nresult = activateControllerMemoryPressure();`,
+  pressureContext
+);
+assert.equal(pressureContext.result, false, 'normal A+B startup heap must be learned, not rejected');
+assert.equal(pressureState.pipelineMemoryBaselineBytes, 537 * 1024 * 1024);
+now += 61 * 1000;
+pressureContext.performance.memory.usedJSHeapSize = 740 * 1024 * 1024;
+vm.runInContext('result = activateControllerMemoryPressure();', pressureContext);
+assert.equal(pressureContext.result, false, 'growth must be sustained before B is released');
+now += 16 * 1000;
+vm.runInContext('result = activateControllerMemoryPressure();', pressureContext);
+assert.equal(pressureContext.result, true);
+assert.equal(pressureState.pipelineMemoryPressureActive, true);
+assert.equal(pressureState.pipelineMemoryRecyclePending, true);
+assert.equal(pressureState.pipelineMemoryPressureReason, 'sustained-growth');
+assert.equal(pipelinePauses, 1);
+vm.runInContext('result = activateControllerMemoryPressure();', pressureContext);
+assert.equal(pressureContext.result, false);
+assert.equal(pipelinePauses, 1, 'RAM protection activation must be idempotent');
+
+pressureState.pipelineMemoryRecyclePending = false;
+pressureContext.performance.memory.usedJSHeapSize = 600 * 1024 * 1024;
+now += 5 * 1000;
+vm.runInContext('result = activateControllerMemoryPressure();', pressureContext);
+assert.equal(pressureState.pipelineMemoryPressureActive, true, 'one low sample must not release RAM protection');
+now += 61 * 1000;
+vm.runInContext('result = activateControllerMemoryPressure();', pressureContext);
+assert.equal(pressureState.pipelineMemoryPressureActive, false, 'a sustained safe heap must release RAM protection');
+assert.equal(pressureState.pipelineMemoryPressureReleases, 1);
+assert.equal(pipelineRestarts, 1, 'preload B may return after the sustained safe period');
+
+const recycleDecision = extractFunction('shouldRecycleControllerRuntimeAtBoundary');
+for (const token of [
+  'pipelineMemoryRecyclePending',
+  'CONTROLLER_PRESSURE_RECYCLE_ADVANCES',
+  'CONTROLLER_PRESSURE_RECYCLE_MAX_AGE_MS',
+]) {
+  assert.ok(recycleDecision.includes(token), `memory-pressure recycle decision lost ${token}`);
+}
+const recycle = extractFunction('recycleControllerRuntimeAtMissionBoundary');
+assert.ok(recycle.includes('state.pipelineMemoryRecyclePending = false'));
+assert.ok(recycle.includes('CONTROLLER_RECYCLE_RESTART_DELAY_MS'));
+assert.ok(recycle.includes('removeWorker(false)'));
+assert.ok(recycle.includes('window.location.reload()'), 'native iframe memory must get a periodic full-realm recycle');
+assert.ok(recycle.includes('CONTROLLER_FULL_PAGE_RECYCLE_EVERY_RUNTIME_CYCLES'));
+assert.doesNotMatch(recycle, /localStorage\.(?:clear|removeItem)/);
+
+const dispose = extractFunction('disposeManagedFrameRuntime');
+assert.ok(dispose.includes("removeEventListener('load', loadHandler)"));
+assert.ok(dispose.includes('contentWindow?.stop?.()'));
+assert.ok(dispose.includes('V2_FRAME_RUNTIME_RECONCILE_EVENT'));
+const removeSlot = extractFunction('removePipelineSlot');
+assert.ok(removeSlot.includes('slot.frame = null'), 'removed preload slots must release their iframe document edge');
+assert.ok(removeSlot.includes("frame.src = 'about:blank'"));
+
+const largeRelease = extractFunction('releaseMissionFinderLargeEphemeralState');
+for (const token of [
+  'resetMissionRequirementPreloadCache',
+  'resetVehicleLoadState',
+  'mfLastMissionDefinitionRawRows = []',
+  'mfPatientSelectionLedgerCache = null',
+  'mfTransportOwnerModal = null',
+]) {
+  assert.ok(largeRelease.includes(token), `embedded cleanup lost ${token}`);
+}
+for (const lifecycle of [
+  'suspendMissionFinderRuntimeForInactiveFrame',
+  'suspendMissionFinderRuntimeForPageHide',
+  'cleanupMissionFinderRuntime',
+]) {
+  assert.ok(
+    extractFunction(lifecycle).includes('releaseMissionFinderLargeEphemeralState('),
+    `${lifecycle} must release large transient mission state`
+  );
+}
+
+for (const durableKey of [
+  'mcPersonnelVehicleTrainingRegistry_v1',
+  'mcPersonnelService',
+  'mcPersonnelProfile',
+]) {
+  assert.doesNotMatch(largeRelease, new RegExp(durableKey));
+}
+
+console.log(
+  'PASS: V3 owns mission observers, learns normal A+B heap, sheds B only after sustained pressure, releases the latch after a safe minute, and clears disposable state without touching durable registers.'
+);
+
+
+===== scripts/check-v3-dormant-preload.mjs =====
+#!/usr/bin/env node
+
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
+
+const source = await readFile(
+  'src/missionchief-command-nexus.user.js',
+  'utf8'
+);
+
+assert.match(
+  source,
+  /let autoModeRunning\s*=\s*!mfV3DormantPreload\s*&&/,
+  'dormant preloads must not inherit shared Auto Mode running state'
+);
+assert.match(
+  source,
+  /function startMissionFinderObserver\(\)\s*\{\s*if \(mfV3DormantPreload\) return;/,
+  'the Mission Finder runtime must fail closed while a V3 preload is dormant'
+);
+assert.match(
+  source,
+  /if \(mfV3DormantPreload\)\s*\{\s*installMfV3DormantPreloadBridge\(\);\s*\} else if \(document\.body\)/,
+  'dormant startup must install only the promotion bridge instead of the observer'
+);
+assert.match(
+  source,
+  /!activationToken[\s\S]*expectedMissionId !== currentMissionId[\s\S]*MF_V3_ACTIVE_NAME_PREFIX[\s\S]*!ownsOperationalState/,
+  'promotion must require a token, the expected mission, an active frame name and sole storage ownership'
+);
+
+const blockStart = source.indexOf(
+  '    function getMfV3DormantPreloadMissionId()'
+);
+const blockEnd = source.indexOf(
+  '\n    if (mfV3DormantPreload) {',
+  blockStart
+);
+assert.ok(blockStart >= 0 && blockEnd > blockStart, 'dormant bridge implementation was found');
+
+const bridgeSource = source.slice(blockStart, blockEnd);
+let observerStarts = 0;
+let alertInstalls = 0;
+let cleanups = 0;
+let ownsOperationalState = false;
+
+const windowObject = {
+  name: 'mcn-v3-pipeline-preload-test',
+  location: { pathname: '/missions/123' },
+  __MCN_V3_FRAME_OWNERSHIP_BRIDGE__: {
+    isActive() {
+      return ownsOperationalState;
+    },
+  },
+};
+const context = vm.createContext({
+  window: windowObject,
+  document: {
+    body: {},
+    addEventListener() {},
+    getElementById() {
+      return null;
+    },
+  },
+  MF_V3_DORMANT_PRELOAD_BRIDGE_KEY: '__testDormantBridge',
+  MF_V3_ACTIVE_NAME_PREFIX: 'mcn-v3-active-worker-',
+  mfV3DormantPreload: true,
+  mfV3DormantPreloadPromoted: false,
+  mfV3DormantPreloadPromotedAt: 0,
+  mfV3DormantPreloadPromotionSource: '',
+  mfMainMutationObserver: null,
+  autoModeRunning: true,
+  installMissionFinderAlertOverride() {
+    alertInstalls += 1;
+  },
+  startMissionFinderObserver() {
+    observerStarts += 1;
+  },
+  cleanupMissionFinderRuntime() {
+    cleanups += 1;
+  },
+});
+
+vm.runInContext(
+  `${bridgeSource}\nthis.__bridgeInstaller = installMfV3DormantPreloadBridge;`,
+  context,
+  { filename: 'dormant-preload-bridge-extract.js' }
+);
+
+const bridge = context.__bridgeInstaller();
+assert.ok(bridge, 'a dormant preload exposes the V2 promotion bridge');
+assert.equal(bridge.isDormant(), true);
+assert.equal(bridge.isPromoted(), false);
+assert.equal(observerStarts, 0, 'installing the bridge alone does not start Mission Finder');
+
+windowObject.name = 'mcn-v3-active-worker-test';
+assert.equal(
+  bridge.promote({ expectedMissionId: '123' }),
+  false,
+  'a missing activation token is rejected'
+);
+assert.equal(
+  bridge.promote({ activationToken: 'token', expectedMissionId: '999' }),
+  false,
+  'a mission mismatch is rejected'
+);
+assert.equal(
+  bridge.promote({ activationToken: 'token', expectedMissionId: '123' }),
+  false,
+  'promotion is rejected until V3 grants storage ownership'
+);
+
+ownsOperationalState = true;
+assert.equal(
+  bridge.promote({
+    activationToken: 'token',
+    expectedMissionId: '123',
+    source: 'regression-test',
+  }),
+  true,
+  'the exact sole-owner mission can be promoted'
+);
+assert.equal(bridge.isDormant(), false);
+assert.equal(bridge.isPromoted(), true);
+assert.equal(observerStarts, 1, 'promotion starts Mission Finder exactly once');
+assert.equal(alertInstalls, 1, 'promotion installs frame-local alert handling');
+assert.equal(cleanups, 0, 'the successful promotion path does not need rollback cleanup');
+assert.equal(
+  bridge.promote({ activationToken: 'again', expectedMissionId: '123' }),
+  true,
+  'promotion is idempotent for the same mission'
+);
+assert.equal(observerStarts, 1, 'idempotent promotion does not start a second runtime');
+
+console.log('V3 native dormant-preload lifecycle regression passed.');
+
+
+===== scripts/check-v3-true-idle-runtime.mjs =====
+#!/usr/bin/env node
+
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
+
+const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
+
+function extractFunction(name) {
+  const declaration = `function ${name}(`;
+  const start = source.indexOf(declaration);
+  assert.ok(start >= 0, `${name} must exist`);
+  const brace = source.indexOf('{', start);
+  let depth = 0;
+  for (let index = brace; index < source.length; index += 1) {
+    if (source[index] === '{') depth += 1;
+    if (source[index] === '}' && --depth === 0) return source.slice(start, index + 1);
+  }
+  assert.fail(`${name} is unterminated`);
+}
+
+const heavyStart = source.indexOf('const shouldStartHeavyCommandNexusRuntime = () => {');
+const heavyEnd = source.indexOf('\n  };', heavyStart) + 5;
+assert.ok(heavyStart >= 0 && heavyEnd > heavyStart, 'heavy-runtime host gate must exist');
+const heavyGate = source.slice(heavyStart, heavyEnd);
+
+function heavyRuntimeAllowed({ path = '/', name = '', missionDom = false } = {}) {
+  const context = vm.createContext({
+    window: { name },
+    location: { pathname: path },
+    document: { querySelector: () => missionDom ? {} : null },
+    result: null,
+  });
+  vm.runInContext(`${heavyGate}\nresult = shouldStartHeavyCommandNexusRuntime();`, context);
+  return context.result;
+}
+
+assert.equal(heavyRuntimeAllowed(), false, 'the idle main map must not allocate both heavy engines');
+assert.equal(heavyRuntimeAllowed({ path: '/buildings/123' }), false, 'unrelated game pages must remain lightweight');
+assert.equal(heavyRuntimeAllowed({ path: '/missions/123' }), true, 'a mission page needs Mission Finder');
+assert.equal(heavyRuntimeAllowed({ path: '/vehicles/12/patient/34' }), true, 'patient transport needs Mission Finder');
+assert.equal(heavyRuntimeAllowed({ path: '/vehicles/12/gefangener/34' }), true, 'prisoner transport needs Mission Finder');
+assert.equal(heavyRuntimeAllowed({ path: '/leitstellenansicht' }), true, 'Stations workspace needs Resource Administration');
+assert.equal(heavyRuntimeAllowed({ name: 'mcn-v3-active-worker-1-123' }), true, 'Worker A needs the full runtime');
+assert.equal(heavyRuntimeAllowed({ name: 'mcn-v3-pipeline-preload-0-123' }), false, 'warm Worker B must not allocate the heavy engine');
+assert.equal(heavyRuntimeAllowed({ missionDom: true }), true, 'an embedded mission DOM must remain supported');
+
+const lightweightStart = source.indexOf("const dormantPreload = String(window.name || '').startsWith('mcn-v3-pipeline-preload-');");
+const lightweightEnd = source.indexOf('\n\n/* Dispatch Centres Show all', lightweightStart);
+assert.ok(lightweightStart >= 0 && lightweightEnd > lightweightStart, 'lightweight B bridge block must exist');
+const lightweightBlock = source.slice(lightweightStart, lightweightEnd);
+let heavyLoads = 0;
+let ownsOperationalState = false;
+const preloadWindow = {
+  name: 'mcn-v3-pipeline-preload-1-123',
+  __MCN_V3_FRAME_OWNERSHIP_BRIDGE__: { isActive: () => ownsOperationalState },
+  __MCN_HEAVY_RUNTIME_LOADED__: true,
+  missionFinder2026Initialized: false,
+};
+const preloadContext = vm.createContext({
+  window: preloadWindow,
+  location: { pathname: '/missions/123' },
+  Date,
+  Object,
+  heavyStarted: false,
+  startHeavyCommandNexusRuntime() {
+    heavyLoads += 1;
+    preloadContext.heavyStarted = true;
+    preloadWindow.__MCN_HEAVY_RUNTIME_LOADED__ = true;
+    preloadWindow.missionFinder2026Initialized = true;
+    return true;
+  },
+});
+vm.runInContext(lightweightBlock, preloadContext);
+const lightweightBridge = preloadWindow.__MCN_V2_DORMANT_PRELOAD_BRIDGE__;
+assert.ok(lightweightBridge, 'Worker B must publish the native dormant bridge');
+assert.equal(lightweightBridge.status().lightweight, true);
+assert.equal(preloadWindow.__MCN_HEAVY_RUNTIME_LOADED__, false);
+assert.equal(lightweightBridge.promote({ activationToken: 'token', expectedMissionId: '123' }), false);
+preloadWindow.name = 'mcn-v3-active-worker-2-123';
+ownsOperationalState = true;
+assert.equal(lightweightBridge.promote({ activationToken: 'token', expectedMissionId: '123' }), true);
+assert.equal(heavyLoads, 1, 'promotion must mount the heavy engine exactly once');
+assert.equal(lightweightBridge.status().promoted, true);
+assert.equal(lightweightBridge.status().lightweight, false);
+
+const resumeAllowed = extractFunction('persistedBackgroundResumeAllowed');
+let now = Date.now();
+class FakeDate extends Date { static now() { return now; } }
+const resumeState = { wanted: true, handoffAt: now - 5000, discarded: false };
+const resumeContext = vm.createContext({
+  document: {},
+  Date: FakeDate,
+  SESSION_RESUME_HANDOFF_AT: 'resume-handoff',
+  CONTROLLER_RESUME_HANDOFF_MAX_AGE_MS: 15 * 1000,
+  persistedBackgroundWanted: () => resumeState.wanted,
+  sessionGet: () => String(resumeState.handoffAt || ''),
+  result: null,
+});
+Object.defineProperty(resumeContext.document, 'wasDiscarded', {
+  get: () => resumeState.discarded,
+});
+vm.runInContext(`${resumeAllowed}\nresult = persistedBackgroundResumeAllowed();`, resumeContext);
+assert.equal(resumeContext.result, true, 'a fresh verified page handoff must resume');
+resumeState.handoffAt = now - 16000;
+vm.runInContext('result = persistedBackgroundResumeAllowed();', resumeContext);
+assert.equal(resumeContext.result, false, 'stale run intent must not silently recreate A/B');
+resumeState.handoffAt = 0;
+resumeState.discarded = true;
+vm.runInContext('result = persistedBackgroundResumeAllowed();', resumeContext);
+assert.equal(resumeContext.result, true, 'a browser-discarded active tab must retain sleep recovery');
+resumeState.wanted = false;
+vm.runInContext('result = persistedBackgroundResumeAllowed();', resumeContext);
+assert.equal(resumeContext.result, false, 'no stored run intent means no resume');
+
+const clearIntent = extractFunction('clearPersistedRunIntent');
+assert.ok(clearIntent.includes("sessionSet(SESSION_RESUME_HANDOFF_AT, '')"));
+const pagehideIndex = source.indexOf("window.addEventListener('pagehide', () => {");
+const startupIndex = source.indexOf('const startupResumeAllowed = persistedBackgroundResumeAllowed();');
+assert.ok(pagehideIndex >= 0 && startupIndex > pagehideIndex);
+assert.ok(source.slice(pagehideIndex, startupIndex).includes('sessionSet(SESSION_RESUME_HANDOFF_AT, String(Date.now()))'));
+assert.ok(source.slice(startupIndex, source.indexOf('mountWhenMapReady();', startupIndex)).includes('clearPersistedRunIntent();'));
+assert.ok(source.includes('const startHeavyCommandNexusRuntime = () => {'));
+assert.ok(source.includes('} else if (shouldStartHeavyCommandNexusRuntime()) {'));
+assert.ok(source.includes('if (window.top !== window.self) return;'));
+
+console.log('PASS: V3 idle map and dormant B stay lightweight, promotion mounts the full engine once, and stale run intent cannot spawn A/B.');
+
