@@ -1,0 +1,1232 @@
+lines=53205 bytes=2093421
+terms=['exportUnitFinderDiagnosticSnapshot', 'recordUnitFinderDiagnostic', 'unitFinderDiagnostic', 'diagnosticSnapshot', 'diagnosticHistory', 'Export Diagnostics', 'mf-export-unit-finder-diagnostics', 'createObjectURL', 'application/json']
+
+===== match-1 [7291-7327] =====
+007291: captureWorkerSnapshot();
+007292: return;
+007293: }
+007294: maybeEnforcePriority(doc, href, context, radioRequests);
+007295: const foreignMissionFrame = findVisibleForeignMissionFrame();
+007296: if (foreignMissionFrame && !state.foreignMissionUiWarned) {
+007297: state.foreignMissionUiWarned = true;
+007298: log('V2 opened or retained a visible native mission frame outside the background worker.');
+007299: if (!kind) {
+007300: setPhase(
+007301: 'BACKGROUND_ESCAPE_WARN',
+007302: 'Auto Mode escaped to a visible mission frame',
+007303: 'The background-worker concept is not fully isolated on this live layout yet. Stop and export diagnostics; do not treat this as a finished V3 behaviour.'
+007304: );
+007305: }
+007306: }
+007307: if (control) {
+007308: state.autoControlText = elementLabel(control);
+007309: if (handleUnconfirmedAutoStart(control)) {
+007310: captureWorkerSnapshot();
+007311: return;
+007312: }
+007313: const controlRunning = autoControlLooksRunning(control);
+007314: const currentDocumentConfirmed = currentWorkerAutoConfirmed();
+007315: if (!controlRunning && !state.autoStartIssued && isMissionUrl(href)) {
+007316: startExistingAutoMode(control, state.worker, state.workerGeneration);
+007317: captureWorkerSnapshot();
+007318: return;
+007319: }
+007320: if (controlRunning) {
+007321: confirmCurrentDocumentAutoMode(control, 'watcher-running');
+007322: state.autoStoppedSince = 0;
+007323: state.autoStopWarned = false;
+007324: state.activeControlMissingSince = 0;
+007325: clearAutoRecoveryWatchdog('auto-mode-running-again');
+007326: if (!kind && !promotedWorkAwaitingEvidence() && (
+007327: state.phase === 'STARTING' ||
+
+===== match-2 [8339-8376] =====
+008339: workerSnapshot.transport?.greenPrisonDestinations ||
+008340: workerSnapshot.transport?.releaseLinks
+008341: ),
+008342: transportEvidence: workerSnapshot.transport?.evidence || [],
+008343: visibleMissionFrameOutsideWorker: Boolean(findVisibleForeignMissionFrame()) || Boolean(workerSnapshot.visibleMissionFrameOutsideWorker),
+008344: },
+008345: userAgent: navigator.userAgent,
+008346: log: state.log.slice(-120),
+008347: };
+008348: }
+008349: function exportDiagnostics() {
+008350: const snapshot = diagnosticsSnapshot();
+008351: const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+008352: const url = URL.createObjectURL(blob);
+008353: const anchor = document.createElement('a');
+008354: anchor.href = url;
+008355: anchor.download = `missionchief-command-nexus-v3-${Date.now()}.json`;
+008356: document.body.appendChild(anchor);
+008357: anchor.click();
+008358: anchor.remove();
+008359: window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+008360: log('Exported Command Nexus V3 diagnostics.');
+008361: }
+008362: function injectStyles() {
+008363: if (document.getElementById(STYLE_ID)) return;
+008364: const style = document.createElement('style');
+008365: style.id = STYLE_ID;
+008366: style.textContent = `
+008367: #${ROOT_ID} {
+008368: --mcn-bg: rgba(8, 16, 30, 0.97);
+008369: --mcn-bg2: rgba(13, 29, 50, 0.98);
+008370: --mcn-border: rgba(104, 168, 255, 0.30);
+008371: --mcn-text: #edf6ff;
+008372: --mcn-muted: #9cb1c8;
+008373: --mcn-accent: #66b7ff;
+008374: --mcn-ok: #74dfaa;
+008375: --mcn-warn: #ffd479;
+008376: --mcn-bad: #ff8989;
+
+===== match-3 [8598-8634] =====
+008598: </div>
+008599: <div class="mcn-meta-card wide">
+008600: <div class="mcn-meta-label">Live health</div>
+008601: <div class="mcn-meta-value" data-mcn-rule-assists>Pipeline 0/0 ready | handoff restarts 0 | transport 0/0</div>
+008602: </div>
+008603: </div>
+008604: <div class="mcn-note"><strong>Command Nexus V3.</strong> Only A can dispatch and load the complete vehicle list; B only warms the immediate next page. Sustained heap growth or the 768 MiB ceiling releases B and restarts A at a verified boundary. Below two missions all workers are released. Cleanup never clears station, unit, personnel, training or durable settings. The watchdog, personal transport clearing and exact banked vehicle rules remain enabled; Alliance requests stay ignored.</div>
+008605: </div>
+008606: <div class="mcn-actions">
+008607: <button type="button" class="mcn-action primary" data-mcn-start>Start Auto Mode</button>
+008608: <button type="button" class="mcn-action stop" data-mcn-stop>Stop</button>
+008609: <button type="button" class="mcn-action" data-mcn-retry>Retry current</button>
+008610: <button type="button" class="mcn-action" data-mcn-export>Export diagnostics</button>
+008611: </div>
+008612: </div>
+008613: </div>
+008614: <button type="button" class="mcn-launcher" aria-label="Open Command Nexus V3" title="Command Nexus V3">
+008615: <span class="mcn-core-n" aria-hidden="true">N</span>
+008616: <span class="mcn-dot" aria-hidden="true"></span>
+008617: </button>
+008618: `;
+008619: const navbarHeader = document.querySelector('.navbar-header');
+008620: const navbarBrand = navbarHeader?.querySelector('a.navbar-brand.hidden-xs, a.navbar-brand');
+008621: if (!navbarHeader || !navbarBrand) {
+008622: log('Navbar brand not available yet; Nexus launcher mount deferred.');
+008623: return;
+008624: }
+008625: navbarBrand.insertAdjacentElement('afterend', root);
+008626: const launcher = root.querySelector('.mcn-launcher');
+008627: const startButton = root.querySelector('[data-mcn-start]');
+008628: const stopButton = root.querySelector('[data-mcn-stop]');
+008629: const retryButton = root.querySelector('[data-mcn-retry]');
+008630: const exportButton = root.querySelector('[data-mcn-export]');
+008631: launcher.addEventListener('click', () => {
+008632: const collapsed = root.dataset.collapsed !== 'false';
+008633: root.dataset.collapsed = collapsed ? 'false' : 'true';
+008634: localStorage.setItem(STORAGE_COLLAPSED, root.dataset.collapsed);
+
+===== match-4 [10739-10775] =====
+010739:                     <div id="mc-personnel-units-required-note" class="mc-personnel-input-note">Disabled in All Stations mode. Select the target-units mode to enter a stopping target.</div>
+010740:                     <label style="margin-top:6px; display:block;"><b>Start From:</b></label>
+010741:                     <select id="mc-personnel-startfrom">
+010742:                         <option value="">Refresh stations first</option>
+010743:                     </select>
+010744:                 </div>
+010745:                 <div class="mc-namer-buttons mc-nexus-action-bar">
+010746:                     <button id="mc-personnel-refresh">Refresh Stations</button>
+010747:                     <button id="mc-personnel-build-register" title="Quickly refresh every station. Unchanged exact vehicle records are reused; only changed or unsafe vehicles are reopened. No personnel assignments are changed.">Quick Refresh Register</button>
+010748:                     <button id="mc-personnel-full-register" title="Build All Register by reading every exact vehicle assignment page. Use this for a periodic full audit. No personnel assignments are changed.">Full Verify Register</button>
+010749:                     <button id="mc-personnel-export-register" title="Download the saved Personnel Register as a JSON backup.">Export Register</button>
+010750:                     <button id="mc-personnel-import-register" title="Replace the saved Personnel Register with a validated JSON backup.">Import Register</button>
+010751:                     <input id="mc-personnel-import-register-file" type="file" accept="application/json,.json" hidden>
+010752:                     <button id="mc-personnel-start">Start</button>
+010753:                     <button id="mc-personnel-pause">Pause</button>
+010754:                     <button id="mc-personnel-stop">Stop</button>
+010755:                     <button id="mc-personnel-view-station-report">View Station Report</button>
+010756:                     <button id="mc-personnel-copy-station">Copy Station Report</button>
+010757:                     <button id="mc-personnel-copy">Copy Overall Report</button>
+010758:                     <button id="mc-personnel-debug">Debug: OFF</button>
+010759:                     <button id="mc-personnel-clear">Clear Log</button>
+010760:                 </div>
+010761:                 <div class="mc-namer-section mc-nexus-status-card">
+010762:                     <div><b>Status:</b> <span id="mc-personnel-status">Idle</span></div>
+010763:                     <div><b>Station:</b> <span id="mc-personnel-current">None</span></div>
+010764:                     <div><b>Vehicle:</b> <span id="mc-personnel-vehicle">None</span></div>
+010765:                     <div><b>Station progress:</b> <span id="mc-personnel-progress">0 / 0</span></div>
+010766:                     <div><b>Stations completed:</b> <span id="mc-personnel-completed">0</span></div>
+010767:                     <div><b>Vehicles checked:</b> <span id="mc-personnel-vehicles">0</span></div>
+010768:                     <div><b>Register:</b> <span id="mc-personnel-register-status">No saved vehicles</span></div>
+010769:                     <div><b id="mc-personnel-units-fulfilled-label">Units fulfilled:</b> <span id="mc-personnel-units-fulfilled">0 / All</span></div>
+010770:                     <div><b>Planned / assigned:</b> <span id="mc-personnel-assigned">0</span></div>
+010771:                     <div><b>Need training:</b> <span id="mc-personnel-training-shortfall">0</span></div>
+010772:                     <div><b>Unfilled positions:</b> <span id="mc-personnel-assignment-shortfall">0</span></div>
+010773:                 </div>
+010774:                 <div id="mc-personnel-training-shortfall-section" class="mc-namer-section mc-personnel-training-shortfall-section mc-nexus-alert-card" hidden>
+010775:                     <div class="mc-personnel-training-shortfall-heading">
+
+===== match-5 [14226-14263] =====
+014226:             const timestamp = Number(value || 0);
+014227:             return Number.isFinite(timestamp) && timestamp >= 0 ? timestamp : 0;
+014228:         };
+014229:         return {
+014230:             schemaVersion: PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION,
+014231:             sourceVersion: String(source.sourceVersion || '').slice(0, 80),
+014232:             updatedAt: safeRegistryTimestamp(source.updatedAt),
+014233:             lastPrunedAt: safeRegistryTimestamp(source.lastPrunedAt),
+014234:             vehicles
+014235:         };
+014236:     }
+014237:     function downloadPersonnelTrainingRegistryJson(filename, payload) {
+014238:         const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], { type: 'application/json;charset=utf-8' });
+014239:         const url = URL.createObjectURL(blob);
+014240:         const link = document.createElement('a');
+014241:         link.href = url;
+014242:         link.download = filename;
+014243:         link.hidden = true;
+014244:         document.body.appendChild(link);
+014245:         link.click();
+014246:         link.remove();
+014247:         setTimeout(() => URL.revokeObjectURL(url), 1000);
+014248:     }
+014249:     function exportPersonnelTrainingRegistry() {
+014250:         if (PERSONNEL_STATE.running) {
+014251:             window.alert('Finish or stop the active Personnel operation before exporting the register.');
+014252:             return;
+014253:         }
+014254:         flushPersonnelTrainingRegistry(false);
+014255:         const registry = readPersonnelTrainingRegistry();
+014256:         const stats = getPersonnelTrainingRegistryStats(registry);
+014257:         if (!stats.count) {
+014258:             window.alert('The Personnel Register is empty. Build or import a register before exporting.');
+014259:             return;
+014260:         }
+014261:         const exportedAt = new Date().toISOString();
+014262:         downloadPersonnelTrainingRegistryJson(`missionchief-personnel-register-${exportedAt.slice(0, 10)}.json`, {
+014263:             format: PERSONNEL_TRAINING_REGISTRY_EXPORT_FORMAT,
+
+===== match-6 [16130-16166] =====
+016130:         );
+016131:         if (!/^\d+$/.test(buildingId)) {
+016132:             personnelLog('Companion-vehicle lookup skipped: the station building ID is unavailable.', 'error');
+016133:             companionRules.forEach(rule => resolvedByRuleId.set(rule.id, new Set()));
+016134:             return resolvedByRuleId;
+016135:         }
+016136:         let records = [];
+016137:         try {
+016138:             const response = await personnelFetchResponse(
+016139:                 `/api/buildings/${buildingId}/vehicles`,
+016140:                 {
+016141:                     headers: {
+016142:                         'Accept': 'application/json'
+016143:                     }
+016144:                 },
+016145:                 14000
+016146:             );
+016147:             if (!response.ok) {
+016148:                 throw new Error(`HTTP ${response.status}`);
+016149:             }
+016150:             records = getPersonnelBuildingVehicleApiRecords(
+016151:                 await response.json()
+016152:             );
+016153:             if (!records.length) {
+016154:                 throw new Error('the vehicle API returned no records');
+016155:             }
+016156:         } catch (error) {
+016157:             personnelLog(
+016158:                 `Companion-vehicle lookup failed at ${station.displayName}: ${error?.message || error}. Trailer and pod profiles were skipped safely.`,
+016159:                 'error'
+016160:             );
+016161:             companionRules.forEach(rule => resolvedByRuleId.set(rule.id, new Set()));
+016162:             return resolvedByRuleId;
+016163:         }
+016164:         const stationTargetVehicleIds = new Set(
+016165:             allVehicles.map(vehicle => String(vehicle.vehicleId))
+016166:         );
+
+===== match-7 [19829-19865] =====
+019829:         try {
+019830:             legacyRecorderRemoved =
+019831:                 localStorage.getItem(MF_RECORDER_KEY) !== null;
+019832:             localStorage.removeItem(MF_RECORDER_KEY);
+019833:         } catch (_error) {}
+019834:         try {
+019835:             const raw = localStorage.getItem(
+019836:                 MF_UNIT_FINDER_DIAGNOSTICS_KEY
+019837:             ) || '[]';
+019838:             diagnosticCharsBefore = raw.length;
+019839:             const parsed = JSON.parse(raw);
+019840:             const bounded =
+019841:                 mfBoundUnitFinderDiagnosticHistory(
+019842:                     Array.isArray(parsed) ? parsed : []
+019843:                 );
+019844:             diagnosticCharsAfter = bounded.encoded.length;
+019845:             if (bounded.encoded !== raw) {
+019846:                 localStorage.setItem(
+019847:                     MF_UNIT_FINDER_DIAGNOSTICS_KEY,
+019848:                     bounded.encoded
+019849:                 );
+019850:             }
+019851:         } catch (_error) {
+019852:             try {
+019853:                 localStorage.removeItem(
+019854:                     MF_UNIT_FINDER_DIAGNOSTICS_KEY
+019855:                 );
+019856:             } catch (_ignored) {}
+019857:         }
+019858:         mfRuntimeStorageMaintenanceState = {
+019859:             ranAt: Date.now(),
+019860:             legacyRecorderRemoved,
+019861:             diagnosticCharsBefore,
+019862:             diagnosticCharsAfter
+019863:         };
+019864:     }
+019865:     function isMissionFinderMemoryWorkActive() {
+
+===== match-8 [19904-19940] =====
+019904:             !mfTransportOwnerModal.isConnected
+019905:         ) {
+019906:             mfTransportOwnerModal = null;
+019907:         }
+019908:         mfRuntimeMemoryLastSoftFlushAt = Date.now();
+019909:         mfRuntimeMemorySoftFlushCount += 1;
+019910:         mfRuntimeMemoryLastReason = String(reason || '');
+019911:     }
+019912:     function releaseMissionFinderLargeEphemeralState(reason = '') {
+019913:         cancelTrainedPersonnelPanelRefresh();
+019914:         resetMissionRequirementPreloadCache(reason);
+019915:         resetVehicleLoadState();
+019916:         mfUnitFinderDiagnosticContext = {
+019917:             missionKey: '', mode: 'idle', sourceLabel: '',
+019918:             suppliedRows: [], processedRows: [], updatedAt: 0
+019919:         };
+019920:         mfLastMissionDefinitionRawRows = [];
+019921:         mfPatientSelectionLedgerCache = null;
+019922:         mfTransportOwnerModal = null;
+019923:     }
+019924:     function shouldRecycleIdleMissionMemory() {
+019925:         if (
+019926:             autoModeRunning ||
+019927:             sessionStorage.getItem(
+019928:                 'mf_auto_mode_running'
+019929:             ) === 'true' ||
+019930:             !isMissionPage() ||
+019931:             !isCurrentMissionExecutionOwner(
+019932:                 'idle memory maintenance'
+019933:             ) ||
+019934:             document.visibilityState === 'hidden' ||
+019935:             mfRuntimeSuspendedForPageHide ||
+019936:             mfRuntimeSuspendedForInactiveFrame ||
+019937:             vehicleLoadState.ready ||
+019938:             isMissionFinderMemoryWorkActive() ||
+019939:             hasSelectedMissionVehiclesForMemoryRecycle() ||
+019940:             mfMissionRequirementPreloadPromise ||
+
+===== match-9 [20554-20599] =====
+020554:     };
+020555:     const MF_UNIT_FINDER_DIAGNOSTICS_KEY =
+020556:         'mf_unit_finder_diagnostics_v1';
+020557:     const MF_UNIT_FINDER_DIAGNOSTICS_LIMIT = 120;
+020558:     const MF_UNIT_FINDER_DIAGNOSTICS_MAX_STORAGE_CHARS = 2500000;
+020559:     const MF_STAFFING_FAILURE_HISTORY_KEY =
+020560:         'mf_staffing_failure_history_v1';
+020561:     const MF_STAFFING_FAILURE_HISTORY_LIMIT = 600;
+020562:     const MF_STAFFING_FAILURE_MAX_STORAGE_CHARS = 900000;
+020563:     const MF_STAFFING_QUARANTINE_KEY =
+020564:         'mf_staffing_vehicle_quarantine_v1';
+020565:     const MF_STAFFING_QUARANTINE_LIMIT = 80;
+020566:     let mfUnitFinderDiagnosticContext = {
+020567:         missionKey: '',
+020568:         mode: 'idle',
+020569:         sourceLabel: '',
+020570:         suppliedRows: [],
+020571:         processedRows: [],
+020572:         updatedAt: 0
+020573:     };
+020574:     let mfLastMissionDefinitionRawRows = [];
+020575:     let mfLastUnitFinderDiagnosticSignature = '';
+020576:     let mfLastStaffingFailureSignature = '';
+020577:     let mfKnownUnstaffedAmbulanceExclusions = [];
+020578:     let processedSelectionKeys = new Set();
+020579:     function buildSelectionKey(source, originalName, mappedName, amount) {
+020580:         return `${String(source || 'UNKNOWN').toUpperCase()}|${normaliseVehicleText(originalName)}|${normaliseVehicleText(mappedName)}|${Math.max(0, parseInt(amount, 10) || 0)}`;
+020581:     }
+020582:     function clearSelectionGuards() {
+020583:         processedSelectionKeys = new Set();
+020584:     }
+020585:     function withTimeout(promise, timeoutMs, label) {
+020586:         return new Promise((resolve, reject) => {
+020587:             const timeoutId = setTimeout(() => {
+020588:                 reject(
+020589:                     new Error(
+020590:                         `${label || 'Operation'} timed out after ${timeoutMs}ms`
+020591:                     )
+020592:                 );
+020593:             }, timeoutMs);
+020594:             Promise.resolve(promise).then(
+020595:                 value => {
+020596:                     clearTimeout(timeoutId);
+020597:                     resolve(value);
+020598:                 },
+020599:                 error => {
+
+===== match-10 [20663-20743] =====
+020663:                         details.explicitMissingPersonnel === true,
+020664:                     structuredMissingVehicles:
+020665:                         details.structuredMissingVehicles === true
+020666:                 }
+020667:                 : null
+020668:         };
+020669:     }
+020670:     function mfSerialiseDiagnosticRequirementRows(rows) {
+020671:         return (Array.isArray(rows) ? rows : [])
+020672:             .map(mfSerialiseDiagnosticRequirementRow)
+020673:             .filter(Boolean);
+020674:     }
+020675:     function mfSetUnitFinderDiagnosticContext(
+020676:         mode,
+020677:         sourceLabel,
+020678:         suppliedRows,
+020679:         processedRows
+020680:     ) {
+020681:         mfUnitFinderDiagnosticContext = {
+020682:             missionKey:
+020683:                 getLocalMissionInstanceKey() ||
+020684:                 getCurrentMissionIdForQueueRestart() ||
+020685:                 '',
+020686:             mode: String(mode || 'unit-finder'),
+020687:             sourceLabel: String(sourceLabel || ''),
+020688:             suppliedRows:
+020689:                 mfSerialiseDiagnosticRequirementRows(suppliedRows),
+020690:             processedRows:
+020691:                 mfSerialiseDiagnosticRequirementRows(processedRows),
+020692:             updatedAt: Date.now()
+020693:         };
+020694:     }
+020695:     function mfBoundUnitFinderDiagnosticHistory(history) {
+020696:         let bounded = (Array.isArray(history) ? history : [])
+020697:             .slice(-MF_UNIT_FINDER_DIAGNOSTICS_LIMIT);
+020698:         let encoded = JSON.stringify(bounded);
+020699:         while (
+020700:             encoded.length >
+020701:                 MF_UNIT_FINDER_DIAGNOSTICS_MAX_STORAGE_CHARS &&
+020702:             bounded.length > 0
+020703:         ) {
+020704:             bounded = bounded.slice(1);
+020705:             encoded = JSON.stringify(bounded);
+020706:         }
+020707:         return {
+020708:             history: bounded,
+020709:             encoded
+020710:         };
+020711:     }
+020712:     function mfReadUnitFinderDiagnosticHistory() {
+020713:         try {
+020714:             const parsed = JSON.parse(
+020715:                 localStorage.getItem(
+020716:                     MF_UNIT_FINDER_DIAGNOSTICS_KEY
+020717:                 ) || '[]'
+020718:             );
+020719:             return mfBoundUnitFinderDiagnosticHistory(
+020720:                 Array.isArray(parsed) ? parsed : []
+020721:             ).history;
+020722:         } catch (_error) {
+020723:             return [];
+020724:         }
+020725:     }
+020726:     function mfGetDiagnosticRegistryEvidence(input, registry) {
+020727:         let registryMatch = null;
+020728:         try {
+020729:             registryMatch = getRegistryEntryForMissionCheckbox(
+020730:                 input,
+020731:                 registry
+020732:             );
+020733:         } catch (_error) {}
+020734:         const entry = registryMatch?.entry || null;
+020735:         if (!entry) return null;
+020736:         return {
+020737:             vehicleId: String(entry.vehicleId || ''),
+020738:             vehicleName: String(entry.vehicleName || ''),
+020739:             vehicleTypeId: String(entry.vehicleTypeId || ''),
+020740:             stationName: String(entry.stationName || ''),
+020741:             stationHref: String(entry.stationHref || ''),
+020742:             source: String(entry.source || ''),
+020743:             updatedAt: Number(entry.updatedAt || 0),
+
+===== match-11 [21022-21058] =====
+021022:                 hiddenOwnerFrames:
+021023:                     documentSnapshots.filter(item =>
+021024:                         !item.ownerFrameVisible
+021025:                     ).length,
+021026:                 detachedOwnerFrames:
+021027:                     documentSnapshots.filter(item =>
+021028:                         !item.ownerFrameConnected
+021029:                     ).length,
+021030:                 samples: documentSnapshots
+021031:             }
+021032:         };
+021033:     }
+021034:     function mfBuildUnitFinderDiagnosticSnapshot(reason) {
+021035:         let liveRows = [];
+021036:         try {
+021037:             liveRows = readMissionUpdateRows({ silent: true });
+021038:         } catch (_error) {}
+021039:         const selectedVehicles =
+021040:             mfGetDiagnosticSelectedVehicles();
+021041:         const diagnosticBoxes = getVehicleCheckboxSnapshot(true);
+021042:         return {
+021043:             schema: 'missionchief-unit-finder-diagnostics',
+021044:             schemaVersion: 1,
+021045:             capturedAt: new Date().toISOString(),
+021046:             capturedAtUnix: Date.now(),
+021047:             reason: String(reason || 'manual-export'),
+021048:             versions: {
+021049:                 commandNexus: '3.0.33',
+021050:                 missionFinder: 'V10.6.177',
+021051:                 personnelAssignment: '1.3.8'
+021052:             },
+021053:             mission: {
+021054:                 missionId:
+021055:                     getCurrentMissionIdForQueueRestart() || '',
+021056:                 missionKey:
+021057:                     getLocalMissionInstanceKey() || '',
+021058:                 missionName:
+
+===== match-12 [21074-21110] =====
+021074:                 ambulanceOfficerThresholdEnabled:
+021075:                     mfAmbulanceOfficerThresholdEnabled,
+021076:                 ambulanceOfficerThreshold:
+021077:                     mfAmbulanceOfficerThreshold,
+021078:                 alwaysSendAmbulanceToHighRiskMissingPerson:
+021079:                     mfAlwaysSendAmbulanceToHighRiskMissingPerson === true,
+021080:                 highRiskMissingPersonMission:
+021081:                     isConfiguredHighRiskMissingPersonMission(),
+021082:                 processedSelectionKeys:
+021083:                     Array.from(processedSelectionKeys || [])
+021084:             },
+021085:             requirementContext: {
+021086:                 ...mfUnitFinderDiagnosticContext,
+021087:                 missionDefinitionRawRows:
+021088:                     mfLastMissionDefinitionRawRows.map(row => ({
+021089:                         label: String(row.label || ''),
+021090:                         value: String(row.value || '')
+021091:                     })),
+021092:                 currentLiveRequirementRows:
+021093:                     mfSerialiseDiagnosticRequirementRows(liveRows),
+021094:                 visibleAlerts:
+021095:                     mfGetDiagnosticVisibleAlerts()
+021096:             },
+021097:             selectionSummary: {
+021098:                 vehicleInventory: {total: diagnosticBoxes.length,searchDogType102: diagnosticBoxes.filter(isSearchDogUnitVehicleCheckbox).length,availableSearchDogType102: diagnosticBoxes.filter(input => !input.disabled && !input.checked && isSearchDogUnitVehicleCheckbox(input)).length,loadControlVisible: isVehicleListLoadControlVisible(),loadingIndicatorVisible: isVehicleListLoadingIndicatorVisible()},
+021099:                 vehicleLoadState: {
+021100:                     rows: vehicleLoadState.rows.map(row => ({
+021101:                         originalName: String(row.originalName || ''),
+021102:                         mappedName: String(row.mappedName || ''),
+021103:                         required: Math.max(
+021104:                             0,
+021105:                             parseInt(row.required, 10) || 0
+021106:                         ),
+021107:                         selected: Math.max(
+021108:                             0,
+021109:                             parseInt(row.selected, 10) || 0
+021110:                         ),
+
+===== match-13 [21123-21214] =====
+021123:                 selectedVehicles,
+021124:                 knownUnstaffedAmbulanceExclusions:
+021125:                     mfKnownUnstaffedAmbulanceExclusions
+021126:                         .slice(0, 40)
+021127:                         .map(vehicle => ({ ...vehicle }))
+021128:             },
+021129:             environment: {
+021130:                 language: String(navigator.language || ''),
+021131:                 userAgent: String(navigator.userAgent || '')
+021132:             }
+021133:         };
+021134:     }
+021135:     function mfPersistUnitFinderDiagnostic(reason) {
+021136:         const snapshot =
+021137:             mfBuildUnitFinderDiagnosticSnapshot(reason);
+021138:         const hasUsefulData = !!(
+021139:             snapshot.requirementContext.updatedAt ||
+021140:             snapshot.requirementContext.suppliedRows.length ||
+021141:             snapshot.requirementContext.processedRows.length ||
+021142:             snapshot.requirementContext.currentLiveRequirementRows.length ||
+021143:             snapshot.requirementContext.visibleAlerts.length ||
+021144:             snapshot.selectionSummary.vehicleLoadState.rows.length ||
+021145:             snapshot.selectionSummary.selectedVehicles.length ||
+021146:             snapshot.selectionSummary.knownUnstaffedAmbulanceExclusions.length
+021147:         );
+021148:         if (!hasUsefulData) return snapshot;
+021149:         const emptyMissionUpdateSnapshot =
+021150:             reason === 'not-ready' &&
+021151:             snapshot.requirementContext.mode === 'mission-update' &&
+021152:             snapshot.requirementContext.suppliedRows.length === 0 &&
+021153:             snapshot.requirementContext.processedRows.length === 0 &&
+021154:             snapshot.requirementContext.currentLiveRequirementRows.length === 0 &&
+021155:             snapshot.requirementContext.visibleAlerts.length === 0 &&
+021156:             snapshot.selectionSummary.vehicleLoadState.rows.length === 0;
+021157:         if (emptyMissionUpdateSnapshot) return snapshot;
+021158:         const signature = JSON.stringify({
+021159:             mission: snapshot.mission.missionKey || snapshot.mission.missionId,
+021160:             reason: snapshot.reason,
+021161:             mode: snapshot.requirementContext.mode,
+021162:             source: snapshot.requirementContext.sourceLabel,
+021163:             ready: snapshot.execution.ready,
+021164:             rows: snapshot.selectionSummary.vehicleLoadState.rows,
+021165:             selected: snapshot.selectionSummary.selectedVehicles
+021166:                 .map(vehicle => vehicle.vehicleId || vehicle.vehicleName),
+021167:             knownUnstaffed:
+021168:                 snapshot.selectionSummary.knownUnstaffedAmbulanceExclusions
+021169:                     .map(vehicle => vehicle.vehicleId || vehicle.vehicleName)
+021170:         });
+021171:         if (
+021172:             signature === mfLastUnitFinderDiagnosticSignature &&
+021173:             reason !== 'manual-export'
+021174:         ) {
+021175:             return snapshot;
+021176:         }
+021177:         mfLastUnitFinderDiagnosticSignature = signature;
+021178:         const history = mfReadUnitFinderDiagnosticHistory();
+021179:         history.push(snapshot);
+021180:         const boundedHistory =
+021181:             mfBoundUnitFinderDiagnosticHistory(history);
+021182:         try {
+021183:             localStorage.setItem(
+021184:                 MF_UNIT_FINDER_DIAGNOSTICS_KEY,
+021185:                 boundedHistory.encoded
+021186:             );
+021187:         } catch (_error) {
+021188:             try {
+021189:                 const fallback =
+021190:                     mfBoundUnitFinderDiagnosticHistory(
+021191:                         boundedHistory.history.slice(-4)
+021192:                     );
+021193:                 localStorage.setItem(
+021194:                     MF_UNIT_FINDER_DIAGNOSTICS_KEY,
+021195:                     fallback.encoded
+021196:                 );
+021197:             } catch (_ignored) {}
+021198:         }
+021199:         return snapshot;
+021200:     }
+021201:     function mfBoundStaffingFailureHistory(history) {
+021202:         let bounded = (Array.isArray(history) ? history : [])
+021203:             .slice(-MF_STAFFING_FAILURE_HISTORY_LIMIT);
+021204:         let encoded = JSON.stringify(bounded);
+021205:         while (
+021206:             encoded.length >
+021207:                 MF_STAFFING_FAILURE_MAX_STORAGE_CHARS &&
+021208:             bounded.length > 0
+021209:         ) {
+021210:             bounded = bounded.slice(1);
+021211:             encoded = JSON.stringify(bounded);
+021212:         }
+021213:         return { history: bounded, encoded };
+021214:     }
+
+===== match-14 [21472-21536] =====
+021472:         };
+021473:         const history = mfReadStaffingFailureHistory();
+021474:         history.push(record);
+021475:         const bounded = mfBoundStaffingFailureHistory(history);
+021476:         try {
+021477:             sessionStorage.setItem(
+021478:                 MF_STAFFING_FAILURE_HISTORY_KEY,
+021479:                 bounded.encoded
+021480:             );
+021481:         } catch (_error) {}
+021482:         return record;
+021483:     }
+021484:     function exportUnitFinderDiagnostics() {
+021485:         const current =
+021486:             mfPersistUnitFinderDiagnostic('manual-export');
+021487:         const history = mfReadUnitFinderDiagnosticHistory();
+021488:         const payload = {
+021489:             format: 'missionchief-unit-finder-diagnostics',
+021490:             exportVersion: 1,
+021491:             exportedAt: new Date().toISOString(),
+021492:             privacyNote:
+021493:                 'Contains mission IDs, vehicle names, training-code evidence and browser memory/DOM counts. It does not include cookies, passwords or personnel names.',
+021494:             memoryDiagnostics:
+021495:                 mfCollectMemoryDiagnostics(),
+021496:             current,
+021497:             history
+021498:         };
+021499:         const missionId =
+021500:             current?.mission?.missionId || 'mission';
+021501:         const timestamp = new Date()
+021502:             .toISOString()
+021503:             .replace(/[:.]/g, '-')
+021504:             .replace('T', '_')
+021505:             .replace('Z', '');
+021506:         const filename =
+021507:             `MissionChief-Unit-Finder-Diagnostics-${missionId}-${timestamp}.json`;
+021508:         const blob = new Blob(
+021509:             [JSON.stringify(payload, null, 2)],
+021510:             { type: 'application/json;charset=utf-8' }
+021511:         );
+021512:         const url = URL.createObjectURL(blob);
+021513:         const link = document.createElement('a');
+021514:         link.href = url;
+021515:         link.download = filename;
+021516:         link.style.display = 'none';
+021517:         document.body.appendChild(link);
+021518:         link.click();
+021519:         link.remove();
+021520:         setTimeout(() => URL.revokeObjectURL(url), 1500);
+021521:         updateStatusBox(
+021522:             `Diagnostics exported: ${history.length} captured attempt(s).`
+021523:         );
+021524:     }
+021525:     function getVehicleDebugName(element) {
+021526:         if (!element) return 'not found';
+021527:         const row = element.closest && element.closest('tr');
+021528:         const values = [
+021529:             element.getAttribute && element.getAttribute('vehicle_caption'),
+021530:             element.getAttribute && element.getAttribute('vehicle_type_caption'),
+021531:             element.getAttribute && element.getAttribute('search_attribute'),
+021532:             row && row.getAttribute('vehicle_caption'),
+021533:             row && row.getAttribute('vehicle_type_caption'),
+021534:             row && row.querySelector('td:nth-child(2)') && row.querySelector('td:nth-child(2)').innerText
+021535:         ].filter(Boolean);
+021536:         return values.length ? values[0].replace(/\s+/g, ' ').trim() : element.tagName;
+
+===== match-15 [22755-22791] =====
+022755:                     vehicle
+022756:                 ])
+022757:             );
+022758:             excluded.forEach(vehicle => {
+022759:                 knownByKey.set(
+022760:                     vehicle.vehicleId ||
+022761:                         `${vehicle.stationName}|${vehicle.vehicleName}`,
+022762:                     vehicle
+022763:                 );
+022764:             });
+022765:             mfKnownUnstaffedAmbulanceExclusions =
+022766:                 Array.from(knownByKey.values()).slice(-40);
+022767:             const snapshot = mfPersistUnitFinderDiagnostic(
+022768:                 'known-unstaffed-ambulance-filter'
+022769:             );
+022770:             mfRecordStaffingFailure(
+022771:                 sourceLabel || 'ambulance selection',
+022772:                 'Personnel register confirmed zero assigned staff; vehicle excluded before selection.',
+022773:                 snapshot,
+022774:                 'preflight-exclusion'
+022775:             );
+022776:         }
+022777:         return eligible;
+022778:     }
+022779:     function isCriticalCareTransferAmbulanceRequirement(originalName, mappedName) {
+022780:         const raw = normaliseVehicleText(originalName);
+022781:         const mapped = normaliseVehicleText(mappedName);
+022782:         const supported = new Set([
+022783:             'critical care transfer ambulance',
+022784:             'critical care transfer ambulances',
+022785:             'required critical care transfer ambulance',
+022786:             'required critical care transfer ambulances',
+022787:             'cct', 'ccts'
+022788:         ]);
+022789:         return supported.has(raw) || supported.has(mapped);
+022790:     }
+022791:     function isCriticalCareTransferAmbulanceCheckbox(input) {
+
+===== match-16 [24887-24923] =====
+024887:         for (const { row, missing } of shortfalls) {
+024888:             selectVehicleUnits(row.originalName, row.mappedName, missing,
+024889:                 `PRVSRV FINAL ${++mfPrvSrvFinalSelectionAttempt}`);
+024890:         }
+024891:         if (shortfalls.length) await wait(180);
+024892:         invalidateVehicleCheckboxCache();
+024893:         shortfalls = inspect();
+024894:         renderVehicleLoadList();
+024895:         if (shortfalls.length) {
+024896:             mfPrvSrvSelectionBlockText = `Confirmed PRV/SRV units still missing: ${shortfalls.map(({ row, missing }) => `${row.mappedName || row.originalName} x${missing}`).join(', ')}.`;
+024897:             changeDispatchBoxColor(false);
+024898:             updateStatusBox(`${mfPrvSrvSelectionBlockText} Dispatch blocked.`);
+024899:             try { mfPersistUnitFinderDiagnostic('prv-srv-final-verification-block'); } catch (_error) {}
+024900:             if (mfDebugEnabled) debugLog('PRV/SRV FINAL BLOCK', `${reason || 'dispatch'} | ${mfPrvSrvSelectionBlockText}`);
+024901:             return false;
+024902:         }
+024903:         mfPrvSrvSelectionBlockText = '';
+024904:         if (vehicleLoadState.rows.every(row => Number(row.selected || 0) >= Number(row.required || 0)) &&
+024905:             !mfStaffingBlockActive && vehicleLoadState.trainedPersonnelBlocked !== true) {
+024906:             changeDispatchBoxColor(true);
+024907:         }
+024908:         return true;
+024909:     }
+024910:     function findUnitButton(mappedName, originalName) {
+024911:         if (isFireOperationalSupportRequirement(originalName, mappedName)) {
+024912:             return sortVehicleCheckboxesByBestArrival(getVehicleCheckboxSnapshot().filter(input =>
+024913:                 !input.disabled && !input.checked && isFireOperationalSupportUnitCheckbox(input)))[0] || null;
+024914:         }
+024915:         if (isFireEngineRequirement(originalName, mappedName)) {
+024916:             return sortVehicleCheckboxesByBestArrival(
+024917:                 getVehicleCheckboxSnapshot().filter(input => (
+024918:                     !input.disabled &&
+024919:                     !input.checked &&
+024920:                     isFireEngineVehicleCheckbox(input)
+024921:                 ))
+024922:             )[0] || null;
+024923:         }
+
+===== match-17 [26097-26133] =====
+026097:             font-size: 12px;
+026098:             letter-spacing: 0.01em;
+026099:         }
+026100:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-small {
+026101:             color: #aebdd0;
+026102:             line-height: 1.4;
+026103:         }
+026104:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-primary-actions {
+026105:             gap: 8px;
+026106:             margin-top: auto;
+026107:         }
+026108:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-primary-actions .mf2026-button,
+026109:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-export-unit-finder-diagnostics {
+026110:             min-height: 42px;
+026111:             border: 1px solid rgba(255, 255, 255, 0.11);
+026112:             border-radius: 8px;
+026113:             color: #fff !important;
+026114:             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 5px 14px rgba(0, 0, 0, 0.22);
+026115:             transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+026116:         }
+026117:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-button:hover {
+026118:             filter: brightness(1.1);
+026119:             transform: translateY(-1px);
+026120:         }
+026121:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #unit-finder-box {
+026122:             background: linear-gradient(145deg, #f2a900, #b96d00) !important;
+026123:         }
+026124:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-ally-steal {
+026125:             background: linear-gradient(145deg, #d42b86, #861653) !important;
+026126:         }
+026127:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mission-update-box {
+026128:             background: linear-gradient(145deg, #1268da, #08418e) !important;
+026129:         }
+026130:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #dispatch-box {
+026131:             background: linear-gradient(145deg, #526273, #303b47) !important;
+026132:         }
+026133:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #dispatch-share-box {
+
+===== match-18 [26231-26267] =====
+026231:             border: 1px solid rgba(126, 167, 218, 0.20) !important;
+026232:             border-radius: 7px !important;
+026233:             min-height: 38px;
+026234:             padding: 7px 9px !important;
+026235:             box-sizing: border-box;
+026236:         }
+026237:         .mf-dashboard-toggle-row {
+026238:             align-items: flex-start;
+026239:         }
+026240:         #mf-event-scanner-state {
+026241:             margin-top: 7px;
+026242:         }
+026243:         #mf-dashboard-diagnostics-pane #mf-export-unit-finder-diagnostics {
+026244:             width: 100%;
+026245:             background: linear-gradient(145deg, #27394d, #172638) !important;
+026246:         }
+026247:         #mf-dashboard-footer {
+026248:             grid-area: footer;
+026249:             padding: 4px 10px 0;
+026250:             text-align: center;
+026251:             color: #7f91a8;
+026252:             font-size: 11px;
+026253:             letter-spacing: 0.02em;
+026254:         }
+026255:         @media (max-width: 1180px) and (min-width: 701px) {
+026256:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
+026257:             #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+026258:                 grid-template-columns: 62px repeat(2, minmax(250px, 1fr));
+026259:                 grid-template-areas:
+026260:                     "rail control load"
+026261:                     "rail trained trained"
+026262:                     "utility utility utility"
+026263:                     "footer footer footer";
+026264:                 width: min(920px, calc(100vw - 24px));
+026265:             }
+026266:             #mf-dashboard-utility {
+026267:                 max-height: 310px;
+
+===== match-19 [26598-26634] =====
+026598:             min-width: 0;
+026599:             border-bottom-color: rgba(151, 171, 195, 0.10);
+026600:         }
+026601:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026602:         .mf2026-primary-actions {
+026603:             grid-template-columns: repeat(2, minmax(0, 1fr));
+026604:             gap: 6px;
+026605:             margin-top: auto;
+026606:         }
+026607:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026608:         .mf2026-primary-actions .mf2026-button,
+026609:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026610:         #mf-export-unit-finder-diagnostics,
+026611:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026612:         #mf-control-centre,
+026613:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026614:         #mf-control-minimize,
+026615:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026616:         #mf-load-minimize,
+026617:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026618:         #mf-trained-minimize,
+026619:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026620:         #mf-dashboard-utility-close {
+026621:             min-width: 0;
+026622:             min-height: 36px;
+026623:             padding: 7px 8px;
+026624:             border: 1px solid var(--nx-border) !important;
+026625:             border-radius: 8px;
+026626:             background: var(--nx-surface-2) !important;
+026627:             color: var(--nx-text-2) !important;
+026628:             font-size: 10.5px;
+026629:             font-weight: 650;
+026630:             line-height: 1.2;
+026631:             white-space: normal;
+026632:             overflow-wrap: anywhere;
+026633:             box-shadow: none;
+026634:             transition: border-color 120ms ease, background 120ms ease,
+
+===== match-20 [26950-26986] =====
+026950:             grid-template-columns: repeat(3, minmax(0, 1fr));
+026951:             gap: 3px;
+026952:         }
+026953:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026954:         .mf2026-primary-actions #dispatch-share-box,
+026955:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026956:         .mf2026-primary-actions #auto-mode-box {
+026957:             grid-column: auto;
+026958:         }
+026959:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026960:         .mf2026-primary-actions .mf2026-button,
+026961:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026962:         #mf-export-unit-finder-diagnostics,
+026963:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026964:         #mf-control-centre,
+026965:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026966:         #mf-control-minimize,
+026967:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026968:         #mf-load-minimize,
+026969:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026970:         #mf-trained-minimize,
+026971:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026972:         #mf-dashboard-utility-close {
+026973:             min-height: 28px;
+026974:             padding: 4px 5px;
+026975:             border-radius: 5px;
+026976:             font-size: 9px;
+026977:             line-height: 1.1;
+026978:         }
+026979:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026980:         #mf-control-centre,
+026981:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026982:         #mf-control-minimize,
+026983:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026984:         #mf-load-minimize,
+026985:         #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+026986:         #mf-trained-minimize,
+
+===== match-21 [27860-27904] =====
+027860:             triggerDispatchShareClick();
+027861:         });
+027862:         const autoModeBtn = document.createElement('button');
+027863:         autoModeBtn.id = 'auto-mode-box';
+027864:         autoModeBtn.textContent = 'Auto Mode: Start';
+027865:         autoModeBtn.className = 'mf2026-button';
+027866:         autoModeBtn.style.backgroundColor = '#6f42c1';
+027867:         autoModeBtn.style.color = 'white';
+027868:         autoModeBtn.addEventListener('click', function() {
+027869:             toggleAutoMode();
+027870:         });
+027871:         const diagnosticsBtn = document.createElement('button');
+027872:         diagnosticsBtn.id = 'mf-export-unit-finder-diagnostics';
+027873:         diagnosticsBtn.textContent = 'Export Diagnostics';
+027874:         diagnosticsBtn.className = 'mf2026-button';
+027875:         diagnosticsBtn.style.backgroundColor = '#495057';
+027876:         diagnosticsBtn.style.color = 'white';
+027877:         diagnosticsBtn.title =
+027878:             'Download recent Unit Finder and Mission Update requirements, selected vehicles and Personnel Register training evidence.';
+027879:         diagnosticsBtn.addEventListener('click', function() {
+027880:             exportUnitFinderDiagnostics();
+027881:         });
+027882:         const primaryActions =
+027883:             document.createElement('div');
+027884:         primaryActions.className =
+027885:             'mf2026-primary-actions';
+027886:         primaryActions.appendChild(unitFinderBtn);
+027887:         primaryActions.appendChild(missionUpdateBtn);
+027888:         primaryActions.appendChild(allyStealBtn);
+027889:         primaryActions.appendChild(dispatchBtn);
+027890:         primaryActions.appendChild(dispatchShareBtn);
+027891:         primaryActions.appendChild(autoModeBtn);
+027892:         if (missionFinderIphoneSafari) {
+027893:             primaryActions.appendChild(diagnosticsBtn);
+027894:         } else {
+027895:             diagnosticsPane.appendChild(diagnosticsBtn);
+027896:         }
+027897:         controlBody.appendChild(primaryActions);
+027898:         function syncIphoneAdvancedToggle() {
+027899:             if (!missionFinderIphoneSafari) return;
+027900:             iphoneAdvancedToggle.textContent =
+027901:                 mfIphoneAdvancedExpanded
+027902:                     ? 'Settings  ▴'
+027903:                     : 'Settings  ▾';
+027904:             iphoneAdvancedToggle.setAttribute(
+
+===== match-22 [30244-30280] =====
+030244:             } catch (error) {}
+030245:         }
+030246:         const dispatchBox = document.getElementById('dispatch-box');
+030247:         if (dispatchBox) {
+030248:             dispatchBox.style.backgroundColor = isComplete ? 'green' : 'grey';
+030249:             if (isComplete) {
+030250:                 updateStatusBox('Units ready for dispatch.');
+030251:             }
+030252:         }
+030253:         vehicleLoadState.ready = !!isComplete;
+030254:         renderVehicleLoadList();
+030255:         try {
+030256:             mfPersistUnitFinderDiagnostic(
+030257:                 isComplete
+030258:                     ? 'ready-for-dispatch'
+030259:                     : 'not-ready'
+030260:             );
+030261:         } catch (_error) {}
+030262:     }
+030263:     function resetVehicleLoadState() {
+030264:         clearSelectionGuards();
+030265:         invalidateVehicleCheckboxCache();
+030266:         vehicleLoadState = {
+030267:             rows: [],
+030268:             patients: 0,
+030269:             ambulances: 0,
+030270:             ambulanceOfficer: false,
+030271:             trainedPersonnelBlocked: false,
+030272:             trainedPersonnelBlockText: '',
+030273:             ready: false
+030274:         };
+030275:     }
+030276:     function blockTrainedPersonnelDispatch(
+030277:         shortfalls,
+030278:         source = 'Trained-personnel selection'
+030279:     ) {
+030280:         const detail = (Array.isArray(shortfalls) ? shortfalls : [shortfalls])
+
+===== match-23 [38734-38803] =====
+038734:         const runtimeQuarantine =
+038735:             mfQuarantineExactStaffingVehicle(text, reason);
+038736:         if (runtimeQuarantine) {
+038737:             mfStaffingBlockActive = false;
+038738:             mfStaffingBlockText = '';
+038739:             mfStaffingQuarantineRetryRequested = true;
+038740:             vehicleLoadState.ready = false;
+038741:             changeDispatchBoxColor(false);
+038742:             updateStatusBox(
+038743:                 `Staffing guard excluded ${runtimeQuarantine.vehicleName}. Retrying this mission with another eligible vehicle...`
+038744:             );
+038745:             const quarantineSnapshot =
+038746:                 mfPersistUnitFinderDiagnostic(
+038747:                     'runtime-staffing-quarantine'
+038748:                 );
+038749:             mfRecordStaffingFailure(
+038750:                 reason || 'runtime-staffing-quarantine',
+038751:                 text,
+038752:                 quarantineSnapshot,
+038753:                 'runtime-quarantine',
+038754:                 runtimeQuarantine
+038755:             );
+038756:             try {
+038757:                 recordIssueEvent(
+038758:                     'STAFFING VEHICLE QUARANTINED',
+038759:                     runtimeQuarantine,
+038760:                     true
+038761:                 );
+038762:             } catch (_error) {}
+038763:             return false;
+038764:         }
+038765:         mfStaffingBlockActive = true;
+038766:         mfStaffingBlockText = text;
+038767:         vehicleLoadState.ready = false;
+038768:         changeDispatchBoxColor(false);
+038769:         updateStatusBox(
+038770:             'Staffing/qualification shortage detected. No more vehicles will be selected.'
+038771:         );
+038772:         if (mfDebugEnabled) {
+038773:             debugLog(
+038774:                 'STAFFING GUARD',
+038775:                 `BLOCKED | reason=${reason || 'unknown'} | ${text.slice(0, 350)}`
+038776:             );
+038777:         }
+038778:         const staffingSnapshot =
+038779:             mfPersistUnitFinderDiagnostic(
+038780:                 'staffing-block'
+038781:             );
+038782:         mfRecordStaffingFailure(
+038783:             reason || 'staffing-block',
+038784:             text,
+038785:             staffingSnapshot,
+038786:             'dispatch-block'
+038787:         );
+038788:         try {
+038789:             recordIssueEvent(
+038790:                 'STAFFING GUARD BLOCKED',
+038791:                 {
+038792:                     reason: reason || 'unknown',
+038793:                     text: text.slice(0, 500)
+038794:                 },
+038795:                 true
+038796:             );
+038797:         } catch (error) {}
+038798:         return true;
+038799:     }
+038800:     function selectVehicleUnits(
+038801:         originalName,
+038802:         mappedName,
+038803:         amount,
+
+===== match-24 [39371-39417] =====
+039371:                         row =>
+039372:                             row?.configuredAmbulanceOfficerThreshold ===
+039373:                             true
+039374:                     )
+039375:                 ) {
+039376:                     debugLog(
+039377:                         'AMBULANCE OFFICER THRESHOLD',
+039378:                         `Settings rule added Ambulance Officer x1 because ordinary Ambulance demand exceeded ${normaliseConfiguredAmbulanceOfficerThreshold(mfAmbulanceOfficerThreshold)}.`
+039379:                     );
+039380:                 }
+039381:             }
+039382:         }
+039383:         mfSetUnitFinderDiagnosticContext(
+039384:             'unit-finder',
+039385:             sourceLabel,
+039386:             diagnosticSuppliedRows,
+039387:             requirementRows
+039388:         );
+039389:         if (
+039390:             diagnosticSourceLabel !== sourceLabel &&
+039391:             mfUnitFinderDiagnosticContext
+039392:         ) {
+039393:             mfUnitFinderDiagnosticContext.replacedSourceLabel =
+039394:                 diagnosticSourceLabel;
+039395:         }
+039396:         updateStatusBox(`Processing ${sourceLabel} requirements...`);
+039397:         await preparePoliceVehicleSafetyForRows(
+039398:             requirementRows,
+039399:             sourceLabel
+039400:         );
+039401:         for (const item of requirementRows) {
+039402:             if (
+039403:                 detectAndLatchStaffingBlock(
+039404:                     `process-${sourceLabel}`
+039405:                 )
+039406:             ) {
+039407:                 break;
+039408:             }
+039409:             const unitText = item.unitName;
+039410:             if (
+039411:                 item
+039412:                     .isTrainedPersonnelRequirement
+039413:             ) {
+039414:                 const requirements =
+039415:                     item
+039416:                         .personnelTrainingRequirements ||
+039417:                     [];
+
+===== match-25 [41855-41918] =====
+041855:         clearAutoAdvanceAfterDispatchState(
+041856:             'normal Auto Mode Dispatch & Next'
+041857:         );
+041858:         const clicked = clickDispatchOnly();
+041859:         return {
+041860:             clicked,
+041861:             shared: false,
+041862:             advancePending: false
+041863:         };
+041864:     }
+041865:     async function triggerDispatchClick() {
+041866:         try {
+041867:             mfPersistUnitFinderDiagnostic('before-dispatch');
+041868:         } catch (_error) {}
+041869:         if (
+041870:             !await confirmPrvSrvSelectionBeforeDispatch(
+041871:                 'manual Dispatch'
+041872:             )
+041873:         ) {
+041874:             return;
+041875:         }
+041876:         clearAutoAdvanceAfterDispatchState(
+041877:             'manual normal Dispatch uses native Dispatch-and-next'
+041878:         );
+041879:         if (clickDispatchOnly()) {
+041880:             updateStatusBox(
+041881:                 'Dispatch & Next clicked. MissionChief is opening the next mission...'
+041882:             );
+041883:         } else {
+041884:             updateStatusBox(
+041885:                 'Dispatch & Next button not found.'
+041886:             );
+041887:             console.error(
+041888:                 'Dispatch & Next button not found.'
+041889:             );
+041890:         }
+041891:     }
+041892:     async function triggerDispatchShareClick() {
+041893:         try {
+041894:             mfPersistUnitFinderDiagnostic('before-dispatch-share');
+041895:         } catch (_error) {}
+041896:         if (
+041897:             !await confirmPrvSrvSelectionBeforeDispatch(
+041898:                 'manual Dispatch & Share'
+041899:             )
+041900:         ) {
+041901:             return;
+041902:         }
+041903:         const advanceState =
+041904:             createAutoAdvanceAfterDispatchState(
+041905:                 'manual Dispatch & Share',
+041906:                 'manual'
+041907:             );
+041908:         writeAutoAdvanceAfterDispatchState(
+041909:             advanceState
+041910:         );
+041911:         if (clickDispatchAndShareOnly()) {
+041912:             updateStatusBox(
+041913:                 advanceState
+041914:                     ? 'Dispatch & Share clicked. Waiting for refresh, then opening Next Mission...'
+041915:                     : 'Dispatch & Share clicked. No next mission is available.'
+041916:             );
+041917:             if (advanceState) {
+041918:                 setTimeout(
+
+===== match-26 [45104-45140] =====
+045104:                 ? suppliedRows
+045105:                 : readMissionUpdateRows();
+045106:         const normalisedMissingRows =
+045107:             collapseSharedFireOperationalSupportRequirements(
+045108:                 normaliseOperationalRequirementRows(
+045109:                     rawMissingRows
+045110:                 )
+045111:             );
+045112:         const missingRows =
+045113:             addConfiguredAmbulanceOfficerThresholdRequirement(
+045114:                 normalisedMissingRows
+045115:             );
+045116:         mfSetUnitFinderDiagnosticContext(
+045117:             'mission-update',
+045118:             'MISSION UPDATE',
+045119:             rawMissingRows,
+045120:             missingRows
+045121:         );
+045122:         if (mfDebugEnabled) {
+045123:             debugLog(
+045124:                 'UPDATE ONLY',
+045125:                 missingRows.length
+045126:                     ? `Active mission rows only: ${missingRows.map(row => `${row.unitName} x${row.stillNeeded}`).join(', ')}`
+045127:                     : 'No visible active-mission update rows found. Hidden and previous mission requirements were ignored.'
+045128:             );
+045129:         }
+045130:         if (missingRows.length === 0) {
+045131:             updateStatusBox("No mission update units needed.");
+045132:             return false;
+045133:         }
+045134:         const missingAfterAttempt = [];
+045135:         const trainedPersonnelWarnings = [];
+045136:         missingRows.forEach(item => {
+045137:             if (
+045138:                 isPublicOrderPersonnelRequirementName(
+045139:                     item?.unitName
+045140:                 )
