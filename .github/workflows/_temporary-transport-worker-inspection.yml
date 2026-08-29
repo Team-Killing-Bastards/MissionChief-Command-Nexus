@@ -42,6 +42,42 @@ jobs:
           PY
           python3 scripts/_temporary-build-v3035-worker-b.py
 
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/check-v3-low-queue-memory-lifecycle.mjs')
+          text = path.read_text(encoding='utf-8')
+          old = """assert.ok(
+  pausedTransport.includes('`/vehicles/${request.vehicleId}`') &&
+    pausedTransport.includes('createWorker(url.href)'),
+  'paused transport must create only the exact vehicle worker'
+);"""
+          new = """assert.ok(
+  pausedTransport.includes('`/vehicles/${request.vehicleId}`') &&
+    pausedTransport.includes(\"createWorker(url.href, 'TRANSPORT_B')\"),
+  'paused transport must create only the exact vehicle route as explicit Worker B'
+);"""
+          if old not in text:
+              raise SystemExit('Low-queue explicit TRANSPORT_B assertion marker was not found.')
+          text = text.replace(old, new, 1)
+          old = """assert.ok(
+  transportReturn.includes(\"event: 'return-to-low-queue-pause'\") &&
+    transportReturn.includes('removeWorker(false)') &&
+    transportReturn.includes('beginMissionRescan()'),
+  'a pause transport worker must release itself and return to the mission wait'
+);"""
+          new = """assert.ok(
+  transportReturn.includes(\"state.workerRole !== 'TRANSPORT_B'\") &&
+    transportReturn.includes(\"event: 'transport-worker-b-complete'\") &&
+    transportReturn.includes('removeWorker(false)') &&
+    transportReturn.includes('if (paused)') &&
+    transportReturn.includes('beginMissionRescan()'),
+  'transport Worker B must release itself before returning to the mission wait'
+);"""
+          if old not in text:
+              raise SystemExit('Low-queue transport-B completion assertion marker was not found.')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+
       - name: Validate exact candidate
         shell: bash
         run: |
