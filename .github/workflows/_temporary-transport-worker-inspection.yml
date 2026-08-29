@@ -1,0 +1,113 @@
+name: Temporary transport-worker inspection
+
+on:
+  push:
+    branches:
+      - feature/v3035-worker-b-transport
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    if: ${{ !contains(github.event.head_commit.message, '[skip transport inspection]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build targeted source maps
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          source_path = Path('src/missionchief-command-nexus.user.js')
+          lines = source_path.read_text(encoding='utf-8').splitlines()
+
+          def contexts(output, terms, before=12, after=28, max_ranges=180):
+              ranges = []
+              for number, line in enumerate(lines, 1):
+                  lowered = line.lower()
+                  if any(term.lower() in lowered for term in terms):
+                      ranges.append((max(1, number-before), min(len(lines), number+after)))
+              merged = []
+              for start, end in ranges:
+                  if merged and start <= merged[-1][1] + 3:
+                      merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+                  else:
+                      merged.append((start, end))
+              report = [f'lines={len(lines)} bytes={source_path.stat().st_size}', 'terms=' + repr(terms)]
+              for index, (start, end) in enumerate(merged[:max_ranges], 1):
+                  report.append(f'\n===== context-{index} [{start}-{end}] =====')
+                  for line_number in range(start, end+1):
+                      report.append(f'{line_number:06d}: {lines[line_number-1]}')
+              Path(output).write_text('\n'.join(report) + '\n', encoding='utf-8')
+
+          contexts('.tmp-transport-service-map.txt', [
+              'transportService', 'transport service', 'radioTransportRequests',
+              'currentTransportVehicleId', 'transportRequestMissionId',
+              'patientAssist', 'prisonerAssist', 'transportAffinity',
+              'postTransportRehook', 'serviceTransport', 'balanced transport',
+              'TRANSPORT_SERVICE_', 'TRANSPORT_ASSIST_', 'PRISONER_ASSIST_',
+              'PATIENT_ASSIST_'
+          ], max_ranges=220)
+
+          contexts('.tmp-worker-lifecycle-map.txt', [
+              'function createWorker', 'function removeWorker', 'function destroyWorker',
+              'workerGeneration', 'createPipeline', 'removePipeline', 'pipelineSlots',
+              'promotePipeline', 'pipelinePromotion', 'pipelineActiveOnly',
+              'runtime recycle', 'memory pressure', 'createIframe', 'removeIframe',
+              'ACTIVE_WORKER_NAME_PREFIX', 'PIPELINE_PRELOAD_NAME_PREFIX'
+          ], max_ranges=220)
+
+          contexts('.tmp-controller-flow-map.txt', [
+              'function watcher', 'function watch', 'function tick', 'setInterval(',
+              'function start', 'function stop', 'function render', 'function diagnosticsSnapshot',
+              'function choose', 'function redirect', 'priorityRedirect', 'topMission',
+              'postDispatchWatchdog', 'queueFastRelease', 'activeBootstrapRescue'
+          ], max_ranges=220)
+
+          contexts('.tmp-embedded-transport-map.txt', [
+              'patient transport', 'prisoner transport', 'transport request',
+              'select hospital', 'hospital', 'cell selection', 'release prisoners',
+              'mfHandle', 'mfProcess', 'mfTransport', 'transportState',
+              '/patient/', '/gefangene/', 'Release Prisoners'
+          ], max_ranges=260)
+
+          declaration = re.compile(r'^\s*(?:async\s+)?function\s+([A-Za-z0-9_$]+)|^\s*(?:const|let|var)\s+([A-Za-z0-9_$]+)\s*=')
+          keywords = ('transport', 'radio', 'worker', 'pipeline', 'patient', 'prisoner', 'mission', 'dispatch', 'watch', 'recycle', 'memory', 'ownership')
+          report = []
+          for number, line in enumerate(lines, 1):
+              match = declaration.search(line)
+              if not match:
+                  continue
+              name = next((group for group in match.groups() if group), '')
+              if name and any(keyword in name.lower() for keyword in keywords):
+                  report.append(f'{number:06d}: {line}')
+          Path('.tmp-transport-declarations.txt').write_text('\n'.join(report) + '\n', encoding='utf-8')
+
+          for name, start, end in [
+              ('.tmp-source-head.txt', 1, 900),
+              ('.tmp-source-controller-state.txt', 900, 1900),
+              ('.tmp-source-controller-export.txt', 7600, 8500),
+              ('.tmp-source-embedded-bootstrap.txt', 18000, 19400),
+          ]:
+              start = max(1, start); end = min(len(lines), end)
+              Path(name).write_text('\n'.join(f'{i:06d}: {lines[i-1]}' for i in range(start, end+1)) + '\n', encoding='utf-8')
+          PY
+
+      - name: Commit inspection maps
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .tmp-*.txt
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Add transport-worker source maps [skip transport inspection]"
+          git push origin HEAD:feature/v3035-worker-b-transport
