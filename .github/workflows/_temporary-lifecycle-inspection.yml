@@ -18,88 +18,111 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Build bounded source map
+      - name: Build targeted source maps
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
 
-          path = Path('src/missionchief-command-nexus.user.js')
-          lines = path.read_text(encoding='utf-8').splitlines()
-          report = []
-          report.append(f'lines={len(lines)} bytes={path.stat().st_size}')
+          source_path = Path('src/missionchief-command-nexus.user.js')
+          lines = source_path.read_text(encoding='utf-8').splitlines()
 
-          def emit(title, start, end):
-              start = max(1, start)
-              end = min(len(lines), end)
-              report.append(f'\n===== {title} [{start}-{end}] =====')
-              for number in range(start, end + 1):
-                  report.append(f'{number:06d}: {lines[number - 1]}')
+          def build_context_file(output_name, terms, before=12, after=24, max_matches=80):
+              ranges = []
+              for number, line in enumerate(lines, 1):
+                  if any(term.lower() in line.lower() for term in terms):
+                      ranges.append((max(1, number - before), min(len(lines), number + after)))
+              merged = []
+              for start, end in ranges:
+                  if merged and start <= merged[-1][1] + 2:
+                      merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+                  else:
+                      merged.append((start, end))
+              report = [f'lines={len(lines)} bytes={source_path.stat().st_size}', 'terms=' + repr(terms)]
+              for index, (start, end) in enumerate(merged[:max_matches], 1):
+                  report.append(f'\n===== match-{index} [{start}-{end}] =====')
+                  for line_number in range(start, end + 1):
+                      report.append(f'{line_number:06d}: {lines[line_number - 1]}')
+              Path(output_name).write_text('\n'.join(report) + '\n', encoding='utf-8')
 
-          emit('header', 1, 180)
+          build_context_file(
+              '.tmp-lifecycle-diagnostics-map.txt',
+              [
+                  'exportUnitFinderDiagnosticSnapshot',
+                  'recordUnitFinderDiagnostic',
+                  'unitFinderDiagnostic',
+                  'diagnosticSnapshot',
+                  'diagnosticHistory',
+                  'Export Diagnostics',
+                  'mf-export-unit-finder-diagnostics',
+                  'createObjectURL',
+                  'application/json',
+              ],
+              max_matches=55,
+          )
 
-          exact_terms = [
-              'exportUnitFinderDiagnosticSnapshot',
-              'recordUnitFinderDiagnostic',
-              'unitFinderDiagnostic',
-              'diagnosticSnapshot',
-              'Export Diagnostics',
-              'mf-export-unit-finder-diagnostics',
-              'pagehide',
-              'beforeunload',
-              'transport return',
-              'transportReturn',
-              'workerGeneration',
-              'generationToken',
-              'promote',
-              'promotion',
-              'suspend',
-              'mission overlay',
-              'Mission Control',
-              'AUTO_V3',
-              'Worker A',
-              'worker A',
-              'active owner',
-              'inactive owner',
-          ]
-          matched_ranges = []
+          build_context_file(
+              '.tmp-lifecycle-controller-map.txt',
+              [
+                  'workerGeneration',
+                  'createWorker',
+                  'destroyWorker',
+                  'promotePipeline',
+                  'pipelinePromot',
+                  'transportEvents',
+                  'recordTransport',
+                  'pagehide',
+                  'beforeunload',
+                  'setStatus(',
+                  'setPhase(',
+                  'ownershipBridge',
+                  'mission-observer-managed-active-owner',
+                  'mission-observer-inactive-owner',
+              ],
+              max_matches=100,
+          )
+
+          build_context_file(
+              '.tmp-lifecycle-ui-map.txt',
+              [
+                  'mountMission',
+                  'Mission Control',
+                  'mf-mission-control',
+                  'overlay',
+                  'Auto Mode was not found',
+                  'autoControl',
+                  'findAuto',
+                  'fatal',
+                  'suspend',
+              ],
+              max_matches=90,
+          )
+
+          declarations = []
+          pattern = re.compile(r'^\s*(?:async\s+)?function\s+([A-Za-z0-9_$]+)|^\s*(?:const|let|var)\s+([A-Za-z0-9_$]+)\s*=')
+          keywords = ('diagnostic', 'worker', 'transport', 'owner', 'overlay', 'missioncontrol', 'automode', 'auto', 'pipeline', 'lifecycle', 'status')
           for number, line in enumerate(lines, 1):
-              if any(term.lower() in line.lower() for term in exact_terms):
-                  matched_ranges.append((max(1, number - 7), min(len(lines), number + 14)))
+              match = pattern.search(line)
+              name = next((value for value in match.groups() if value), '') if match else ''
+              if name and any(keyword in name.lower() for keyword in keywords):
+                  declarations.append(f'{number:06d}: {line}')
+          Path('.tmp-lifecycle-declarations.txt').write_text('\n'.join(declarations) + '\n', encoding='utf-8')
 
-          merged = []
-          for start, end in sorted(matched_ranges):
-              if merged and start <= merged[-1][1] + 2:
-                  merged[-1] = (merged[-1][0], max(merged[-1][1], end))
-              else:
-                  merged.append((start, end))
-
-          # Keep the report reviewable while covering every key area.
-          for index, (start, end) in enumerate(merged[:160], 1):
-              emit(f'match-{index}', start, end)
-
-          report.append('\n===== relevant declarations =====')
-          declaration = re.compile(r'^\s*(?:async\s+)?function\s+([A-Za-z0-9_$]+)|^\s*(?:const|let|var)\s+([A-Za-z0-9_$]+)\s*=')
-          keywords = ('diagnostic', 'worker', 'transport', 'owner', 'overlay', 'missioncontrol', 'automode', 'autoMode', 'lifecycle')
-          for number, line in enumerate(lines, 1):
-              match = declaration.search(line)
-              name = next((group for group in match.groups() if group), '') if match else ''
-              if name and any(word.lower() in name.lower() for word in keywords):
-                  report.append(f'{number:06d}: {line}')
-
-          emit('tail', max(1, len(lines) - 180), len(lines))
-          Path('.tmp-lifecycle-source-map.txt').write_text('\n'.join(report) + '\n', encoding='utf-8')
+          tail = []
+          for line_number in range(max(1, len(lines) - 360), len(lines) + 1):
+              tail.append(f'{line_number:06d}: {lines[line_number - 1]}')
+          Path('.tmp-lifecycle-tail.txt').write_text('\n'.join(tail) + '\n', encoding='utf-8')
           PY
 
-      - name: Commit inspection map
+      - name: Commit targeted maps
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .tmp-lifecycle-source-map.txt
+          git add .tmp-lifecycle-*.txt
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "Add lifecycle source inspection [skip lifecycle inspection]"
+          git commit -m "Add targeted lifecycle source maps [skip lifecycle inspection]"
           git push origin HEAD:build/lifecycle-diagnostics-v3034
