@@ -18,111 +18,59 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Build targeted source maps
+      - name: Build exact lifecycle ranges
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
 
-          source_path = Path('src/missionchief-command-nexus.user.js')
-          lines = source_path.read_text(encoding='utf-8').splitlines()
+          path = Path('src/missionchief-command-nexus.user.js')
+          lines = path.read_text(encoding='utf-8').splitlines()
 
-          def build_context_file(output_name, terms, before=12, after=24, max_matches=80):
-              ranges = []
-              for number, line in enumerate(lines, 1):
-                  if any(term.lower() in line.lower() for term in terms):
-                      ranges.append((max(1, number - before), min(len(lines), number + after)))
-              merged = []
-              for start, end in ranges:
-                  if merged and start <= merged[-1][1] + 2:
-                      merged[-1] = (merged[-1][0], max(merged[-1][1], end))
-                  else:
-                      merged.append((start, end))
-              report = [f'lines={len(lines)} bytes={source_path.stat().st_size}', 'terms=' + repr(terms)]
-              for index, (start, end) in enumerate(merged[:max_matches], 1):
-                  report.append(f'\n===== match-{index} [{start}-{end}] =====')
+          def write_range(name, start, end):
+              start = max(1, start)
+              end = min(len(lines), end)
+              content = [f'{number:06d}: {lines[number - 1]}' for number in range(start, end + 1)]
+              Path(name).write_text('\n'.join(content) + '\n', encoding='utf-8')
+
+          write_range('.tmp-src-controller-core.txt', 1, 900)
+          write_range('.tmp-src-controller-worker.txt', 1600, 1900)
+          write_range('.tmp-src-controller-pipeline.txt', 2920, 4310)
+          write_range('.tmp-src-controller-transport.txt', 4610, 5745)
+          write_range('.tmp-src-controller-admission.txt', 5740, 7525)
+          write_range('.tmp-src-controller-export.txt', 7860, 8380)
+          write_range('.tmp-src-mf-bootstrap.txt', 18200, 19250)
+          write_range('.tmp-src-mf-diagnostics.txt', 20480, 21600)
+
+          terms = [
+              '__MCN_BOOT_TRACE__',
+              'isMfV3ManagedActiveWorker',
+              'mission-observer-managed-active-owner',
+              'mission-observer-inactive-owner',
+              'MF_FRAME_RUNTIME_RECONCILE',
+              'V2_FRAME_RUNTIME_RECONCILE',
+              'managed-active-owner',
+              'bootstrapTrace',
+          ]
+          report = []
+          for number, line in enumerate(lines, 1):
+              if any(term.lower() in line.lower() for term in terms):
+                  start = max(1, number - 12)
+                  end = min(len(lines), number + 24)
+                  report.append(f'\n===== {number} [{start}-{end}] =====')
                   for line_number in range(start, end + 1):
                       report.append(f'{line_number:06d}: {lines[line_number - 1]}')
-              Path(output_name).write_text('\n'.join(report) + '\n', encoding='utf-8')
-
-          build_context_file(
-              '.tmp-lifecycle-diagnostics-map.txt',
-              [
-                  'exportUnitFinderDiagnosticSnapshot',
-                  'recordUnitFinderDiagnostic',
-                  'unitFinderDiagnostic',
-                  'diagnosticSnapshot',
-                  'diagnosticHistory',
-                  'Export Diagnostics',
-                  'mf-export-unit-finder-diagnostics',
-                  'createObjectURL',
-                  'application/json',
-              ],
-              max_matches=55,
-          )
-
-          build_context_file(
-              '.tmp-lifecycle-controller-map.txt',
-              [
-                  'workerGeneration',
-                  'createWorker',
-                  'destroyWorker',
-                  'promotePipeline',
-                  'pipelinePromot',
-                  'transportEvents',
-                  'recordTransport',
-                  'pagehide',
-                  'beforeunload',
-                  'setStatus(',
-                  'setPhase(',
-                  'ownershipBridge',
-                  'mission-observer-managed-active-owner',
-                  'mission-observer-inactive-owner',
-              ],
-              max_matches=100,
-          )
-
-          build_context_file(
-              '.tmp-lifecycle-ui-map.txt',
-              [
-                  'mountMission',
-                  'Mission Control',
-                  'mf-mission-control',
-                  'overlay',
-                  'Auto Mode was not found',
-                  'autoControl',
-                  'findAuto',
-                  'fatal',
-                  'suspend',
-              ],
-              max_matches=90,
-          )
-
-          declarations = []
-          pattern = re.compile(r'^\s*(?:async\s+)?function\s+([A-Za-z0-9_$]+)|^\s*(?:const|let|var)\s+([A-Za-z0-9_$]+)\s*=')
-          keywords = ('diagnostic', 'worker', 'transport', 'owner', 'overlay', 'missioncontrol', 'automode', 'auto', 'pipeline', 'lifecycle', 'status')
-          for number, line in enumerate(lines, 1):
-              match = pattern.search(line)
-              name = next((value for value in match.groups() if value), '') if match else ''
-              if name and any(keyword in name.lower() for keyword in keywords):
-                  declarations.append(f'{number:06d}: {line}')
-          Path('.tmp-lifecycle-declarations.txt').write_text('\n'.join(declarations) + '\n', encoding='utf-8')
-
-          tail = []
-          for line_number in range(max(1, len(lines) - 360), len(lines) + 1):
-              tail.append(f'{line_number:06d}: {lines[line_number - 1]}')
-          Path('.tmp-lifecycle-tail.txt').write_text('\n'.join(tail) + '\n', encoding='utf-8')
+          Path('.tmp-src-bootstrap-map.txt').write_text('\n'.join(report) + '\n', encoding='utf-8')
           PY
 
-      - name: Commit targeted maps
+      - name: Commit exact lifecycle ranges
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .tmp-lifecycle-*.txt
+          git add .tmp-src-*.txt
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "Add targeted lifecycle source maps [skip lifecycle inspection]"
+          git commit -m "Add exact lifecycle source ranges [skip lifecycle inspection]"
           git push origin HEAD:build/lifecycle-diagnostics-v3034
