@@ -56,7 +56,7 @@ function extractFunction(name) {
   assert.fail(`function ${name} is unterminated`);
 }
 
-assert.match(source, /const PIPELINE_PRELOAD_COUNT = 1;/);
+assert.match(source, /const PIPELINE_PRELOAD_COUNT = 0;/);
 assert.match(source, /const CONTROLLER_MEMORY_PRESSURE_BYTES = 768 \* 1024 \* 1024;/);
 assert.match(source, /const CONTROLLER_MEMORY_GROWTH_BYTES = 192 \* 1024 \* 1024;/);
 assert.match(source, /const CONTROLLER_MEMORY_WARMUP_MS = 60 \* 1000;/);
@@ -170,12 +170,12 @@ vm.runInContext(
   `${heapSnapshot}\n${pressureReleaseLimit}\n${activatePressure}\nresult = activateControllerMemoryPressure();`,
   pressureContext
 );
-assert.equal(pressureContext.result, false, 'normal A+B startup heap must be learned, not rejected');
+assert.equal(pressureContext.result, false, 'normal mission-A startup heap must be learned, not rejected');
 assert.equal(pressureState.pipelineMemoryBaselineBytes, 537 * 1024 * 1024);
 now += 61 * 1000;
 pressureContext.performance.memory.usedJSHeapSize = 740 * 1024 * 1024;
 vm.runInContext('result = activateControllerMemoryPressure();', pressureContext);
-assert.equal(pressureContext.result, false, 'growth must be sustained before B is released');
+assert.equal(pressureContext.result, false, 'growth must be sustained before RAM protection activates');
 now += 16 * 1000;
 vm.runInContext('result = activateControllerMemoryPressure();', pressureContext);
 assert.equal(pressureContext.result, true);
@@ -196,7 +196,7 @@ now += 61 * 1000;
 vm.runInContext('result = activateControllerMemoryPressure();', pressureContext);
 assert.equal(pressureState.pipelineMemoryPressureActive, false, 'a sustained safe heap must release RAM protection');
 assert.equal(pressureState.pipelineMemoryPressureReleases, 1);
-assert.equal(pipelineRestarts, 1, 'preload B may return after the sustained safe period');
+assert.equal(pipelineRestarts, 1, 'the controller may leave RAM protection after the sustained safe period');
 
 const recycleDecision = extractFunction('shouldRecycleControllerRuntimeAtBoundary');
 for (const token of [
@@ -252,5 +252,5 @@ for (const durableKey of [
 }
 
 console.log(
-  'PASS: V3 owns mission observers, learns normal A+B heap, sheds B only after sustained pressure, releases the latch after a safe minute, and clears disposable state without touching durable registers.'
+  'PASS: V3 owns mission observers, learns normal mission-A heap and activates protection only after sustained pressure, releases the latch after a safe minute, and clears disposable state without touching durable registers.'
 );

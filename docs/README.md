@@ -1,6 +1,6 @@
 # Command Nexus Documentation
 
-This directory separates current operating guidance from versioned historical records. The current baseline is Command Nexus `3.0.34` with Mission Finder `V10.6.177`, retaining the proven `3.0.29` runtime with diagnostic-only Worker A lifecycle evidence.
+This directory separates current operating guidance from versioned historical records. The current baseline is Command Nexus `3.0.35` with Mission Finder `V10.6.177`, using mission-only Worker A and on-demand transport-only Worker B.
 
 ## Current operational documentation
 

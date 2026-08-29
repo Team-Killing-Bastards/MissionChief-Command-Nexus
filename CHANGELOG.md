@@ -6,6 +6,17 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.35] - 2026-08-29
+
+### Changed
+
+- Split the active lifecycle into mission-only Worker A and on-demand transport-only Worker B. A is always removed before B starts; B is always removed before a fresh A starts.
+- Disabled dormant mission preloading so the B slot is reserved exclusively for personal patient and prisoner transport. Alliance Radio remains excluded.
+- Prevented transport Worker B from inheriting Auto Mode state, mounting mission dispatch controls or entering Unit Finder/Dispatch when a transport flow reaches a mission route.
+- Start the established transport destination engine locally in each Worker B document while suppressing shared Auto Mode and post-transport rehook flags; the parent controller remains the only B-to-A handoff authority.
+- Updated RAM behaviour and diagnostics to show the active worker role. Transport B remains the sole active frame during a handoff and is released immediately after clearance or bounded timeout.
+- Increased the unified userscript version from `3.0.34` to `3.0.35`; Mission Finder remains `V10.6.177`.
+
 ## [3.0.34] - 2026-08-29
 
 ### Added

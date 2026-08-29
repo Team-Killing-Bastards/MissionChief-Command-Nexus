@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.34
+// @version      3.0.35
 // @description  MissionChief safe background automation.
 // @author       MartyBlyth
 // @license      MIT
@@ -36,18 +36,12 @@ const StorageCtor = targetWindow.Storage ||
 (targetWindow === window && typeof Storage !== 'undefined' ? Storage : null);
 if (!StorageCtor?.prototype) return null;
 let activeOwner = Boolean(initialActive);
-const ownershipTrace = targetWindow.__MCN_V3_OWNERSHIP_TRACE__ ||= [];
-let lastOwnershipBlock = '';
-const traceOwnership = (event, detail = '') => {
-ownershipTrace.push({ at: Date.now(), event, detail, active: activeOwner, name: String(targetWindow.name || ''), path: String(targetWindow.location?.pathname || '') });
-if (ownershipTrace.length > 40) ownershipTrace.shift();
+const ownershipTrace=targetWindow.__MCN_V3_OWNERSHIP_TRACE__||=[];
+const traceOwnership=(event,detail='')=>{
+ownershipTrace.push({at:Date.now(),event,detail,active:activeOwner});
+if(ownershipTrace.length>40)ownershipTrace.shift();
 };
-const traceOwnershipBlock = (operation, key) => {
-const marker = `${operation}:${String(key || '')}`;
-if (marker === lastOwnershipBlock) return;
-lastOwnershipBlock = marker;
-traceOwnership(`blocked-${operation}`, String(key || ''));
-};
+const traceOwnershipBlock=(operation,key)=>traceOwnership(`blocked-${operation}`,String(key||''));
 traceOwnership('install', source);
 const originalGetItem = StorageCtor.prototype.getItem;
 const originalSetItem = StorageCtor.prototype.setItem;
@@ -158,8 +152,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.34';
-const MASTER_VERSION = '3.0.34';
+const VERSION = '3.0.35';
+const MASTER_VERSION = '3.0.35';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -227,7 +221,7 @@ const POST_DISPATCH_SOFT_RECOVERY_MS = 5000;
 const POST_DISPATCH_HARD_RECOVERY_MS = 16000;
 const POST_DISPATCH_RECOVERY_WINDOW_MS = 120000;
 const POST_DISPATCH_RECOVERY_HISTORY_LIMIT = 50;
-const PIPELINE_PRELOAD_COUNT = 1;
+const PIPELINE_PRELOAD_COUNT = 0;
 const PIPELINE_SYNC_MS = 650;
 const PIPELINE_PUMP_MS = 450;
 const PIPELINE_READY_AUDIT_MS = 1800;
@@ -324,6 +318,7 @@ phase: 'IDLE',
 status: 'Ready',
 detail: 'Auto Mode is stopped.',
 worker: null,
+workerRole: '',
 workerGeneration: 0,
 workerLoadTimer: null,
 nexusDiscoveryTimer: null,
@@ -1884,9 +1879,9 @@ state.log.push(entry);
 if (state.log.length > LOG_LIMIT) state.log.splice(0, state.log.length - LOG_LIMIT);
 render();
 }
-window.__MCN_V3_LIFECYCLE_MARK__ = (stage, detail = {}) => log(
+window.__MCN_V3_LIFECYCLE_MARK__=(stage,detail={})=>log(
 `Worker lifecycle: ${normaliseText(stage)}`,
-{ workerGeneration: state.workerGeneration, documentSerial: state.workerDocumentSerial, missionId: state.currentMissionId, workerName: state.worker?.name || '', path: pathFromUrl(getWorkerHref()), detail }
+{workerGeneration:state.workerGeneration,documentSerial:state.workerDocumentSerial,missionId:state.currentMissionId,detail}
 );
 function setPhase(phase, status, detail = '') {
 state.phase = phase;
@@ -5159,64 +5154,43 @@ resetPatientAssistTracking();
 resetPrisonerAssistTracking();
 }
 function redirectWorkerToTransportService(request, currentMissionId) {
-if (!request?.vehicleId || !request?.missionId || !state.worker?.isConnected) return false;
-if (state.transportServiceActive) return false;
-const url = sameOriginUrl(`/vehicles/${request.vehicleId}`);
-if (!url) return false;
+if (!request?.vehicleId || !request?.missionId || !state.worker?.isConnected ||
+state.workerRole !== 'MISSION_A' || state.transportServiceActive) return false;
 state.transportServiceEligible = false;
-state.transportServiceActive = true;
-state.transportServiceKey = request.key;
-state.transportServiceVehicleId = request.vehicleId;
-state.transportServiceMissionId = request.missionId;
-state.transportServiceStartedAt = Date.now();
-state.transportServiceAttempts += 1;
-state.currentMissionId = request.missionId;
-state.currentMissionName = missionNameForId(request.missionId) || state.currentMissionName;
-state.currentMissionUrl = request.missionUrl || state.currentMissionUrl;
-resetPriorityPending();
-const event = {
-event: 'service-start',
-key: request.key,
-vehicleId: request.vehicleId,
-missionId: request.missionId,
-missionName: missionNameForId(request.missionId),
-fromMissionId: currentMissionId || '',
-url: url.href,
-};
+const event = { event: 'mission-a-to-transport-b', key: request.key,
+vehicleId: request.vehicleId, missionId: request.missionId,
+missionName: missionNameForId(request.missionId), fromMissionId: currentMissionId || '' };
 recordTransportService(event);
-setPhase(
-'TRANSPORT_SERVICE',
-'Clearing personal transport',
-`${missionDisplay(request.missionId, event.missionName)} | ${request.vehicleLabel || `vehicle ${request.vehicleId}`}. Missions resume immediately after this one transport clears.`
-);
-log('Balanced queue opened one personal Radio transport between mission passes.', event);
-try {
-state.worker.contentWindow.location.replace(url.href);
-return true;
-} catch {
-try {
-state.worker.src = url.href;
-return true;
-} catch (error) {
-recordTransportService({
-event: 'service-open-failed',
-key: request.key,
-vehicleId: request.vehicleId,
-missionId: request.missionId,
-error: String(error?.message || error),
-});
-clearTransportServiceState();
-return false;
+pausePipelineController('transport-worker-b-handoff', true);
+clearSharedV2AutoRunning('transport-worker-b-handoff');
+resetAutoStartTracking();
+state.running = false;
+setPhase('TRANSPORT_HANDOFF', 'Pausing A for B',
+`B clears ${request.vehicleLabel || `vehicle ${request.vehicleId}`}; then A restarts.`);
+log('Released A before starting transport B.', event);
+removeWorker(false);
+const workerFreeGeneration = state.workerGeneration;
+window.setTimeout(() => {
+if (!state.wanted || state.stopping || state.worker?.isConnected ||
+state.workerGeneration !== workerFreeGeneration) return;
+const liveRequest = refreshRadioTransportRequests().find(item => item.key === request.key) || null;
+if (liveRequest && startTransportOnlyWorker(liveRequest, 'mission-boundary-handoff')) return;
+recordTransportService({ event: 'transport-b-not-needed', key: request.key,
+vehicleId: request.vehicleId, missionId: request.missionId });
+const supply = actionableMissionSupply();
+if (supply.count < MINIMUM_ACTIONABLE_MISSIONS) {
+enterLowQueuePause('transport-handoff-cleared-below-minimum-supply');
+return;
 }
-}
+const mission = supply.candidates[0] || chooseTopMission({ actionableOnly: true });
+if (mission?.url) createWorker(mission.url);
+else beginMissionRescan();
+}, 120);
+return true;
 }
 function startTransportOnlyWorker(request, source = 'mission-wait') {
-if (
-state.worker?.isConnected ||
-state.transportServiceActive ||
-!request?.vehicleId ||
-!request?.missionId
-) return false;
+if (state.worker?.isConnected || state.transportServiceActive ||
+!request?.vehicleId || !request?.missionId) return false;
 const url = sameOriginUrl(`/vehicles/${request.vehicleId}`);
 if (!url) return false;
 state.transportServiceEligible = false;
@@ -5229,100 +5203,73 @@ state.transportServiceAttempts += 1;
 state.currentMissionId = request.missionId;
 state.currentMissionName = missionNameForId(request.missionId) || state.currentMissionName;
 state.currentMissionUrl = request.missionUrl || state.currentMissionUrl;
-recordTransportService({
-event: 'transport-only-worker-start',
-source,
-lowQueuePaused: state.lowQueuePaused,
-key: request.key,
-vehicleId: request.vehicleId,
-missionId: request.missionId,
-missionName: missionNameForId(request.missionId),
-url: url.href,
-});
+recordTransportService({ event: 'transport-worker-b-start', source,
+lowQueuePaused: state.lowQueuePaused, key: request.key,
+vehicleId: request.vehicleId, missionId: request.missionId,
+missionName: state.currentMissionName, url: url.href });
 clearTimer('missionRescanTimer', window.clearInterval);
-createWorker(url.href);
-state.currentMissionId = request.missionId;
-state.currentMissionName = missionNameForId(request.missionId) || state.currentMissionName;
-state.currentMissionUrl = request.missionUrl || state.currentMissionUrl;
-setPhase(
-'TRANSPORT_SERVICE',
-state.lowQueuePaused ? 'Clearing transport during mission pause' : 'Clearing queued personal transport',
-`${missionDisplay(request.missionId, missionNameForId(request.missionId))} | ${request.vehicleLabel || `vehicle ${request.vehicleId}`}. Worker A is transport-only and will be released or returned to the mission queue when this request clears.`
-);
-log('Created a temporary transport-only Worker A.', {
-source,
-lowQueuePaused: state.lowQueuePaused,
-key: request.key,
-vehicleId: request.vehicleId,
-missionId: request.missionId,
-});
+pausePipelineController('transport-worker-b-start', true);
+clearSharedV2AutoRunning('transport-worker-b-start');
+resetAutoStartTracking();
+state.running = false;
+createWorker(url.href, 'TRANSPORT_B');
+setPhase('TRANSPORT_SERVICE',
+state.lowQueuePaused ? 'B transport during mission pause' : 'B clearing personal transport',
+`${missionDisplay(request.missionId, state.currentMissionName)} | ${request.vehicleLabel || `vehicle ${request.vehicleId}`}.`);
+log('Created transport B.', {
+source, key: request.key, vehicleId: request.vehicleId, missionId: request.missionId });
 return true;
 }
 function returnToTopMissionAfterTransport(reason, request = null) {
-if (!state.wanted || state.stopping || !state.worker?.isConnected) return false;
-if (state.lowQueuePaused) {
-const serviceKey = state.transportServiceKey;
-const serviceVehicleId = state.transportServiceVehicleId;
-const serviceMissionId = state.transportServiceMissionId;
+if (!state.wanted || state.stopping || !state.worker?.isConnected ||
+state.workerRole !== 'TRANSPORT_B') return false;
+const service = { key: state.transportServiceKey || request?.key || '',
+vehicleId: state.transportServiceVehicleId || request?.vehicleId || '',
+missionId: state.transportServiceMissionId || request?.missionId || '' };
+const paused = state.lowQueuePaused;
 clearTransportServiceState();
-state.transportServiceEligible = true;
-recordTransportService({
-event: 'return-to-low-queue-pause',
-reason,
-key: serviceKey || request?.key || '',
-vehicleId: serviceVehicleId || request?.vehicleId || '',
-missionId: serviceMissionId || request?.missionId || '',
-});
+clearSharedV2AutoRunning('transport-worker-b-complete');
+resetAutoStartTracking();
+state.running = false;
 removeWorker(false);
 compactControllerEphemeralMemory();
 saveRunContinuity();
-setPhase(
-'LOW_QUEUE_PAUSED',
-'Transport cleared - waiting for 2 missions',
-`The temporary transport worker was released. ${state.lowQueueObservedCount} actionable personal mission${state.lowQueueObservedCount === 1 ? '' : 's'} remain; durable registers were not touched.`
-);
+recordTransportService({ event: 'transport-worker-b-complete', reason, ...service });
+if (paused) {
+state.transportServiceEligible = true;
+setPhase('LOW_QUEUE_PAUSED', 'Transport cleared - waiting for 2 missions',
+`B released; ${state.lowQueueObservedCount} mission${state.lowQueueObservedCount === 1 ? '' : 's'} remain.`);
 beginMissionRescan();
 return true;
 }
 const supply = actionableMissionSupply();
 if (supply.count < MINIMUM_ACTIONABLE_MISSIONS) {
-clearTransportServiceState();
-removeWorker(false);
 enterLowQueuePause('transport-cleared-below-minimum-supply');
 return true;
 }
 const mission = supply.candidates[0] || chooseTopMission({ actionableOnly: true });
 if (!mission?.missionId || !mission.url) {
-clearTransportServiceState();
-removeWorker(false);
-setPhase('WAITING_MISSION', 'Transport cleared; waiting for mission', 'No actionable personal mission is currently available.');
+setPhase('WAITING_MISSION', 'B cleared; waiting for mission',
+'B released; no mission available.');
 beginMissionRescan();
 return true;
 }
 state.postTransportRehooks += 1;
-const serviceKey = state.transportServiceKey;
-const serviceVehicleId = state.transportServiceVehicleId;
-const serviceMissionId = state.transportServiceMissionId;
-clearTransportServiceState();
-state.lastPriorityRedirectAt = 0;
-recordTransportService({
-event: 'return-to-top',
-reason,
-key: serviceKey || request?.key || '',
-vehicleId: serviceVehicleId || request?.vehicleId || '',
-missionId: serviceMissionId || request?.missionId || '',
-toMissionId: mission.missionId,
-toMissionName: cleanMissionCaption(mission.caption),
-});
-log('Transport side pass finished; returning the hidden worker to the current top personal mission.', {
-reason,
-toMissionId: mission.missionId,
-toMissionName: cleanMissionCaption(mission.caption),
-});
-return redirectWorkerToPriority(
-{ source: 'TOP_MISSION', missionId: mission.missionId, url: mission.url, mission },
-serviceMissionId || state.currentMissionId
-);
+state.currentMissionId = mission.missionId;
+state.currentMissionName = cleanMissionCaption(mission.caption) || missionNameForId(mission.missionId);
+state.currentMissionUrl = mission.url;
+persistResumeMission(mission.url);
+setPhase('TRANSPORT_RETURN', 'B cleared; starting mission A',
+`${missionDisplay(mission.missionId, state.currentMissionName)}`);
+log('Released B; starting A.', {
+reason, ...service, toMissionId: mission.missionId, toMissionName: state.currentMissionName });
+const workerFreeGeneration = state.workerGeneration;
+window.setTimeout(() => {
+if (!state.wanted || state.stopping || state.worker?.isConnected ||
+state.workerGeneration !== workerFreeGeneration) return;
+createWorker(mission.url);
+}, 120);
+return true;
 }
 function maybeHandleTransportServiceTimeout(requests) {
 if (!state.transportServiceActive || !state.transportServiceStartedAt) return false;
@@ -5727,6 +5674,7 @@ return false;
 function maybeEnforcePriority(doc, href, context, radioRequests = state.radioTransportRequests) {
 const activeControl = findAutoModeControl(doc);
 if (
+state.workerRole !== 'MISSION_A' ||
 !state.wanted ||
 !currentWorkerAutoConfirmed() ||
 !activeControl ||
@@ -5789,19 +5737,21 @@ return;
 if (Date.now() - state.priorityPendingSince < TOP_PRIORITY_STABLE_MS) return;
 redirectWorkerToPriority(target, currentMissionId);
 }
-function createWorker(url) {
+function createWorker(url, role = 'MISSION_A') {
 clearPostDispatchWatchdog('worker-recreated');
 removeWorker(false);
 state.nonMissionRedirectRecoveryInFlight = false;
 state.workerGeneration += 1;
 const generation = state.workerGeneration;
+const transportWorker = role === 'TRANSPORT_B';
 const frame = document.createElement('iframe');
 frame.id = WORKER_ID;
-frame.name = `${ACTIVE_WORKER_NAME_PREFIX}${generation}-${missionIdFromUrl(url) || 'mission'}`;
+frame.name = `${ACTIVE_WORKER_NAME_PREFIX}${transportWorker ? 'transport-b-' : ''}${generation}-${missionIdFromUrl(url) || state.transportServiceMissionId || 'mission'}`;
 frame.src = url;
 frame.setAttribute('aria-hidden', 'true');
 frame.setAttribute('tabindex', '-1');
 frame.setAttribute('data-mcn-v3-worker', 'true');
+frame.setAttribute('data-mcn-v3-worker-role', transportWorker ? 'transport-b' : 'mission-a');
 applyActiveWorkerFrameStyle(frame);
 bindManagedFrameLoad(frame, () => {
 if (generation !== state.workerGeneration || state.worker !== frame) return;
@@ -5809,12 +5759,18 @@ onWorkerLoad(frame, generation);
 });
 document.body.appendChild(frame);
 state.worker = frame;
+state.workerRole = transportWorker ? 'TRANSPORT_B' : 'MISSION_A';
 state.lastWatchHeartbeatAt = Date.now();
 state.wakeRecoveryActive = false;
+if (!transportWorker) {
 state.bootstrapMissionUrl = url;
 state.currentMissionUrl = url;
 state.currentMissionId = missionIdFromUrl(url);
 state.currentMissionName = missionNameForId(state.currentMissionId);
+} else {
+state.currentMissionId = state.transportServiceMissionId || state.currentMissionId;
+state.currentMissionName = missionNameForId(state.currentMissionId) || state.currentMissionName;
+}
 forgetWorkerDocument();
 state.lastWorkerHref = '';
 state.lastWorkerNavigationAt = Date.now();
@@ -5830,25 +5786,19 @@ state.transportIdentity = '';
 state.transportSince = 0;
 state.transportWarned = false;
 state.foreignMissionUiWarned = false;
-recordMissionVisit(url, 'worker-created');
+recordMissionVisit(url, transportWorker ? 'transport-worker-b-created' : 'worker-created');
 clearTimer('workerLoadTimer');
 state.workerLoadTimer = window.setTimeout(() => {
 if (generation !== state.workerGeneration || !state.wanted) return;
-setError(
-'Background mission worker did not finish loading.',
-'The off-screen MissionChief mission frame exceeded the 30 second load window.'
-);
+setError(`${transportWorker ? 'Transport Worker B' : 'Mission Worker A'} did not finish loading.`,
+'The off-screen MissionChief frame exceeded the 30 second load window.');
 }, WORKER_LOAD_TIMEOUT_MS);
-setPhase(
-'LOADING',
-'Opening background mission',
-`${missionDisplay(state.currentMissionId, state.currentMissionName)} is loading off-screen.`
-);
-log('Created off-screen MissionChief mission worker.', {
-missionId: state.currentMissionId,
-missionName: state.currentMissionName,
-pathname: new URL(url).pathname,
-});
+setPhase(transportWorker ? 'TRANSPORT_LOADING' : 'LOADING',
+transportWorker ? 'Opening transport Worker B' : 'Opening mission Worker A',
+transportWorker ? `Vehicle ${state.transportServiceVehicleId} is loading off-screen.` : `${missionDisplay(state.currentMissionId, state.currentMissionName)} is loading off-screen.`);
+log(`Created ${transportWorker ? 'transport B' : 'mission A'}.`, {
+role: state.workerRole, missionId: state.currentMissionId,
+missionName: state.currentMissionName, pathname: new URL(url).pathname });
 }
 function getWorkerDocument(frame = state.worker) {
 if (!frame || !frame.isConnected) return null;
@@ -6555,6 +6505,12 @@ pathname: new URL(href).pathname,
 balancedTransportService: state.transportServiceActive,
 });
 refreshRadioTransportRequests();
+if (state.workerRole === 'TRANSPORT_B' && isMissionUrl(href)) {
+setPhase('TRANSPORT_RETURN_WAIT', 'Worker B awaiting transport clearance',
+`Transport B reached a mission route; Auto Mode remains blocked.`);
+startWatcher();
+return;
+}
 applyAirfieldOperationsSupervisorCrossRef(doc);
 installAirfieldOperationsSupervisorObservers(doc);
 if (!isMissionUrl(href)) {
@@ -7120,6 +7076,14 @@ setError(
 return;
 }
 const documentChanged = adoptWorkerDocument(doc, href, 'watcher');
+if (state.workerRole === 'TRANSPORT_B' && isMissionUrl(href)) {
+const requests = refreshRadioTransportRequests();
+const liveRequest = requests.find(item => item.key === state.transportServiceKey) || null;
+if (!liveRequest) returnToTopMissionAfterTransport('transport-worker-b-mission-route');
+else maybeHandleTransportServiceTimeout(requests);
+captureWorkerSnapshot();
+return;
+}
 if (maybeRecoverStaleCanonicalMissionWorker(href, doc, 'watcher')) return;
 if (href !== state.lastWorkerHref) {
 const previousHref = state.lastWorkerHref;
@@ -7336,7 +7300,7 @@ return;
 }
 const controlRunning = autoControlLooksRunning(control);
 const currentDocumentConfirmed = currentWorkerAutoConfirmed();
-if (!controlRunning && !state.autoStartIssued && isMissionUrl(href)) {
+if (state.workerRole === 'MISSION_A' && !controlRunning && !state.autoStartIssued && isMissionUrl(href)) {
 startExistingAutoMode(control, state.worker, state.workerGeneration);
 captureWorkerSnapshot();
 return;
@@ -7428,7 +7392,9 @@ captureWorkerSnapshot();
 if (state.activeTransportEvent) endTransportEvent('worker-removed');
 clearPostDispatchWatchdog('worker-removed');
 const frame = state.worker;
+const role = state.workerRole || 'MISSION_A';
 state.worker = null;
+state.workerRole = '';
 forgetWorkerDocument();
 state.workerGeneration += 1;
 if (frame?.isConnected) {
@@ -7437,7 +7403,7 @@ try { frame.name = `mcn-v3-retired-worker-${state.workerGeneration}`; } catch {}
 disposeManagedFrameRuntime(frame, logRemoval ? 'active-worker-remove' : 'active-worker-replace');
 try { frame.src = 'about:blank'; } catch {}
 try { frame.remove(); } catch {}
-if (logRemoval) log('Removed background mission worker.');
+if (logRemoval) log(`Removed ${role === 'TRANSPORT_B' ? 'transport B' : 'mission A'}.`);
 }
 }
 function gracefulStop() {
@@ -7556,7 +7522,7 @@ saveRunContinuity();
 setPhase(
 'RESUMING',
 'Mission supply restored',
-`${supply.count} actionable personal missions remained stable. Starting a fresh Worker A; B will rebuild only as a dormant preload.`
+`${supply.count} actionable personal missions remained stable. Starting mission Worker A; Worker B remains reserved for transport.`
 );
 log('Low-queue pause ended after mission supply recovered.', {
 observedCount: supply.count,
@@ -8151,6 +8117,7 @@ stopping: state.stopping,
 phase: state.phase,
 status: state.status,
 detail: state.detail,
+workerRole: state.workerRole || '',
 lowQueuePaused: state.lowQueuePaused,
 lowQueuePauseSince: state.lowQueuePauseSince
 ? new Date(state.lowQueuePauseSince).toISOString()
@@ -8342,6 +8309,7 @@ radioTransportRequests: state.radioTransportRequests.map(request => ({ ...reques
 radioRequestWarningKey: state.radioRequestWarningKey,
 },
 worker: {
+role: state.workerRole || '',
 present: Boolean(state.worker?.isConnected),
 storageOwnershipActive: frameOwnsOperationalState(state.worker),
 storageOwnershipSource: (() => {
@@ -8752,29 +8720,9 @@ state.ui.topMission.textContent = visualTopSkipRemaining > 0
 ? `${missionDisplay(top.missionId, top.caption)}${top.actionKind && top.actionKind !== 'OTHER' ? ` | ${top.actionKind}` : ''}`
 : '-');
 if (state.ui.pipeline) {
-const slots = state.pipelineSlots.slice().sort((a, b) => a.index - b.index);
-const activeLabel = state.transportServiceActive
-? 'A: clearing transport'
-: state.lowQueuePaused
-? 'A: released for RAM'
-: `A: ${state.running ? 'active' : 'starting'} ${compactMissionIdLabel(state.currentMissionId)}`;
-const labels = [activeLabel];
-if (state.lowQueuePaused) {
-labels.push('B: released');
-} else if (state.pipelineMemoryPressureActive) {
-labels.push('B: off (RAM protection)');
-} else if (state.pipelineActiveOnly) {
-labels.push('B: off (safe A-only)');
-} else {
-for (let i = 0; i < PIPELINE_PRELOAD_COUNT; i += 1) {
-const slot = slots.find(item => item.index === i) || null;
-const letter = 'B';
-labels.push(slot
-? `${letter}: ${readablePipelineSlotStatus(slot)} ${compactMissionIdLabel(slot.missionId)}`
-: `${letter}: waiting`);
-}
-}
-state.ui.pipeline.textContent = labels.join(' | ');
+state.ui.pipeline.textContent = state.workerRole === 'TRANSPORT_B'
+? `A: paused | B: transport ${compactMissionIdLabel(state.transportServiceMissionId)}`
+: `${state.lowQueuePaused ? 'A: released' : `A: ${state.running ? 'dispatching' : 'starting'} ${compactMissionIdLabel(state.currentMissionId)}`} | B: transport standby`;
 }
 const nextRadio = state.radioTransportRequests[0] || null;
 state.ui.radio.textContent = nextRadio
@@ -8786,7 +8734,7 @@ state.ui.skips.textContent = skips.length
 : '0';
 if (state.ui.ruleAssists) {
 state.ui.ruleAssists.textContent =
-`warm handoffs ${state.pipelineReadyPromotions}/${state.pipelinePromotions} | dormant B ${state.pipelineV2DormantReady} | RAM guard ${state.pipelineMemoryPressureActive ? 'A-only' : 'normal'} | cycles ${state.runtimeRecycles} | cleanups ${state.managedRuntimeDisposals} | recovery ${state.postDispatchSoftRecoveries}/${state.postDispatchHardRecoveries} | transport ${state.transportServiceCleared}/${state.transportServiceAttempts}`;
+`A mission-only | B transport ${state.transportServiceCleared}/${state.transportServiceAttempts} | RAM ${state.pipelineMemoryPressureActive ? 'guard' : 'normal'} | cycles ${state.runtimeRecycles} | recovery ${state.postDispatchSoftRecoveries}/${state.postDispatchHardRecoveries}`;
 }
 state.ui.startButton.disabled = state.wanted || state.stopping;
 state.ui.stopButton.disabled = (!state.wanted && !state.worker) || state.stopping;
@@ -8827,7 +8775,7 @@ enterLowQueuePause('visible-page-resume-below-minimum-supply');
 setPhase(
 'LOW_QUEUE_PAUSED',
 'Paused - waiting for 2 missions',
-`The persisted low-queue pause was restored with ${supply.count} actionable personal mission${supply.count === 1 ? '' : 's'}. A/B remain released.`
+`The persisted low-queue pause was restored with ${supply.count} actionable personal mission${supply.count === 1 ? '' : 's'}. Mission A is released; transport B remains on standby.`
 );
 beginMissionRescan();
 }
@@ -18859,6 +18807,16 @@ bootMark('heavy-runtime-start');
             return false;
         }
     }
+    function isMfV3ManagedTransportWorker() {
+        try {
+            return window.top !== window.self &&
+                String(window.name || '').startsWith(
+                    MF_V3_ACTIVE_NAME_PREFIX + 'transport-b-'
+                );
+        } catch (_error) {
+            return false;
+        }
+    }
     function isMfV3ManagedActiveWorker() {
         try {
             if (!isMfV3ManagedActiveFrame()) return false;
@@ -19104,6 +19062,7 @@ bootMark('heavy-runtime-start');
     }
     let autoModeRunning =
         !mfV3DormantPreload &&
+        !isMfV3ManagedTransportWorker() &&
         (
             sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
             localStorage.getItem('mf_auto_mode_running') === 'true'
@@ -21077,7 +21036,7 @@ bootMark('heavy-runtime-start');
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.34',
+                commandNexus: '3.0.35',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },
@@ -21521,7 +21480,7 @@ bootMark('heavy-runtime-start');
             exportVersion: 2,
             exportedAt: new Date().toISOString(),
             privacyNote:
-                'Contains mission IDs, vehicle names, lifecycle/frame evidence, training-code evidence and browser memory/DOM counts. It does not include cookies, passwords or personnel names.',
+                'Contains mission, vehicle, lifecycle, training and memory evidence; excludes cookies, passwords and personnel names.',
             memoryDiagnostics:
                 mfCollectMemoryDiagnostics(),
             lifecycleDiagnostics: {
@@ -48958,7 +48917,8 @@ async function handleAutoPrisonerReleaseAfterActions() {
     }
     function isTransportAutomationAllowed() {
         if (isManualAutoStopActive()) return false;
-        return isAutoModeActiveFlagSet() || isPostTransportRehookPending();
+        return isMfV3ManagedTransportWorker() ||
+            isAutoModeActiveFlagSet() || isPostTransportRehookPending();
     }
     function clearAllTransportAutomationFlags(reason) {
         mfTransportSequenceActive = false;
@@ -48976,9 +48936,9 @@ async function handleAutoPrisonerReleaseAfterActions() {
         sessionStorage.removeItem(MF_TRANSPORT_LAST_CLICK_AT_KEY);
         sessionStorage.removeItem(MF_TRANSPORT_LAST_CLICK_REASON_KEY);
         mfClearTransportOwner(reason || 'transport flags cleared');
-        const clearRecentRehook =
-            String(reason || '').toLowerCase().includes('manual') ||
-            String(reason || '').toLowerCase().includes('stopped');
+        const clearReason = String(reason || '').toLowerCase();
+        const clearRecentRehook = clearReason.includes('manual') ||
+            clearReason.includes('stopped') || clearReason.includes('transport-worker-b');
         if (clearRecentRehook) {
             sessionStorage.removeItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY);
             localStorage.removeItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY);
@@ -49300,7 +49260,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
         mfLastTransportFingerprint = fingerprint || '';
         mfLastTransportClickAt = now;
         mfTransportLastClickAt = now;
-        markTransportSequenceActive();
+        if (!isMfV3ManagedTransportWorker()) markTransportSequenceActive();
         try {
             const row = button.closest('tr');
             const rowText = row ? (row.innerText || '').replace(/\s+/g, ' ').trim() : '';
@@ -49311,7 +49271,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
             try {
                 updateStatusBox(`Transport handoff: clicking ${text}...`);
             } catch (error) {}
-            sessionStorage.setItem('mf_transport_sent_in_vehicle_modal_v1', 'true');
+            if (!isMfV3ManagedTransportWorker()) sessionStorage.setItem('mf_transport_sent_in_vehicle_modal_v1', 'true');
             realClickForQueueRestart(button);
             await wait(4000);
             return true;
@@ -49487,7 +49447,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
         mfBruteLastFingerprint = mfBruteTransportFingerprint(button) || '';
         mfBruteLastClickAt = now;
         mfTransportLastClickAt = now;
-        markTransportSequenceActive();
+        if (!isMfV3ManagedTransportWorker()) markTransportSequenceActive();
         try {
             const row = button.closest('tr');
             const rowText = row ? mfBruteNormaliseText(row.innerText) : '';
@@ -49506,7 +49466,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
                     `chosenCapacity=${capacityInfo.hasCapacityColumn ? capacityInfo.capacity : 'n/a'} | row="${capacityInfo.rowText || rowText}"`
                 );
             }
-            sessionStorage.setItem('mf_brute_transport_sent_v1', 'true');
+            if (!isMfV3ManagedTransportWorker()) sessionStorage.setItem('mf_brute_transport_sent_v1', 'true');
             const clicked = mfBruteClickElement(button);
             await wait(4000);
             return clicked;
@@ -49568,7 +49528,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
         }
         let sentCount = 0;
         const started = Date.now();
-        while (autoModeRunning && Date.now() - started < 90000 && sentCount < 25) {
+        while ((autoModeRunning || isMfV3ManagedTransportWorker()) && Date.now() - started < 90000 && sentCount < 25) {
             if (!isTransportScreenBlockingQueueRestart()) {
                 break;
             }
@@ -50532,7 +50492,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
             );
         if (mfIsApproachTransportVisible() || isTransportScreenBlockingQueueRestart()) {
             updateStatusBox('Final mission transport detected. Sending Approach sequence...');
-            markTransportSequenceActive();
+            if (!isMfV3ManagedTransportWorker()) markTransportSequenceActive();
             const started = Date.now();
             while (autoModeRunning && Date.now() - started < 90000) {
                 if (mfIsApproachTransportVisible()) {
@@ -51418,6 +51378,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
         updateAutoModeButton();
     }
     function initialize() {
+        if (typeof window !== 'undefined' && String(window.name || '').startsWith('mcn-v3-active-worker-transport-b-')) return;
         globalThis.__MCN_BOOT_MARK__?.('mission-initialize-entered', document.readyState);
         if (!isMissionPage()) return;
         if (!claimCurrentMissionExecutionOwnership('initialize')) {
@@ -52870,6 +52831,10 @@ async function handleAutoPrisonerReleaseAfterActions() {
             startMissionFinderRuntimeMemoryMaintenance();
         }
         scheduleAutoMemoryRecycleResume();
+        if (isMfV3ManagedTransportWorker()) {
+            clearAllTransportAutomationFlags('transport-worker-b');
+            void handleTransportRequestsAfterDispatch('worker-b');
+        }
     }
     function getMfV3DormantPreloadMissionId() {
         try {
