@@ -6,6 +6,15 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.34] - 2026-08-29
+
+### Added
+
+- Add bounded diagnostic-only Worker A ownership traces for bridge installation, activation, demotion, promotion and blocked operational storage access.
+- Forward worker document lifecycle and existing boot markers into the parent controller log, including page show/hide, unload preparation, visibility, frame name, route and current ownership role.
+- Include the complete parent controller lifecycle snapshot, local boot trace and local ownership trace in the normal Unit Finder diagnostics export without changing admission, dispatch, transport, overlay or Auto Mode decisions.
+- Increased the unified userscript version from `3.0.33` to `3.0.34`; Mission Finder remains `V10.6.177` on the restored `3.0.29` runtime.
+
 ## [3.0.33] - 2026-08-29
 
 ### Fixed

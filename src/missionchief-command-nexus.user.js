@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.33
+// @version      3.0.34
 // @description  MissionChief safe background automation.
 // @author       MartyBlyth
 // @license      MIT
@@ -36,6 +36,19 @@ const StorageCtor = targetWindow.Storage ||
 (targetWindow === window && typeof Storage !== 'undefined' ? Storage : null);
 if (!StorageCtor?.prototype) return null;
 let activeOwner = Boolean(initialActive);
+const ownershipTrace = targetWindow.__MCN_V3_OWNERSHIP_TRACE__ ||= [];
+let lastOwnershipBlock = '';
+const traceOwnership = (event, detail = '') => {
+ownershipTrace.push({ at: Date.now(), event, detail, active: activeOwner, name: String(targetWindow.name || ''), path: String(targetWindow.location?.pathname || '') });
+if (ownershipTrace.length > 40) ownershipTrace.shift();
+};
+const traceOwnershipBlock = (operation, key) => {
+const marker = `${operation}:${String(key || '')}`;
+if (marker === lastOwnershipBlock) return;
+lastOwnershipBlock = marker;
+traceOwnership(`blocked-${operation}`, String(key || ''));
+};
+traceOwnership('install', source);
 const originalGetItem = StorageCtor.prototype.getItem;
 const originalSetItem = StorageCtor.prototype.setItem;
 const originalRemoveItem = StorageCtor.prototype.removeItem;
@@ -45,22 +58,22 @@ typeof originalSetItem !== 'function' ||
 typeof originalRemoveItem !== 'function'
 ) return null;
 StorageCtor.prototype.getItem = function(key) {
-if (!activeOwner && isOperationalV2StorageKey(key)) return null;
+if (!activeOwner && isOperationalV2StorageKey(key)) { traceOwnershipBlock('get', key); return null; }
 return originalGetItem.call(this, key);
 };
 StorageCtor.prototype.setItem = function(key, value) {
-if (!activeOwner && isOperationalV2StorageKey(key)) return undefined;
+if (!activeOwner && isOperationalV2StorageKey(key)) { traceOwnershipBlock('set', key); return undefined; }
 return originalSetItem.call(this, key, value);
 };
 StorageCtor.prototype.removeItem = function(key) {
-if (!activeOwner && isOperationalV2StorageKey(key)) return undefined;
+if (!activeOwner && isOperationalV2StorageKey(key)) { traceOwnershipBlock('remove', key); return undefined; }
 return originalRemoveItem.call(this, key);
 };
 const bridge = Object.freeze({
-activate() { activeOwner = true; return true; },
-deactivate() { activeOwner = false; return true; },
-promote() { activeOwner = true; return true; },
-demote() { activeOwner = false; return true; },
+activate() { activeOwner = true; traceOwnership('activate'); return true; },
+deactivate() { activeOwner = false; traceOwnership('deactivate'); return true; },
+promote() { activeOwner = true; traceOwnership('promote'); return true; },
+demote() { activeOwner = false; traceOwnership('demote'); return true; },
 isActive() { return activeOwner; },
 isPreload() { return !activeOwner; },
 isPromoted() { return activeOwner; },
@@ -145,8 +158,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.33';
-const MASTER_VERSION = '3.0.33';
+const VERSION = '3.0.34';
+const MASTER_VERSION = '3.0.34';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -1831,6 +1844,8 @@ controlPanelPresent: Boolean(doc?.querySelector?.('#control-panel')),
 autoControlFound: Boolean(control),
 autoControlText: control ? elementLabel(control) : state.autoControlText,
 autoLooksRunning: Boolean(control && autoControlLooksRunning(control)),
+workerGeneration: state.workerGeneration,
+workerName: state.worker?.name || '',
 workerDocumentSerial: state.workerDocumentSerial,
 autoStartDocumentSerial: state.autoStartDocumentSerial,
 autoRunningConfirmedDocumentSerial: state.autoRunningConfirmedDocumentSerial,
@@ -1843,6 +1858,11 @@ try {
 snapshot.bootstrapTrace = JSON.parse(JSON.stringify(doc?.defaultView?.__MCN_BOOT_TRACE__ || null));
 } catch {
 snapshot.bootstrapTrace = null;
+}
+try {
+snapshot.ownershipTrace = JSON.parse(JSON.stringify(doc?.defaultView?.__MCN_V3_OWNERSHIP_TRACE__ || []));
+} catch {
+snapshot.ownershipTrace = [];
 }
 state.lastWorkerSnapshot = snapshot;
 return snapshot;
@@ -1864,6 +1884,10 @@ state.log.push(entry);
 if (state.log.length > LOG_LIMIT) state.log.splice(0, state.log.length - LOG_LIMIT);
 render();
 }
+window.__MCN_V3_LIFECYCLE_MARK__ = (stage, detail = {}) => log(
+`Worker lifecycle: ${normaliseText(stage)}`,
+{ workerGeneration: state.workerGeneration, documentSerial: state.workerDocumentSerial, missionId: state.currentMissionId, workerName: state.worker?.name || '', path: pathFromUrl(getWorkerHref()), detail }
+);
 function setPhase(phase, status, detail = '') {
 state.phase = phase;
 state.status = status;
@@ -8346,6 +8370,7 @@ userAgent: navigator.userAgent,
 log: state.log.slice(-120),
 };
 }
+window.__MCN_V3_DIAGNOSTICS_SNAPSHOT__ = diagnosticsSnapshot;
 function exportDiagnostics() {
 const snapshot = diagnosticsSnapshot();
 const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
@@ -8942,8 +8967,12 @@ resumePersistedBackground();
     startedAt: Date.now(), path: String(location.pathname || ''), frameName: String(window.name || ''), events: [], errors: []
   };
   const bootMark = (stage, detail = '') => {
-    bootTrace.events.push({ at: Date.now(), stage: String(stage), detail: String(detail || '').slice(0, 300) });
-    if (bootTrace.events.length > 30) bootTrace.events.shift();
+    const entry = { at: Date.now(), stage: String(stage), detail: String(detail || '').slice(0, 300) };
+    bootTrace.events.push(entry);
+    if (bootTrace.events.length > 60) bootTrace.events.shift();
+    try {
+      if (window.top !== window) window.top.__MCN_V3_LIFECYCLE_MARK__?.(entry.stage, { detail: entry.detail, frameName: String(window.name || ''), path: String(location.pathname || ''), visibility: document.visibilityState, ownership: window.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__?.role?.() || '' });
+    } catch {}
   };
   window.__MCN_BOOT_MARK__ = bootMark;
   const bootError = (type, value) => {
@@ -8953,6 +8982,8 @@ resumePersistedBackground();
   };
   window.addEventListener('error', event => bootError('error', event));
   window.addEventListener('unhandledrejection', event => bootError('unhandledrejection', event));
+  for (const type of ['pageshow', 'pagehide', 'beforeunload']) window.addEventListener(type, () => bootMark(type, document.readyState), true);
+  document.addEventListener('visibilitychange', () => bootMark('visibilitychange', document.visibilityState), true);
   bootMark('embedded-wrapper-entered', document.readyState);
   let started = false;
   const shouldStartHeavyCommandNexusRuntime = () => {
@@ -21046,7 +21077,7 @@ bootMark('heavy-runtime-start');
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.33',
+                commandNexus: '3.0.34',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },
@@ -21487,12 +21518,20 @@ bootMark('heavy-runtime-start');
         const history = mfReadUnitFinderDiagnosticHistory();
         const payload = {
             format: 'missionchief-unit-finder-diagnostics',
-            exportVersion: 1,
+            exportVersion: 2,
             exportedAt: new Date().toISOString(),
             privacyNote:
-                'Contains mission IDs, vehicle names, training-code evidence and browser memory/DOM counts. It does not include cookies, passwords or personnel names.',
+                'Contains mission IDs, vehicle names, lifecycle/frame evidence, training-code evidence and browser memory/DOM counts. It does not include cookies, passwords or personnel names.',
             memoryDiagnostics:
                 mfCollectMemoryDiagnostics(),
+            lifecycleDiagnostics: {
+                localBootTrace: window.__MCN_BOOT_TRACE__ || null,
+                localOwnershipTrace: window.__MCN_V3_OWNERSHIP_TRACE__ || [],
+                controller: (() => {
+                    try { return window.top.__MCN_V3_DIAGNOSTICS_SNAPSHOT__?.() || null; }
+                    catch (_error) { return null; }
+                })()
+            },
             current,
             history
         };
