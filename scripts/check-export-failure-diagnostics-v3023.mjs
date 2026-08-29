@@ -35,11 +35,11 @@ if (minimumAmbulanceCalls.length < 2) {
 const minimumAmbulanceStart = source.indexOf('function ensureAutoMinimumAmbulanceSelected(');
 const minimumAmbulanceEnd = source.indexOf('function getAutoMemoryHeapSnapshot(', minimumAmbulanceStart);
 const minimumAmbulance = source.slice(minimumAmbulanceStart, minimumAmbulanceEnd);
-if (!minimumAmbulance.includes("getAllMatchingVehicleCheckboxes('Any vehicle','Ambulance',false)")) {
+if (!minimumAmbulance.includes('getVehicleCheckboxSnapshot(true).find(input=>!input.disabled&&!input.checked&&isNormalAmbulanceVehicleCheckbox(input))')) {
   console.error('Minimum ambulance gate must select through the exact type-5 Any vehicle route.');
   process.exit(1);
 }
-if (minimumAmbulance.includes("selectVehicleUnits('Ambulance','Ambulance x 01'")) {
+if (minimumAmbulance.includes('filterKnownUnstaffedAmbulanceCandidates') || minimumAmbulance.includes("selectVehicleUnits('Ambulance','Ambulance x 01'")) {
   console.error('Minimum ambulance gate must not re-enter the mixed type-5/type-9 patient route.');
   process.exit(1);
 }

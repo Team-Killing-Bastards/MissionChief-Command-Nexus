@@ -6,6 +6,13 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.27] - 2026-08-29
+
+### Fixed
+
+- The mandatory exact type-`5` ambulance gate now treats MissionChief's live enabled/unchecked vehicle checkbox as the availability authority. It no longer passes otherwise free Ambulances through the personnel-register `known unstaffed` filter, which could reject them using stale assignment evidence.
+- Increased the unified userscript version from `3.0.26` to `3.0.27`.
+
 ## [3.0.26] - 2026-08-29
 
 ### Fixed

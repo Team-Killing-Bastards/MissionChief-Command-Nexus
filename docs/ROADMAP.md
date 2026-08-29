@@ -5,10 +5,10 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 **Developer and technical owner:** MartyBlyth  
 **Repository and documentation support:** Conroy1988
 
-## Current production baseline — v3.0.26
+## Current production baseline — v3.0.27
 
 - [x] Publish one canonical userscript on trusted `main`.
-- [x] Prepare Command Nexus `3.0.26` with Mission Finder `V10.6.177`, mission-level fulfilment/failure exports, mandatory normal-ambulance Auto Mode coverage, restored standalone pop-out naming filters, exact PRV/SRV and Coastguard helicopter selection, transport/prisoner recovery, bounded endurance telemetry and station-aware staffing evidence.
+- [x] Prepare Command Nexus `3.0.27` with Mission Finder `V10.6.177`, mission-level fulfilment/failure exports, mandatory normal-ambulance Auto Mode coverage, restored standalone pop-out naming filters, exact PRV/SRV and Coastguard helicopter selection, transport/prisoner recovery, bounded endurance telemetry and station-aware staffing evidence.
 - [x] Keep one sole dispatcher active while one dormant worker page-warms the immediate next mission without expanding its vehicle table, and fail closed on uncertain ownership or handoff.
 - [x] Retain Resource Administration `V4.2.8`, with Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.12`.
 - [x] Protect duplicate initialization and independent engine startup.
