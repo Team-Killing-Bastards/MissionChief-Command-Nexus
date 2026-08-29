@@ -1,0 +1,601 @@
+008500: overflow: hidden;
+008501: max-height: calc(100vh - 70px);
+008502: max-height: calc(100dvh - 70px);
+008503: display: flex;
+008504: flex-direction: column;
+008505: transform-origin: top left;
+008506: z-index: 2147483001;
+008507: }
+008508: #${ROOT_ID}[data-collapsed="true"] .mcn-panel { display: none; }
+008509: #${ROOT_ID} .mcn-head {
+008510: padding: 11px 12px 9px;
+008511: display: flex;
+008512: align-items: center;
+008513: justify-content: space-between;
+008514: gap: 10px;
+008515: border-bottom: 1px solid rgba(255,255,255,.07);
+008516: flex: 0 0 auto;
+008517: }
+008518: #${ROOT_ID} .mcn-title { font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+008519: #${ROOT_ID} .mcn-version { font-size: 10px; color: var(--mcn-muted); font-weight: 600; }
+008520: #${ROOT_ID} .mcn-body { min-height: 0; display: flex; flex: 1 1 auto; flex-direction: column; overflow: hidden; }
+008521: #${ROOT_ID} .mcn-scroll { min-height: 0; padding: 12px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(102,183,255,.55) transparent; }
+008522: #${ROOT_ID} .mcn-scroll::-webkit-scrollbar { width: 8px; }
+008523: #${ROOT_ID} .mcn-scroll::-webkit-scrollbar-thumb { border-radius: 8px; background: rgba(102,183,255,.42); }
+008524: #${ROOT_ID} .mcn-status {
+008525: padding: 10px;
+008526: border-radius: 10px;
+008527: background: rgba(255,255,255,.045);
+008528: border: 1px solid rgba(255,255,255,.06);
+008529: }
+008530: #${ROOT_ID} .mcn-status-main { font-size: 13px; font-weight: 760; line-height: 1.25; }
+008531: #${ROOT_ID} .mcn-status-detail { margin-top: 5px; color: var(--mcn-muted); font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
+008532: #${ROOT_ID} .mcn-meta { margin-top: 9px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+008533: #${ROOT_ID} .mcn-meta-card { padding: 7px 8px; border-radius: 8px; background: rgba(255,255,255,.035); }
+008534: #${ROOT_ID} .mcn-meta-card.wide { grid-column: 1 / -1; }
+008535: #${ROOT_ID} .mcn-meta-label { font-size: 9px; color: var(--mcn-muted); text-transform: uppercase; letter-spacing: .07em; }
+008536: #${ROOT_ID} .mcn-meta-value { margin-top: 2px; font-size: 11px; font-weight: 700; overflow-wrap: anywhere; }
+008537: #${ROOT_ID} [data-mcn-skips] { max-height: 96px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+008538: #${ROOT_ID} .mcn-actions { display: grid; flex: 0 0 auto; grid-template-columns: 1fr 1fr; gap: 7px; margin: 0; padding: 10px 12px 12px; border-top: 1px solid rgba(255,255,255,.07); background: rgba(8,16,30,.96); }
+008539: #${ROOT_ID} button.mcn-action {
+008540: min-height: 34px;
+008541: padding: 7px 8px;
+008542: border-radius: 9px;
+008543: border: 1px solid rgba(122,181,234,.25);
+008544: background: rgba(67,130,189,.13);
+008545: color: var(--mcn-text);
+008546: font: inherit;
+008547: font-size: 11px;
+008548: font-weight: 720;
+008549: cursor: pointer;
+008550: }
+008551: #${ROOT_ID} button.mcn-action:hover { background: rgba(82,151,214,.22); }
+008552: #${ROOT_ID} button.mcn-action.primary { background: rgba(63,150,217,.28); border-color: rgba(100,185,250,.45); }
+008553: #${ROOT_ID} button.mcn-action.stop { background: rgba(190,72,82,.18); border-color: rgba(255,118,126,.32); }
+008554: #${ROOT_ID} button.mcn-action:disabled { opacity: .45; cursor: default; }
+008555: #${ROOT_ID} .mcn-note { margin-top: 9px; color: var(--mcn-muted); font-size: 10px; line-height: 1.35; }
+008556: #${ROOT_ID} .mcn-note strong { color: #d8e9f8; }
+008557: @media (max-width: 767px) {
+008558: #${ROOT_ID} { display: none !important; }
+008559: }
+008560: @media (min-width: 768px) and (max-width: 900px) {
+008561: #${ROOT_ID} .mcn-panel { left: 12px; width: min(310px, calc(100vw - 24px)); }
+008562: }
+008563: @media (prefers-reduced-motion: reduce) {
+008564: #${ROOT_ID} *, #${ROOT_ID} *::before, #${ROOT_ID} *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; }
+008565: }
+008566: `;
+008567: document.head.appendChild(style);
+008568: }
+008569: function buildUi() {
+008570: if (document.getElementById(ROOT_ID)) return;
+008571: injectStyles();
+008572: const root = document.createElement('section');
+008573: root.id = ROOT_ID;
+008574: root.dataset.phase = state.phase;
+008575: root.dataset.collapsed = localStorage.getItem(STORAGE_COLLAPSED) === 'false' ? 'false' : 'true';
+008576: root.innerHTML = `
+008577: <div class="mcn-panel" role="region" aria-label="Command Nexus V3 controls">
+008578: <div class="mcn-head">
+008579: <div>
+008580: <div class="mcn-title">Command Nexus V3</div>
+008581: <div class="mcn-version">Master ${MASTER_VERSION} | Mission Finder ${MISSION_FINDER_VERSION}</div>
+008582: </div>
+008583: <div aria-hidden="true" style="font-size:18px;color:#7fa6c8;">+</div>
+008584: </div>
+008585: <div class="mcn-body">
+008586: <div class="mcn-scroll">
+008587: <div class="mcn-status">
+008588: <div class="mcn-status-main"></div>
+008589: <div class="mcn-status-detail"></div>
+008590: </div>
+008591: <div class="mcn-meta">
+008592: <div class="mcn-meta-card">
+008593: <div class="mcn-meta-label">Phase</div>
+008594: <div class="mcn-meta-value" data-mcn-phase></div>
+008595: </div>
+008596: <div class="mcn-meta-card">
+008597: <div class="mcn-meta-label">Working mission</div>
+008598: <div class="mcn-meta-value" data-mcn-mission>-</div>
+008599: </div>
+008600: <div class="mcn-meta-card">
+008601: <div class="mcn-meta-label">Missions this run</div>
+008602: <div class="mcn-meta-value" data-mcn-mission-count>0</div>
+008603: </div>
+008604: <div class="mcn-meta-card">
+008605: <div class="mcn-meta-label">Transport seen</div>
+008606: <div class="mcn-meta-value" data-mcn-transport-count>P0 | R0 | cleared 0</div>
+008607: </div>
+008608: <div class="mcn-meta-card">
+008609: <div class="mcn-meta-label">Top queue</div>
+008610: <div class="mcn-meta-value" data-mcn-top-mission>-</div>
+008611: </div>
+008612: <div class="mcn-meta-card wide">
+008613: <div class="mcn-meta-label">Workers: A active, B warms next</div>
+008614: <div class="mcn-meta-value" data-mcn-pipeline>A: waiting | B: waiting</div>
+008615: </div>
+008616: <div class="mcn-meta-card">
+008617: <div class="mcn-meta-label">Radio transport</div>
+008618: <div class="mcn-meta-value" data-mcn-radio>0</div>
+008619: </div>
+008620: <div class="mcn-meta-card">
+008621: <div class="mcn-meta-label">Temporary skips</div>
+008622: <div class="mcn-meta-value" data-mcn-skips>0</div>
+008623: </div>
+008624: <div class="mcn-meta-card wide">
+008625: <div class="mcn-meta-label">Live health</div>
+008626: <div class="mcn-meta-value" data-mcn-rule-assists>Pipeline 0/0 ready | handoff restarts 0 | transport 0/0</div>
+008627: </div>
+008628: </div>
+008629: <div class="mcn-note"><strong>Command Nexus V3.</strong> Only A can dispatch and load the complete vehicle list; B only warms the immediate next page. Sustained heap growth or the 768 MiB ceiling releases B and restarts A at a verified boundary. Below two missions all workers are released. Cleanup never clears station, unit, personnel, training or durable settings. The watchdog, personal transport clearing and exact banked vehicle rules remain enabled; Alliance requests stay ignored.</div>
+008630: </div>
+008631: <div class="mcn-actions">
+008632: <button type="button" class="mcn-action primary" data-mcn-start>Start Auto Mode</button>
+008633: <button type="button" class="mcn-action stop" data-mcn-stop>Stop</button>
+008634: <button type="button" class="mcn-action" data-mcn-retry>Retry current</button>
+008635: <button type="button" class="mcn-action" data-mcn-export>Export diagnostics</button>
+008636: </div>
+008637: </div>
+008638: </div>
+008639: <button type="button" class="mcn-launcher" aria-label="Open Command Nexus V3" title="Command Nexus V3">
+008640: <span class="mcn-core-n" aria-hidden="true">N</span>
+008641: <span class="mcn-dot" aria-hidden="true"></span>
+008642: </button>
+008643: `;
+008644: const navbarHeader = document.querySelector('.navbar-header');
+008645: const navbarBrand = navbarHeader?.querySelector('a.navbar-brand.hidden-xs, a.navbar-brand');
+008646: if (!navbarHeader || !navbarBrand) {
+008647: log('Navbar brand not available yet; Nexus launcher mount deferred.');
+008648: return;
+008649: }
+008650: navbarBrand.insertAdjacentElement('afterend', root);
+008651: const launcher = root.querySelector('.mcn-launcher');
+008652: const startButton = root.querySelector('[data-mcn-start]');
+008653: const stopButton = root.querySelector('[data-mcn-stop]');
+008654: const retryButton = root.querySelector('[data-mcn-retry]');
+008655: const exportButton = root.querySelector('[data-mcn-export]');
+008656: launcher.addEventListener('click', () => {
+008657: const collapsed = root.dataset.collapsed !== 'false';
+008658: root.dataset.collapsed = collapsed ? 'false' : 'true';
+008659: localStorage.setItem(STORAGE_COLLAPSED, root.dataset.collapsed);
+008660: launcher.setAttribute('aria-label', collapsed ? 'Close Command Nexus V3' : 'Open Command Nexus V3');
+008661: });
+008662: startButton.addEventListener('click', startController);
+008663: stopButton.addEventListener('click', gracefulStop);
+008664: retryButton.addEventListener('click', retryCurrent);
+008665: exportButton.addEventListener('click', exportDiagnostics);
+008666: chooseTopMission();
+008667: refreshRadioTransportRequests();
+008668: state.ui = {
+008669: root,
+008670: statusMain: root.querySelector('.mcn-status-main'),
+008671: statusDetail: root.querySelector('.mcn-status-detail'),
+008672: phase: root.querySelector('[data-mcn-phase]'),
+008673: mission: root.querySelector('[data-mcn-mission]'),
+008674: missionCount: root.querySelector('[data-mcn-mission-count]'),
+008675: transportCount: root.querySelector('[data-mcn-transport-count]'),
+008676: topMission: root.querySelector('[data-mcn-top-mission]'),
+008677: pipeline: root.querySelector('[data-mcn-pipeline]'),
+008678: radio: root.querySelector('[data-mcn-radio]'),
+008679: skips: root.querySelector('[data-mcn-skips]'),
+008680: ruleAssists: root.querySelector('[data-mcn-rule-assists]'),
+008681: startButton,
+008682: stopButton,
+008683: retryButton,
+008684: };
+008685: render();
+008686: }
+008687: function readablePhaseLabel(phase) {
+008688: const labels = {
+008689: ACTIVE: 'RUNNING',
+008690: PIPELINE_PROMOTE: 'HANDING OVER',
+008691: PROMOTION_VERIFY: 'CHECKING HANDOFF',
+008692: PROMOTION_RECOVERY: 'RESTARTING HANDOFF',
+008693: CONTROL_RECOVERY: 'RESTARTING WORKER A',
+008694: NAVIGATION_RECOVERY: 'RECOVERING NAVIGATION',
+008695: POST_DISPATCH_RECOVERY: 'RECOVERING MISSION ADVANCE',
+008696: WAKE_RECOVERY: 'RECOVERING AFTER SLEEP',
+008697: TRANSPORT: 'TRANSPORT ACTIVE',
+008698: TRANSPORT_SERVICE: 'CLEARING TRANSPORT',
+008699: TRANSPORT_WARN: 'TRANSPORT WARNING',
+008700: WAITING_NEXUS: 'STARTING V2',
+008701: STARTING: 'STARTING V2',
+008702: PRIORITY_REDIRECT: 'CHANGING MISSION',
+008703: AUTO_RECOVERY_WAIT: 'CHECKING AUTO STOP',
+008704: MISSION_SKIPPED: 'MISSION ROTATED',
+008705: LOW_QUEUE_PAUSED: 'WAITING FOR 2 MISSIONS',
+008706: MEMORY_RECYCLE: 'REFRESHING WORKERS',
+008707: };
+008708: return labels[phase] || String(phase || 'IDLE').replace(/_/g, ' ');
+008709: }
+008710: function compactMissionIdLabel(missionId) {
+008711: return missionId ? `M${missionId}` : '-';
+008712: }
+008713: function readablePipelineSlotStatus(slot) {
+008714: if (!slot) return 'waiting';
+008715: if (!slot.v2DormantBridgeReady) return 'checking V2';
+008716: if (slot.ready) return slot.v2DormantLightweight ? 'page-warm ready' : 'ready';
+008717: if (slot.status === 'VEHICLES') return 'loading vehicles';
+008718: if (slot.status === 'STABILISING') return 'checking vehicles';
+008719: if (slot.status === 'ERROR' || slot.status === 'ISOLATION_FAIL') return 'failed';
+008720: return 'loading page';
+008721: }
+008722: function render() {
+008723: if (!state.ui) return;
+008724: state.ui.root.dataset.phase = state.phase;
+008725: state.ui.statusMain.textContent = state.status;
+008726: state.ui.statusDetail.textContent = state.detail || '';
+008727: state.ui.phase.textContent = readablePhaseLabel(state.phase);
+008728: updateCurrentMissionName(getWorkerDocument());
+008729: const top = state.topMission || compactMissionCandidate(chooseTopMission());
+008730: const workingTopMatch = Boolean(
+008731: top?.missionId &&
+008732: state.currentMissionId &&
+008733: top.missionId === state.currentMissionId &&
+008734: !state.transportServiceActive
+008735: );
+008736: state.ui.mission.textContent = state.transportServiceActive
+008737: ? `TRANSPORT | ${missionDisplay(state.transportServiceMissionId, missionNameForId(state.transportServiceMissionId))}`
+008738: : state.lowQueuePaused
+008739: ? `PAUSED | ${state.lowQueueObservedCount}/${MINIMUM_ACTIONABLE_MISSIONS} available`
+008740: : `${missionDisplay(state.currentMissionId, state.currentMissionName)}${workingTopMatch ? ' | TOP' : ''}`;
+008741: state.ui.missionCount.textContent =
+008742: `${missionFinderRunValueSnapshot(
+008743: state.runStartedAt ? Math.max(0, (Date.now() - Date.parse(state.runStartedAt)) / 1000) : 0
+008744: ).completedDispatches} sent | ${state.runUniqueMissionCount} seen | ${state.nativeMissionAdvances} advances`;
+008745: state.ui.transportCount.textContent =
+008746: `P${state.runPatientTransports} | R${state.runPrisonerTransports} | cleared ${state.transportServiceCleared}`;
+008747: const visualTop = state.visualTopMission;
+008748: const visualTopSkipRemaining = visualTop?.missionId ? missionSkipRemaining(visualTop.missionId) : 0;
+008749: state.ui.topMission.textContent = visualTopSkipRemaining > 0
+008750: ? `${missionDisplay(visualTop.missionId, visualTop.caption)} | SKIP ${visualTopSkipRemaining} -> ${top ? missionDisplay(top.missionId, top.caption) : 'waiting'}`
+008751: : (top
+008752: ? `${missionDisplay(top.missionId, top.caption)}${top.actionKind && top.actionKind !== 'OTHER' ? ` | ${top.actionKind}` : ''}`
+008753: : '-');
+008754: if (state.ui.pipeline) {
+008755: const slots = state.pipelineSlots.slice().sort((a, b) => a.index - b.index);
+008756: const activeLabel = state.transportServiceActive
+008757: ? 'A: clearing transport'
+008758: : state.lowQueuePaused
+008759: ? 'A: released for RAM'
+008760: : `A: ${state.running ? 'active' : 'starting'} ${compactMissionIdLabel(state.currentMissionId)}`;
+008761: const labels = [activeLabel];
+008762: if (state.lowQueuePaused) {
+008763: labels.push('B: released');
+008764: } else if (state.pipelineMemoryPressureActive) {
+008765: labels.push('B: off (RAM protection)');
+008766: } else if (state.pipelineActiveOnly) {
+008767: labels.push('B: off (safe A-only)');
+008768: } else {
+008769: for (let i = 0; i < PIPELINE_PRELOAD_COUNT; i += 1) {
+008770: const slot = slots.find(item => item.index === i) || null;
+008771: const letter = 'B';
+008772: labels.push(slot
+008773: ? `${letter}: ${readablePipelineSlotStatus(slot)} ${compactMissionIdLabel(slot.missionId)}`
+008774: : `${letter}: waiting`);
+008775: }
+008776: }
+008777: state.ui.pipeline.textContent = labels.join(' | ');
+008778: }
+008779: const nextRadio = state.radioTransportRequests[0] || null;
+008780: state.ui.radio.textContent = nextRadio
+008781: ? `${state.radioTransportRequests.length} pending | next ${compactMissionIdLabel(nextRadio.missionId)}`
+008782: : (state.runAllianceRadioIgnored ? `0 personal | ${state.runAllianceRadioIgnored} alliance ignored` : '0');
+008783: const skips = activeMissionSkipRecords();
+008784: state.ui.skips.textContent = skips.length
+008785: ? skips.map(record => `${missionDisplay(record.missionId, record.missionName)} | retry in ${record.remaining}`).join(' | ')
+008786: : '0';
+008787: if (state.ui.ruleAssists) {
+008788: state.ui.ruleAssists.textContent =
+008789: `warm handoffs ${state.pipelineReadyPromotions}/${state.pipelinePromotions} | dormant B ${state.pipelineV2DormantReady} | RAM guard ${state.pipelineMemoryPressureActive ? 'A-only' : 'normal'} | cycles ${state.runtimeRecycles} | cleanups ${state.managedRuntimeDisposals} | recovery ${state.postDispatchSoftRecoveries}/${state.postDispatchHardRecoveries} | transport ${state.transportServiceCleared}/${state.transportServiceAttempts}`;
+008790: }
+008791: state.ui.startButton.disabled = state.wanted || state.stopping;
+008792: state.ui.stopButton.disabled = (!state.wanted && !state.worker) || state.stopping;
+008793: state.ui.retryButton.disabled = state.stopping || (!state.currentMissionUrl && !collectMissionCandidates().length);
+008794: }
+008795: function resumePersistedBackground() {
+008796: if (!persistedBackgroundWanted() || state.stopping || state.worker?.isConnected) return false;
+008797: restoreRunContinuity();
+008798: state.wanted = true;
+008799: state.running = false;
+008800: state.lastError = '';
+008801: resetAutoStartTracking();
+008802: clearSharedV2AutoRunning('visible-page-resume-bootstrap');
+008803: state.resumedFromTopNavigation = true;
+008804: const persistedStart = sessionGet(SESSION_RUN_STARTED_AT);
+008805: state.runStartedAt = persistedStart || state.runStartedAt || nowIso();
+008806: persistRunStart(state.runStartedAt);
+008807: if (!state.runtimeRecycleLastAt) {
+008808: state.runtimeRecycleLastAt = Date.now();
+008809: state.runtimeRecycleAdvanceBaseline = state.nativeMissionAdvances;
+008810: }
+008811: const previousResumes = Math.max(0, Number(sessionGet(SESSION_TOP_PAGE_RESUMES) || 0));
+008812: state.topPageResumes = previousResumes + 1;
+008813: sessionSet(SESSION_TOP_PAGE_RESUMES, String(state.topPageResumes));
+008814: const resume = () => {
+008815: if (!state.wanted || !persistedBackgroundWanted() || state.worker?.isConnected) return;
+008816: if (!document.body) {
+008817: window.setTimeout(resume, 80);
+008818: return;
+008819: }
+008820: const supply = actionableMissionSupply({
+008821: excludeMissionId: state.lowQueuePaused ? state.lowQueueTriggerMissionId : '',
+008822: });
+008823: if (state.lowQueuePaused || supply.count < MINIMUM_ACTIONABLE_MISSIONS) {
+008824: if (!state.lowQueuePaused) {
+008825: enterLowQueuePause('visible-page-resume-below-minimum-supply');
+008826: } else {
+008827: setPhase(
+008828: 'LOW_QUEUE_PAUSED',
+008829: 'Paused - waiting for 2 missions',
+008830: `The persisted low-queue pause was restored with ${supply.count} actionable personal mission${supply.count === 1 ? '' : 's'}. A/B remain released.`
+008831: );
+008832: beginMissionRescan();
+008833: }
+008834: return;
+008835: }
+008836: const request = transportServiceRequest(refreshRadioTransportRequests());
+008837: if (request && startTransportOnlyWorker(request, 'visible-page-resume')) return;
+008838: const topTarget = choosePriorityTarget();
+008839: const storedUrl = storedResumeMissionUrl();
+008840: const mission = topTarget || (storedUrl ? { url: storedUrl } : null) || chooseBootstrapMission();
+008841: if (mission?.url) {
+008842: persistResumeMission(mission.url);
+008843: setPhase(
+008844: 'RESUMING',
+008845: 'Restoring background Auto Mode',
+008846: `Visible page ${location.pathname} remains under player control while the hidden worker is re-created.`
+008847: );
+008848: log('Visible-page navigation handoff restored the hidden Auto Mode worker.', {
+008849: pathname: location.pathname,
+008850: resumeCount: state.topPageResumes,
+008851: missionId: missionIdFromUrl(mission.url),
+008852: });
+008853: pausePipelineController('visible-page-resume-active-bootstrap', true);
+008854: createWorker(mission.url);
+008855: return;
+008856: }
+008857: setPhase(
+008858: 'WAITING_MISSION',
+008859: 'Background Auto Mode waiting',
+008860: `The visible page remains available. Nexus will re-create the hidden worker when an actionable personal mission becomes available.`
+008861: );
+008862: beginMissionRescan();
+008863: };
+008864: if (document.readyState === 'loading') {
+008865: document.addEventListener('DOMContentLoaded', resume, { once: true });
+008866: window.setTimeout(resume, 1200);
+008867: } else {
+008868: resume();
+008869: }
+008870: return true;
+008871: }
+008872: function mountWhenMapReady() {
+008873: const looksReady = () => Boolean(
+008874: document.body &&
+008875: document.querySelector('.navbar-header a.navbar-brand.hidden-xs, .navbar-header a.navbar-brand')
+008876: );
+008877: if (looksReady()) {
+008878: buildUi();
+008879: return;
+008880: }
+008881: const startObserver = () => {
+008882: if (looksReady()) {
+008883: buildUi();
+008884: return;
+008885: }
+008886: const root = document.documentElement;
+008887: if (!root) {
+008888: window.setTimeout(startObserver, 50);
+008889: return;
+008890: }
+008891: const observer = new MutationObserver(() => {
+008892: if (!looksReady()) return;
+008893: observer.disconnect();
+008894: buildUi();
+008895: });
+008896: observer.observe(root, { childList: true, subtree: true });
+008897: window.setTimeout(() => {
+008898: observer.disconnect();
+008899: }, 60000);
+008900: };
+008901: startObserver();
+008902: }
+008903: window.addEventListener('pagehide', () => {
+008904: const handoffWanted =
+008905: state.wanted &&
+008906: !state.stopping &&
+008907: persistedBackgroundWanted();
+008908: if (handoffWanted) {
+008909: sessionSet(SESSION_RESUME_HANDOFF_AT, String(Date.now()));
+008910: const top = state.topMission?.url || state.visualTopMission?.url || '';
+008911: persistResumeMission(top || state.currentMissionUrl || state.bootstrapMissionUrl);
+008912: captureWorkerSnapshot();
+008913: finaliseActiveMissionTiming('visible-page-handoff');
+008914: persistPipelineTargets(state.pipelineSlots);
+008915: saveRunContinuity();
+008916: clearAllControllerTimers();
+008917: removeWorker(false);
+008918: removeAllPipelinePreloads('visible-page-handoff');
+008919: return;
+008920: }
+008921: state.wanted = false;
+008922: markRunStopped();
+008923: finaliseActiveMissionTiming('pagehide-stop');
+008924: clearAllControllerTimers();
+008925: removeWorker(false);
+008926: removeAllPipelinePreloads('pagehide-stop');
+008927: }, { capture: true });
+008928: window.addEventListener('pageshow', event => {
+008929: if (event.persisted && persistedBackgroundWanted() && !state.worker?.isConnected) {
+008930: resumePersistedBackground();
+008931: return;
+008932: }
+008933: if (state.wanted && state.worker?.isConnected) {
+008934: checkForSuspendedTimerGap('pageshow');
+008935: }
+008936: });
+008937: document.addEventListener('visibilitychange', () => {
+008938: if (
+008939: document.visibilityState === 'visible' &&
+008940: state.wanted &&
+008941: state.worker?.isConnected
+008942: ) {
+008943: checkForSuspendedTimerGap('visibilitychange');
+008944: }
+008945: });
+008946: window.addEventListener('focus', () => {
+008947: if (state.wanted && state.worker?.isConnected) {
+008948: checkForSuspendedTimerGap('window-focus');
+008949: }
+008950: });
+008951: const startupResumeAllowed = persistedBackgroundResumeAllowed();
+008952: if (persistedBackgroundWanted() && !startupResumeAllowed) {
+008953: clearPersistedRunIntent();
+008954: }
+008955: if (startupResumeAllowed) {
+008956: sessionSet(SESSION_RESUME_HANDOFF_AT, '');
+008957: state.wanted = true;
+008958: state.runStartedAt = sessionGet(SESSION_RUN_STARTED_AT) || nowIso();
+008959: }
+008960: mountWhenMapReady();
+008961: resumePersistedBackground();
+008962: })();
+008963: /* Complete embedded Command Nexus starts at the former document-end boundary. */
+008964: (() => {
+008965:   'use strict';
+008966:   const bootTrace = window.__MCN_BOOT_TRACE__ = {
+008967:     startedAt: Date.now(), path: String(location.pathname || ''), frameName: String(window.name || ''), events: [], errors: []
+008968:   };
+008969:   const bootMark = (stage, detail = '') => {
+008970:     const entry = { at: Date.now(), stage: String(stage), detail: String(detail || '').slice(0, 300) };
+008971:     bootTrace.events.push(entry);
+008972:     if (bootTrace.events.length > 60) bootTrace.events.shift();
+008973:     try {
+008974:       if (window.top !== window) window.top.__MCN_V3_LIFECYCLE_MARK__?.(entry.stage, { detail: entry.detail, frameName: String(window.name || ''), path: String(location.pathname || ''), visibility: document.visibilityState, ownership: window.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__?.role?.() || '' });
+008975:     } catch {}
+008976:   };
+008977:   window.__MCN_BOOT_MARK__ = bootMark;
+008978:   const bootError = (type, value) => {
+008979:     const error = value?.error || value?.reason || value;
+008980:     bootTrace.errors.push({ at: Date.now(), type, message: String(error?.message || error || '').slice(0, 500), stack: String(error?.stack || '').slice(0, 1200) });
+008981:     if (bootTrace.errors.length > 10) bootTrace.errors.shift();
+008982:   };
+008983:   window.addEventListener('error', event => bootError('error', event));
+008984:   window.addEventListener('unhandledrejection', event => bootError('unhandledrejection', event));
+008985:   for (const type of ['pageshow', 'pagehide', 'beforeunload']) window.addEventListener(type, () => bootMark(type, document.readyState), true);
+008986:   document.addEventListener('visibilitychange', () => bootMark('visibilitychange', document.visibilityState), true);
+008987:   bootMark('embedded-wrapper-entered', document.readyState);
+008988:   let started = false;
+008989:   const shouldStartHeavyCommandNexusRuntime = () => {
+008990:     try {
+008991:       const name = String(window.name || '');
+008992:       const path = String(location.pathname || '');
+008993:       return name.startsWith('mcn-v3-active-worker-') ||
+008994:         /^\/missions\/\d+(?:\/|$)/i.test(path) ||
+008995:         /^\/vehicles\/\d+\/(?:patient|gefangener)\/\d+(?:\/|$)/i.test(path) ||
+008996:         /^\/leitstellenansicht\/?$/i.test(path) ||
+008997:         Boolean(document.querySelector('#mission_general_info'));
+008998:     } catch (_error) {
+008999:       return false;
+009000:     }
+009001:   };
+009002:   const startEmbeddedCommandNexus = () => {
+009003:     if (started) return;
+009004:     started = true;
+009005: bootMark('embedded-start', document.readyState);
+009006: let heavyStarted = false;
+009007: const startHeavyCommandNexusRuntime = () => {
+009008: if (heavyStarted) return true;
+009009: heavyStarted = true;
+009010: window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
+009011: bootMark('heavy-runtime-start');
+009012: (function () {
+009013:     'use strict';
+009014:     if (window.__MC_COMPLETE_TOOLS_MERGED_V10668_V428__) return;
+009015:     window.__MC_COMPLETE_TOOLS_MERGED_V10668_V428__ = true;
+009016:     try {
+009017:         /* ==================================================================
+009018:          * MODULE 1: UNIT, STATION & PERSONNEL TOOLS V4.2.8
+009019:          * Original source retained below, excluding only its metadata block.
+009020:          * ================================================================== */
+009021: (function () {
+009022:     'use strict';
+009023:     if (window.__MC_NAMING_TOOLS_V428__) return;
+009024:     window.__MC_NAMING_TOOLS_V428__ = true;
+009025:     const TOOL_IS_TOP_WINDOW = (() => {
+009026:         try {
+009027:             return window.top === window.self;
+009028:         } catch (_error) {
+009029:             return true;
+009030:         }
+009031:     })();
+009032:     const TOOL_IS_STATION_OVERVIEW_ROUTE =
+009033:         /^\/leitstellenansicht\/?$/.test(
+009034:             String(location.pathname || '')
+009035:         );
+009036:     const TOOL_IS_STANDALONE_STATION_OVERVIEW =
+009037:         TOOL_IS_TOP_WINDOW &&
+009038:         TOOL_IS_STATION_OVERVIEW_ROUTE;
+009039:     const TOOL_IS_STATION_OVERVIEW_FRAME = (() => {
+009040:         if (
+009041:             TOOL_IS_TOP_WINDOW ||
+009042:             !TOOL_IS_STATION_OVERVIEW_ROUTE
+009043:         ) return false;
+009044:         try {
+009045:             if (window.top.location.origin !== location.origin) return false;
+009046:         } catch (_error) {
+009047:             return false;
+009048:         }
+009049:         return true;
+009050:     })();
+009051:     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
+009052:     const UNIT_VERSION = '3.3.27';
+009053:     const STATION_VERSION = '1.3.22';
+009054:     const PERSONNEL_VERSION = '1.3.12';
+009055:     const PERSONNEL_TRAINING_CODE = 'critical_care';
+009056:     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
+009057:     const PERSONNEL_TARGET_VEHICLE_TYPE_ID = '5';
+009058:     const PERSONNEL_TARGET_VEHICLE_LABEL = 'Ambulance';
+009059:     const PERSONNEL_TARGET_PER_VEHICLE = 1;
+009060:     const PERSONNEL_REQUEST_GAP_MS = 650;
+009061:     const PERSONNEL_STATION_GAP_MS = 900;
+009062:     const PERSONNEL_REGISTER_MAX_CONCURRENCY = 3;
+009063:     const PERSONNEL_REGISTER_LAUNCH_GAP_MS = 350;
+009064:     const PERSONNEL_REGISTER_REVERIFY_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+009065:     const ACTIVE_TAB_STORAGE_KEY = 'mcNamingToolsActiveTab_v32';
+009066:     const COLLAPSED_STORAGE_KEY = 'mcNamingToolsCollapsed_v36';
+009067:     const PERSONNEL_STATION_REPORT_VISIBLE_KEY = 'mcPersonnelStationReportVisible_v407';
+009068:     const PERSONNEL_OVERALL_REPORT_VISIBLE_KEY = 'mcPersonnelOverallReportVisible_v407';
+009069:     const PERSONNEL_SERVICE_STORAGE_KEY = 'mcPersonnelService_v410';
+009070:     const PERSONNEL_PROFILE_STORAGE_KEY = 'mcPersonnelProfile_v410';
+009071:     const PERSONNEL_UNITS_REQUIRED_STORAGE_KEY = 'mcPersonnelUnitsRequired_v423';
+009072:     const PERSONNEL_TRAINING_REGISTRY_STORAGE_KEY =
+009073:         'mcPersonnelVehicleTrainingRegistry_v1';
+009074:     const PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION = 1;
+009075:     const PERSONNEL_TRAINING_REGISTRY_EXPORT_FORMAT =
+009076:         'missionchief-personnel-training-register';
+009077:     const PERSONNEL_TRAINING_REGISTRY_EXPORT_VERSION = 1;
+009078:     const PERSONNEL_TRAINING_REGISTRY_IMPORT_MAX_BYTES = 10 * 1024 * 1024;
+009079:     const TOOL_LOG_MAX_LINES = 400;
+009080:     const TOOL_LOG_TRIM_BUFFER = 40;
+009081:     const PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES = 5000;
+009082:     const PERSONNEL_TRAINING_REGISTRY_MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000;
+009083:     const PERSONNEL_TRAINING_REGISTRY_QUOTA_RETRY_MAX_VEHICLES = 2500;
+009084:     const PERSONNEL_TRAINING_REGISTRY_FLUSH_DELAY_MS = 1400;
+009085:     const PERSONNEL_TRAINING_REGISTRY_PRUNE_INTERVAL_MS = 6 * 60 * 60 * 1000;
+009086:     const TOOL_LIFECYCLE_CLEANUPS = new Set();
+009087:     const TOOL_LOG_SCROLL_FRAMES = new Map();
+009088:     const TOOL_UI_ELEMENT_CACHE = new Map();
+009089:     const PERSONNEL_ASSIGNMENT_INDEX_CACHE = new WeakMap();
+009090:     const PERSONNEL_TRAINING_SET_CACHE = new WeakMap();
+009091:     const PERSONNEL_VISIBLE_TRAINING_COUNTS_CACHE = new WeakMap();
+009092:     const PERSONNEL_REPORT_BLOCK_CACHE = new WeakMap();
+009093:     const PERSONNEL_STATION_LINK_BY_HREF = new Map();
+009094:     const PERSONNEL_START_OPTION_BY_HREF = new Map();
+009095:     const PERSONNEL_HIGHLIGHTED_STATION_LINKS = new Set();
+009096:     let TOOL_LIFECYCLE_CLEANED = false;
+009097:     let NAMING_TOOLS_PANEL_GUARD_INSTALLED = false;
+009098:     let PERSONNEL_TRAINING_REGISTRY_CACHE = null;
+009099:     let PERSONNEL_TRAINING_REGISTRY_DIRTY = false;
+009100:     let PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = null;

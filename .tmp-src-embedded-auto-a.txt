@@ -1,0 +1,1201 @@
+044500:                         group
+044501:                     )
+044502:                 ) {
+044503:                     needsAmbulanceOfficer =
+044504:                         true;
+044505:                 }
+044506:                 if (
+044507:                     group
+044508:                         .hasMassCasualtyEquipment &&
+044509:                     !isPatientAlertOwnedByLivePanel(
+044510:                         'mass-casualty-equipment',
+044511:                         group
+044512:                     )
+044513:                 ) {
+044514:                     needsMassCasualtyEquipment =
+044515:                         true;
+044516:                 }
+044517:                 if (
+044518:                     mfDebugEnabled &&
+044519:                     !silent
+044520:                 ) {
+044521:                     debugLog(
+044522:                         'PATIENT GROUP',
+044523:                         `${group.key} | alerts=${Array.from(group.sourceTexts).join(' + ')} | ` +
+044524:                         `Ambulance=${group.hasAmbulance ? (isPatientAlertOwnedByLivePanel('ambulance', group) ? 'ignored/live-panel-owned' : `x${group.multiplier}`) : 'no'} | ` +
+044525:                         `Critical Care=${group.hasCriticalCare ? (ambulanceReplacesCriticalCareTransport ? 'suppressed/ambulance-is-transport' : (isPatientAlertOwnedByLivePanel('critical-care', group) ? 'ignored/live-panel-owned' : `x${group.multiplier}`)) : 'no'} | ` +
+044526:                         `Officer=${group.hasAmbulanceOfficer ? (isPatientAlertOwnedByLivePanel('ambulance-officer', group) ? 'ignored/live-panel-owned' : 'yes/capped at 1') : 'no'} | ` +
+044527:                         `MCE=${group.hasMassCasualtyEquipment ? (isPatientAlertOwnedByLivePanel('mass-casualty-equipment', group) ? 'ignored/live-panel-owned' : 'yes/capped at 1') : 'no'}`
+044528:                     );
+044529:                 }
+044530:             });
+044531:         const currentPatientTotal =
+044532:             visibleCurrentPatientBadgeCount > 0
+044533:                 ? visibleCurrentPatientBadgeCount
+044534:                 : findPatientCount(true);
+044535:         if (currentPatientTotal > 0) {
+044536:             ambulanceRequired =
+044537:                 Math.min(
+044538:                     ambulanceRequired,
+044539:                     currentPatientTotal
+044540:                 );
+044541:             criticalCareRequired =
+044542:                 Math.min(
+044543:                     criticalCareRequired,
+044544:                     currentPatientTotal
+044545:                 );
+044546:         }
+044547:         if (ambulanceRequired > 0) {
+044548:             missingRows.push({
+044549:                 unitName: 'Ambulance x 01',
+044550:                 stillNeeded: ambulanceRequired,
+044551:                 patientRequirementType: 'ambulance',
+044552:                 isPatientAlertFallback: true,
+044553:                 isTotalPatientRequirement: true,
+044554:                 patientCountCap: currentPatientTotal
+044555:             });
+044556:         }
+044557:         if (criticalCareRequired > 0) {
+044558:             missingRows.push({
+044559:                 unitName: 'Critical Care',
+044560:                 stillNeeded: criticalCareRequired,
+044561:                 patientRequirementType: 'critical-care',
+044562:                 isPatientAlertFallback: true,
+044563:                 isTotalPatientRequirement: true,
+044564:                 patientCountCap: currentPatientTotal
+044565:             });
+044566:             if (mfDebugEnabled && !silent) {
+044567:                 debugLog(
+044568:                     'PATIENT CRITICAL CARE',
+044569:                     `Patient alerts require Critical Care x${criticalCareRequired}`
+044570:                 );
+044571:             }
+044572:         }
+044573:         if (needsAmbulanceOfficer) {
+044574:             missingRows.push({
+044575:                 unitName: 'Ambulance Officer',
+044576:                 stillNeeded: 1,
+044577:                 patientRequirementType: 'ambulance-officer',
+044578:                 isPatientAlertFallback: true,
+044579:                 isTotalPatientRequirement: true,
+044580:                 patientCountCap: currentPatientTotal
+044581:             });
+044582:         }
+044583:         if (needsMassCasualtyEquipment) {
+044584:             missingRows.push({
+044585:                 unitName: 'Mass Casualty Equipment',
+044586:                 stillNeeded: 1,
+044587:                 patientRequirementType: 'mass-casualty-equipment',
+044588:                 isPatientAlertFallback: true,
+044589:                 isTotalPatientRequirement: true,
+044590:                 patientCountCap: currentPatientTotal
+044591:             });
+044592:             if (mfDebugEnabled && !silent) {
+044593:                 debugLog(
+044594:                     'PATIENT MCE',
+044595:                     'Patient requires Mass Casualty Equipment -> select Mass Casualty Equipment x1'
+044596:                 );
+044597:             }
+044598:         }
+044599:         const explicitMissingRequirementsPresent =
+044600:             hasExplicitCurrentMissingRequirementRows(
+044601:                 missingRows
+044602:             );
+044603:         const requirementRowsForDedupe =
+044604:             explicitMissingRequirementsPresent
+044605:                 ? missingRows.filter(row => {
+044606:                     if (
+044607:                         isExplicitMissingVehicleRequirementRow(row) ||
+044608:                         isExplicitMissingPersonnelRequirementRow(row)
+044609:                     ) {
+044610:                         return true;
+044611:                     }
+044612:                     if (row?.isPatientAlertFallback) {
+044613:                         return true;
+044614:                     }
+044615:                     return !!(
+044616:                         row?.patientRequirementType &&
+044617:                         row?.liveRequirementDetails?.dispatchTargetMode ===
+044618:                             'shortage'
+044619:                     );
+044620:                 })
+044621:                 : missingRows;
+044622:         if (
+044623:             explicitMissingRequirementsPresent &&
+044624:             mfDebugEnabled &&
+044625:             !silent
+044626:         ) {
+044627:             debugLog(
+044628:                 'MISSING REQUIREMENTS AUTHORITY',
+044629:                 `Explicit current Missing Vehicles/Personnel rows own this pass. Retained ${requirementRowsForDedupe.length}/${missingRows.length} row(s); full mission totals were suppressed.`
+044630:             );
+044631:         }
+044632:         const dedupedByMappedName =
+044633:             new Map();
+044634:         requirementRowsForDedupe.forEach(row => {
+044635:             if (
+044636:                 row
+044637:                     .isTrainedPersonnelRequirement
+044638:             ) {
+044639:                 const signature =
+044640:                     getTrainedPersonnelRequirementsSignature(
+044641:                         row.personnelTrainingRequirements
+044642:                     );
+044643:                 if (!signature) {
+044644:                     return;
+044645:                 }
+044646:                 dedupedByMappedName.set(
+044647:                     `trained-personnel:${signature}`,
+044648:                     {
+044649:                         ...row,
+044650:                         stillNeeded:
+044651:                             getTrainedPersonnelVehicleTarget(
+044652:                                 row
+044653:                                     .personnelTrainingRequirements
+044654:                             )
+044655:                     }
+044656:                 );
+044657:                 return;
+044658:             }
+044659:             const patientRequirement =
+044660:                 normaliseMissionUpdatePatientRequirement(
+044661:                     row.unitName,
+044662:                     row.stillNeeded
+044663:                 );
+044664:             const effectiveUnitName =
+044665:                 patientRequirement.unitName ||
+044666:                 row.unitName;
+044667:             const mappedName =
+044668:                 resolveUnitName(
+044669:                     effectiveUnitName
+044670:                 );
+044671:             const canonicalName =
+044672:                 normaliseVehicleText(
+044673:                     mappedName ||
+044674:                     effectiveUnitName
+044675:                 );
+044676:             const amount =
+044677:                 patientRequirement.stillNeeded;
+044678:             if (
+044679:                 !canonicalName ||
+044680:                 amount <= 0
+044681:             ) {
+044682:                 return;
+044683:             }
+044684:             const existing =
+044685:                 dedupedByMappedName.get(
+044686:                     canonicalName
+044687:                 );
+044688:             const candidateAuthority =
+044689:                 getMissionUpdateRowAuthority(
+044690:                     row
+044691:                 );
+044692:             const existingAuthority =
+044693:                 getMissionUpdateRowAuthority(
+044694:                     existing
+044695:                 );
+044696:             if (
+044697:                 !existing ||
+044698:                 candidateAuthority > existingAuthority ||
+044699:                 (
+044700:                     candidateAuthority === existingAuthority &&
+044701:                     amount > existing.stillNeeded
+044702:                 )
+044703:             ) {
+044704:                 dedupedByMappedName.set(
+044705:                     canonicalName,
+044706:                     {
+044707:                         ...row,
+044708:                         unitName:
+044709:                             effectiveUnitName,
+044710:                         stillNeeded:
+044711:                             amount,
+044712:                         patientRequirementType:
+044713:                             row.patientRequirementType ||
+044714:                             patientRequirement.type ||
+044715:                             '',
+044716:                         isPatientAlertFallback:
+044717:                             !!row.isPatientAlertFallback,
+044718:                         isTotalPatientRequirement:
+044719:                             !!row.isTotalPatientRequirement
+044720:                     }
+044721:                 );
+044722:             }
+044723:         });
+044724:         const deduped =
+044725:             Array.from(
+044726:                 dedupedByMappedName.values()
+044727:             ).sort(
+044728:                 (
+044729:                     left,
+044730:                     right
+044731:                 ) => {
+044732:                     const leftPriority =
+044733:                         left
+044734:                             .isTrainedPersonnelRequirement
+044735:                             ? 0
+044736:                             : 1;
+044737:                     const rightPriority =
+044738:                         right
+044739:                             .isTrainedPersonnelRequirement
+044740:                             ? 0
+044741:                             : 1;
+044742:                     return (
+044743:                         leftPriority -
+044744:                         rightPriority
+044745:                     );
+044746:                 }
+044747:             );
+044748:         if (
+044749:             mfDebugEnabled &&
+044750:             !silent &&
+044751:             deduped.length >
+044752:                 0
+044753:         ) {
+044754:             debugLog(
+044755:                 'UPDATE ORDER',
+044756:                 deduped
+044757:                     .map(row => {
+044758:                         return row
+044759:                             .isTrainedPersonnelRequirement
+044760:                                 ? `TRAINED:${formatTrainedPersonnelRequirements(row.personnelTrainingRequirements)}`
+044761:                                 : `GENERAL:${row.unitName} x${row.stillNeeded}`;
+044762:                     })
+044763:                     .join(' -> ')
+044764:             );
+044765:         }
+044766:         if (mfDebugEnabled && !silent) {
+044767:             debugLog(
+044768:                 'UPDATE ROWS',
+044769:                 deduped.length
+044770:                     ? deduped.map(row => {
+044771:                         return row.isTrainedPersonnelRequirement
+044772:                             ? `${row.unitName}: ${formatTrainedPersonnelRequirements(row.personnelTrainingRequirements)}`
+044773:                             : `${row.unitName} x${row.stillNeeded}`;
+044774:                     }).join(' | ')
+044775:                     : 'None'
+044776:             );
+044777:         }
+044778:         mfMissionUpdateRowsCache = {
+044779:             expiresAt: Date.now() + 175,
+044780:             missionKey,
+044781:             rows: deduped,
+044782:             ambulanceOfficerSatisfied:
+044783:                 liveAmbulanceOfficerSatisfied
+044784:         };
+044785:         return deduped;
+044786:     }
+044787:     function getMissionUpdateFirstPassKey() {
+044788:         const missionId = getCurrentMissionIdForQueueRestart();
+044789:         if (missionId) {
+044790:             return `mission-${missionId}`;
+044791:         }
+044792:         const helpLink =
+044793:             getActiveMissionHelpLink();
+044794:         const helpHref = helpLink
+044795:             ? (
+044796:                 helpLink.getAttribute(
+044797:                     'href'
+044798:                 ) ||
+044799:                 helpLink.href ||
+044800:                 ''
+044801:             )
+044802:             : '';
+044803:         if (helpHref) {
+044804:             return `help-${helpHref}`;
+044805:         }
+044806:         const missionName = getCurrentMissionName();
+044807:         return missionName
+044808:             ? `name-${missionName}`
+044809:             : 'mission-unknown';
+044810:     }
+044811:     function getMissionUpdateRenderSignature() {
+044812:         const roots =
+044813:             Array.from(
+044814:                 new Set(
+044815:                     getActiveMissionRequirementContexts()
+044816:                         .map(
+044817:                             context =>
+044818:                                 context.root
+044819:                         )
+044820:                 )
+044821:             );
+044822:         const updateTables =
+044823:             Array.from(
+044824:                 new Set(
+044825:                     roots.flatMap(root => {
+044826:                         try {
+044827:                             return Array.from(
+044828:                                 root.querySelectorAll(
+044829:                                     '#mc-map-command-toolkit-mission-requirements[data-mcms-requirements-panel="1"] table[aria-label="Live mission requirements"], ' +
+044830:                                         'section[data-mcms-requirements-panel="1"] table[aria-label="Live mission requirements"], ' +
+044831:                                         'table.table-striped.table-condensed, table.table'
+044832:                                 )
+044833:                             );
+044834:                         } catch (_error) {
+044835:                             return [];
+044836:                         }
+044837:                     })
+044838:                 )
+044839:             )
+044840:                 .filter(
+044841:                     isMissionUpdateTable
+044842:                 )
+044843:                 .filter(
+044844:                     table =>
+044845:                         isMissionElementVisible(
+044846:                             table
+044847:                         )
+044848:                 );
+044849:         const updateTableText =
+044850:             updateTables
+044851:                 .map(table => (
+044852:                     table.innerText ||
+044853:                     table.textContent ||
+044854:                     ''
+044855:                 )
+044856:                     .replace(
+044857:                         /\s+/g,
+044858:                         ' '
+044859:                     )
+044860:                     .trim()
+044861:                 )
+044862:                 .join(' || ')
+044863:                 .slice(
+044864:                     0,
+044865:                     1200
+044866:                 );
+044867:         const patientAlerts =
+044868:             Array.from(
+044869:                 new Set(
+044870:                     roots.flatMap(root => {
+044871:                         try {
+044872:                             return Array.from(
+044873:                                 root.querySelectorAll(
+044874:                                     '.mission_patient .alert.alert-danger'
+044875:                                 )
+044876:                             );
+044877:                         } catch (_error) {
+044878:                             return [];
+044879:                         }
+044880:                     })
+044881:                 )
+044882:             )
+044883:                 .filter(
+044884:                     alert =>
+044885:                         isMissionElementVisible(
+044886:                             alert
+044887:                         )
+044888:                 )
+044889:                 .map(alert => (
+044890:                     alert.innerText ||
+044891:                     alert.textContent ||
+044892:                     ''
+044893:                 )
+044894:                     .replace(
+044895:                         /\s+/g,
+044896:                         ' '
+044897:                     )
+044898:                     .trim()
+044899:                 )
+044900:                 .join(' || ')
+044901:                 .slice(
+044902:                     0,
+044903:                     800
+044904:                 );
+044905:         const visibleProblemAlerts =
+044906:             getActiveMissionProblemTextBlocks(
+044907:                 roots
+044908:             )
+044909:                 .join(' || ')
+044910:                 .slice(
+044911:                     0,
+044912:                     1200
+044913:                 );
+044914:         const vehicleCount =
+044915:             roots.reduce(
+044916:                 (
+044917:                     total,
+044918:                     root
+044919:                 ) => {
+044920:                     try {
+044921:                         return (
+044922:                             total +
+044923:                             root
+044924:                                 .querySelectorAll(
+044925:                                     'a[search_attribute], input[type="checkbox"][vehicle_id], input[type="checkbox"][id^="vehicle_"]'
+044926:                                 )
+044927:                                 .length
+044928:                         );
+044929:                     } catch (_error) {
+044930:                         return total;
+044931:                     }
+044932:                 },
+044933:                 0
+044934:             );
+044935:         const dispatchPresent =
+044936:             roots.some(root => {
+044937:                 try {
+044938:                     return !!root.querySelector(
+044939:                         '#alarm_button, #mission_alarm_btn, input[type="submit"][name="commit"], button[type="submit"]'
+044940:                     );
+044941:                 } catch (_error) {
+044942:                     return false;
+044943:                 }
+044944:             });
+044945:         return [
+044946:             updateTables.length,
+044947:             updateTableText,
+044948:             patientAlerts,
+044949:             visibleProblemAlerts,
+044950:             vehicleCount,
+044951:             dispatchPresent
+044952:                 ? 1
+044953:                 : 0
+044954:         ].join('|');
+044955:     }
+044956:     function requireMissionUpdateFirstPass(reason) {
+044957:         mfMissionUpdateFirstPassRequired = true;
+044958:         mfMissionUpdateFirstPassCompletedAt = 0;
+044959:         if (mfDebugEnabled) {
+044960:             debugLog(
+044961:                 'UPDATE FIRST GATE',
+044962:                 `Required again | reason=${reason || 'unknown'}`
+044963:             );
+044964:         }
+044965:     }
+044966:     async function waitForMissionUpdateBeforeUnitFinder(reason) {
+044967:         const initialKey = getMissionUpdateFirstPassKey();
+044968:         if (
+044969:             initialKey &&
+044970:             initialKey !== mfMissionUpdateFirstPassMissionKey
+044971:         ) {
+044972:             mfMissionUpdateFirstPassMissionKey = initialKey;
+044973:             mfMissionUpdateFirstPassRequired = true;
+044974:             mfMissionUpdateFirstPassCompletedAt = 0;
+044975:         }
+044976:         if (!mfMissionUpdateFirstPassRequired) {
+044977:             return readMissionUpdateRows({ silent: true });
+044978:         }
+044979:         updateStatusBox(
+044980:             'Waiting for mission update data before Unit Finder...'
+044981:         );
+044982:         if (mfDebugEnabled) {
+044983:             debugLog(
+044984:                 'UPDATE FIRST GATE',
+044985:                 `Started | reason=${reason || 'unknown'} | mission=${initialKey || 'unknown'}`
+044986:             );
+044987:         }
+044988:         let gateStartedAt = Date.now();
+044989:         let basicReadyAt = 0;
+044990:         let lastSignature = '';
+044991:         let signatureStableAt = 0;
+044992:         let lastRowsSignature = '';
+044993:         let rowsStableAt = 0;
+044994:         let latestRows = [];
+044995:         while (
+044996:             Date.now() - gateStartedAt <
+044997:             MF_UPDATE_FIRST_MAX_WAIT_MS
+044998:         ) {
+044999:             if (
+045000:                 isManualAutoStopActive() ||
+045001:                 !autoModeRunning
+045002:             ) {
+045003:                 return [];
+045004:             }
+045005:             if (!isMissionPage()) {
+045006:                 await wait(300);
+045007:                 continue;
+045008:             }
+045009:             const currentKey = getMissionUpdateFirstPassKey();
+045010:             if (
+045011:                 currentKey &&
+045012:                 currentKey !== mfMissionUpdateFirstPassMissionKey
+045013:             ) {
+045014:                 mfMissionUpdateFirstPassMissionKey = currentKey;
+045015:                 gateStartedAt = Date.now();
+045016:                 basicReadyAt = 0;
+045017:                 lastSignature = '';
+045018:                 signatureStableAt = 0;
+045019:                 lastRowsSignature = '';
+045020:                 rowsStableAt = 0;
+045021:                 latestRows = [];
+045022:                 if (mfDebugEnabled) {
+045023:                     debugLog(
+045024:                         'UPDATE FIRST GATE',
+045025:                         `Mission identity changed while loading -> ${currentKey}`
+045026:                     );
+045027:                 }
+045028:             }
+045029:             const selectionDocument =
+045030:                 getVehicleSelectionDocument(
+045031:                     true
+045032:                 );
+045033:             const hasMissionInfo =
+045034:                 !!selectionDocument.querySelector(
+045035:                     '#mission_general_info'
+045036:                 );
+045037:             const hasMissionHelp =
+045038:                 !!getMissionRequirementSource(
+045039:                     true
+045040:                 );
+045041:             const hasVehicleInterface =
+045042:                 !!selectionDocument.querySelector(
+045043:                     'a[search_attribute], input[type="checkbox"][vehicle_id], input[type="checkbox"][id^="vehicle_"]'
+045044:                 );
+045045:             if (
+045046:                 hasMissionInfo &&
+045047:                 hasMissionHelp &&
+045048:                 hasVehicleInterface
+045049:             ) {
+045050:                 if (!basicReadyAt) {
+045051:                     basicReadyAt = Date.now();
+045052:                 }
+045053:             } else {
+045054:                 basicReadyAt = 0;
+045055:             }
+045056:             const signature = getMissionUpdateRenderSignature();
+045057:             if (signature !== lastSignature) {
+045058:                 lastSignature = signature;
+045059:                 signatureStableAt = Date.now();
+045060:             }
+045061:             latestRows = readMissionUpdateRows({
+045062:                 silent: true
+045063:             });
+045064:             const rowsSignature =
+045065:                 getMissionUpdateRowsSignature(
+045066:                     latestRows
+045067:                 );
+045068:             if (rowsSignature !== lastRowsSignature) {
+045069:                 lastRowsSignature = rowsSignature;
+045070:                 rowsStableAt = Date.now();
+045071:             }
+045072:             if (
+045073:                 latestRows.length > 0 &&
+045074:                 Date.now() - rowsStableAt >=
+045075:                     MF_UPDATE_FIRST_STABLE_MS
+045076:             ) {
+045077:                 mfMissionUpdateFirstPassRequired = false;
+045078:                 mfMissionUpdateFirstPassCompletedAt = Date.now();
+045079:                 updateStatusBox(
+045080:                     `Mission update detected before Unit Finder (${latestRows.length} row(s)).`
+045081:                 );
+045082:                 if (mfDebugEnabled) {
+045083:                     debugLog(
+045084:                         'UPDATE FIRST GATE',
+045085:                         `Update route released after ${Date.now() - gateStartedAt}ms: ${latestRows.map(row => `${row.unitName} x${row.stillNeeded}`).join(', ')}`
+045086:                     );
+045087:                 }
+045088:                 return latestRows;
+045089:             }
+045090:             if (
+045091:                 basicReadyAt &&
+045092:                 Date.now() - basicReadyAt >=
+045093:                     MF_UPDATE_FIRST_MIN_WAIT_MS &&
+045094:                 Date.now() - signatureStableAt >=
+045095:                     MF_UPDATE_FIRST_STABLE_MS
+045096:             ) {
+045097:                 mfMissionUpdateFirstPassRequired = false;
+045098:                 mfMissionUpdateFirstPassCompletedAt = Date.now();
+045099:                 if (mfDebugEnabled) {
+045100:                     debugLog(
+045101:                         'UPDATE FIRST GATE',
+045102:                         `Normal Unit Finder route released after ${Date.now() - gateStartedAt}ms gate time; no update rows appeared.`
+045103:                     );
+045104:                 }
+045105:                 return [];
+045106:             }
+045107:             await wait(150);
+045108:         }
+045109:         latestRows = readMissionUpdateRows({
+045110:             silent: true
+045111:         });
+045112:         mfMissionUpdateFirstPassRequired = false;
+045113:         mfMissionUpdateFirstPassCompletedAt = Date.now();
+045114:         if (mfDebugEnabled) {
+045115:             debugLog(
+045116:                 'UPDATE FIRST GATE',
+045117:                 `Timed out after ${MF_UPDATE_FIRST_MAX_WAIT_MS}ms | rows=${latestRows.length}. Unit Finder permitted only after final update check.`
+045118:             );
+045119:         }
+045120:         return latestRows;
+045121:     }
+045122:     function handleMissionUpdateUnits(showAlerts, suppliedRows = null, options = {}) {
+045123:         if (!isCurrentMissionExecutionOwner('Mission Update')) {
+045124:             return false;
+045125:         }
+045126:         synchroniseMissionInstanceState('Mission Update start');
+045127:         updateStatusBox("Checking mission update requirements...");
+045128:         if (
+045129:             detectAndLatchStaffingBlock(
+045130:                 'before-mission-update-selection'
+045131:             )
+045132:         ) {
+045133:             updateStatusBox(
+045134:                 'Mission update is a staffing/qualification shortage. No extra vehicles selected.'
+045135:             );
+045136:             changeDispatchBoxColor(false);
+045137:             return false;
+045138:         }
+045139:         const rawMissingRows =
+045140:             Array.isArray(
+045141:                 suppliedRows
+045142:             )
+045143:                 ? suppliedRows
+045144:                 : readMissionUpdateRows();
+045145:         const normalisedMissingRows =
+045146:             collapseSharedFireOperationalSupportRequirements(
+045147:                 normaliseOperationalRequirementRows(
+045148:                     rawMissingRows
+045149:                 )
+045150:             );
+045151:         const missingRows =
+045152:             addConfiguredAmbulanceOfficerThresholdRequirement(
+045153:                 normalisedMissingRows
+045154:             );
+045155:         mfSetUnitFinderDiagnosticContext(
+045156:             'mission-update',
+045157:             'MISSION UPDATE',
+045158:             rawMissingRows,
+045159:             missingRows
+045160:         );
+045161:         if (mfDebugEnabled) {
+045162:             debugLog(
+045163:                 'UPDATE ONLY',
+045164:                 missingRows.length
+045165:                     ? `Active mission rows only: ${missingRows.map(row => `${row.unitName} x${row.stillNeeded}`).join(', ')}`
+045166:                     : 'No visible active-mission update rows found. Hidden and previous mission requirements were ignored.'
+045167:             );
+045168:         }
+045169:         if (missingRows.length === 0) {
+045170:             updateStatusBox("No mission update units needed.");
+045171:             return false;
+045172:         }
+045173:         const missingAfterAttempt = [];
+045174:         const trainedPersonnelWarnings = [];
+045175:         missingRows.forEach(item => {
+045176:             if (
+045177:                 isPublicOrderPersonnelRequirementName(
+045178:                     item?.unitName
+045179:                 )
+045180:             ) {
+045181:                 if (
+045182:                     mfDebugEnabled
+045183:                 ) {
+045184:                     debugLog(
+045185:                         'PUBLIC ORDER UPDATE GUARD',
+045186:                         `${item.unitName} skipped as a standalone row; the independent trained IRV requirements own it.`
+045187:                     );
+045188:                 }
+045189:                 return;
+045190:             }
+045191:             if (
+045192:                 item
+045193:                     .isTrainedPersonnelRequirement
+045194:             ) {
+045195:                 if (
+045196:                     mfDebugEnabled
+045197:                 ) {
+045198:                     debugLog(
+045199:                         'TRAINED UPDATE ROUTE',
+045200:                         `Entering independent trained-vehicle selector for ${formatTrainedPersonnelRequirements(item.personnelTrainingRequirements)}`
+045201:                     );
+045202:                 }
+045203:                 const requirements =
+045204:                     item
+045205:                         .personnelTrainingRequirements ||
+045206:                     [];
+045207:                 const requirementText =
+045208:                     formatTrainedPersonnelRequirements(
+045209:                         requirements
+045210:                     );
+045211:                 const trainedVehicleTarget =
+045212:                     getTrainedPersonnelVehicleTarget(
+045213:                         requirements
+045214:                     );
+045215:                 addOrUpdateVehicleRow(
+045216:                     item.unitName,
+045217:                     'Assigned trained vehicles',
+045218:                     trainedVehicleTarget,
+045219:                     'pending',
+045220:                     0
+045221:                 );
+045222:                 renderVehicleLoadList();
+045223:                 const result =
+045224:                     selectVehiclesForTrainedPersonnelRequirements(
+045225:                         requirements,
+045226:                         'UPDATE'
+045227:                     );
+045228:                 const selectedCount =
+045229:                     result.selectedVehicleCount;
+045230:                 const displayedTarget =
+045231:                     Math.max(
+045232:                         trainedVehicleTarget,
+045233:                         selectedCount
+045234:                     );
+045235:                 addOrUpdateVehicleRow(
+045236:                     item.unitName,
+045237:                     result.trainingSatisfied
+045238:                         ? 'Assigned trained vehicles'
+045239:                         : 'Verified trained vehicles still needed',
+045240:                     displayedTarget,
+045241:                     result.trainingSatisfied
+045242:                         ? 'assigned'
+045243:                         : selectedCount > 0
+045244:                             ? 'retrying'
+045245:                             : 'missing',
+045246:                     selectedCount
+045247:                 );
+045248:                 renderVehicleLoadList();
+045249:                 if (!result.vehicleCoverageSatisfied) {
+045250:                     missingAfterAttempt.push(
+045251:                         `Compatible trained-personnel vehicles still needed: ` +
+045252:                         (
+045253:                             formatTrainedVehicleCapacityShortfall(
+045254:                                 result.capacityRemaining
+045255:                             ) ||
+045256:                             requirementText
+045257:                         )
+045258:                     );
+045259:                 }
+045260:                 if (!result.trainingSatisfied) {
+045261:                     trainedPersonnelWarnings.push(
+045262:                         formatTrainedPersonnelShortfall(
+045263:                             result.trainingRemaining
+045264:                         ) ||
+045265:                         'No verified trained personnel were found in the selected compatible vehicles.'
+045266:                     );
+045267:                 }
+045268:                 return;
+045269:             }
+045270:             const mappedName = resolveUnitName(item.unitName);
+045271:             const needed = parseInt(item.stillNeeded, 10);
+045272:             const targetMode = getOperationalRequirementTargetMode(item);
+045273:             if (!Number.isFinite(needed) || needed <= 0) return;
+045274:             const patientRule =
+045275:                 getMissionUpdatePatientRequirementRule(
+045276:                     item.unitName
+045277:                 );
+045278:             const patientRequirementType =
+045279:                 item.patientRequirementType ||
+045280:                 patientRule?.type ||
+045281:                 '';
+045282:             const isTotalPatientFallback =
+045283:                 !!(
+045284:                     item.isPatientAlertFallback &&
+045285:                     item.isTotalPatientRequirement &&
+045286:                     patientRequirementType
+045287:                 );
+045288:             const matchingSelectedFromDom =
+045289:                 countSelectedMatchingVehicles(
+045290:                     item.unitName,
+045291:                     mappedName
+045292:                 );
+045293:             const initialMissingOnMissionState =
+045294:                 getMissingOnMissionRequirementState(
+045295:                     item
+045296:                 );
+045297:             const initialMissingOnMissionTarget =
+045298:                 initialMissingOnMissionState
+045299:                     ? getMissingOnMissionSelectionTarget(
+045300:                         initialMissingOnMissionState,
+045301:                         needed
+045302:                     )
+045303:                     : null;
+045304:             const matchingSelectedFromLiveTable =
+045305:                 initialMissingOnMissionState
+045306:                     ? initialMissingOnMissionState.selected
+045307:                     : null;
+045308:             const trackedPatientSelected =
+045309:                 isTotalPatientFallback
+045310:                     ? getTrackedPatientUnitSelections(
+045311:                         patientRequirementType
+045312:                     )
+045313:                     : 0;
+045314:             const exactPrvSrvRequirement = !!(
+045315:                 getPrvSrvRequirementTypeId(
+045316:                     item.unitName,
+045317:                     mappedName
+045318:                 )
+045319:             );
+045320:             const matchingSelectedTotal =
+045321:                 exactPrvSrvRequirement
+045322:                     ? matchingSelectedFromDom
+045323:                     : Math.max(
+045324:                         matchingSelectedFromDom,
+045325:                         trackedPatientSelected,
+045326:                         Number.isFinite(
+045327:                             matchingSelectedFromLiveTable
+045328:                         )
+045329:                             ? matchingSelectedFromLiveTable
+045330:                             : 0
+045331:                     );
+045332:             const effectiveRequired =
+045333:                 Number.isFinite(
+045334:                     initialMissingOnMissionTarget
+045335:                 )
+045336:                     ? initialMissingOnMissionTarget
+045337:                     : targetMode === 'shortage'
+045338:                         ? matchingSelectedTotal + needed
+045339:                         : needed;
+045340:             const selectedBefore =
+045341:                 Math.min(
+045342:                     matchingSelectedTotal,
+045343:                     effectiveRequired
+045344:                 );
+045345:             const remainingToSelect =
+045346:                 Math.max(
+045347:                     0,
+045348:                     effectiveRequired -
+045349:                     selectedBefore
+045350:                 );
+045351:             addOrUpdateVehicleRow(
+045352:                 item.unitName,
+045353:                 mappedName,
+045354:                 effectiveRequired,
+045355:                 remainingToSelect > 0
+045356:                     ? 'pending'
+045357:                     : 'assigned',
+045358:                 selectedBefore
+045359:             );
+045360:             renderVehicleLoadList();
+045361:             if (mfDebugEnabled) {
+045362:                 debugLog(
+045363:                     'UPDATE CAP',
+045364:                     `${item.unitName} -> ${mappedName} | mode=${targetMode} | panel target=${needed} | live missing=${initialMissingOnMissionState?.missingOnMission ?? 'n/a'} | live en-route=${initialMissingOnMissionState?.enRoute ?? 'n/a'} | live still needed=${initialMissingOnMissionState?.stillNeeded ?? 'n/a'} | effective total=${effectiveRequired} | DOM selected=${matchingSelectedFromDom} | live table selected=${Number.isFinite(matchingSelectedFromLiveTable) ? matchingSelectedFromLiveTable : 'n/a'} | tracked patient selected=${trackedPatientSelected} | matching selected total=${matchingSelectedTotal} | counted toward requirement=${selectedBefore} | selecting at most=${remainingToSelect}`
+045365:                 );
+045366:             }
+045367:             let updateSelectionResult = null;
+045368:             if (remainingToSelect > 0) {
+045369:                 updateSelectionResult =
+045370:                     selectVehicleUnits(
+045371:                         item.unitName,
+045372:                         mappedName,
+045373:                         remainingToSelect,
+045374:                         'UPDATE',
+045375:                         {
+045376:                             isRequirementSatisfied: () => {
+045377:                                 const liveState =
+045378:                                     getMissingOnMissionRequirementState(
+045379:                                         item
+045380:                                     );
+045381:                                 if (!liveState) {
+045382:                                     return false;
+045383:                                 }
+045384:                                 const liveTarget =
+045385:                                     getMissingOnMissionSelectionTarget(
+045386:                                         liveState,
+045387:                                         effectiveRequired
+045388:                                     );
+045389:                                 return (
+045390:                                     liveState.selected >=
+045391:                                     liveTarget
+045392:                                 );
+045393:                             }
+045394:                         }
+045395:                     );
+045396:             }
+045397:             const finalMissingOnMissionState =
+045398:                 getMissingOnMissionRequirementState(
+045399:                     item
+045400:                 );
+045401:             const confirmedEffectiveRequired =
+045402:                 finalMissingOnMissionState
+045403:                     ? getMissingOnMissionSelectionTarget(
+045404:                         finalMissingOnMissionState,
+045405:                         effectiveRequired
+045406:                     )
+045407:                     : effectiveRequired;
+045408:             const selectedFromCurrentDom =
+045409:                 Math.min(
+045410:                     countSelectedMatchingVehicles(
+045411:                         item.unitName,
+045412:                         mappedName
+045413:                     ),
+045414:                     confirmedEffectiveRequired
+045415:                 );
+045416:             const selectedFromLiveTable =
+045417:                 finalMissingOnMissionState
+045418:                     ? finalMissingOnMissionState.selected
+045419:                     : null;
+045420:             const selectedFromCurrentLiveTable =
+045421:                 Number.isFinite(selectedFromLiveTable)
+045422:                     ? Math.min(
+045423:                         selectedFromLiveTable,
+045424:                         confirmedEffectiveRequired
+045425:                     )
+045426:                     : 0;
+045427:             const selectedFromThisAttempt =
+045428:                 Math.min(
+045429:                     confirmedEffectiveRequired,
+045430:                     selectedBefore +
+045431:                     Math.max(
+045432:                         0,
+045433:                         parseInt(
+045434:                             updateSelectionResult?.assigned,
+045435:                             10
+045436:                         ) || 0
+045437:                     )
+045438:                 );
+045439:             const visualSelected =
+045440:                 exactPrvSrvRequirement
+045441:                     ? selectedFromCurrentDom
+045442:                     : Math.max(
+045443:                         selectedFromCurrentDom,
+045444:                         selectedFromThisAttempt,
+045445:                         selectedFromCurrentLiveTable
+045446:                     );
+045447:             if (
+045448:                 visualSelected > 0 &&
+045449:                 isAmbulanceOfficerRequirement(
+045450:                     item.unitName,
+045451:                     mappedName
+045452:                 )
+045453:             ) {
+045454:                 vehicleLoadState.ambulanceOfficer =
+045455:                     true;
+045456:             }
+045457:             if (patientRequirementType) {
+045458:                 if (isTotalPatientFallback) {
+045459:                     setTrackedPatientUnitSelections(
+045460:                         patientRequirementType,
+045461:                         visualSelected
+045462:                     );
+045463:                 } else {
+045464:                     incrementTrackedPatientUnitSelections(
+045465:                         patientRequirementType,
+045466:                         Math.max(
+045467:                             0,
+045468:                             parseInt(
+045469:                                 updateSelectionResult?.assigned,
+045470:                                 10
+045471:                             ) || 0
+045472:                         )
+045473:                     );
+045474:                 }
+045475:                 if (
+045476:                     patientRequirementType ===
+045477:                     'ambulance'
+045478:                 ) {
+045479:                     vehicleLoadState.ambulances =
+045480:                         Math.max(
+045481:                             vehicleLoadState.ambulances || 0,
+045482:                             getTrackedPatientUnitSelections(
+045483:                                 'ambulance'
+045484:                             )
+045485:                         );
+045486:                 }
+045487:             }
+045488:             if (
+045489:                 mfDebugEnabled &&
+045490:                 !exactPrvSrvRequirement &&
+045491:                 selectedFromThisAttempt >
+045492:                     selectedFromCurrentDom
+045493:             ) {
+045494:                 debugLog(
+045495:                     'UPDATE CONFIRMATION',
+045496:                     `${item.unitName} -> ${mappedName} | DOM=${selectedFromCurrentDom}/${needed} | successful clicks=${selectedFromThisAttempt}/${needed} | using successful-click confirmation`
+045497:                 );
+045498:             }
+045499:             const status =
+045500:                 visualSelected >= confirmedEffectiveRequired
+045501:                     ? 'assigned'
+045502:                     : visualSelected > 0
+045503:                         ? 'retrying'
+045504:                         : 'missing';
+045505:             addOrUpdateVehicleRow(
+045506:                 item.unitName,
+045507:                 mappedName,
+045508:                 confirmedEffectiveRequired,
+045509:                 status,
+045510:                 visualSelected
+045511:             );
+045512:             renderVehicleLoadList();
+045513:             if (
+045514:                 visualSelected <
+045515:                 confirmedEffectiveRequired
+045516:             ) {
+045517:                 const remaining =
+045518:                     confirmedEffectiveRequired -
+045519:                     visualSelected;
+045520:                 missingAfterAttempt.push(
+045521:                     normaliseVehicleText(
+045522:                         item.unitName
+045523:                     ) === normaliseVehicleText(
+045524:                         mappedName
+045525:                     )
+045526:                         ? `${item.unitName} x${remaining}`
+045527:                         : `${item.unitName} → ${mappedName} x${remaining}`
+045528:                 );
+045529:             }
+045530:         });
+045531:         if (trainedPersonnelWarnings.length > 0) {
+045532:             const warningText =
+045533:                 trainedPersonnelWarnings.join('\n');
+045534:             blockTrainedPersonnelDispatch(
+045535:                 trainedPersonnelWarnings,
+045536:                 'Mission Update'
+045537:             );
+045538:             console.warn(
+045539:                 '[Mission Finder] Mission Update verified trained-personnel shortage blocked dispatch:',
+045540:                 warningText
+045541:             );
+045542:             if (showAlerts && !autoModeRunning) {
+045543:                 alert(
+045544:                     `Verified trained-personnel shortage — dispatch blocked:\n\n${warningText}`
+045545:                 );
+045546:             }
+045547:             return false;
+045548:         }
+045549:         if (missingAfterAttempt.length > 0) {
+045550:             if (showAlerts && !autoModeRunning) {
+045551:                 alert(`Mission update units still missing:\n\n${missingAfterAttempt.join('\n')}`);
+045552:             }
+045553:             updateStatusBox("Some mission update units are missing.");
+045554:             changeDispatchBoxColor(false);
+045555:             if (autoModeRunning) {
+045556:                 updateStatusBox(`Auto Mode: missing update units. Will dispatch to skip.`);
+045557:             }
+045558:             return false;
+045559:         }
+045560:         updateStatusBox(
+045561:             "Mission update vehicles and supported personnel units assigned."
+045562:         );
+045563:         changeDispatchBoxColor(true);
+045564:         if (
+045565:             missingRows.length > 0 &&
+045566:             !options.suppressUpdateLog
+045567:         ) {
+045568:             addMissionLogEntry('update', getCurrentMissionName(), `Mission update handled x${missingRows.length}`, null);
+045569:         }
+045570:         return true;
+045571:     }
+045572:     async function autoHandleMissionUpdateAfterDispatch() {
+045573:         const rows = readMissionUpdateRows();
+045574:         if (rows.length === 0) {
+045575:             updateStatusBox("No mission update found after dispatch.");
+045576:             return;
+045577:         }
+045578:         updateStatusBox("Mission update found. Assigning new units...");
+045579:         await preparePoliceVehicleSafetyForRows(
+045580:             rows,
+045581:             'AUTO POST-DISPATCH UPDATE'
+045582:         );
+045583:         const assigned = handleMissionUpdateUnits(false, rows);
+045584:         if (assigned) {
+045585:             setTimeout(() => {
+045586:                 updateStatusBox("Mission update assigned. Ready to dispatch again.");
+045587:                 changeDispatchBoxColor(true);
+045588:             }, 1000);
+045589:         }
+045590:     }
+045591:     function parseMissionIdFromHrefForQueueRestart(href) {
+045592:         const value = String(href || '');
+045593:         const directMatch = value.match(/\/missions\/(\d+)/i);
+045594:         if (directMatch) return directMatch[1];
+045595:         try {
+045596:             const url = new URL(value, window.location.origin);
+045597:             const missionId = url.searchParams.get('mission_id');
+045598:             if (missionId) return missionId;
+045599:         } catch (error) {}
+045600:         const anyMatch = value.match(/mission_id=(\d+)/i);
+045601:         return anyMatch ? anyMatch[1] : '';
+045602:     }
+045603:     function getCurrentMissionIdForQueueRestart() {
+045604:         const helpLink =
+045605:             getActiveMissionHelpLink();
+045606:         const helpId =
+045607:             parseMissionIdFromHrefForQueueRestart(
+045608:                 helpLink
+045609:                     ? (
+045610:                         helpLink.href ||
+045611:                         helpLink.getAttribute(
+045612:                             'href'
+045613:                         )
+045614:                     )
+045615:                     : ''
+045616:             );
+045617:         if (helpId) return helpId;
+045618:         const missionInfo =
+045619:             getActiveVisibleMissionInfo();
+045620:         if (missionInfo) {
+045621:             const attrs = ['data-mission-id', 'data-id', 'mission_id', 'data-mission'];
+045622:             for (const attr of attrs) {
+045623:                 const value = missionInfo.getAttribute(attr);
+045624:                 if (value && /^\d+$/.test(String(value))) return String(value);
+045625:             }
+045626:             const missionLink = missionInfo.querySelector && missionInfo.querySelector('a[href*="/missions/"], a[href*="mission_id="]');
+045627:             const linkId = parseMissionIdFromHrefForQueueRestart(missionLink ? (missionLink.href || missionLink.getAttribute('href')) : '');
+045628:             if (linkId) return linkId;
+045629:         }
+045630:         return parseMissionIdFromHrefForQueueRestart(window.location.href);
+045631:     }
+045632:     function isSilentQueueWatchActive() {
+045633:         if (!MF_IS_TOP_WINDOW) return false;
+045634:         if (isManualAutoStopActive()) return false;
+045635:         if (!mfQueueRestartEnabled) return false;
+045636:         const autoActive =
+045637:             autoModeRunning === true ||
+045638:             sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
+045639:             localStorage.getItem('mf_auto_mode_running') === 'true';
+045640:         if (!autoActive) return false;
+045641:         if (
+045642:             isPostTransportRehookPending() ||
+045643:             wasTransportSequenceActive() ||
+045644:             getTransportRehookLockRemaining() > 0
+045645:         ) {
+045646:             return false;
+045647:         }
+045648:         const normalQueueWait =
+045649:             sessionStorage.getItem(MF_QUEUE_WAIT_ACTIVE_FLAG) === 'true';
+045650:         const mainScreenFallback =
+045651:             !isMissionPage() &&
+045652:             !isMissionScreenVisibleForQueueRestart();
+045653:         return normalQueueWait || mainScreenFallback;
+045654:     }
+045655:     function safeQueueStatus(message) {
+045656:         try {
+045657:             updateStatusBox(message);
+045658:         } catch (error) {}
+045659:     }
+045660:     async function waitForSpecificQueueMissionToOpen(
+045661:         targetMissionId,
+045662:         previousMissionId,
+045663:         modalCountBeforeClick
+045664:     ) {
+045665:         const started = Date.now();
+045666:         const beforeCount = Number.isFinite(modalCountBeforeClick)
+045667:             ? modalCountBeforeClick
+045668:             : 0;
+045669:         while (Date.now() - started < 30000) {
+045670:             const currentMissionId = getCurrentMissionIdForQueueRestart();
+045671:             const missionScreenVisible = isMissionScreenVisibleForQueueRestart();
+045672:             const missionPage = isMissionPage();
+045673:             const modalCount = getVisibleQueueOpenModals().length;
+045674:             const urlMissionId = parseMissionIdFromHrefForQueueRestart(
+045675:                 window.location.href
+045676:             );
+045677:             if (mfDebugEnabled) {
+045678:                 debugLog(
+045679:                     'NEXT QUEUE OPEN',
+045680:                     `target=${targetMissionId || 'unknown'} | previous=${previousMissionId || 'unknown'} | current=${currentMissionId || 'unknown'} | url=${urlMissionId || 'unknown'} | missionPage=${missionPage ? 'yes' : 'no'} | missionVisible=${missionScreenVisible ? 'yes' : 'no'} | modals=${modalCount}`
+045681:                 );
+045682:             }
+045683:             if (
+045684:                 targetMissionId &&
+045685:                 (
+045686:                     currentMissionId === targetMissionId ||
+045687:                     urlMissionId === targetMissionId
+045688:                 ) &&
+045689:                 (
+045690:                     missionPage ||
+045691:                     missionScreenVisible ||
+045692:                     modalCount > beforeCount
+045693:                 )
+045694:             ) {
+045695:                 return true;
+045696:             }
+045697:             if (
+045698:                 currentMissionId &&
+045699:                 currentMissionId !== previousMissionId &&
+045700:                 (missionPage || missionScreenVisible)

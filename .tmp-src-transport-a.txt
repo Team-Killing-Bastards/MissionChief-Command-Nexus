@@ -1,0 +1,501 @@
+004700: }
+004701: function findSyntheticTopMissionAnchor(target) {
+004702: const element = target && target.nodeType === 1 ? target : target?.parentElement;
+004703: const anchor = element?.closest?.('a[href*="/missions/"]');
+004704: if (!anchor || anchor.ownerDocument !== document) return null;
+004705: const href = anchor.href || anchor.getAttribute('href') || '';
+004706: return missionIdFromUrl(href) ? anchor : null;
+004707: }
+004708: function blockSyntheticTopMissionRehook(event) {
+004709: if (!(state.wanted || state.stopping || persistedBackgroundWanted()) || event.isTrusted) return;
+004710: const anchor = findSyntheticTopMissionAnchor(event.target);
+004711: if (!anchor) return;
+004712: event.preventDefault();
+004713: event.stopImmediatePropagation();
+004714: state.topSyntheticMissionRehooksBlocked += 1;
+004715: const missionId = missionIdFromUrl(anchor.href || anchor.getAttribute('href') || '');
+004716: const hiddenDoc = getWorkerDocument();
+004717: if (
+004718: missionId &&
+004719: hiddenDoc?.readyState === 'complete' &&
+004720: state.currentMissionId === missionId &&
+004721: missionIdFromUrl(getWorkerHref()) === missionId
+004722: ) {
+004723: clearSharedV2QueueGuard('blocked top-window synthetic mission open; exact mission already owned by hidden worker', missionId);
+004724: }
+004725: if (state.topSyntheticMissionRehooksBlocked <= 3 || state.topSyntheticMissionRehooksBlocked % 10 === 0) {
+004726: log('Blocked synthetic top-window mission navigation so the visible page stays under player control.', {
+004727: missionId,
+004728: pathname: location.pathname,
+004729: blockedCount: state.topSyntheticMissionRehooksBlocked,
+004730: });
+004731: }
+004732: }
+004733: document.addEventListener('click', blockSyntheticTopMissionRehook, true);
+004734: function chooseBootstrapMission() {
+004735: return chooseTopMission({ actionableOnly: true });
+004736: }
+004737: function collectRadioTransportRequests() {
+004738: const rows = Array.from(document.querySelectorAll(
+004739: '#radio_messages_important li, #radio_messages li'
+004740: ));
+004741: const requests = [];
+004742: const seen = new Set();
+004743: for (const row of rows) {
+004744: const status5 = row.querySelector(
+004745: '.building_list_fms_5[title="Transport Request"], .building_list_fms[title="Transport Request"]'
+004746: );
+004747: const rowText = normaliseText(row.textContent);
+004748: if (!status5 && !/\bTransport Request\b/i.test(rowText)) continue;
+004749: const classMatch = String(row.className || '').match(/\bradio_message_vehicle_(\d+)\b/);
+004750: const vehicleId = classMatch?.[1] ||
+004751: normaliseText(row.querySelector('[vehicle_id]')?.getAttribute('vehicle_id')) ||
+004752: '';
+004753: const missionAnchor = row.querySelector('a.mission-radio-button[href*="/missions/"], a[href*="/missions/"]');
+004754: const missionUrl = sameOriginUrl(missionAnchor?.getAttribute('href') || missionAnchor?.href || '');
+004755: const missionId = missionIdFromUrl(missionUrl?.href || '');
+004756: if (!vehicleId || !missionId || !missionUrl) continue;
+004757: const missionAnchorText = normaliseText(missionAnchor?.textContent || '');
+004758: const allianceLike = /\[alliance\]/i.test(rowText) || /\[alliance\]/i.test(missionAnchorText);
+004759: const key = `${vehicleId}:${missionId}`;
+004760: if (allianceLike) {
+004761: if (!state.allianceRadioIgnoredKeys.has(key)) {
+004762: state.allianceRadioIgnoredKeys.add(key);
+004763: trimOldestSetEntries(state.allianceRadioIgnoredKeys, ALLIANCE_RADIO_IGNORED_KEY_CACHE_LIMIT);
+004764: state.runAllianceRadioIgnored += 1;
+004765: const ignored = {
+004766: at: nowIso(),
+004767: key,
+004768: vehicleId,
+004769: missionId,
+004770: vehicleLabel: normaliseText(row.querySelector(`a[href^="/vehicles/${CSS.escape(vehicleId)}"]`)?.textContent),
+004771: rowText,
+004772: };
+004773: if (state.runAllianceRadioIgnored <= 5 || state.runAllianceRadioIgnored % 250 === 0) {
+004774: state.allianceRadioIgnoredHistory.push(ignored);
+004775: if (state.allianceRadioIgnoredHistory.length > RADIO_HISTORY_LIMIT) {
+004776: state.allianceRadioIgnoredHistory.splice(0, state.allianceRadioIgnoredHistory.length - RADIO_HISTORY_LIMIT);
+004777: }
+004778: log('Ignored sampled Alliance Radio Transport Request; it cannot enter the personal V3 work queue.', ignored);
+004779: }
+004780: }
+004781: continue;
+004782: }
+004783: if (seen.has(key)) continue;
+004784: seen.add(key);
+004785: requests.push({
+004786: key,
+004787: vehicleId,
+004788: missionId,
+004789: missionUrl: missionUrl.href,
+004790: vehicleLabel: normaliseText(row.querySelector(`a[href^="/vehicles/${CSS.escape(vehicleId)}"]`)?.textContent),
+004791: rowText,
+004792: });
+004793: }
+004794: return requests;
+004795: }
+004796: function restoreAfterResolvedRadioTransportWarning(warnedKey, remainingRequests = []) {
+004797: if (
+004798: !warnedKey ||
+004799: state.phase !== 'TRANSPORT_WARN' ||
+004800: !/personal radio transport request may be stalled/i.test(state.status || '') ||
+004801: state.transportServiceActive ||
+004802: state.transportKind ||
+004803: state.autoStopWarned ||
+004804: state.lastError
+004805: ) return false;
+004806: if ((remainingRequests || []).some(request => request?.key === warnedKey)) return false;
+004807: if (state.lowQueuePaused) {
+004808: setPhase(
+004809: 'LOW_QUEUE_PAUSED',
+004810: 'Paused - waiting for 2 missions',
+004811: `The warned personal transport request cleared. ${state.lowQueueObservedCount} actionable personal mission${state.lowQueueObservedCount === 1 ? '' : 's'} remain; no mission worker was started.`
+004812: );
+004813: } else if (state.postDispatchWatchdog) {
+004814: setPhase(
+004815: 'POST_DISPATCH_RECOVERY',
+004816: 'Waiting for the verified mission handoff',
+004817: `${missionDisplay(state.postDispatchWatchdog.missionId, state.postDispatchWatchdog.missionName)} remains protected by the dispatch watchdog. The cleared transport request no longer blocks recovery.`
+004818: );
+004819: } else if (state.wanted && state.worker?.isConnected) {
+004820: const doc = getWorkerDocument();
+004821: const status = findUsefulNexusStatus(doc);
+004822: setPhase(
+004823: 'ACTIVE',
+004824: 'Background Auto Mode running',
+004825: status || `${missionDisplay(state.currentMissionId, state.currentMissionName)} is active. The previous transport warning cleared.`
+004826: );
+004827: } else {
+004828: setPhase(
+004829: 'WAITING_MISSION',
+004830: 'Waiting for the next mission',
+004831: 'The warned personal transport request cleared and no transport work remains.'
+004832: );
+004833: }
+004834: log('Cleared stale Radio Transport warning after the exact request disappeared.', {
+004835: key: warnedKey,
+004836: remainingPersonalRequests: (remainingRequests || []).length,
+004837: });
+004838: return true;
+004839: }
+004840: function refreshRadioTransportRequests() {
+004841: const observedAt = Date.now();
+004842: if (state.radioScanAt && observedAt - state.radioScanAt < RADIO_SCAN_INTERVAL_MS) {
+004843: return state.radioTransportRequests.map(request => ({
+004844: ...request,
+004845: pendingMs: Math.max(0, observedAt - Number(request.firstSeenAt || observedAt)),
+004846: }));
+004847: }
+004848: state.radioScanAt = observedAt;
+004849: const observedRequests = collectRadioTransportRequests();
+004850: const nextKeys = new Set(observedRequests.map(request => request.key));
+004851: for (const request of observedRequests) {
+004852: if (!state.radioRequestFirstSeenAt.has(request.key)) {
+004853: state.radioRequestFirstSeenAt.set(request.key, observedAt);
+004854: }
+004855: if (state.radioRequestKeys.has(request.key)) continue;
+004856: state.runRadioTransportRequests += 1;
+004857: const event = {
+004858: at: nowIso(),
+004859: event: 'appeared',
+004860: key: request.key,
+004861: vehicleId: request.vehicleId,
+004862: missionId: request.missionId,
+004863: vehicleLabel: request.vehicleLabel,
+004864: };
+004865: state.radioRequestHistory.push(event);
+004866: log('Radio Transport Request appeared.', event);
+004867: }
+004868: for (const oldKey of state.radioRequestKeys) {
+004869: if (nextKeys.has(oldKey)) continue;
+004870: const event = { at: nowIso(), event: 'cleared', key: oldKey };
+004871: state.radioRequestHistory.push(event);
+004872: log('Radio Transport Request cleared.', event);
+004873: state.radioRequestFirstSeenAt.delete(oldKey);
+004874: state.transportServiceDeferredUntil.delete(oldKey);
+004875: schedulePostTransportRehook(oldKey);
+004876: }
+004877: if (state.radioRequestHistory.length > RADIO_HISTORY_LIMIT) {
+004878: state.radioRequestHistory.splice(0, state.radioRequestHistory.length - RADIO_HISTORY_LIMIT);
+004879: }
+004880: const requests = observedRequests
+004881: .map((request, domOrder) => {
+004882: const firstSeenAt = Number(state.radioRequestFirstSeenAt.get(request.key) || observedAt);
+004883: return {
+004884: ...request,
+004885: firstSeenAt,
+004886: pendingMs: Math.max(0, observedAt - firstSeenAt),
+004887: domOrder,
+004888: };
+004889: })
+004890: .sort((left, right) =>
+004891: left.firstSeenAt - right.firstSeenAt ||
+004892: left.domOrder - right.domOrder
+004893: )
+004894: .map(({ domOrder, ...request }) => request);
+004895: const previousFirstKey = state.radioTransportRequests[0]?.key || '';
+004896: const nextFirstKey = requests[0]?.key || '';
+004897: const warnedKey = state.radioRequestWarningKey;
+004898: if (nextFirstKey !== previousFirstKey) {
+004899: state.radioRequestSince = nextFirstKey
+004900: ? Number(state.radioRequestFirstSeenAt.get(nextFirstKey) || observedAt)
+004901: : 0;
+004902: state.radioRequestWarned = false;
+004903: state.radioRequestWarningKey = '';
+004904: } else if (nextFirstKey && !state.radioRequestSince) {
+004905: state.radioRequestSince = Number(state.radioRequestFirstSeenAt.get(nextFirstKey) || observedAt);
+004906: }
+004907: state.radioTransportRequests = requests;
+004908: state.radioRequestKeys = nextKeys;
+004909: if (warnedKey && !nextKeys.has(warnedKey)) {
+004910: restoreAfterResolvedRadioTransportWarning(warnedKey, requests);
+004911: }
+004912: return requests;
+004913: }
+004914: function radioRequestForVehicle(vehicleId, requests = state.radioTransportRequests) {
+004915: const id = String(vehicleId || '');
+004916: if (!id) return null;
+004917: return (requests || []).find(request => String(request.vehicleId) === id) || null;
+004918: }
+004919: function resetPrisonerAssistTracking() {
+004920: state.prisonerAssistKey = '';
+004921: state.prisonerAssistSince = 0;
+004922: }
+004923: function findPersonalStructuredPrisonerContext(doc, href, requests) {
+004924: if (!doc) return null;
+004925: const routeVehicleId = vehicleIdFromUrl(href);
+004926: for (const scope of getAccessibleTransportDocuments(doc)) {
+004927: let roots = [];
+004928: try {
+004929: roots = Array.from(scope.querySelectorAll(
+004930: '[data-transport-request="true"][data-transport-request-type="prisoner"]'
+004931: ));
+004932: } catch {}
+004933: for (const root of roots) {
+004934: const selector = root.querySelector?.('.prison-select[data-vehicle-id]');
+004935: const vehicleId = normaliseText(selector?.getAttribute?.('data-vehicle-id') || routeVehicleId || '');
+004936: if (!vehicleId) continue;
+004937: if (routeVehicleId && routeVehicleId !== vehicleId) continue;
+004938: const request = radioRequestForVehicle(vehicleId, requests);
+004939: if (!request) continue;
+004940: return { document: scope, root, selector, vehicleId, request };
+004941: }
+004942: }
+004943: return null;
+004944: }
+004945: function firstUsableGreenPrisonCell(prisonerContext) {
+004946: if (!prisonerContext?.root || !prisonerContext.vehicleId) return null;
+004947: let links = [];
+004948: try {
+004949: links = Array.from(prisonerContext.root.querySelectorAll(
+004950: 'a.btn.btn-success[data-prison-id][href*="/gefangener/"]'
+004951: ));
+004952: } catch {}
+004953: for (const link of links) {
+004954: if (!link?.isConnected || link.hidden) continue;
+004955: if (link.classList?.contains('disabled') || link.classList?.contains('btn-danger')) continue;
+004956: if (String(link.getAttribute?.('aria-disabled') || '').toLowerCase() === 'true') continue;
+004957: const url = sameOriginUrl(link.getAttribute?.('href') || link.href || '');
+004958: if (!url) continue;
+004959: const route = url.pathname.match(/^\/vehicles\/(\d+)\/gefangener\/(\d+)\/?$/i);
+004960: if (!route || route[1] !== prisonerContext.vehicleId) continue;
+004961: const label = normaliseText(link.textContent || link.innerText || '');
+004962: const freeMatch = label.match(/Free cells:\s*(\d+)/i);
+004963: const freeCells = freeMatch ? Number.parseInt(freeMatch[1], 10) : null;
+004964: if (Number.isFinite(freeCells) && freeCells <= 0) continue;
+004965: return {
+004966: link,
+004967: prisonId: route[2],
+004968: label,
+004969: freeCells,
+004970: href: url.href,
+004971: };
+004972: }
+004973: return null;
+004974: }
+004975: function maybeAssistPrisonerTransport(doc, href, context, requests) {
+004976: if (!state.wanted || state.stopping || context?.kind !== 'PRISONER') {
+004977: resetPrisonerAssistTracking();
+004978: return false;
+004979: }
+004980: if (exactPrisonerPath(href)) {
+004981: resetPrisonerAssistTracking();
+004982: return false;
+004983: }
+004984: const prisoner = findPersonalStructuredPrisonerContext(doc, href, requests);
+004985: if (!prisoner) {
+004986: resetPrisonerAssistTracking();
+004987: return false;
+004988: }
+004989: const assistKey = `${prisoner.request.key}:${pathFromUrl(href)}`;
+004990: if (state.prisonerAssistKey !== assistKey) {
+004991: state.prisonerAssistKey = assistKey;
+004992: state.prisonerAssistSince = Date.now();
+004993: return false;
+004994: }
+004995: if (Date.now() - state.prisonerAssistSince < PRISONER_ASSIST_DELAY_MS) return false;
+004996: const destination = firstUsableGreenPrisonCell(prisoner);
+004997: if (!destination) {
+004998: return false;
+004999: }
+005000: const clickKey = `${prisoner.request.key}:${destination.prisonId}`;
+005001: if (
+005002: state.prisonerAssistLastClickKey === clickKey &&
+005003: Date.now() - state.prisonerAssistLastClickAt < PRISONER_ASSIST_CLICK_COOLDOWN_MS
+005004: ) return false;
+005005: const liveRequests = collectRadioTransportRequests();
+005006: const liveRequest = radioRequestForVehicle(prisoner.vehicleId, liveRequests);
+005007: if (!liveRequest || liveRequest.missionId !== prisoner.request.missionId) {
+005008: resetPrisonerAssistTracking();
+005009: return false;
+005010: }
+005011: state.prisonerAssistLastClickKey = clickKey;
+005012: state.prisonerAssistLastClickAt = Date.now();
+005013: state.prisonerAssistAttempts += 1;
+005014: const event = {
+005015: at: nowIso(),
+005016: vehicleId: prisoner.vehicleId,
+005017: missionId: prisoner.request.missionId,
+005018: prisonId: destination.prisonId,
+005019: freeCells: destination.freeCells,
+005020: label: destination.label,
+005021: path: pathFromUrl(href),
+005022: reason: 'V2 prisoner Cell Selection remained unchanged after fallback delay',
+005023: };
+005024: state.prisonerAssistHistory.push(event);
+005025: if (state.prisonerAssistHistory.length > AFFINITY_HISTORY_LIMIT) {
+005026: state.prisonerAssistHistory.splice(0, state.prisonerAssistHistory.length - AFFINITY_HISTORY_LIMIT);
+005027: }
+005028: setPhase(
+005029: 'PRISONER_ASSIST',
+005030: 'Completing prisoner transport',
+005031: `V2 did not advance the personal prisoner Cell Selection. Using the first exact usable green cell for vehicle ${prisoner.vehicleId} on mission ${prisoner.request.missionId}.`
+005032: );
+005033: log('Prisoner assist clicked the first exact usable green cell after V2 had first chance.', event);
+005034: try {
+005035: destination.link.click();
+005036: return true;
+005037: } catch (error) {
+005038: log('Prisoner assist click failed.', { ...event, error: String(error?.message || error) });
+005039: return false;
+005040: }
+005041: }
+005042: function resetPatientAssistTracking() {
+005043: state.patientAssistKey = '';
+005044: state.patientAssistSince = 0;
+005045: }
+005046: function findExactPersonalPatientAnchor(doc, href, requests) {
+005047: if (!doc) return null;
+005048: const routeVehicleId = vehicleIdFromUrl(href);
+005049: if (!routeVehicleId) return null;
+005050: const request = radioRequestForVehicle(routeVehicleId, requests);
+005051: if (!request) return null;
+005052: for (const scope of getAccessibleTransportDocuments(doc)) {
+005053: let anchors = [];
+005054: try {
+005055: anchors = Array.from(scope.querySelectorAll('a.btn-success[href*="/patient/"]'));
+005056: } catch {}
+005057: for (const anchor of anchors) {
+005058: if (!anchor?.isConnected || anchor.hidden) continue;
+005059: if (anchor.classList?.contains('disabled') || anchor.classList?.contains('btn-danger')) continue;
+005060: if (String(anchor.getAttribute?.('aria-disabled') || '').toLowerCase() === 'true') continue;
+005061: const url = sameOriginUrl(anchor.getAttribute?.('href') || anchor.href || '');
+005062: if (!url) continue;
+005063: const route = url.pathname.match(/^\/vehicles\/(\d+)\/patient\/(\d+)\/?$/i);
+005064: if (!route || route[1] !== routeVehicleId) continue;
+005065: return {
+005066: anchor,
+005067: vehicleId: routeVehicleId,
+005068: patientId: route[2],
+005069: request,
+005070: href: url.href,
+005071: };
+005072: }
+005073: }
+005074: return null;
+005075: }
+005076: function maybeAssistPatientTransport(doc, href, context, requests) {
+005077: if (!state.wanted || state.stopping || context?.kind !== 'PATIENT') {
+005078: resetPatientAssistTracking();
+005079: return false;
+005080: }
+005081: if (exactPatientPath(href)) {
+005082: resetPatientAssistTracking();
+005083: return false;
+005084: }
+005085: const patient = findExactPersonalPatientAnchor(doc, href, requests);
+005086: if (!patient) {
+005087: resetPatientAssistTracking();
+005088: return false;
+005089: }
+005090: const assistKey = `${patient.request.key}:${patient.patientId}:${pathFromUrl(href)}`;
+005091: if (state.patientAssistKey !== assistKey) {
+005092: state.patientAssistKey = assistKey;
+005093: state.patientAssistSince = Date.now();
+005094: return false;
+005095: }
+005096: if (Date.now() - state.patientAssistSince < PATIENT_ASSIST_DELAY_MS) return false;
+005097: const clickKey = `${patient.request.key}:${patient.patientId}`;
+005098: if (
+005099: state.patientAssistLastClickKey === clickKey &&
+005100: Date.now() - state.patientAssistLastClickAt < PATIENT_ASSIST_CLICK_COOLDOWN_MS
+005101: ) return false;
+005102: const liveRequests = collectRadioTransportRequests();
+005103: const liveRequest = radioRequestForVehicle(patient.vehicleId, liveRequests);
+005104: if (!liveRequest || liveRequest.missionId !== patient.request.missionId) {
+005105: resetPatientAssistTracking();
+005106: return false;
+005107: }
+005108: state.patientAssistLastClickKey = clickKey;
+005109: state.patientAssistLastClickAt = Date.now();
+005110: state.patientAssistAttempts += 1;
+005111: const event = {
+005112: at: nowIso(),
+005113: vehicleId: patient.vehicleId,
+005114: missionId: patient.request.missionId,
+005115: patientId: patient.patientId,
+005116: path: pathFromUrl(href),
+005117: reason: 'V2 patient transport approach remained unchanged after fallback delay',
+005118: };
+005119: state.patientAssistHistory.push(event);
+005120: if (state.patientAssistHistory.length > TRANSPORT_SERVICE_HISTORY_LIMIT) {
+005121: state.patientAssistHistory.splice(0, state.patientAssistHistory.length - TRANSPORT_SERVICE_HISTORY_LIMIT);
+005122: }
+005123: setPhase(
+005124: 'PATIENT_ASSIST',
+005125: 'Opening patient transport',
+005126: `${missionDisplay(patient.request.missionId, missionNameForId(patient.request.missionId))} | vehicle ${patient.vehicleId}.`
+005127: );
+005128: log('Patient assist clicked the exact personal patient transport route after V2 had first chance.', event);
+005129: try {
+005130: patient.anchor.click();
+005131: return true;
+005132: } catch (error) {
+005133: log('Patient assist click failed.', { ...event, error: String(error?.message || error) });
+005134: return false;
+005135: }
+005136: }
+005137: function transportServiceRequest(requests = state.radioTransportRequests) {
+005138: const now = Date.now();
+005139: for (const request of requests || []) {
+005140: const deferredUntil = Number(state.transportServiceDeferredUntil.get(request.key) || 0);
+005141: if (deferredUntil > now) continue;
+005142: return request;
+005143: }
+005144: return null;
+005145: }
+005146: function recordTransportService(event) {
+005147: state.transportServiceHistory.push({ at: nowIso(), ...event });
+005148: if (state.transportServiceHistory.length > TRANSPORT_SERVICE_HISTORY_LIMIT) {
+005149: state.transportServiceHistory.splice(0, state.transportServiceHistory.length - TRANSPORT_SERVICE_HISTORY_LIMIT);
+005150: }
+005151: }
+005152: function clearTransportServiceState() {
+005153: state.transportServiceActive = false;
+005154: state.transportServiceKey = '';
+005155: state.transportServiceVehicleId = '';
+005156: state.transportServiceMissionId = '';
+005157: state.transportServiceStartedAt = 0;
+005158: resetPatientAssistTracking();
+005159: resetPrisonerAssistTracking();
+005160: }
+005161: function redirectWorkerToTransportService(request, currentMissionId) {
+005162: if (!request?.vehicleId || !request?.missionId || !state.worker?.isConnected) return false;
+005163: if (state.transportServiceActive) return false;
+005164: const url = sameOriginUrl(`/vehicles/${request.vehicleId}`);
+005165: if (!url) return false;
+005166: state.transportServiceEligible = false;
+005167: state.transportServiceActive = true;
+005168: state.transportServiceKey = request.key;
+005169: state.transportServiceVehicleId = request.vehicleId;
+005170: state.transportServiceMissionId = request.missionId;
+005171: state.transportServiceStartedAt = Date.now();
+005172: state.transportServiceAttempts += 1;
+005173: state.currentMissionId = request.missionId;
+005174: state.currentMissionName = missionNameForId(request.missionId) || state.currentMissionName;
+005175: state.currentMissionUrl = request.missionUrl || state.currentMissionUrl;
+005176: resetPriorityPending();
+005177: const event = {
+005178: event: 'service-start',
+005179: key: request.key,
+005180: vehicleId: request.vehicleId,
+005181: missionId: request.missionId,
+005182: missionName: missionNameForId(request.missionId),
+005183: fromMissionId: currentMissionId || '',
+005184: url: url.href,
+005185: };
+005186: recordTransportService(event);
+005187: setPhase(
+005188: 'TRANSPORT_SERVICE',
+005189: 'Clearing personal transport',
+005190: `${missionDisplay(request.missionId, event.missionName)} | ${request.vehicleLabel || `vehicle ${request.vehicleId}`}. Missions resume immediately after this one transport clears.`
+005191: );
+005192: log('Balanced queue opened one personal Radio transport between mission passes.', event);
+005193: try {
+005194: state.worker.contentWindow.location.replace(url.href);
+005195: return true;
+005196: } catch {
+005197: try {
+005198: state.worker.src = url.href;
+005199: return true;
+005200: } catch (error) {

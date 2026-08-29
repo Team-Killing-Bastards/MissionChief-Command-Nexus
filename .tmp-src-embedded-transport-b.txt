@@ -1,0 +1,1001 @@
+020350:             } catch (error) {}
+020351:             if (shouldAutoOkMissionFinderAlert(message)) {
+020352:                 try {
+020353:                     updateStatusBox(`Auto-OK alert: ${String(message || '').replace(/\s+/g, ' ').trim()}`);
+020354:                 } catch (error) {}
+020355:                 if (mfDebugEnabled) {
+020356:                     debugLog('AUTO OK POPUP', String(message || '').replace(/\s+/g, ' ').trim());
+020357:                 }
+020358:                 return true;
+020359:             }
+020360:             if (autoModeRunning) {
+020361:                 updateStatusBox(`Auto Mode warning: ${message}`);
+020362:             }
+020363:             originalAlert.call(window, message);
+020364:         };
+020365:     }
+020366:     if (!mfV3DormantPreload) {
+020367:         installMissionFinderAlertOverride();
+020368:     }
+020369:     function wait(ms) {
+020370:         return new Promise(resolve => setTimeout(resolve, ms));
+020371:     }
+020372:     function recorderNowIso() {
+020373:         try {
+020374:             return new Date().toISOString();
+020375:         } catch (error) {
+020376:             return String(Date.now());
+020377:         }
+020378:     }
+020379:     function trimRecorderText(value, maxLength) {
+020380:         const max = Number.isFinite(maxLength) ? maxLength : 500;
+020381:         const text = String(value || '').replace(/\s+/g, ' ').trim();
+020382:         return text.length > max ? `${text.slice(0, max)}…` : text;
+020383:     }
+020384:     function readRecorderEntries() {
+020385:         try {
+020386:             const raw = localStorage.getItem(MF_RECORDER_KEY);
+020387:             const parsed = raw ? JSON.parse(raw) : [];
+020388:             return Array.isArray(parsed) ? parsed : [];
+020389:         } catch (error) {
+020390:             return [];
+020391:         }
+020392:     }
+020393:     function saveRecorderEntries(entries) {
+020394:         try {
+020395:             let bounded = entries.slice(-MF_RECORDER_MAX_ENTRIES);
+020396:             let encoded = JSON.stringify(bounded);
+020397:             while (
+020398:                 encoded.length > MF_RECORDER_MAX_BYTES &&
+020399:                 bounded.length > 1
+020400:             ) {
+020401:                 bounded = bounded.slice(1);
+020402:                 encoded = JSON.stringify(bounded);
+020403:             }
+020404:             localStorage.setItem(MF_RECORDER_KEY, encoded);
+020405:         } catch (_error) {
+020406:             try {
+020407:                 localStorage.setItem(
+020408:                     MF_RECORDER_KEY,
+020409:                     JSON.stringify(entries.slice(-10))
+020410:                 );
+020411:             } catch (_innerError) {}
+020412:         }
+020413:     }
+020414:     function getRecorderElementPath(element) {
+020415:         if (!element || !element.tagName) return '';
+020416:         const parts = [];
+020417:         let node = element;
+020418:         while (node && node.nodeType === 1 && parts.length < 6) {
+020419:             let part = node.tagName.toLowerCase();
+020420:             if (node.id) {
+020421:                 part += `#${node.id}`;
+020422:                 parts.unshift(part);
+020423:                 break;
+020424:             }
+020425:             const className = String(node.className || '')
+020426:                 .replace(/\s+/g, ' ')
+020427:                 .trim()
+020428:                 .split(' ')
+020429:                 .filter(Boolean)
+020430:                 .slice(0, 3)
+020431:                 .join('.');
+020432:             if (className) part += `.${className}`;
+020433:             const parent = node.parentElement;
+020434:             if (parent) {
+020435:                 const siblings = Array.from(parent.children).filter(child => child.tagName === node.tagName);
+020436:                 if (siblings.length > 1) {
+020437:                     part += `:nth-of-type(${siblings.indexOf(node) + 1})`;
+020438:                 }
+020439:             }
+020440:             parts.unshift(part);
+020441:             node = parent;
+020442:         }
+020443:         return parts.join(' > ');
+020444:     }
+020445:     function getRecorderVisibleButtons() {
+020446:         return Array.from(document.querySelectorAll('a, button, input[type="button"], input[type="submit"]'))
+020447:             .filter(element => {
+020448:                 try {
+020449:                     const rect = element.getBoundingClientRect();
+020450:                     const style = window.getComputedStyle(element);
+020451:                     return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+020452:                 } catch (error) {
+020453:                     return false;
+020454:                 }
+020455:             })
+020456:             .slice(0, 80)
+020457:             .map(element => ({
+020458:                 tag: element.tagName || '',
+020459:                 id: element.id || '',
+020460:                 className: String(element.className || ''),
+020461:                 text: trimRecorderText(element.textContent || element.value || element.title || '', 120),
+020462:                 href: element.getAttribute && element.getAttribute('href') ? element.getAttribute('href') : '',
+020463:                 path: getRecorderElementPath(element)
+020464:             }));
+020465:     }
+020466:     function getRecorderMissionSnapshot() {
+020467:         let queueState = null;
+020468:         let unattendedState = null;
+020469:         try {
+020470:             if (typeof getNextMissionQueueState === 'function') queueState = getNextMissionQueueState();
+020471:         } catch (error) {}
+020472:         try {
+020473:             if (typeof getUnattendedMissionStateForQueueRestart === 'function') unattendedState = getUnattendedMissionStateForQueueRestart();
+020474:         } catch (error) {}
+020475:         const alerts = Array.from(document.querySelectorAll('.alert-danger, .alert-warning, .alert-success, div[id^="alert_"]'))
+020476:             .filter(element => {
+020477:                 try {
+020478:                     const style = window.getComputedStyle(element);
+020479:                     const rect = element.getBoundingClientRect();
+020480:                     return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+020481:                 } catch (error) {
+020482:                     return true;
+020483:                 }
+020484:             })
+020485:             .slice(0, 8)
+020486:             .map(element => ({
+020487:                 id: element.id || '',
+020488:                 className: String(element.className || ''),
+020489:                 text: trimRecorderText(element.innerText || element.textContent || '', 650)
+020490:             }));
+020491:         const modals = Array.from(document.querySelectorAll('.vm--modal, .modal, .lightbox'))
+020492:             .filter(element => {
+020493:                 try {
+020494:                     const rect = element.getBoundingClientRect();
+020495:                     const style = window.getComputedStyle(element);
+020496:                     return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+020497:                 } catch (error) {
+020498:                     return false;
+020499:                 }
+020500:             })
+020501:             .slice(0, 5)
+020502:             .map(element => ({
+020503:                 className: String(element.className || ''),
+020504:                 hasVehicleWindow: !!element.querySelector('.vehicle-window'),
+020505:                 approachButtons: Array.from(element.querySelectorAll('button, a')).filter(button => {
+020506:                     const text = trimRecorderText(button.textContent || button.innerText || button.value || '', 50).toLowerCase();
+020507:                     return text === 'approach' || text.includes('approach');
+020508:                 }).length,
+020509:                 title: trimRecorderText(element.querySelector('h1,h2,h3,.modal-title')?.innerText || '', 160),
+020510:                 text: trimRecorderText(element.innerText || element.textContent || '', 900)
+020511:             }));
+020512:         return {
+020513:             url: window.location.href,
+020514:             missionName: (() => { try { return getCurrentMissionName(); } catch (error) { return ''; } })(),
+020515:             missionId: (() => { try { return getCurrentMissionIdForQueueRestart(); } catch (error) { return ''; } })(),
+020516:             isMissionPage: (() => { try { return isMissionPage(); } catch (error) { return false; } })(),
+020517:             autoModeRunning,
+020518:             autoModeLoopActive,
+020519:             queueFlags: {
+020520:                 finalQueueDispatch: sessionStorage.getItem(MF_FINAL_QUEUE_DISPATCH_FLAG),
+020521:                 queueWaitActive: sessionStorage.getItem(MF_QUEUE_WAIT_ACTIVE_FLAG),
+020522:                 queueOpeningMission: sessionStorage.getItem(MF_QUEUE_OPENING_MISSION_FLAG),
+020523:                 postTransportRehookPending: sessionStorage.getItem('mf_post_transport_rehook_pending_v1') || localStorage.getItem('mf_post_transport_rehook_pending_v1'),
+020524:                 transportSequenceActive: sessionStorage.getItem('mf_transport_sequence_active_v1')
+020525:             },
+020526:             queueState,
+020527:             unattendedState,
+020528:             vehicleLoadState: {
+020529:                 ready: vehicleLoadState.ready,
+020530:                 patients: vehicleLoadState.patients,
+020531:                 ambulances: vehicleLoadState.ambulances,
+020532:                 rows: (vehicleLoadState.rows || []).map(row => ({
+020533:                     originalName: row.originalName,
+020534:                     mappedName: row.mappedName,
+020535:                     required: row.required,
+020536:                     selected: row.selected,
+020537:                     status: row.status
+020538:                 })).slice(0, 30)
+020539:             },
+020540:             alerts,
+020541:             modals,
+020542:             visibleButtons: getRecorderVisibleButtons(),
+020543:             debugTail: (mfDebugRows || []).slice(0, 60)
+020544:         };
+020545:     }
+020546:     function recordIssueEvent() {}
+020547:     function renderRecorderStatus() {}
+020548:     function setIssueRecorderEnabled() {}
+020549:     function clearIssueRecorder() {}
+020550:     async function copyIssueRecorder() {}
+020551:     function captureIssueNow() {}
+020552:     function scanIssueRecorderDangerAlerts() {}
+020553:     function syncIssueRecorderMutationObserver() {}
+020554:     function installIssueRecorderWatchers() {
+020555:         window.mfIssueRecorderInstalled = true;
+020556:     }
+020557:     function cleanupDuplicatePanels() {
+020558:         const wrappers = document.querySelectorAll('#mission-finder-wrapper');
+020559:         wrappers.forEach((wrapper, index) => {
+020560:             if (index > 0) {
+020561:                 wrapper.remove();
+020562:             }
+020563:         });
+020564:         document.querySelectorAll('#control-panel').forEach(panel => {
+020565:             if (!panel.closest('#mission-finder-wrapper')) {
+020566:                 panel.remove();
+020567:             }
+020568:         });
+020569:     }
+020570:     const crossReference = { "Pumps": "Fire Engine R/PUMP x 1", "Pump": "Fire Engine R/PUMP x 1", "Fire engine": "Fire Engine R/PUMP x 1", "Fire engines": "Fire Engine R/PUMP x 1", "Fire Engine": "Fire Engine R/PUMP x 1", "Fire Engines": "Fire Engine R/PUMP x 1", "Aerial Appliance": "CARP", "Aerial Appliances": "CARP", "Aerial Appliance Truck": "CARP", "Aerial Appliance Trucks": "CARP", "Fire, rescue or aerial appliance": "Rescue Pump", "Road Rail Unit": "Road Rail Unit", "Road Rail Units": "Road Rail Unit", "Firefighter": "Rescue Pump", "Firefighters": "Rescue Pump", "Required Firefighter": "Rescue Pump", "Required Firefighters": "Rescue Pump", "Car Recovery": "Flatbed Recovery Vehicle", "Required Car Recovery": "Flatbed Recovery Vehicle", "ICCU or Ambulance Control Unit": "ICCU/ACU", "ICCU or Ambulance Control Units": "ICCU/ACU", "ICCUs or Ambulance Control Units": "ICCU/ACU", "Fire Officer": "Fire Officer", "Fire Officers": "Fire Officer", "Rescue Support Unit": "Fire Engine R/PUMP x 1", "Rescue Support Units": "Fire Engine R/PUMP x 1", "Rescue Support Vehicle": "Fire Engine R/PUMP x 1", "Rescue Support Vehicles": "Fire Engine R/PUMP x 1", "Rescue Support Unit or Rescue Pump": "Fire Engine R/PUMP x 1", "Rescue Support Units or Rescue Pumps": "Fire Engine R/PUMP x 1", "Fire Engines or Rescue Support Vehicles": "Fire Engine R/PUMP x 1", "Fire Engines, Rescue Support Vehicles or Aerial Appliance Trucks": "Fire Engine R/PUMP x 1", "Foam Unit": "RP CAFS", "Foam Units": "RP CAFS", "Water Carrier": "Water Carrier", "Water Carriers": "Water Carrier", "Welfare Vehicles x1": "Welfare Vehicle", "Police Car": "Police Car", "Police Cars": "Police Car", "Police car": "Police Car", "Police cars": "Police Car", "Police Officer": "Police Car", "Police Officers": "Police Car", "Traffic Car": "Police ATC", "Traffic Cars": "Police ATC", "Police Cars or Armed Response Vehicles (ARVs)": "Police ATC", "Armed Response Personnel (In Armed Vehicles)": "Police ATC", "Dog Support Unit (DSU)": "Police DSU", "Dog Support Units (DSU)": "Police DSU", "Dog Support Units (DSUs)": "Police DSU", "Mounted Unit": "Mounted Unit", "Mounted Units": "Mounted Unit", "Police Inspector": "Police Inspector", "Police Sergeant": "Police Sergeant", "Cell Van": "Cell Van", "Police Helicopter": "Police Helicopter", "Police Helicopters": "Police Helicopter", "Police Helicopter or Drone": "Police Helicopter", "Police Helicopter or Drones": "Police Helicopter", "Police Helicopters or Drone": "Police Helicopter", "Police Helicopters or Drones": "Police Helicopter", "Required Police Helicopter or Drone": "Police Helicopter", "Required Police Helicopter or Drones": "Police Helicopter", "Required Police Helicopters or Drone": "Police Helicopter", "Required Police Helicopters or Drones": "Police Helicopter", "Require Drone": "Drone", "Require Drones": "Drone", "Required Drone": "Drone", "Required Drones": "Drone", "Requires Drone": "Drone", "Requires Drones": "Drone", "Police Drone": "Police Helicopter", "Police Drones": "Police Helicopter", "Policehelicopter": "Police Helicopter", "Policehelicopters": "Police Helicopter", "modules.missionHelper.vehicles.captions.railway_police": "railway police", "modules.missionHelper.prerequisites.railway_police": "EIU", "modules.missionHelper.prerequisites.railway_police_command": "EIU", "Ambulance": "Ambulance", "Ambulances": "Ambulance", "Any vehicle": "Ambulance", "Any vehicles": "Ambulance", "Required Any vehicle": "Ambulance", "Required Any vehicles": "Ambulance", "Ambulance Officer": "Ambulance Officer", "Ambulance Officers": "Ambulance Officer", "Required Ambulance Officer": "Ambulance Officer", "Required Ambulance Officers": "Ambulance Officer", "Primary Response Vehicle": "PRV", "Primary Response Vehicles": "PRV", "PRVs": "PRV", "Secondary Response Vehicle": "SRV", "Secondary Response Vehicles": "SRV", "SRVs": "SRV", "Operational Team Leader": "OTL", "Operational Team Leaders": "OTL", "Mass Casualty Equipment": "Mass Casualty Equipment", "Mass Casualty Equipment Unit": "Mass Casualty Equipment", "Mass Casualty Equipment Units": "Mass Casualty Equipment", "Critical Care": "Critical Care", "Critical Care Team": "Critical Care", "Critical Care Teams": "Critical Care", "Required Critical Care": "Critical Care", "Required Critical Care Team": "Critical Care", "Required Critical Care Teams": "Critical Care", "ATV Carrier": "ATV Carrier", "ATV Carriers": "ATV Carrier", "ATC Carrier": "ATV Carrier", "ATC Carriers": "ATV Carrier", "RRV": "RRV", "RRVs": "RRV", "Required RRV": "RRV", "Required RRVs": "RRV", "Specialist Paramedic RRV": "RRV", "Specialist Paramedic RRVs": "RRV", "Required Specialist Paramedic RRV": "RRV", "Required Specialist Paramedic RRVs": "RRV", "RRV or Specialist Paramedic RRV": "RRV", "RRVs or Specialist Paramedic RRVs": "RRV", "Required RRV or Specialist Paramedic RRV": "RRV", "Required RRVs or Specialist Paramedic RRVs": "RRV", "Community Midwife": "Community Midwife", "Community Midwifes": "Community Midwife", "CRV": "CRV", "CRVs": "CRV", "Inland Rescue Boat (Trailer)": "Inland Rescue Boat (Trailer)", "Boat Trailer or Inland Rescue Boat": "Boat Trailer", "Seagoing Vessel": "ALB", "Seagoing Vessels": "ALB", "Coastguard Rescue Helicopter": "CG Rescue Helicopter", "Coastguard Rescue Helicopters": "CG Rescue Helicopter", "Coastguard Rescue Helicopter (20%)": "CG Rescue Helicopter", "ILBs or ALBs": "ALB", "ALBs": "ALB", "ALB": "ALB", "ILBs": "ILB", "ILB": "ILB", "Control Van": "Control Van", "Control Vans": "Control Van", "SAR Commander": "Control Van", "SAR Commanders": "Control Van", "Required SAR Commander": "Control Van", "Required SAR Commanders": "Control Van", "HEMS": "Air Ambulance", "HEMS Helicopter": "Air Ambulance", "HEMS Helicopters": "Air Ambulance", "Operational Support Van": "Operational Support Van", "Operational Support Vans": "Operational Support Van", "Operational Support or SAR Vehicle": "Operational Support Van", "Operational Support or SAR Vehicles": "Operational Support Van", "Operational Support or SAR Vehicle x1": "Operational Support Van", "Operational Support Van or SAR Vehicle": "Operational Support Van", "Operational Support Vans or SAR Vehicles": "Operational Support Van", "Operational Support Vehicle or SAR Vehicle": "Operational Support Van", "Operational Support Vehicles or SAR Vehicles": "Operational Support Van", "Operational Support or Personal SAR Vehicle": "Operational Support Van", "Operational Support or Personal SAR Vehicles": "Operational Support Van", "Required Operational Support or SAR Vehicle": "Operational Support Van", "Required Operational Support or SAR Vehicles": "Operational Support Van", "Operational Support Van, Trailer or Personal SAR Vehicle": "Operational Support Van", "Operational Support Vans, Trailers or Personal SAR Vehicles": "Operational Support Van", "Operational Support Van Trailer or Personal SAR Vehicle": "Operational Support Van", "Operational Support Vans Trailers or Personal SAR Vehicles": "Operational Support Van", "Operational Support Van or Personal SAR Vehicle": "Operational Support Van", "Operational Support Vans or Personal SAR Vehicles": "Operational Support Van", "OSV": "Operational Support Van", "OSVs": "Operational Support Van", "Hovercraft (trailer)": "Hovercraft (trailer)", "Coastguard Mud Rescue Unit": "Coastguard Mud Rescue Unit", "Coastguard Mud Rescue Units": "Coastguard Mud Rescue Unit", "Mud Decontamination Unit": "Mud Decontamination Unit", "Mud Decontamination Units": "Mud Decontamination Unit", "Coastguard Commander": "CG Commander", "Flood Rescue Units":"Flood Rescue", "Airfield Operations Vehicle": "Airfield Operations Vehicle", "Airfield Operations Vehicles": "Airfield Operations Vehicle", "Aerial Appliance Truck or Rescue Stairs": "Rescue Stairs", "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs", "Required Aerial Appliance Truck or Rescue Stairs": "Rescue Stairs", "Required Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs", "Fire Engines or RIVs": "RIV", "RIV": "RIV", "RIVs": "RIV", "Rapid Intervention Vehicle": "RIV", "Rapid Intervention Vehicles": "RIV", "Major Foam Tender": "Major Foam Tender", "Major Foam Tenders": "Major Foam Tender", "RIVs or Major Foam Tenders": "RIV", "RIV or Major Foam Tender": "RIV", "Required RIV or Major Foam Tender": "RIV", "Required RIVs or Major Foam Tenders": "RIV", "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender", "Fire Engines or Major Foam Tenders": "Major Foam Tender", "Airfield Operations Supervisor": "Airfield Operations Supervisor", "Airfield Operations Supervisors": "Airfield Operations Supervisor", "Required Airfield Operations Supervisor": "Airfield Operations Supervisor", "Required Airfield Operations Supervisors": "Airfield Operations Supervisor", "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle", "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle", "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer", "Flood Rescue Unit": "Flood Rescue Unit (Trailer)", "4x4 Vehicle": "4x4 Units", "4x4 Vehicles": "4x4 Units", "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units", "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units", "Rescue Dog": "Search Dog Unit", "Rescue Dogs": "Search Dog Unit", "Required Rescue Dog": "Search Dog Unit", "Required Rescue Dogs": "Search Dog Unit", "Search Dog Unit": "Search Dog Unit", "Search Dog Units": "Search Dog Unit", "Required Search Dog Unit": "Search Dog Unit", "Required Search Dog Units": "Search Dog Unit", "SARTEC": "SARTEC", "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle", "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle", "1 car to tow": "Flatbed Recovery Vehicle", "Cars to tow": "Flatbed Recovery Vehicle", "Car to tow": "Flatbed Recovery Vehicle", "Maximum amount of cars to tow": "Flatbed Recovery Vehicle", "Minimum amount of cars to tow": "Flatbed Recovery Vehicle", "Tow Trucks Large": "Flatbed Recovery Vehicle", "Flatbed Recovery Vehicle": "Flatbed Recovery Vehicle", "Flatbed Recovery Vehicles": "Flatbed Recovery Vehicle", "Truck to tow": "HGV Recovery Vehicle", "Trucks to tow": "HGV Recovery Vehicle", "Maximum amount of trucks to tow": "HGV Recovery Vehicle", "Minimum amount of trucks to tow": "HGV Recovery Vehicle", "HGV Recovery Vehicle": "HGV Recovery Vehicle", "HGV Recovery Vehicles": "HGV Recovery Vehicle", "modules.missionHelper.vehicles.captions.bomb_disposal_crew": "Bomb Disposal crew x1", "Support Units": "Support Unit", "Breathing Apparatus Support Unit": "OSU", "Breathing Apparatus Support Units": "OSU", "Breathing Apparatus Support Vehicle": "OSU", "Breathing Apparatus Support Vehicles": "OSU", "BASU": "OSU", "BASUs": "OSU", "Welfare": "OSU", "Welfare Unit": "OSU", "Welfare Units": "OSU", "Welfare Vehicle": "OSU", "Welfare Vehicles": "OSU", "HazMat": "OSU", "Hazmat": "OSU", "HazMat Unit": "OSU", "HazMat Units": "OSU", "Hazmat Unit": "OSU", "Hazmat Units": "OSU", "Required HazMat": "OSU", "Required Hazmat": "OSU", "Required HazMat Unit": "OSU", "Required HazMat Units": "OSU", "Required Hazmat Unit": "OSU", "Required Hazmat Units": "OSU", "Required HazMat Unit x1": "OSU", "Required HazMat Units x1": "OSU", "Required Hazmat Unit x1": "OSU", "Required Hazmat Units x1": "OSU", "HazMat Unit or CBRN Vehicle": "OSU", "HazMat Units or CBRN Vehicles": "OSU", "Hazmat Unit or CBRN Vehicle": "OSU", "Hazmat Units or CBRN Vehicles": "OSU", "CBRN Vehicle": "OSU", "CBRN Vehicles": "OSU", "Operational Support Unit": "OSU", "Operational Support Units": "OSU", "Fire Operational Support Unit": "OSU", "Fire Operational Support Units": "OSU", "Breathing Apparatus Support Unit x1": "OSU", "Breathing Apparatus Support Units x1": "OSU", "BASU x1": "OSU", "BASUs x1": "OSU", "Welfare Vehicle x1": "OSU", "Welfare Vehicles x1": "OSU", "HazMat Unit or CBRN Vehicle x1": "OSU", "HazMat Units or CBRN Vehicles x1": "OSU", "Operational Support Unit x1": "OSU", "Operational Support Units x1": "OSU", };
+020571:     const crossReferenceNormalisedLookup = new Map(
+020572:         Object.entries(crossReference).map(([key, value]) => [
+020573:             String(key || '').replace(/\s+/g, ' ').trim().toLowerCase(),
+020574:             value
+020575:         ])
+020576:     );
+020577:     let vehicleLoadState = {
+020578:         rows: [],
+020579:         patients: 0,
+020580:         ambulances: 0,
+020581:         ambulanceOfficer: false,
+020582:         trainedPersonnelBlocked: false,
+020583:         trainedPersonnelBlockText: '',
+020584:         ready: false
+020585:     };
+020586:     const MF_UNIT_FINDER_DIAGNOSTICS_KEY =
+020587:         'mf_unit_finder_diagnostics_v1';
+020588:     const MF_UNIT_FINDER_DIAGNOSTICS_LIMIT = 120;
+020589:     const MF_UNIT_FINDER_DIAGNOSTICS_MAX_STORAGE_CHARS = 2500000;
+020590:     const MF_STAFFING_FAILURE_HISTORY_KEY =
+020591:         'mf_staffing_failure_history_v1';
+020592:     const MF_STAFFING_FAILURE_HISTORY_LIMIT = 600;
+020593:     const MF_STAFFING_FAILURE_MAX_STORAGE_CHARS = 900000;
+020594:     const MF_STAFFING_QUARANTINE_KEY =
+020595:         'mf_staffing_vehicle_quarantine_v1';
+020596:     const MF_STAFFING_QUARANTINE_LIMIT = 80;
+020597:     let mfUnitFinderDiagnosticContext = {
+020598:         missionKey: '',
+020599:         mode: 'idle',
+020600:         sourceLabel: '',
+020601:         suppliedRows: [],
+020602:         processedRows: [],
+020603:         updatedAt: 0
+020604:     };
+020605:     let mfLastMissionDefinitionRawRows = [];
+020606:     let mfLastUnitFinderDiagnosticSignature = '';
+020607:     let mfLastStaffingFailureSignature = '';
+020608:     let mfKnownUnstaffedAmbulanceExclusions = [];
+020609:     let processedSelectionKeys = new Set();
+020610:     function buildSelectionKey(source, originalName, mappedName, amount) {
+020611:         return `${String(source || 'UNKNOWN').toUpperCase()}|${normaliseVehicleText(originalName)}|${normaliseVehicleText(mappedName)}|${Math.max(0, parseInt(amount, 10) || 0)}`;
+020612:     }
+020613:     function clearSelectionGuards() {
+020614:         processedSelectionKeys = new Set();
+020615:     }
+020616:     function withTimeout(promise, timeoutMs, label) {
+020617:         return new Promise((resolve, reject) => {
+020618:             const timeoutId = setTimeout(() => {
+020619:                 reject(
+020620:                     new Error(
+020621:                         `${label || 'Operation'} timed out after ${timeoutMs}ms`
+020622:                     )
+020623:                 );
+020624:             }, timeoutMs);
+020625:             Promise.resolve(promise).then(
+020626:                 value => {
+020627:                     clearTimeout(timeoutId);
+020628:                     resolve(value);
+020629:                 },
+020630:                 error => {
+020631:                     clearTimeout(timeoutId);
+020632:                     reject(error);
+020633:                 }
+020634:             );
+020635:         });
+020636:     }
+020637:     function debugLog() {}
+020638:     function highDebugLog() {}
+020639:     function setDebugEnabled() {}
+020640:     function setHighDebugEnabled() {}
+020641:     function clearDebugLog() {}
+020642:     async function copyDebugLog() {}
+020643:     function renderDebugPanelNow() {}
+020644:     function renderDebugPanel() {}
+020645:     function mfSerialiseDiagnosticTrainingRequirement(requirement) {
+020646:         if (!requirement || typeof requirement !== 'object') return null;
+020647:         return {
+020648:             code: String(requirement.code || ''),
+020649:             label: String(requirement.label || ''),
+020650:             required: Math.max(0, parseInt(requirement.required, 10) || 0),
+020651:             personnelRequired: Math.max(
+020652:                 0,
+020653:                 parseInt(requirement.personnelRequired, 10) || 0
+020654:             ),
+020655:             requirementType: String(requirement.requirementType || ''),
+020656:             requiredTrainingCodes: Array.isArray(requirement.requiredTrainingCodes)
+020657:                 ? requirement.requiredTrainingCodes.map(String)
+020658:                 : [],
+020659:             eligibleVehicleTypeIds: Array.isArray(requirement.eligibleVehicleTypeIds)
+020660:                 ? requirement.eligibleVehicleTypeIds.map(String)
+020661:                 : []
+020662:         };
+020663:     }
+020664:     function mfSerialiseDiagnosticRequirementRow(row) {
+020665:         if (!row || typeof row !== 'object') return null;
+020666:         const details = row.liveRequirementDetails || null;
+020667:         return {
+020668:             unitName: String(row.unitName || ''),
+020669:             mappedName: resolveUnitName(row.unitName || ''),
+020670:             stillNeeded: Math.max(0, parseInt(row.stillNeeded, 10) || 0),
+020671:             requiredTotal: Math.max(0, parseInt(row.requiredTotal, 10) || 0),
+020672:             source: String(row.source || row.updateSource || ''),
+020673:             isTrainedPersonnelRequirement:
+020674:                 row.isTrainedPersonnelRequirement === true,
+020675:             missionDefinitionRequiredPersonnel:
+020676:                 row.missionDefinitionRequiredPersonnel === true,
+020677:             convertedFromPersonnelRequirement:
+020678:                 row.convertedFromPersonnelRequirement === true,
+020679:             patientRequirementType: String(row.patientRequirementType || ''),
+020680:             personnelRequirement: String(row.personnelRequirement || ''),
+020681:             personnelTrainingRequirements: Array.isArray(
+020682:                 row.personnelTrainingRequirements
+020683:             )
+020684:                 ? row.personnelTrainingRequirements
+020685:                     .map(mfSerialiseDiagnosticTrainingRequirement)
+020686:                     .filter(Boolean)
+020687:                 : [],
+020688:             liveRequirementDetails: details
+020689:                 ? {
+020690:                     dispatchTargetMode: String(details.dispatchTargetMode || ''),
+020691:                     explicitMissingVehicles:
+020692:                         details.explicitMissingVehicles === true,
+020693:                     explicitMissingPersonnel:
+020694:                         details.explicitMissingPersonnel === true,
+020695:                     structuredMissingVehicles:
+020696:                         details.structuredMissingVehicles === true
+020697:                 }
+020698:                 : null
+020699:         };
+020700:     }
+020701:     function mfSerialiseDiagnosticRequirementRows(rows) {
+020702:         return (Array.isArray(rows) ? rows : [])
+020703:             .map(mfSerialiseDiagnosticRequirementRow)
+020704:             .filter(Boolean);
+020705:     }
+020706:     function mfSetUnitFinderDiagnosticContext(
+020707:         mode,
+020708:         sourceLabel,
+020709:         suppliedRows,
+020710:         processedRows
+020711:     ) {
+020712:         mfUnitFinderDiagnosticContext = {
+020713:             missionKey:
+020714:                 getLocalMissionInstanceKey() ||
+020715:                 getCurrentMissionIdForQueueRestart() ||
+020716:                 '',
+020717:             mode: String(mode || 'unit-finder'),
+020718:             sourceLabel: String(sourceLabel || ''),
+020719:             suppliedRows:
+020720:                 mfSerialiseDiagnosticRequirementRows(suppliedRows),
+020721:             processedRows:
+020722:                 mfSerialiseDiagnosticRequirementRows(processedRows),
+020723:             updatedAt: Date.now()
+020724:         };
+020725:     }
+020726:     function mfBoundUnitFinderDiagnosticHistory(history) {
+020727:         let bounded = (Array.isArray(history) ? history : [])
+020728:             .slice(-MF_UNIT_FINDER_DIAGNOSTICS_LIMIT);
+020729:         let encoded = JSON.stringify(bounded);
+020730:         while (
+020731:             encoded.length >
+020732:                 MF_UNIT_FINDER_DIAGNOSTICS_MAX_STORAGE_CHARS &&
+020733:             bounded.length > 0
+020734:         ) {
+020735:             bounded = bounded.slice(1);
+020736:             encoded = JSON.stringify(bounded);
+020737:         }
+020738:         return {
+020739:             history: bounded,
+020740:             encoded
+020741:         };
+020742:     }
+020743:     function mfReadUnitFinderDiagnosticHistory() {
+020744:         try {
+020745:             const parsed = JSON.parse(
+020746:                 localStorage.getItem(
+020747:                     MF_UNIT_FINDER_DIAGNOSTICS_KEY
+020748:                 ) || '[]'
+020749:             );
+020750:             return mfBoundUnitFinderDiagnosticHistory(
+020751:                 Array.isArray(parsed) ? parsed : []
+020752:             ).history;
+020753:         } catch (_error) {
+020754:             return [];
+020755:         }
+020756:     }
+020757:     function mfGetDiagnosticRegistryEvidence(input, registry) {
+020758:         let registryMatch = null;
+020759:         try {
+020760:             registryMatch = getRegistryEntryForMissionCheckbox(
+020761:                 input,
+020762:                 registry
+020763:             );
+020764:         } catch (_error) {}
+020765:         const entry = registryMatch?.entry || null;
+020766:         if (!entry) return null;
+020767:         return {
+020768:             vehicleId: String(entry.vehicleId || ''),
+020769:             vehicleName: String(entry.vehicleName || ''),
+020770:             vehicleTypeId: String(entry.vehicleTypeId || ''),
+020771:             stationName: String(entry.stationName || ''),
+020772:             stationHref: String(entry.stationHref || ''),
+020773:             source: String(entry.source || ''),
+020774:             updatedAt: Number(entry.updatedAt || 0),
+020775:             assignedPersonnelCount: Math.max(
+020776:                 0,
+020777:                 parseInt(entry.assignedPersonnelCount, 10) || 0
+020778:             ),
+020779:             assignmentScanComplete:
+020780:                 entry.assignmentScanComplete === true,
+020781:             trainingProfilesComplete:
+020782:                 entry.trainingProfilesComplete === true,
+020783:             trainingCounts:
+020784:                 entry.trainingCounts &&
+020785:                 typeof entry.trainingCounts === 'object'
+020786:                     ? { ...entry.trainingCounts }
+020787:                     : {},
+020788:             assignedTrainingProfiles:
+020789:                 Array.isArray(entry.assignedTrainingProfiles)
+020790:                     ? entry.assignedTrainingProfiles
+020791:                         .slice(0, 40)
+020792:                         .map(profile => {
+020793:                             return Array.isArray(profile)
+020794:                                 ? profile.slice(0, 40).map(String)
+020795:                                 : [];
+020796:                         })
+020797:                     : [],
+020798:             matchType: String(
+020799:                 registryMatch?.matchMode ||
+020800:                 registryMatch?.matchType ||
+020801:                 registryMatch?.matchedBy ||
+020802:                 ''
+020803:             )
+020804:         };
+020805:     }
+020806:     function mfGetDiagnosticSelectedVehicles() {
+020807:         let registry = { vehicles: {} };
+020808:         try {
+020809:             registry = readPersonnelTrainingRegistry();
+020810:         } catch (_error) {}
+020811:         return getVehicleCheckboxSnapshot(true)
+020812:             .filter(input => input?.checked)
+020813:             .map(input => {
+020814:                 const row = input.closest?.('tr') || null;
+020815:                 return {
+020816:                     vehicleId: getMissionVehicleId(input),
+020817:                     vehicleName: getVehicleDebugName(input),
+020818:                     vehicleTypeId: String(
+020819:                         input.getAttribute?.('vehicle_type_id') ||
+020820:                         row?.getAttribute?.('vehicle_type_id') ||
+020821:                         input.getAttribute?.('vehicle_type') ||
+020822:                         row?.getAttribute?.('vehicle_type') ||
+020823:                         ''
+020824:                     ),
+020825:                     vehicleTypeCaption: String(
+020826:                         input.getAttribute?.('vehicle_type_caption') ||
+020827:                         row?.getAttribute?.('vehicle_type_caption') ||
+020828:                         ''
+020829:                     ),
+020830:                     disabled: input.disabled === true,
+020831:                     rowText: String(
+020832:                         row?.innerText ||
+020833:                         row?.textContent ||
+020834:                         ''
+020835:                     )
+020836:                         .replace(/\s+/g, ' ')
+020837:                         .trim()
+020838:                         .slice(0, 600),
+020839:                     registryEvidence:
+020840:                         mfGetDiagnosticRegistryEvidence(
+020841:                             input,
+020842:                             registry
+020843:                         )
+020844:                 };
+020845:             });
+020846:     }
+020847:     function mfGetDiagnosticVisibleAlerts() {
+020848:         const values = [];
+020849:         try {
+020850:             getCurrentMissionAlertScopes().forEach(scope => {
+020851:                 Array.from(
+020852:                     scope.querySelectorAll(
+020853:                         '.alert-danger, .alert-warning, ' +
+020854:                         'div[id^="alert_danger_"], #missing_text'
+020855:                     )
+020856:                 ).forEach(alert => {
+020857:                     try {
+020858:                         if (!isElementVisible(alert)) return;
+020859:                     } catch (_error) {}
+020860:                     const text = String(
+020861:                         alert.innerText ||
+020862:                         alert.textContent ||
+020863:                         ''
+020864:                     )
+020865:                         .replace(/\s+/g, ' ')
+020866:                         .trim();
+020867:                     if (text) values.push(text.slice(0, 1500));
+020868:                 });
+020869:             });
+020870:         } catch (_error) {}
+020871:         return Array.from(new Set(values));
+020872:     }
+020873:     function mfCollectMemoryDiagnostics() {
+020874:         const documents = [];
+020875:         const addDocument = candidateDocument => {
+020876:             try {
+020877:                 if (
+020878:                     candidateDocument?.documentElement &&
+020879:                     !documents.includes(candidateDocument)
+020880:                 ) {
+020881:                     documents.push(candidateDocument);
+020882:                 }
+020883:             } catch (_error) {}
+020884:         };
+020885:         try {
+020886:             getMissionAccessibleDocuments(true)
+020887:                 .forEach(addDocument);
+020888:         } catch (_error) {
+020889:             addDocument(document);
+020890:         }
+020891:         if (documents.length === 0) {
+020892:             addDocument(document);
+020893:         }
+020894:         const documentSnapshots = documents
+020895:             .slice(0, 24)
+020896:             .map((candidateDocument, index) => {
+020897:                 let ownerFrame = null;
+020898:                 let ownerFrameVisible = true;
+020899:                 let ownerFrameConnected = true;
+020900:                 try {
+020901:                     ownerFrame =
+020902:                         candidateDocument.defaultView?.frameElement ||
+020903:                         null;
+020904:                     ownerFrameConnected = ownerFrame
+020905:                         ? ownerFrame.isConnected !== false
+020906:                         : true;
+020907:                     ownerFrameVisible = ownerFrame
+020908:                         ? isMissionElementVisible(ownerFrame)
+020909:                         : true;
+020910:                 } catch (_error) {}
+020911:                 const count = selector => {
+020912:                     try {
+020913:                         return candidateDocument
+020914:                             .querySelectorAll(selector)
+020915:                             .length;
+020916:                     } catch (_error) {
+020917:                         return 0;
+020918:                     }
+020919:                 };
+020920:                 let elementCount = 0;
+020921:                 try {
+020922:                     elementCount = candidateDocument
+020923:                         .getElementsByTagName('*')
+020924:                         .length;
+020925:                 } catch (_error) {}
+020926:                 let pageUrl = '';
+020927:                 try {
+020928:                     pageUrl = String(
+020929:                         candidateDocument.location?.href ||
+020930:                         ''
+020931:                     );
+020932:                 } catch (_error) {}
+020933:                 return {
+020934:                     index,
+020935:                     pageUrl,
+020936:                     title: String(candidateDocument.title || '')
+020937:                         .slice(0, 160),
+020938:                     isCurrentDocument:
+020939:                         candidateDocument === document,
+020940:                     ownerFrameConnected,
+020941:                     ownerFrameVisible,
+020942:                     elementCount,
+020943:                     iframeCount: count('iframe'),
+020944:                     vehicleCheckboxCount:
+020945:                         count('input.vehicle_checkbox'),
+020946:                     selectedVehicleCheckboxCount:
+020947:                         count('input.vehicle_checkbox:checked'),
+020948:                     missionPanelCount:
+020949:                         count('#mission-finder-wrapper'),
+020950:                     missionGeneralInfoCount:
+020951:                         count('#mission_general_info')
+020952:                 };
+020953:             });
+020954:         let heap = null;
+020955:         try {
+020956:             const memory = performance.memory;
+020957:             if (memory) {
+020958:                 heap = {
+020959:                     usedJSHeapSize:
+020960:                         Number(memory.usedJSHeapSize || 0),
+020961:                     totalJSHeapSize:
+020962:                         Number(memory.totalJSHeapSize || 0),
+020963:                     jsHeapSizeLimit:
+020964:                         Number(memory.jsHeapSizeLimit || 0)
+020965:                 };
+020966:             }
+020967:         } catch (_error) {}
+020968:         const cachedVehicleNodes = Array.isArray(
+020969:             mfVehicleCheckboxCache?.nodes
+020970:         )
+020971:             ? mfVehicleCheckboxCache.nodes
+020972:             : [];
+020973:         return {
+020974:             capturedAt: new Date().toISOString(),
+020975:             heap,
+020976:             runtime: {
+020977:                 isTopWindow: MF_IS_TOP_WINDOW,
+020978:                 autoModeRunning:
+020979:                     autoModeRunning === true,
+020980:                 eventCollectorTimerActive:
+020981:                     mfEventCollectibleScanTimer !== null,
+020982:                 eventCollectorScanRunning:
+020983:                     mfEventCollectibleScanRunning === true,
+020984:                 eventCollectorTrackedClaims:
+020985:                     mfEventCollectibleClaimTimes.size,
+020986:                 mainMutationObserverActive:
+020987:                     mfMainMutationObserver !== null,
+020988:                 backgroundSupervisorActive:
+020989:                     mfBackgroundWatcherSupervisorTimer !== null,
+020990:                 sessionRuntimeTickerActive:
+020991:                     sessionRuntimeTicker !== null,
+020992:                 runtimeSuspendedForPageHide:
+020993:                     mfRuntimeSuspendedForPageHide === true,
+020994:                 runtimeSuspendedForInactiveFrame:
+020995:                     mfRuntimeSuspendedForInactiveFrame === true,
+020996:                 memoryMaintenanceTimerActive:
+020997:                     mfRuntimeMemoryMaintenanceTimer !== null,
+020998:                 memoryOperationDepth:
+020999:                     mfRuntimeMemoryOperationDepth,
+021000:                 memorySoftFlushCount:
+021001:                     mfRuntimeMemorySoftFlushCount,
+021002:                 memoryLastSoftFlushAt:
+021003:                     mfRuntimeMemoryLastSoftFlushAt,
+021004:                 memoryInactiveSuspendCount:
+021005:                     mfRuntimeMemoryInactiveSuspendCount,
+021006:                 memoryLastActivityAt:
+021007:                     mfRuntimeMemoryLastActivityAt,
+021008:                 memoryLastMutationAt:
+021009:                     mfRuntimeMemoryLastMutationAt,
+021010:                 memoryLastReason:
+021011:                     mfRuntimeMemoryLastReason,
+021012:                 storageMaintenance:
+021013:                     { ...mfRuntimeStorageMaintenanceState },
+021014:                 autoMemoryRecycle:
+021015:                     getAutoMemoryRecycleDiagnosticState()
+021016:             },
+021017:             caches: {
+021018:                 liveTrainingVerifyEntries:
+021019:                     mfLiveTrainingVerifyCache.size,
+021020:                 vehicleMatchCandidateEntries:
+021021:                     mfVehicleMatchCandidateCache.size,
+021022:                 cachedVehicleCheckboxes:
+021023:                     cachedVehicleNodes.length,
+021024:                 detachedCachedVehicleCheckboxes:
+021025:                     cachedVehicleNodes.filter(node =>
+021026:                         node?.isConnected === false
+021027:                     ).length,
+021028:                 missionDocuments:
+021029:                     mfMissionDocumentCache.documents.length,
+021030:                 missionContexts:
+021031:                     mfMissionContextCache.contexts.length,
+021032:                 transportDocuments:
+021033:                     mfTransportDocumentCache.documents.length,
+021034:                 transportScopes:
+021035:                     mfTransportScopeCache.scopes.length,
+021036:                 iphoneNativePickerDocuments:
+021037:                     mfIphoneNativePickerDocuments.size
+021038:             },
+021039:             documents: {
+021040:                 accessibleCount: documents.length,
+021041:                 sampledCount: documentSnapshots.length,
+021042:                 totalElements: documentSnapshots.reduce(
+021043:                     (total, item) =>
+021044:                         total + item.elementCount,
+021045:                     0
+021046:                 ),
+021047:                 totalVehicleCheckboxes:
+021048:                     documentSnapshots.reduce(
+021049:                         (total, item) =>
+021050:                             total + item.vehicleCheckboxCount,
+021051:                         0
+021052:                     ),
+021053:                 hiddenOwnerFrames:
+021054:                     documentSnapshots.filter(item =>
+021055:                         !item.ownerFrameVisible
+021056:                     ).length,
+021057:                 detachedOwnerFrames:
+021058:                     documentSnapshots.filter(item =>
+021059:                         !item.ownerFrameConnected
+021060:                     ).length,
+021061:                 samples: documentSnapshots
+021062:             }
+021063:         };
+021064:     }
+021065:     function mfBuildUnitFinderDiagnosticSnapshot(reason) {
+021066:         let liveRows = [];
+021067:         try {
+021068:             liveRows = readMissionUpdateRows({ silent: true });
+021069:         } catch (_error) {}
+021070:         const selectedVehicles =
+021071:             mfGetDiagnosticSelectedVehicles();
+021072:         const diagnosticBoxes = getVehicleCheckboxSnapshot(true);
+021073:         return {
+021074:             schema: 'missionchief-unit-finder-diagnostics',
+021075:             schemaVersion: 1,
+021076:             capturedAt: new Date().toISOString(),
+021077:             capturedAtUnix: Date.now(),
+021078:             reason: String(reason || 'manual-export'),
+021079:             versions: {
+021080:                 commandNexus: '3.0.34',
+021081:                 missionFinder: 'V10.6.177',
+021082:                 personnelAssignment: '1.3.8'
+021083:             },
+021084:             mission: {
+021085:                 missionId:
+021086:                     getCurrentMissionIdForQueueRestart() || '',
+021087:                 missionKey:
+021088:                     getLocalMissionInstanceKey() || '',
+021089:                 missionName:
+021090:                     getCurrentMissionName() || '',
+021091:                 pageUrl: String(window.location.href || ''),
+021092:                 host: String(window.location.host || '')
+021093:             },
+021094:             execution: {
+021095:                 autoModeRunning:
+021096:                     autoModeRunning === true ||
+021097:                     sessionStorage.getItem(
+021098:                         'mf_auto_mode_running'
+021099:                     ) === 'true',
+021100:                 ready: vehicleLoadState.ready === true,
+021101:                 staffingBlockActive:
+021102:                     mfStaffingBlockActive === true,
+021103:                 staffingBlockText:
+021104:                     String(mfStaffingBlockText || ''),
+021105:                 ambulanceOfficerThresholdEnabled:
+021106:                     mfAmbulanceOfficerThresholdEnabled,
+021107:                 ambulanceOfficerThreshold:
+021108:                     mfAmbulanceOfficerThreshold,
+021109:                 alwaysSendAmbulanceToHighRiskMissingPerson:
+021110:                     mfAlwaysSendAmbulanceToHighRiskMissingPerson === true,
+021111:                 highRiskMissingPersonMission:
+021112:                     isConfiguredHighRiskMissingPersonMission(),
+021113:                 processedSelectionKeys:
+021114:                     Array.from(processedSelectionKeys || [])
+021115:             },
+021116:             requirementContext: {
+021117:                 ...mfUnitFinderDiagnosticContext,
+021118:                 missionDefinitionRawRows:
+021119:                     mfLastMissionDefinitionRawRows.map(row => ({
+021120:                         label: String(row.label || ''),
+021121:                         value: String(row.value || '')
+021122:                     })),
+021123:                 currentLiveRequirementRows:
+021124:                     mfSerialiseDiagnosticRequirementRows(liveRows),
+021125:                 visibleAlerts:
+021126:                     mfGetDiagnosticVisibleAlerts()
+021127:             },
+021128:             selectionSummary: {
+021129:                 vehicleInventory: {total: diagnosticBoxes.length,searchDogType102: diagnosticBoxes.filter(isSearchDogUnitVehicleCheckbox).length,availableSearchDogType102: diagnosticBoxes.filter(input => !input.disabled && !input.checked && isSearchDogUnitVehicleCheckbox(input)).length,loadControlVisible: isVehicleListLoadControlVisible(),loadingIndicatorVisible: isVehicleListLoadingIndicatorVisible()},
+021130:                 vehicleLoadState: {
+021131:                     rows: vehicleLoadState.rows.map(row => ({
+021132:                         originalName: String(row.originalName || ''),
+021133:                         mappedName: String(row.mappedName || ''),
+021134:                         required: Math.max(
+021135:                             0,
+021136:                             parseInt(row.required, 10) || 0
+021137:                         ),
+021138:                         selected: Math.max(
+021139:                             0,
+021140:                             parseInt(row.selected, 10) || 0
+021141:                         ),
+021142:                         status: String(row.status || '')
+021143:                     })),
+021144:                     patients: Math.max(
+021145:                         0,
+021146:                         parseInt(vehicleLoadState.patients, 10) || 0
+021147:                     ),
+021148:                     ambulances: Math.max(
+021149:                         0,
+021150:                         parseInt(vehicleLoadState.ambulances, 10) || 0
+021151:                     ),
+021152:                     ready: vehicleLoadState.ready === true
+021153:                 },
+021154:                 selectedVehicles,
+021155:                 knownUnstaffedAmbulanceExclusions:
+021156:                     mfKnownUnstaffedAmbulanceExclusions
+021157:                         .slice(0, 40)
+021158:                         .map(vehicle => ({ ...vehicle }))
+021159:             },
+021160:             environment: {
+021161:                 language: String(navigator.language || ''),
+021162:                 userAgent: String(navigator.userAgent || '')
+021163:             }
+021164:         };
+021165:     }
+021166:     function mfPersistUnitFinderDiagnostic(reason) {
+021167:         const snapshot =
+021168:             mfBuildUnitFinderDiagnosticSnapshot(reason);
+021169:         const hasUsefulData = !!(
+021170:             snapshot.requirementContext.updatedAt ||
+021171:             snapshot.requirementContext.suppliedRows.length ||
+021172:             snapshot.requirementContext.processedRows.length ||
+021173:             snapshot.requirementContext.currentLiveRequirementRows.length ||
+021174:             snapshot.requirementContext.visibleAlerts.length ||
+021175:             snapshot.selectionSummary.vehicleLoadState.rows.length ||
+021176:             snapshot.selectionSummary.selectedVehicles.length ||
+021177:             snapshot.selectionSummary.knownUnstaffedAmbulanceExclusions.length
+021178:         );
+021179:         if (!hasUsefulData) return snapshot;
+021180:         const emptyMissionUpdateSnapshot =
+021181:             reason === 'not-ready' &&
+021182:             snapshot.requirementContext.mode === 'mission-update' &&
+021183:             snapshot.requirementContext.suppliedRows.length === 0 &&
+021184:             snapshot.requirementContext.processedRows.length === 0 &&
+021185:             snapshot.requirementContext.currentLiveRequirementRows.length === 0 &&
+021186:             snapshot.requirementContext.visibleAlerts.length === 0 &&
+021187:             snapshot.selectionSummary.vehicleLoadState.rows.length === 0;
+021188:         if (emptyMissionUpdateSnapshot) return snapshot;
+021189:         const signature = JSON.stringify({
+021190:             mission: snapshot.mission.missionKey || snapshot.mission.missionId,
+021191:             reason: snapshot.reason,
+021192:             mode: snapshot.requirementContext.mode,
+021193:             source: snapshot.requirementContext.sourceLabel,
+021194:             ready: snapshot.execution.ready,
+021195:             rows: snapshot.selectionSummary.vehicleLoadState.rows,
+021196:             selected: snapshot.selectionSummary.selectedVehicles
+021197:                 .map(vehicle => vehicle.vehicleId || vehicle.vehicleName),
+021198:             knownUnstaffed:
+021199:                 snapshot.selectionSummary.knownUnstaffedAmbulanceExclusions
+021200:                     .map(vehicle => vehicle.vehicleId || vehicle.vehicleName)
+021201:         });
+021202:         if (
+021203:             signature === mfLastUnitFinderDiagnosticSignature &&
+021204:             reason !== 'manual-export'
+021205:         ) {
+021206:             return snapshot;
+021207:         }
+021208:         mfLastUnitFinderDiagnosticSignature = signature;
+021209:         const history = mfReadUnitFinderDiagnosticHistory();
+021210:         history.push(snapshot);
+021211:         const boundedHistory =
+021212:             mfBoundUnitFinderDiagnosticHistory(history);
+021213:         try {
+021214:             localStorage.setItem(
+021215:                 MF_UNIT_FINDER_DIAGNOSTICS_KEY,
+021216:                 boundedHistory.encoded
+021217:             );
+021218:         } catch (_error) {
+021219:             try {
+021220:                 const fallback =
+021221:                     mfBoundUnitFinderDiagnosticHistory(
+021222:                         boundedHistory.history.slice(-4)
+021223:                     );
+021224:                 localStorage.setItem(
+021225:                     MF_UNIT_FINDER_DIAGNOSTICS_KEY,
+021226:                     fallback.encoded
+021227:                 );
+021228:             } catch (_ignored) {}
+021229:         }
+021230:         return snapshot;
+021231:     }
+021232:     function mfBoundStaffingFailureHistory(history) {
+021233:         let bounded = (Array.isArray(history) ? history : [])
+021234:             .slice(-MF_STAFFING_FAILURE_HISTORY_LIMIT);
+021235:         let encoded = JSON.stringify(bounded);
+021236:         while (
+021237:             encoded.length >
+021238:                 MF_STAFFING_FAILURE_MAX_STORAGE_CHARS &&
+021239:             bounded.length > 0
+021240:         ) {
+021241:             bounded = bounded.slice(1);
+021242:             encoded = JSON.stringify(bounded);
+021243:         }
+021244:         return { history: bounded, encoded };
+021245:     }
+021246:     function mfReadStaffingFailureHistory() {
+021247:         try {
+021248:             const parsed = JSON.parse(
+021249:                 sessionStorage.getItem(
+021250:                     MF_STAFFING_FAILURE_HISTORY_KEY
+021251:                 ) || '[]'
+021252:             );
+021253:             return mfBoundStaffingFailureHistory(
+021254:                 Array.isArray(parsed) ? parsed : []
+021255:             ).history;
+021256:         } catch (_error) {
+021257:             return [];
+021258:         }
+021259:     }
+021260:     function mfReadStaffingQuarantine() {
+021261:         try {
+021262:             const parsed = JSON.parse(
+021263:                 sessionStorage.getItem(MF_STAFFING_QUARANTINE_KEY) || '[]'
+021264:             );
+021265:             return (Array.isArray(parsed) ? parsed : [])
+021266:                 .filter(record => record && record.vehicleId)
+021267:                 .slice(-MF_STAFFING_QUARANTINE_LIMIT);
+021268:         } catch (_error) {
+021269:             return [];
+021270:         }
+021271:     }
+021272:     function mfWriteStaffingQuarantine(records) {
+021273:         const bounded = (Array.isArray(records) ? records : [])
+021274:             .filter(record => record && record.vehicleId)
+021275:             .slice(-MF_STAFFING_QUARANTINE_LIMIT);
+021276:         try {
+021277:             sessionStorage.setItem(
+021278:                 MF_STAFFING_QUARANTINE_KEY,
+021279:                 JSON.stringify(bounded)
+021280:             );
+021281:         } catch (_error) {}
+021282:         return bounded;
+021283:     }
+021284:     function mfStaffingAlertVehicleLabel(text) {
+021285:         const cleaned = String(text || '')
+021286:             .replace(/^\s*[×x]\s*/i, '')
+021287:             .replace(/\s+/g, ' ')
+021288:             .trim();
+021289:         const match = cleaned.match(
+021290:             /^(.+?)\s+(?:has|does)\s+not\s+(?:have\s+)?enough\s+(?:personal|personnel|staff)\b/i
+021291:         );
+021292:         return match ? match[1].trim() : '';
+021293:     }
+021294:     function mfNormaliseStaffingVehicleLabel(value) {
+021295:         return normaliseVehicleText(value)
+021296:             .replace(/^[^a-z0-9]+/i, '')
+021297:             .trim();
+021298:     }
+021299:     function mfApplyStoredStaffingQuarantine() {
+021300:         const records = mfReadStaffingQuarantine();
+021301:         if (!records.length) return 0;
+021302:         const ids = new Set(records.map(record => String(record.vehicleId)));
+021303:         let applied = 0;
+021304:         for (const input of getVehicleCheckboxSnapshot()) {
+021305:             const vehicleId = getMissionVehicleId(input);
+021306:             if (!vehicleId || !ids.has(vehicleId)) continue;
+021307:             if (input.checked) {
+021308:                 try { input.click(); } catch (_error) {}
+021309:             }
+021310:             input.disabled = true;
+021311:             input.setAttribute?.('data-mf-staffing-quarantined', 'true');
+021312:             applied += 1;
+021313:         }
+021314:         return applied;
+021315:     }
+021316:     function mfDismissExactStaffingAlert(text) {
+021317:         const expected = String(text || '').replace(/\s+/g, ' ').trim();
+021318:         if (!expected) return 0;
+021319:         let dismissed = 0;
+021320:         for (const scope of getCurrentMissionAlertScopes()) {
+021321:             const alerts = Array.from(scope.querySelectorAll(
+021322:                 '.alert-danger, div[id^="alert_danger_"], #missing_text'
+021323:             ));
+021324:             for (const alert of alerts) {
+021325:                 const actual = String(alert.innerText || alert.textContent || '')
+021326:                     .replace(/\s+/g, ' ')
+021327:                     .trim();
+021328:                 if (actual !== expected) continue;
+021329:                 const close = alert.querySelector?.('[data-dismiss="alert"], .close');
+021330:                 try {
+021331:                     if (close) close.click();
+021332:                     else alert.remove();
+021333:                     dismissed += 1;
+021334:                 } catch (_error) {}
+021335:             }
+021336:         }
+021337:         return dismissed;
+021338:     }
+021339:     function mfQuarantineExactStaffingVehicle(text, reason) {
+021340:         const alertLabel = mfStaffingAlertVehicleLabel(text);
+021341:         const normalisedLabel = mfNormaliseStaffingVehicleLabel(alertLabel);
+021342:         if (!normalisedLabel) return null;
+021343:         const matches = getVehicleCheckboxSnapshot().filter(input => {
+021344:             const values = [
+021345:                 ...getExtendedVehicleValues(input),
+021346:                 getVehicleDebugName(input)
+021347:             ].map(mfNormaliseStaffingVehicleLabel).filter(Boolean);
+021348:             return values.some(value =>
+021349:                 value === normalisedLabel ||
+021350:                 value.startsWith(`${normalisedLabel} `) ||

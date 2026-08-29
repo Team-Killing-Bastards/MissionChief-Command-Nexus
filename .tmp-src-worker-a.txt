@@ -1,0 +1,741 @@
+005660: source,
+005661: skippedMissionId: missionId,
+005662: skippedMissionName: missionNameForId(missionId),
+005663: remainingAdvances: remaining,
+005664: toMissionId: target.missionId,
+005665: toMissionName: cleanMissionCaption(target.mission?.caption),
+005666: });
+005667: resetAutoStartTracking();
+005668: state.running = false;
+005669: return redirectWorkerToPriority(target, missionId);
+005670: }
+005671: function resetPriorityPending() {
+005672: state.priorityPendingKey = '';
+005673: state.priorityPendingSince = 0;
+005674: }
+005675: function redirectWorkerToPriority(target, currentMissionId) {
+005676: if (!target?.missionId || !target.url || !state.worker?.isConnected) return false;
+005677: const now = Date.now();
+005678: if (
+005679: state.redirectTargetMissionId === target.missionId &&
+005680: now - state.lastPriorityRedirectAt < PRIORITY_REDIRECT_IN_FLIGHT_MS
+005681: ) {
+005682: return false;
+005683: }
+005684: if (now - state.lastPriorityRedirectAt < PRIORITY_REDIRECT_COOLDOWN_MS) return false;
+005685: state.lastPriorityRedirectAt = now;
+005686: state.priorityRedirects += 1;
+005687: if (promotePipelineMission(target.missionId, 'priority-redirect', {
+005688: fromMissionId: currentMissionId || '',
+005689: source: target.source || 'TOP_MISSION',
+005690: })) {
+005691: resetPriorityPending();
+005692: return true;
+005693: }
+005694: state.redirectFromMissionId = currentMissionId || '';
+005695: state.redirectTargetMissionId = target.missionId;
+005696: state.currentMissionId = target.missionId;
+005697: state.currentMissionName = cleanMissionCaption(target.mission?.caption) || missionNameForId(target.missionId);
+005698: state.currentMissionUrl = target.url;
+005699: resetPriorityPending();
+005700: const sourceLabel = `top ${target.mission?.actionKind === 'UPGRADE' ? 'mission upgrade' : 'mission'}`;
+005701: setPhase(
+005702: 'PRIORITY_REDIRECT',
+005703: `Switching to ${sourceLabel}`,
+005704: `${missionDisplay(target.missionId, state.currentMissionName)} is now the background target.`
+005705: );
+005706: log('Priority controller redirected the background worker.', {
+005707: source: target.source,
+005708: fromMissionId: currentMissionId || '',
+005709: toMissionId: target.missionId,
+005710: toMissionName: state.currentMissionName,
+005711: actionKind: target.mission?.actionKind || '',
+005712: radioVehicleId: target.request?.vehicleId || '',
+005713: });
+005714: try {
+005715: state.worker.contentWindow.location.replace(target.url);
+005716: return true;
+005717: } catch {
+005718: try {
+005719: state.worker.src = target.url;
+005720: return true;
+005721: } catch (error) {
+005722: log('Priority redirect failed.', { error: String(error?.message || error) });
+005723: return false;
+005724: }
+005725: }
+005726: }
+005727: function maybeEnforcePriority(doc, href, context, radioRequests = state.radioTransportRequests) {
+005728: const activeControl = findAutoModeControl(doc);
+005729: if (
+005730: !state.wanted ||
+005731: !currentWorkerAutoConfirmed() ||
+005732: !activeControl ||
+005733: !autoControlLooksRunning(activeControl) ||
+005734: state.stopping ||
+005735: !state.worker?.isConnected
+005736: ) return;
+005737: if (state.autoStopWarned && state.phase === 'AUTO_STOPPED') {
+005738: resetPriorityPending();
+005739: return;
+005740: }
+005741: if (state.transportServiceActive) {
+005742: resetPriorityPending();
+005743: return;
+005744: }
+005745: if (context?.kind) {
+005746: resetPriorityPending();
+005747: return;
+005748: }
+005749: if (state.postDispatchWatchdog) {
+005750: resetPriorityPending();
+005751: return;
+005752: }
+005753: const currentMissionId = missionIdFromUrl(href);
+005754: if (!currentMissionId) {
+005755: resetPriorityPending();
+005756: return;
+005757: }
+005758: const navAge = Date.now() - state.lastWorkerNavigationAt;
+005759: if (navAge > TOP_PRIORITY_NAV_WINDOW_MS) {
+005760: state.transportServiceEligible = false;
+005761: resetPriorityPending();
+005762: return;
+005763: }
+005764: if (state.transportServiceEligible) {
+005765: const request = transportServiceRequest(radioRequests);
+005766: if (request) {
+005767: const pendingKey = `TRANSPORT_SERVICE:${request.key}`;
+005768: if (state.priorityPendingKey !== pendingKey) {
+005769: state.priorityPendingKey = pendingKey;
+005770: state.priorityPendingSince = Date.now();
+005771: return;
+005772: }
+005773: if (Date.now() - state.priorityPendingSince < TRANSPORT_SERVICE_SETTLE_MS) return;
+005774: if (redirectWorkerToTransportService(request, currentMissionId)) return;
+005775: }
+005776: resetPriorityPending();
+005777: }
+005778: const target = choosePriorityTarget();
+005779: if (!target?.missionId || target.missionId === currentMissionId) {
+005780: resetPriorityPending();
+005781: return;
+005782: }
+005783: const pendingKey = `TOP_MISSION:${target.missionId}`;
+005784: if (state.priorityPendingKey !== pendingKey) {
+005785: state.priorityPendingKey = pendingKey;
+005786: state.priorityPendingSince = Date.now();
+005787: return;
+005788: }
+005789: if (Date.now() - state.priorityPendingSince < TOP_PRIORITY_STABLE_MS) return;
+005790: redirectWorkerToPriority(target, currentMissionId);
+005791: }
+005792: function createWorker(url) {
+005793: clearPostDispatchWatchdog('worker-recreated');
+005794: removeWorker(false);
+005795: state.nonMissionRedirectRecoveryInFlight = false;
+005796: state.workerGeneration += 1;
+005797: const generation = state.workerGeneration;
+005798: const frame = document.createElement('iframe');
+005799: frame.id = WORKER_ID;
+005800: frame.name = `${ACTIVE_WORKER_NAME_PREFIX}${generation}-${missionIdFromUrl(url) || 'mission'}`;
+005801: frame.src = url;
+005802: frame.setAttribute('aria-hidden', 'true');
+005803: frame.setAttribute('tabindex', '-1');
+005804: frame.setAttribute('data-mcn-v3-worker', 'true');
+005805: applyActiveWorkerFrameStyle(frame);
+005806: bindManagedFrameLoad(frame, () => {
+005807: if (generation !== state.workerGeneration || state.worker !== frame) return;
+005808: onWorkerLoad(frame, generation);
+005809: });
+005810: document.body.appendChild(frame);
+005811: state.worker = frame;
+005812: state.lastWatchHeartbeatAt = Date.now();
+005813: state.wakeRecoveryActive = false;
+005814: state.bootstrapMissionUrl = url;
+005815: state.currentMissionUrl = url;
+005816: state.currentMissionId = missionIdFromUrl(url);
+005817: state.currentMissionName = missionNameForId(state.currentMissionId);
+005818: forgetWorkerDocument();
+005819: state.lastWorkerHref = '';
+005820: state.lastWorkerNavigationAt = Date.now();
+005821: state.autoStoppedSince = 0;
+005822: state.autoStopWarned = false;
+005823: clearAutoRecoveryWatchdog();
+005824: state.priorityPendingKey = '';
+005825: state.priorityPendingSince = 0;
+005826: state.redirectFromMissionId = '';
+005827: state.redirectTargetMissionId = '';
+005828: state.transportKind = '';
+005829: state.transportIdentity = '';
+005830: state.transportSince = 0;
+005831: state.transportWarned = false;
+005832: state.foreignMissionUiWarned = false;
+005833: recordMissionVisit(url, 'worker-created');
+005834: clearTimer('workerLoadTimer');
+005835: state.workerLoadTimer = window.setTimeout(() => {
+005836: if (generation !== state.workerGeneration || !state.wanted) return;
+005837: setError(
+005838: 'Background mission worker did not finish loading.',
+005839: 'The off-screen MissionChief mission frame exceeded the 30 second load window.'
+005840: );
+005841: }, WORKER_LOAD_TIMEOUT_MS);
+005842: setPhase(
+005843: 'LOADING',
+005844: 'Opening background mission',
+005845: `${missionDisplay(state.currentMissionId, state.currentMissionName)} is loading off-screen.`
+005846: );
+005847: log('Created off-screen MissionChief mission worker.', {
+005848: missionId: state.currentMissionId,
+005849: missionName: state.currentMissionName,
+005850: pathname: new URL(url).pathname,
+005851: });
+005852: }
+005853: function getWorkerDocument(frame = state.worker) {
+005854: if (!frame || !frame.isConnected) return null;
+005855: try {
+005856: if (frame.contentWindow.location.origin !== location.origin) return null;
+005857: return frame.contentDocument || frame.contentWindow.document || null;
+005858: } catch {
+005859: return null;
+005860: }
+005861: }
+005862: function getWorkerHref(frame = state.worker) {
+005863: if (!frame || !frame.isConnected) return '';
+005864: try {
+005865: return frame.contentWindow.location.href || '';
+005866: } catch {
+005867: return '';
+005868: }
+005869: }
+005870: function resetStaleCanonicalMissionCandidate() {
+005871: state.staleCanonicalMissionCandidateKey = '';
+005872: state.staleCanonicalMissionCandidateSince = 0;
+005873: }
+005874: function maybeRecoverDisposedMissionWorker(href, doc, source = 'watcher') {
+005875: const alarm = Boolean(missionAlarmSubmissionId(href));
+005876: const missionId = alarm ? missionAlarmSubmissionId(href) : canonicalMissionPageId(href);
+005877: let elapsedMs = 0;
+005878: let missionCandidates = [];
+005879: if (!alarm) {
+005880: const root = findMissionListRoot();
+005881: missionCandidates = root ? collectMissionCandidates() : [];
+005882: const stale = missionId && doc?.readyState === 'complete' &&
+005883: !doc.querySelector?.('#mission_general_info') && !detectTransportContext(doc, href)?.kind &&
+005884: root && !missionCandidates.some(item => String(item?.missionId || '') === missionId);
+005885: if (!stale) { resetStaleCanonicalMissionCandidate(); return false; }
+005886: const key = `${state.workerGeneration}:${state.workerDocumentSerial}:${missionId}`;
+005887: if (state.staleCanonicalMissionCandidateKey !== key) {
+005888: state.staleCanonicalMissionCandidateKey = key;
+005889: state.staleCanonicalMissionCandidateSince = Date.now();
+005890: log('Stale mission settle.', { missionId, source });
+005891: return false;
+005892: }
+005893: elapsedMs = Date.now() - state.staleCanonicalMissionCandidateSince;
+005894: if (elapsedMs < STALE_CANONICAL_MISSION_SETTLE_MS) return false;
+005895: }
+005896: const dispatchProtected = state.postDispatchWatchdog?.missionId === missionId ||
+005897: readSharedV2QueueGuardState().finalDispatch === 'true';
+005898: if (!alarm || dispatchProtected) state.recentlyNativeAdvanced.set(missionId, Date.now());
+005899: const recoveryTarget = alarm && !dispatchProtected ? {
+005900: missionId,
+005901: url: new URL(`/missions/${missionId}`, location.origin).href,
+005902: } : choosePostDispatchRecoveryTarget(missionId);
+005903: const recoveryReason = alarm ? 'post-dispatch-alarm-worker' : 'stale-canonical-mission-worker';
+005904: const event = {
+005905: at: nowIso(), missionId, source, elapsedMs, dispatchProtected, recoveryReason,
+005906: action: recoveryTarget?.missionId === missionId ? 'verify-canonical-mission' :
+005907: (recoveryTarget?.url ? 'start-fresh-mission' : 'rescan-map'),
+005908: nextMissionId: recoveryTarget?.missionId || '',
+005909: };
+005910: state.postDispatchRecoveryHistory.push(event);
+005911: if (state.postDispatchRecoveryHistory.length > POST_DISPATCH_RECOVERY_HISTORY_LIMIT) state.postDispatchRecoveryHistory.shift();
+005912: clearSharedV2QueueGuard(recoveryReason, missionId, { preserveFinalDispatch: dispatchProtected });
+005913: clearSharedV2AutoRunning(recoveryReason);
+005914: clearAutoRecoveryWatchdog(recoveryReason);
+005915: state.running = false;
+005916: pausePipelineController(recoveryReason, true);
+005917: finaliseActiveMissionTiming(recoveryReason);
+005918: removeWorker(false);
+005919: resetStaleCanonicalMissionCandidate();
+005920: compactControllerEphemeralMemory();
+005921: if (recoveryTarget?.url) persistResumeMission(recoveryTarget.url);
+005922: else sessionSet(SESSION_RESUME_MISSION, '');
+005923: saveRunContinuity();
+005924: setPhase(
+005925: alarm ? 'POST_DISPATCH_RECOVERY' : 'STALE_MISSION_RECOVERY',
+005926: 'Restarting mission worker'
+005927: );
+005928: log('Mission worker recovered.', event);
+005929: const workerFreeGeneration = state.workerGeneration;
+005930: window.setTimeout(() => {
+005931: if (!state.wanted || state.stopping || state.worker?.isConnected ||
+005932: state.workerGeneration !== workerFreeGeneration) return;
+005933: if (recoveryTarget?.url) createWorker(recoveryTarget.url);
+005934: else beginMissionRescan();
+005935: }, 80);
+005936: return true;
+005937: }
+005938: function maybeRecoverMissionAlarmWorker(href) {
+005939: return missionAlarmSubmissionId(href) ?
+005940: maybeRecoverDisposedMissionWorker(href, getWorkerDocument(), 'alarm-route') : false;
+005941: }
+005942: function maybeRecoverStaleCanonicalMissionWorker(href, doc, source) {
+005943: return maybeRecoverDisposedMissionWorker(href, doc, source);
+005944: }
+005945: function applyActiveWorkerFrameStyle(frame) {
+005946: if (!frame) return;
+005947: frame.style.cssText = [
+005948: 'position:fixed',
+005949: 'left:0',
+005950: 'top:0',
+005951: `width:${WORKER_WIDTH}px`,
+005952: `height:${WORKER_HEIGHT}px`,
+005953: 'display:block',
+005954: 'visibility:visible',
+005955: 'opacity:0.001',
+005956: 'pointer-events:none',
+005957: 'border:0',
+005958: 'margin:0',
+005959: 'padding:0',
+005960: 'z-index:-2147483647',
+005961: 'background:#0b1220',
+005962: ].join(';');
+005963: }
+005964: function resetAutoStartTracking() {
+005965: state.autoStartIssued = false;
+005966: state.autoStartDocumentSerial = 0;
+005967: state.autoRunningConfirmedDocumentSerial = 0;
+005968: state.autoRunningConfirmedAt = 0;
+005969: state.autoStartAttemptAt = 0;
+005970: state.autoStartAttempts = 0;
+005971: }
+005972: function clearPromotedWorkTracking() {
+005973: state.promotedDocumentSerial = 0;
+005974: state.promotedWorkStartedAt = 0;
+005975: state.promotedWorkEvidenceAt = 0;
+005976: state.promotedWorkEvidenceText = '';
+005977: }
+005978: function armPromotedWorkTracking(reason = 'pipeline-promotion') {
+005979: state.promotedDocumentSerial = state.workerDocumentSerial;
+005980: state.promotedWorkStartedAt = Date.now();
+005981: state.promotedWorkEvidenceAt = 0;
+005982: state.promotedWorkEvidenceText = '';
+005983: pipelineRecord('promoted-work-watchdog-armed', {
+005984: missionId: state.currentMissionId,
+005985: documentSerial: state.workerDocumentSerial,
+005986: timeoutMs: PROMOTED_WORK_ACTIVITY_TIMEOUT_MS,
+005987: reason,
+005988: });
+005989: }
+005990: function promotedWorkAwaitingEvidence() {
+005991: return Boolean(
+005992: state.promotedDocumentSerial &&
+005993: state.promotedDocumentSerial === state.workerDocumentSerial &&
+005994: state.promotedWorkStartedAt &&
+005995: !state.promotedWorkEvidenceAt
+005996: );
+005997: }
+005998: function notePromotedWorkEvidence(value, source = 'status') {
+005999: if (!promotedWorkAwaitingEvidence() || !currentWorkerAutoConfirmed()) return false;
+006000: const text = normaliseText(value);
+006001: if (!text || !/(?:waiting for mission update|mission requirements preloaded|vehicle (?:display|list)|unit finder|units ready|dispatch\s*&\s*next|selected\s+\d+\s+vehicles|auto mode restored after mission load)/i.test(text)) {
+006002: return false;
+006003: }
+006004: state.promotedWorkEvidenceAt = Date.now();
+006005: state.promotedWorkEvidenceText = text.slice(0, 280);
+006006: const event = {
+006007: missionId: state.currentMissionId,
+006008: documentSerial: state.workerDocumentSerial,
+006009: source,
+006010: elapsedMs: Math.max(0, state.promotedWorkEvidenceAt - state.promotedWorkStartedAt),
+006011: text: state.promotedWorkEvidenceText,
+006012: };
+006013: pipelineRecord('promoted-work-loop-confirmed', event);
+006014: setPhase('ACTIVE', 'Background Auto Mode running', state.promotedWorkEvidenceText);
+006015: startPipelineController();
+006016: log('Confirmed real V2 work-loop activity after pipeline promotion.', event);
+006017: return true;
+006018: }
+006019: function clearSharedV2AutoRunning(reason = 'promotion-handoff') {
+006020: try { localStorage.removeItem(V2_AUTO_MODE_RUNNING_KEY); } catch {}
+006021: pipelineRecord('v2-shared-auto-running-cleared', {
+006022: missionId: state.currentMissionId,
+006023: reason,
+006024: });
+006025: }
+006026: function maybeRecoverStalledPromotedWorker(doc, href, control, statusText = '') {
+006027: if (
+006028: !state.wanted ||
+006029: state.stopping ||
+006030: state.transportServiceActive ||
+006031: !isMissionUrl(href) ||
+006032: !promotedWorkAwaitingEvidence()
+006033: ) return false;
+006034: const elapsed = Date.now() - state.promotedWorkStartedAt;
+006035: if (elapsed < PROMOTED_WORK_ACTIVITY_TIMEOUT_MS) return false;
+006036: const event = {
+006037: at: nowIso(),
+006038: missionId: state.currentMissionId,
+006039: missionName: state.currentMissionName,
+006040: documentSerial: state.workerDocumentSerial,
+006041: elapsedMs: elapsed,
+006042: controlFound: Boolean(control),
+006043: controlText: control ? elementLabel(control) : '',
+006044: controlLooksRunning: Boolean(control && autoControlLooksRunning(control)),
+006045: status: normaliseText(statusText),
+006046: action: 'reload-active-worker-alone',
+006047: };
+006048: state.promotionWorkStallRecoveries += 1;
+006049: state.promotionRecoveryHistory.push(event);
+006050: if (state.promotionRecoveryHistory.length > PROMOTION_RECOVERY_HISTORY_LIMIT) {
+006051: state.promotionRecoveryHistory.splice(0, state.promotionRecoveryHistory.length - PROMOTION_RECOVERY_HISTORY_LIMIT);
+006052: }
+006053: clearPromotedWorkTracking();
+006054: resetAutoStartTracking();
+006055: state.running = false;
+006056: clearSharedV2AutoRunning('promotion-work-stall-recovery');
+006057: pausePipelineController('promotion-work-stall-recovery', true);
+006058: setPhase(
+006059: 'PROMOTION_RECOVERY',
+006060: 'Handoff stalled; restarting safely',
+006061: `${missionDisplay(state.currentMissionId, state.currentMissionName)} showed no V2 work activity for ${Math.round(elapsed / 1000)} seconds. Reloading the single active worker.`
+006062: );
+006063: log('Promoted worker mounted but did not start real V2 work; reloading it alone.', event);
+006064: const rescueUrl = href || state.currentMissionUrl || state.bootstrapMissionUrl;
+006065: state.promotionRecoveryPendingMissionId = state.currentMissionId || missionIdFromUrl(rescueUrl);
+006066: window.setTimeout(() => {
+006067: if (!state.wanted || state.stopping) return;
+006068: createWorker(rescueUrl);
+006069: }, 120);
+006070: return true;
+006071: }
+006072: function forgetWorkerDocument() {
+006073: disconnectAirfieldOperationsSupervisorObservers();
+006074: state.workerDocument = null;
+006075: resetAutoStartTracking();
+006076: clearPromotedWorkTracking();
+006077: }
+006078: function adoptWorkerDocument(doc, href = '', source = 'worker') {
+006079: if (!doc || state.workerDocument === doc) return false;
+006080: disconnectAirfieldOperationsSupervisorObservers();
+006081: const incomingMissionId = missionIdFromUrl(href);
+006082: const carryPromotionWatchdog = Boolean(
+006083: promotedWorkAwaitingEvidence() &&
+006084: incomingMissionId &&
+006085: incomingMissionId === state.currentMissionId
+006086: );
+006087: const armRecoveryWatchdog = Boolean(
+006088: state.promotionRecoveryPendingMissionId &&
+006089: incomingMissionId === state.promotionRecoveryPendingMissionId
+006090: );
+006091: clearPromotedWorkTracking();
+006092: state.workerDocument = doc;
+006093: state.workerDocumentSerial += 1;
+006094: state.autoStateRecoveryDocumentSerial = state.workerDocumentSerial;
+006095: state.autoStateRecoveryAttempts = 0;
+006096: resetAutoStartTracking();
+006097: state.running = false;
+006098: state.autoStoppedSince = 0;
+006099: state.autoStopWarned = false;
+006100: state.activeControlMissingSince = 0;
+006101: if (armRecoveryWatchdog) state.promotionRecoveryPendingMissionId = '';
+006102: if (carryPromotionWatchdog || armRecoveryWatchdog) {
+006103: armPromotedWorkTracking(
+006104: armRecoveryWatchdog ? 'promotion-recovery-reload' : 'same-mission-document-reload'
+006105: );
+006106: }
+006107: log('Adopted a new background worker document; Auto Mode must be confirmed on this document.', {
+006108: documentSerial: state.workerDocumentSerial,
+006109: source,
+006110: path: pathFromUrl(href || getWorkerHref()),
+006111: promotedWorkWatchdogRearmed: carryPromotionWatchdog || armRecoveryWatchdog,
+006112: });
+006113: return true;
+006114: }
+006115: function confirmCurrentDocumentAutoMode(control, source = 'watcher') {
+006116: if (!control || !autoControlLooksRunning(control) || !state.workerDocumentSerial) return false;
+006117: clearTimer('nexusDiscoveryTimer');
+006118: state.activeBootstrapRescueMissionId = '';
+006119: state.activeBootstrapRescueAttempts = 0;
+006120: const firstConfirmation = state.autoRunningConfirmedDocumentSerial !== state.workerDocumentSerial;
+006121: state.autoStartIssued = true;
+006122: state.autoStartDocumentSerial = state.workerDocumentSerial;
+006123: state.autoRunningConfirmedDocumentSerial = state.workerDocumentSerial;
+006124: state.autoRunningConfirmedAt = Date.now();
+006125: state.running = true;
+006126: state.autoStoppedSince = 0;
+006127: state.autoStopWarned = false;
+006128: if (promotedWorkAwaitingEvidence()) {
+006129: setPhase(
+006130: 'PROMOTION_VERIFY',
+006131: 'V2 mounted; checking mission activity',
+006132: `${missionDisplay(state.currentMissionId, state.currentMissionName)} is waiting for the first real V2 work status.`
+006133: );
+006134: }
+006135: if (firstConfirmation) {
+006136: log('Confirmed V2 Auto Mode running on the current worker document.', {
+006137: documentSerial: state.workerDocumentSerial,
+006138: source,
+006139: label: elementLabel(control),
+006140: });
+006141: }
+006142: return true;
+006143: }
+006144: function currentWorkerAutoConfirmed() {
+006145: return Boolean(
+006146: state.workerDocumentSerial &&
+006147: state.autoRunningConfirmedDocumentSerial === state.workerDocumentSerial
+006148: );
+006149: }
+006150: function readV2AutoStopRecord() {
+006151: try {
+006152: const raw = localStorage.getItem(V2_AUTO_STOP_RECORD_KEY);
+006153: if (!raw) return null;
+006154: const value = JSON.parse(raw);
+006155: const stoppedAtValue = value?.stoppedAt ?? value?.at ?? '';
+006156: const stoppedAtMs = Number.isFinite(Number(stoppedAtValue))
+006157: ? Number(stoppedAtValue)
+006158: : Date.parse(String(stoppedAtValue || ''));
+006159: return {
+006160: reason: normaliseText(value?.reason || value?.message || ''),
+006161: stoppedAt: stoppedAtValue || '',
+006162: stoppedAtMs: Number.isFinite(stoppedAtMs) ? stoppedAtMs : 0,
+006163: ageMs: Number.isFinite(stoppedAtMs) ? Math.max(0, Date.now() - stoppedAtMs) : null,
+006164: afterCurrentConfirmation: Boolean(
+006165: Number.isFinite(stoppedAtMs) &&
+006166: state.autoRunningConfirmedAt &&
+006167: stoppedAtMs >= state.autoRunningConfirmedAt - 250
+006168: ),
+006169: };
+006170: } catch {
+006171: return null;
+006172: }
+006173: }
+006174: function requestV2FrameRuntimeReconcile(frame, generation, reason = 'pipeline-promotion') {
+006175: pipelineRecord('v2-frame-runtime-reconcile-scheduled', {
+006176: missionId: missionIdFromUrl(frameHref(frame)),
+006177: reason,
+006178: });
+006179: for (const delay of [0, 75, 200, 500, 900]) {
+006180: window.setTimeout(() => {
+006181: if (!state.wanted || generation !== state.workerGeneration || state.worker !== frame || !frame?.isConnected) return;
+006182: try {
+006183: const doc = frame.contentDocument || frame.contentWindow?.document || null;
+006184: if (!doc) return;
+006185: const RuntimeEvent = doc.defaultView?.Event || Event;
+006186: doc.dispatchEvent(new RuntimeEvent(V2_FRAME_RUNTIME_RECONCILE_EVENT));
+006187: } catch {}
+006188: }, delay);
+006189: }
+006190: }
+006191: function isInteractive(element) {
+006192: if (!element || !element.isConnected) return false;
+006193: if (element.disabled) return false;
+006194: const style = element.ownerDocument?.defaultView?.getComputedStyle?.(element);
+006195: if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+006196: return true;
+006197: }
+006198: function elementLabel(element) {
+006199: if (!element) return '';
+006200: if (element.matches('input')) return normaliseText(element.value || element.getAttribute('aria-label'));
+006201: return normaliseText(
+006202: element.getAttribute('aria-label') ||
+006203: element.getAttribute('title') ||
+006204: element.textContent
+006205: );
+006206: }
+006207: function findAutoModeControl(doc) {
+006208: if (!doc) return null;
+006209: const scopes = [
+006210: doc.querySelector('#mission-finder-wrapper'),
+006211: doc.querySelector('#control-panel'),
+006212: doc,
+006213: ].filter(Boolean);
+006214: for (const scope of scopes) {
+006215: const controls = Array.from(scope.querySelectorAll(
+006216: 'button, a.btn, input[type="button"], input[type="submit"], [role="button"]'
+006217: ));
+006218: let fallback = null;
+006219: for (const control of controls) {
+006220: if (!isInteractive(control)) continue;
+006221: const label = elementLabel(control);
+006222: if (!label) continue;
+006223: if (/^auto mode$/i.test(label)) return control;
+006224: if (/^(?:start|stop) auto mode$/i.test(label)) return control;
+006225: if (/^auto mode\s*[:\-\u2013\u2014]?\s*(?:start|stop|on|off|running|stopped|active|inactive)$/i.test(label)) {
+006226: fallback = fallback || control;
+006227: }
+006228: }
+006229: if (fallback) return fallback;
+006230: }
+006231: return null;
+006232: }
+006233: function autoControlLooksRunning(control) {
+006234: if (!control) return false;
+006235: const label = elementLabel(control).toLowerCase();
+006236: if (/\bstop\b|\brunning\b|\bactive\b|\bon\b/.test(label)) return true;
+006237: if (/\bstart\b|\bstopped\b|\binactive\b|\boff\b/.test(label)) return false;
+006238: if (control.getAttribute('aria-pressed') === 'true') return true;
+006239: if (control.dataset?.running === 'true' || control.dataset?.active === 'true') return true;
+006240: return false;
+006241: }
+006242: function findUsefulNexusStatus(doc) {
+006243: if (!doc) return '';
+006244: const primary = doc.querySelector('#status-box-message');
+006245: const primaryText = normaliseText(primary?.textContent);
+006246: if (primaryText && primaryText.length <= 280) return primaryText;
+006247: const selectors = [
+006248: '#mission-finder-wrapper [id*="status"]',
+006249: '#mission-finder-wrapper [class*="status"]',
+006250: '#control-panel [id*="status"]',
+006251: '#control-panel [class*="status"]',
+006252: ];
+006253: const values = [];
+006254: for (const selector of selectors) {
+006255: for (const node of doc.querySelectorAll(selector)) {
+006256: if (node === primary || node.closest?.('#mf-auto-stop-flag')) continue;
+006257: if (node.hidden || node.getAttribute?.('aria-hidden') === 'true') continue;
+006258: try {
+006259: const style = doc.defaultView?.getComputedStyle?.(node);
+006260: if (style && (style.display === 'none' || style.visibility === 'hidden')) continue;
+006261: } catch {}
+006262: const text = normaliseText(node.textContent);
+006263: if (!text || text.length > 240) continue;
+006264: if (/auto|dispatch|patient|prison|transport|stopp|ready|mission|waiting|select/i.test(text)) {
+006265: values.push(text);
+006266: }
+006267: if (values.length >= 4) break;
+006268: }
+006269: if (values.length >= 4) break;
+006270: }
+006271: return [...new Set(values)].slice(0, 3).join(' | ');
+006272: }
+006273: function isExplicitTerminalAutoStopStatus(value) {
+006274: const text = normaliseText(value);
+006275: if (!/\bauto stopped:\s*/i.test(text)) return false;
+006276: return /\bdispatch was not clicked\b/i.test(text) ||
+006277: /\bthe mission was not dispatched\b/i.test(text) ||
+006278: /\bstart auto mode again\b/i.test(text);
+006279: }
+006280: function statusLooksLikeBenignV2Progress(value) {
+006281: const text = normaliseText(value);
+006282: if (!text || /\bauto stopped\b|\bdispatch was not clicked\b|\bmission was not dispatched\b/i.test(text)) {
+006283: return false;
+006284: }
+006285: return /(?:all additional vehicle pages loaded and stable|loading additional vehicle page|vehicle display limited|waiting for mission update|mission requirements preloaded|unit finder|units ready|selected\s+\d+\s+vehicles|vehicle list|full vehicle list|dispatch\s*&\s*next)/i.test(text);
+006286: }
+006287: function recordActiveControlDropout(event) {
+006288: state.activeControlDropoutHistory.push({ at: nowIso(), ...event });
+006289: if (state.activeControlDropoutHistory.length > ACTIVE_CONTROL_DROPOUT_HISTORY_LIMIT) {
+006290: state.activeControlDropoutHistory.splice(
+006291: 0,
+006292: state.activeControlDropoutHistory.length - ACTIVE_CONTROL_DROPOUT_HISTORY_LIMIT
+006293: );
+006294: }
+006295: }
+006296: function maybeRecoverMissingActiveControl(doc, href, kind, control, statusText = '') {
+006297: if (
+006298: control ||
+006299: !state.autoStartIssued ||
+006300: kind ||
+006301: !isMissionUrl(href) ||
+006302: doc?.readyState !== 'complete'
+006303: ) {
+006304: state.activeControlMissingSince = 0;
+006305: return false;
+006306: }
+006307: const now = Date.now();
+006308: const status = normaliseText(statusText);
+006309: if (status && status !== state.lastStatusText) {
+006310: recordStatusSnapshot(status, 'active-control-missing');
+006311: }
+006312: const benignProgress = statusLooksLikeBenignV2Progress(status);
+006313: const progressAgeMs = state.lastStatusChangedAt
+006314: ? Math.max(0, now - state.lastStatusChangedAt)
+006315: : Number.POSITIVE_INFINITY;
+006316: const freshProgress =
+006317: benignProgress &&
+006318: progressAgeMs <= ACTIVE_CONTROL_PROGRESS_GRACE_MS;
+006319: if (freshProgress) {
+006320: state.activeControlMissingSince = 0;
+006321: return false;
+006322: }
+006323: if (!state.activeControlMissingSince) {
+006324: state.activeControlMissingSince = now;
+006325: return false;
+006326: }
+006327: const missingForMs = Math.max(0, now - state.activeControlMissingSince);
+006328: const missionStableForMs = Math.max(0, now - state.lastWorkerNavigationAt);
+006329: if (
+006330: missingForMs < ACTIVE_CONTROL_DROPOUT_RESCUE_MS ||
+006331: missionStableForMs < ACTIVE_CONTROL_DROPOUT_RESCUE_MS
+006332: ) return false;
+006333: state.activeControlDropoutTimes = state.activeControlDropoutTimes
+006334: .map(value => Number(value))
+006335: .filter(value => Number.isFinite(value) && now - value <= ACTIVE_CONTROL_DROPOUT_WINDOW_MS);
+006336: state.activeControlDropoutTimes.push(now);
+006337: if (state.activeControlDropoutTimes.length > ACTIVE_CONTROL_DROPOUT_CIRCUIT_BREAKER_COUNT) {
+006338: state.activeControlDropoutTimes.splice(
+006339: 0,
+006340: state.activeControlDropoutTimes.length - ACTIVE_CONTROL_DROPOUT_CIRCUIT_BREAKER_COUNT
+006341: );
+006342: }
+006343: const recentDropouts = state.activeControlDropoutTimes.length;
+006344: const circuitBreaker =
+006345: recentDropouts >= ACTIVE_CONTROL_DROPOUT_CIRCUIT_BREAKER_COUNT;
+006346: const event = {
+006347: missionId: state.currentMissionId || missionIdFromUrl(href),
+006348: missionName: state.currentMissionName,
+006349: documentSerial: state.workerDocumentSerial,
+006350: missingForMs,
+006351: missionStableForMs,
+006352: status,
+006353: benignProgress,
+006354: progressAgeMs: Number.isFinite(progressAgeMs) ? progressAgeMs : null,
+006355: recentDropouts,
+006356: dropoutWindowMs: ACTIVE_CONTROL_DROPOUT_WINDOW_MS,
+006357: action: circuitBreaker
+006358: ? 'open-safe-a-only-after-repeated-dropout'
+006359: : 'reload-a-then-rebuild-b-c',
+006360: };
+006361: state.activeControlMissingSince = 0;
+006362: state.activeControlDropoutRescues += 1;
+006363: state.running = false;
+006364: recordActiveControlDropout(event);
+006365: if (circuitBreaker) {
+006366: state.activeControlDropoutCircuitBreakers += 1;
+006367: enterActiveOnlyMode('repeated-active-control-dropout', event);
+006368: } else {
+006369: state.activeControlSoftRecoveries += 1;
+006370: pausePipelineController('active-control-dropout-soft-recovery', true);
+006371: pipelineRecord('active-control-dropout-soft-recovery', event);
+006372: }
+006373: setPhase(
+006374: circuitBreaker ? 'AUTO_STATE_RECOVERY' : 'CONTROL_RECOVERY',
+006375: circuitBreaker
+006376: ? 'Repeated Worker A control loss; using safe A only'
+006377: : 'Worker A control lost; restarting safely',
+006378: circuitBreaker
+006379: ? `${missionDisplay(event.missionId, event.missionName)} lost its V2 control ${recentDropouts} times inside two minutes. B is disabled for this run.`
+006380: : `${missionDisplay(event.missionId, event.missionName)} lost its V2 control without fresh progress. Reloading A once; B will rebuild after A is healthy.`
+006381: );
+006382: log(
+006383: circuitBreaker
+006384: ? 'Worker A repeatedly lost its mounted V2 control; the B circuit breaker opened.'
+006385: : 'Worker A lost its mounted V2 control; reloading A without permanently disabling B.',
+006386: event
+006387: );
+006388: const rescueUrl = href;
+006389: window.setTimeout(() => {
+006390: if (!state.wanted || state.stopping) return;
+006391: createWorker(rescueUrl);
+006392: }, 120);
+006393: return true;
+006394: }
+006395: function recordAutoStateDropout(event) {
+006396: state.autoStateDropoutHistory.push({ at: nowIso(), ...event });
+006397: if (state.autoStateDropoutHistory.length > AUTO_STATE_DROPOUT_HISTORY_LIMIT) {
+006398: state.autoStateDropoutHistory.splice(
+006399: 0,
+006400: state.autoStateDropoutHistory.length - AUTO_STATE_DROPOUT_HISTORY_LIMIT

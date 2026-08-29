@@ -1,0 +1,1201 @@
+046900:             sessionStorage.getItem(MF_TRANSPORT_CLICK_LOCK_UNTIL_KEY) || '0',
+046901:             10
+046902:         ) || 0;
+046903:         if (lockUntil > now) {
+046904:             if (mfDebugEnabled) {
+046905:                 debugLog(
+046906:                     'TRANSPORT CLICK OWNER',
+046907:                     `${reason || 'click'} blocked | previous=${sessionStorage.getItem(MF_TRANSPORT_LAST_CLICK_REASON_KEY) || 'unknown'}`
+046908:                 );
+046909:             }
+046910:             return false;
+046911:         }
+046912:         sessionStorage.setItem(
+046913:             MF_TRANSPORT_CLICK_LOCK_UNTIL_KEY,
+046914:             String(now + 5200)
+046915:         );
+046916:         sessionStorage.setItem(
+046917:             MF_TRANSPORT_LAST_CLICK_AT_KEY,
+046918:             String(now)
+046919:         );
+046920:         sessionStorage.setItem(
+046921:             MF_TRANSPORT_LAST_CLICK_REASON_KEY,
+046922:             String(reason || 'unknown')
+046923:         );
+046924:         return true;
+046925:     }
+046926:     function mfMarkTransportOwner(button, reason) {
+046927:         const modal = button && button.closest
+046928:             ? button.closest('.vm--modal, .modal, .lightbox')
+046929:             : null;
+046930:         mfTransportOwnerModal = modal;
+046931:         mfTransportOwnerApproachGoneAt = 0;
+046932:         mfTransportOwnerCloseAttemptedAt = 0;
+046933:         mfTransportMainStableAt = 0;
+046934:         if (modal) {
+046935:             try {
+046936:                 modal.setAttribute('data-mf-transport-owner', 'true');
+046937:                 modal.setAttribute(
+046938:                     'data-mf-transport-owner-reason',
+046939:                     String(reason || 'unknown')
+046940:                 );
+046941:             } catch (error) {}
+046942:         }
+046943:         if (mfDebugEnabled) {
+046944:             debugLog(
+046945:                 'TRANSPORT MODAL OWNER',
+046946:                 `Marked | reason=${reason || 'unknown'} | modal=${modal ? 'yes' : 'no'}`
+046947:             );
+046948:         }
+046949:     }
+046950:     function mfGetTransportOwnerModal() {
+046951:         if (mfTransportOwnerModal && mfTransportOwnerModal.isConnected) {
+046952:             return mfTransportOwnerModal;
+046953:         }
+046954:         for (const doc of mfGetAccessibleDocumentsForTransport()) {
+046955:             try {
+046956:                 const marked = doc.querySelector(
+046957:                     '[data-mf-transport-owner="true"]'
+046958:                 );
+046959:                 if (marked) {
+046960:                     mfTransportOwnerModal = marked;
+046961:                     return marked;
+046962:                 }
+046963:             } catch (error) {}
+046964:         }
+046965:         const lastClickAt = mfGetSharedTransportLastClickAt();
+046966:         if (
+046967:             isPostTransportRehookPending() &&
+046968:             lastClickAt > 0 &&
+046969:             Date.now() - lastClickAt < 30000
+046970:         ) {
+046971:             for (const doc of mfGetAccessibleDocumentsForTransport()) {
+046972:                 try {
+046973:                     const modals = Array.from(
+046974:                         doc.querySelectorAll('.vm--modal, .modal, .lightbox')
+046975:                     ).filter(modal => {
+046976:                         if (!mfIsVisibleInOwnDocument(modal)) return false;
+046977:                         const modalText = (
+046978:                             modal.innerText ||
+046979:                             modal.textContent ||
+046980:                             ''
+046981:                         ).replace(/\s+/g, ' ').trim();
+046982:                         const hasMission = !!modal.querySelector(
+046983:                             '#mission_general_info, #mission_content, #mission_caption, #missionH1'
+046984:                         );
+046985:                         const hasApproach =
+046986:                             mfGetExactVisibleApproachButtons(modal).length > 0;
+046987:                         return !hasMission &&
+046988:                             !hasApproach &&
+046989:                             modalText.length < 160;
+046990:                     });
+046991:                     if (modals.length) {
+046992:                         const modal = modals[modals.length - 1];
+046993:                         modal.setAttribute(
+046994:                             'data-mf-transport-owner',
+046995:                             'true'
+046996:                         );
+046997:                         mfTransportOwnerModal = modal;
+046998:                         return modal;
+046999:                     }
+047000:                 } catch (error) {}
+047001:             }
+047002:         }
+047003:         return null;
+047004:     }
+047005:     function mfClearTransportOwner(reason) {
+047006:         for (const doc of mfGetAccessibleDocumentsForTransport()) {
+047007:             try {
+047008:                 doc.querySelectorAll(
+047009:                     '[data-mf-transport-owner="true"]'
+047010:                 ).forEach(modal => {
+047011:                     modal.removeAttribute('data-mf-transport-owner');
+047012:                     modal.removeAttribute(
+047013:                         'data-mf-transport-owner-reason'
+047014:                     );
+047015:                 });
+047016:             } catch (error) {}
+047017:         }
+047018:         mfTransportOwnerModal = null;
+047019:         mfTransportOwnerApproachGoneAt = 0;
+047020:         mfTransportOwnerCloseAttemptedAt = 0;
+047021:         mfTransportMainStableAt = 0;
+047022:         if (mfDebugEnabled) {
+047023:             debugLog(
+047024:                 'TRANSPORT MODAL OWNER',
+047025:                 `Cleared | reason=${reason || 'unknown'}`
+047026:             );
+047027:         }
+047028:     }
+047029:     function mfTransportShellReadyForRehook(reason) {
+047030:         const now = Date.now();
+047031:         const lastClickAt = Math.max(
+047032:             mfGetSharedTransportLastClickAt(),
+047033:             mfTransportLastClickAt || 0,
+047034:             mfBruteLastClickAt || 0,
+047035:             mfLastTransportClickAt || 0
+047036:         );
+047037:         const modal = mfGetTransportOwnerModal();
+047038:         if (modal) {
+047039:             let visible = false;
+047040:             try {
+047041:                 visible = mfIsVisibleInOwnDocument(modal);
+047042:             } catch (error) {}
+047043:             if (visible) {
+047044:                 mfTransportMainStableAt = 0;
+047045:                 if (
+047046:                     mfGetExactVisibleApproachButtons(modal).length > 0
+047047:                 ) {
+047048:                     mfTransportOwnerApproachGoneAt = 0;
+047049:                     return false;
+047050:                 }
+047051:                 if (!mfTransportOwnerApproachGoneAt) {
+047052:                     mfTransportOwnerApproachGoneAt = now;
+047053:                     if (mfDebugEnabled) {
+047054:                         debugLog(
+047055:                             'TRANSPORT MODAL OWNER',
+047056:                             `${reason || 'check'} | Approach gone but grey shell still visible. Waiting.`
+047057:                         );
+047058:                     }
+047059:                     return false;
+047060:                 }
+047061:                 const emptyFor =
+047062:                     now - mfTransportOwnerApproachGoneAt;
+047063:                 if (emptyFor < MF_TRANSPORT_SHELL_WAIT_MS) {
+047064:                     return false;
+047065:                 }
+047066:                 if (
+047067:                     !mfTransportOwnerCloseAttemptedAt ||
+047068:                     now - mfTransportOwnerCloseAttemptedAt > 10000
+047069:                 ) {
+047070:                     const closeButton = modal.querySelector(
+047071:                         '.control-btn-container span.lightbox-close[title="Close"], span.lightbox-close[title="Close"], #lightbox_close_inside, button.close'
+047072:                     );
+047073:                     mfTransportOwnerCloseAttemptedAt = now;
+047074:                     if (closeButton) {
+047075:                         if (mfDebugEnabled) {
+047076:                             debugLog(
+047077:                                 'TRANSPORT MODAL OWNER',
+047078:                                 `${reason || 'check'} | Closing stale grey transport shell after ${emptyFor}ms.`
+047079:                             );
+047080:                         }
+047081:                         realClickForQueueRestart(closeButton);
+047082:                     }
+047083:                 }
+047084:                 return false;
+047085:             }
+047086:         }
+047087:         if (
+047088:             lastClickAt > 0 &&
+047089:             now - lastClickAt < MF_TRANSPORT_SHELL_WAIT_MS
+047090:         ) {
+047091:             return false;
+047092:         }
+047093:         if (!mfTransportMainStableAt) {
+047094:             mfTransportMainStableAt = now;
+047095:             if (mfDebugEnabled) {
+047096:                 debugLog(
+047097:                     'TRANSPORT MODAL OWNER',
+047098:                     `${reason || 'check'} | Shell gone. Starting main-screen settle timer.`
+047099:                 );
+047100:             }
+047101:             return false;
+047102:         }
+047103:         return now - mfTransportMainStableAt >=
+047104:             MF_TRANSPORT_MAIN_STABLE_MS;
+047105:     }
+047106:     function mfIsVisibleInOwnDocument(element) {
+047107:         if (!element) return false;
+047108:         try {
+047109:             const rect = element.getBoundingClientRect();
+047110:             const style = element.ownerDocument.defaultView.getComputedStyle(element);
+047111:             return rect.width > 0
+047112:                 && rect.height > 0
+047113:                 && style.display !== 'none'
+047114:                 && style.visibility !== 'hidden'
+047115:                 && style.opacity !== '0';
+047116:         } catch (error) {
+047117:             try {
+047118:                 return !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
+047119:             } catch (innerError) {
+047120:                 return false;
+047121:             }
+047122:         }
+047123:     }
+047124:     function mfGetExactVisibleApproachButtons(scope) {
+047125:         if (!scope || !scope.querySelectorAll) return [];
+047126:         return Array.from(scope.querySelectorAll(
+047127:             'button, a, input[type="button"], input[type="submit"]'
+047128:         )).filter(button => {
+047129:             if (!mfIsVisibleInOwnDocument(button)) return false;
+047130:             const text = [
+047131:                 button.textContent || '',
+047132:                 button.value || '',
+047133:                 button.getAttribute && button.getAttribute('title') || '',
+047134:                 button.getAttribute && button.getAttribute('aria-label') || ''
+047135:             ].join(' ').replace(/\s+/g, ' ').trim().toLowerCase();
+047136:             if (text !== 'approach') return false;
+047137:             const href = button.getAttribute && (button.getAttribute('href') || '').toLowerCase();
+047138:             if (href && href.includes('/missions/')) return false;
+047139:             if (button.disabled) return false;
+047140:             if (button.getAttribute && button.getAttribute('aria-disabled') === 'true') return false;
+047141:             return true;
+047142:         });
+047143:     }
+047144:     function mfGetApproachCapacityInfo(button) {
+047145:         const row = button && button.closest ? button.closest('tr') : null;
+047146:         const table = row && row.closest ? row.closest('table') : null;
+047147:         if (!row) {
+047148:             return {
+047149:                 hasCapacityColumn: false,
+047150:                 capacity: null,
+047151:                 rowText: ''
+047152:             };
+047153:         }
+047154:         const rowText = (row.innerText || row.textContent || '')
+047155:             .replace(/\s+/g, ' ')
+047156:             .trim();
+047157:         if (table) {
+047158:             const headers = Array.from(table.querySelectorAll('thead th, thead td')).map(header =>
+047159:                 (header.innerText || header.textContent || '')
+047160:                     .replace(/\s+/g, ' ')
+047161:                     .trim()
+047162:                     .toLowerCase()
+047163:             );
+047164:             const cells = Array.from(row.children);
+047165:             const capacityIndex = headers.findIndex(header =>
+047166:                 header.includes('free cells') ||
+047167:                 header.includes('free cell') ||
+047168:                 header.includes('free beds') ||
+047169:                 header.includes('free bed') ||
+047170:                 header === 'free'
+047171:             );
+047172:             if (capacityIndex >= 0 && cells[capacityIndex]) {
+047173:                 const capacityText = (cells[capacityIndex].innerText || cells[capacityIndex].textContent || '')
+047174:                     .replace(/\s+/g, ' ')
+047175:                     .trim();
+047176:                 const parsed = parseInt((capacityText.match(/-?\d+/) || [])[0], 10);
+047177:                 return {
+047178:                     hasCapacityColumn: true,
+047179:                     capacity: Number.isFinite(parsed) ? parsed : 0,
+047180:                     rowText
+047181:                 };
+047182:             }
+047183:         }
+047184:         const endMatch = rowText.match(/\b(-?\d+)\s+(-?\d+(?:\.\d+)?)\s*%\s*Approach\s*$/i);
+047185:         if (endMatch) {
+047186:             return {
+047187:                 hasCapacityColumn: true,
+047188:                 capacity: parseInt(endMatch[1], 10) || 0,
+047189:                 rowText
+047190:             };
+047191:         }
+047192:         return {
+047193:             hasCapacityColumn: false,
+047194:             capacity: null,
+047195:             rowText
+047196:         };
+047197:     }
+047198:     function mfChoosePreferredApproachButton(scope) {
+047199:         const buttons = mfGetExactVisibleApproachButtons(scope);
+047200:         if (!buttons.length) return null;
+047201:         const scopeText = (scope.innerText || scope.textContent || '')
+047202:             .replace(/\s+/g, ' ')
+047203:             .trim()
+047204:             .toLowerCase();
+047205:         const prisonerScreen =
+047206:             scopeText.includes('release prisoners') ||
+047207:             scopeText.includes('free cells') ||
+047208:             scopeText.includes('cells:') ||
+047209:             scopeText.includes('prisoner');
+047210:         const patientScreen =
+047211:             scopeText.includes('discharge patient') ||
+047212:             scopeText.includes('free beds') ||
+047213:             scopeText.includes('hospitals:') ||
+047214:             scopeText.includes('hospital distance');
+047215:         const inspected = buttons.map(button => ({
+047216:             button,
+047217:             info: mfGetApproachCapacityInfo(button),
+047218:             rowText: (
+047219:                 button.closest('tr')?.innerText ||
+047220:                 button.closest('tr')?.textContent ||
+047221:                 ''
+047222:             ).replace(/\s+/g, ' ').trim()
+047223:         }));
+047224:         const validForScreen = inspected.filter(item => {
+047225:             const lowerRow = item.rowText.toLowerCase();
+047226:             if (prisonerScreen) {
+047227:                 if (
+047228:                     lowerRow.includes('hospital') ||
+047229:                     lowerRow.includes('free beds') ||
+047230:                     lowerRow.includes('department')
+047231:                 ) {
+047232:                     return false;
+047233:                 }
+047234:             }
+047235:             if (patientScreen && !prisonerScreen) {
+047236:                 if (
+047237:                     lowerRow.includes('police') ||
+047238:                     lowerRow.includes('custody') ||
+047239:                     lowerRow.includes('free cells')
+047240:                 ) {
+047241:                     return false;
+047242:                 }
+047243:             }
+047244:             return true;
+047245:         });
+047246:         const positive = validForScreen.find(item =>
+047247:             item.info.hasCapacityColumn &&
+047248:             Number.isFinite(item.info.capacity) &&
+047249:             item.info.capacity > 0
+047250:         );
+047251:         if (positive) {
+047252:             if (mfDebugEnabled) {
+047253:                 debugLog(
+047254:                     prisonerScreen ? 'POLICE TRANSPORT' : 'PATIENT TRANSPORT',
+047255:                     `Selected Approach with free capacity=${positive.info.capacity} | row="${positive.info.rowText || positive.rowText}"`
+047256:                 );
+047257:             }
+047258:             return positive.button;
+047259:         }
+047260:         const hasCapacityColumns = validForScreen.some(item => item.info.hasCapacityColumn);
+047261:         if (hasCapacityColumns) {
+047262:             if (mfDebugEnabled) {
+047263:                 debugLog(
+047264:                     prisonerScreen ? 'POLICE TRANSPORT' : 'PATIENT TRANSPORT',
+047265:                     `No valid destination with free capacity. Valid rows=${validForScreen.length}.`
+047266:                 );
+047267:             }
+047268:             return null;
+047269:         }
+047270:         return validForScreen.length ? validForScreen[0].button : null;
+047271:     }
+047272:     function mfGetTransportModalScore(modal) {
+047273:         if (!modal) return -1;
+047274:         let score = 0;
+047275:         try {
+047276:             const style = modal.ownerDocument.defaultView.getComputedStyle(modal);
+047277:             const zIndex = parseInt(style.zIndex || '0', 10);
+047278:             if (Number.isFinite(zIndex)) score += zIndex * 1000;
+047279:         } catch (error) {}
+047280:         try {
+047281:             const siblings = Array.from(modal.ownerDocument.querySelectorAll('.vm--modal, .modal, .lightbox'));
+047282:             score += Math.max(0, siblings.indexOf(modal));
+047283:         } catch (error) {}
+047284:         return score;
+047285:     }
+047286:     function mfGetTransportActiveScopes(forceRefresh = false) {
+047287:         const now = Date.now();
+047288:         const cachedScopes = mfTransportScopeCache.scopes;
+047289:         const cacheStillConnected = cachedScopes.every(
+047290:             scope => scope?.isConnected !== false
+047291:         );
+047292:         if (
+047293:             !forceRefresh &&
+047294:             now < mfTransportScopeCache.expiresAt &&
+047295:             cacheStillConnected
+047296:         ) {
+047297:             return cachedScopes;
+047298:         }
+047299:         const scopes = buildTransportActiveScopes();
+047300:         mfTransportScopeCache = {
+047301:             expiresAt: now + 250,
+047302:             scopes
+047303:         };
+047304:         return scopes;
+047305:     }
+047306:     function buildTransportActiveScopes() {
+047307:         const modalCandidates = [];
+047308:         mfGetAccessibleDocumentsForTransport().forEach(doc => {
+047309:             const modals = Array.from(doc.querySelectorAll('.vm--modal, .modal, .lightbox'));
+047310:             modals.forEach(modal => {
+047311:                 if (!mfIsVisibleInOwnDocument(modal)) return;
+047312:                 const buttons = mfGetExactVisibleApproachButtons(modal);
+047313:                 if (!buttons.length) return;
+047314:                 const text = (modal.innerText || modal.textContent || '')
+047315:                     .replace(/\s+/g, ' ')
+047316:                     .trim()
+047317:                     .toLowerCase();
+047318:                 const hasTransportContext =
+047319:                     !!modal.querySelector('.vehicle-window, .redesign-wrapper[type="vehicle"]') ||
+047320:                     text.includes('patient / prisoner handoff') ||
+047321:                     text.includes('discharge patient') ||
+047322:                     text.includes('release prisoners') ||
+047323:                     text.includes('free cells') ||
+047324:                     text.includes('free beds') ||
+047325:                     text.includes('hospitals:') ||
+047326:                     text.includes('cells:');
+047327:                 if (!hasTransportContext) return;
+047328:                 modalCandidates.push({
+047329:                     scope: modal,
+047330:                     score: mfGetTransportModalScore(modal)
+047331:                 });
+047332:             });
+047333:             try {
+047334:                 const path = doc.location && doc.location.pathname || '';
+047335:                 if (
+047336:                     path.startsWith('/vehicles/') &&
+047337:                     mfGetExactVisibleApproachButtons(doc.body).length > 0
+047338:                 ) {
+047339:                     modalCandidates.push({
+047340:                         scope: doc.body,
+047341:                         score: -1
+047342:                     });
+047343:                 }
+047344:             } catch (error) {}
+047345:         });
+047346:         if (!modalCandidates.length) return [];
+047347:         modalCandidates.sort((a, b) => b.score - a.score);
+047348:         return [modalCandidates[0].scope];
+047349:     }
+047350:     function mfFindAnyVisibleApproachButtonDeep() {
+047351:         const scopes = mfGetTransportActiveScopes();
+047352:         for (const scope of scopes) {
+047353:             const button = mfChoosePreferredApproachButton(scope);
+047354:             if (button) return button;
+047355:         }
+047356:         return null;
+047357:     }
+047358: const MF_AUTO_PRISONER_CELL_HANDOFF_KEY =
+047359:     'mf_auto_prisoner_cell_handoff_v1';
+047360: const MF_AUTO_PRISONER_CELL_DESTINATION_WAIT_MS = 8000;
+047361: const MF_AUTO_PRISONER_CELL_CLICK_RETRY_MS = 4000;
+047362: const MF_AUTO_PRISONER_CELL_MAX_ATTEMPTS = 2;
+047363: const MF_AUTO_DISPATCH_LATCH_KEY =
+047364:     'mf_auto_dispatch_latch_v1';
+047365: const MF_AUTO_DISPATCH_LATCH_TTL_MS = 5 * 60 * 1000;
+047366: const MF_AUTO_PRISONER_RELEASE_STATE_KEY =
+047367:     'mf_auto_prisoner_release_v1';
+047368: const MF_AUTO_PRISONER_RELEASE_CLICK_RETRY_MS = 4000;
+047369: const MF_AUTO_PRISONER_RELEASE_MAX_ATTEMPTS = 2;
+047370: const MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS = 10000;
+047371: const MF_AUTO_PRISONER_RELEASE_DISMISS_WAIT_MS = 8000;
+047372: const MF_AUTO_PRISONER_RELEASE_DISMISS_CLOSE_WAIT_MS = 8000;
+047373: function claimAutoMissionDispatch(missionId) {
+047374:     const id = String(missionId || '').trim();
+047375:     if (!id) return false;
+047376:     const now = Date.now();
+047377:     let previous = null;
+047378:     try {
+047379:         previous = JSON.parse(
+047380:             sessionStorage.getItem(MF_AUTO_DISPATCH_LATCH_KEY) || 'null'
+047381:         );
+047382:     } catch (_error) {}
+047383:     if (
+047384:         previous &&
+047385:         String(previous.missionId || '') === id &&
+047386:         now - Number(previous.claimedAt || 0) < MF_AUTO_DISPATCH_LATCH_TTL_MS
+047387:     ) {
+047388:         return false;
+047389:     }
+047390:     try {
+047391:         sessionStorage.setItem(
+047392:             MF_AUTO_DISPATCH_LATCH_KEY,
+047393:             JSON.stringify({ missionId: id, claimedAt: now })
+047394:         );
+047395:     } catch (_error) {}
+047396:     return true;
+047397: }
+047398: function releaseAutoMissionDispatch(missionId) {
+047399:     try {
+047400:         const previous = JSON.parse(
+047401:             sessionStorage.getItem(MF_AUTO_DISPATCH_LATCH_KEY) || 'null'
+047402:         );
+047403:         if (String(previous?.missionId || '') === String(missionId || '')) {
+047404:             sessionStorage.removeItem(MF_AUTO_DISPATCH_LATCH_KEY);
+047405:         }
+047406:     } catch (_error) {}
+047407: }
+047408: function getActivePrisonerCellSelectionContext() {
+047409:     const candidateDocuments =
+047410:         typeof mfGetAccessibleDocumentsForTransport === 'function'
+047411:             ? mfGetAccessibleDocumentsForTransport()
+047412:             : [document];
+047413:     for (const candidateDocument of candidateDocuments) {
+047414:         if (!candidateDocument || !candidateDocument.querySelectorAll) {
+047415:             continue;
+047416:         }
+047417:         const structuredRequests = Array.from(
+047418:             candidateDocument.querySelectorAll(
+047419:                 '[data-transport-request="true"][data-transport-request-type="prisoner"]'
+047420:             )
+047421:         );
+047422:         for (const request of structuredRequests) {
+047423:             const prisonSelect = request.querySelector?.(
+047424:                 '.prison-select[data-vehicle-id]'
+047425:             );
+047426:             if (!prisonSelect) continue;
+047427:             const alert =
+047428:                 request.querySelector?.('.alert.alert-info') ||
+047429:                 request;
+047430:             try {
+047431:                 if (!mfIsVisibleInOwnDocument(alert)) continue;
+047432:             } catch (_error) {
+047433:                 continue;
+047434:             }
+047435:             return {
+047436:                 document: candidateDocument,
+047437:                 alert,
+047438:                 root: request
+047439:             };
+047440:         }
+047441:         const alerts = Array.from(
+047442:             candidateDocument.querySelectorAll('.alert.alert-info')
+047443:         );
+047444:         for (const alert of alerts) {
+047445:             try {
+047446:                 if (!mfIsVisibleInOwnDocument(alert)) continue;
+047447:             } catch (_error) {
+047448:                 continue;
+047449:             }
+047450:             const alertText = String(
+047451:                 alert.innerText || alert.textContent || ''
+047452:             )
+047453:                 .replace(/\s+/g, ' ')
+047454:                 .trim()
+047455:                 .toLowerCase();
+047456:             if (
+047457:                 !alertText.includes(
+047458:                     'the prisoners should be placed in a cell'
+047459:                 )
+047460:             ) {
+047461:                 continue;
+047462:             }
+047463:             const root =
+047464:                 alert.closest('#col_left') ||
+047465:                 alert.closest(
+047466:                     '.vm--modal, .modal, .lightbox, #lightbox_box'
+047467:                 ) ||
+047468:                 candidateDocument.body ||
+047469:                 candidateDocument;
+047470:             return {
+047471:                 document: candidateDocument,
+047472:                 alert,
+047473:                 root
+047474:             };
+047475:         }
+047476:     }
+047477:     return null;
+047478: }
+047479: function getFirstAvailablePrisonCellDestination(context) {
+047480:     if (!context || !context.root || !context.root.querySelectorAll) {
+047481:         return null;
+047482:     }
+047483:     const links = Array.from(
+047484:         context.root.querySelectorAll(
+047485:             'a.btn.btn-success[data-prison-id][href*="/gefangener/"]'
+047486:         )
+047487:     );
+047488:     for (const link of links) {
+047489:         try {
+047490:             if (!mfIsVisibleInOwnDocument(link)) continue;
+047491:         } catch (_error) {
+047492:             continue;
+047493:         }
+047494:         if (
+047495:             link.hidden ||
+047496:             link.classList.contains('disabled') ||
+047497:             link.classList.contains('hidden') ||
+047498:             link.classList.contains('d-none') ||
+047499:             link.getAttribute('aria-disabled') === 'true'
+047500:         ) {
+047501:             continue;
+047502:         }
+047503:         const href = String(
+047504:             link.getAttribute('href') || link.href || ''
+047505:         ).trim();
+047506:         const prisonId = String(
+047507:             link.getAttribute('data-prison-id') || ''
+047508:         ).trim();
+047509:         if (!/^\d+$/.test(prisonId)) continue;
+047510:         let destinationUrl;
+047511:         try {
+047512:             destinationUrl = new URL(
+047513:                 href,
+047514:                 context.document.location?.origin ||
+047515:                     window.location.origin
+047516:             );
+047517:         } catch (_error) {
+047518:             continue;
+047519:         }
+047520:         const pathMatch = destinationUrl.pathname.match(
+047521:             /^\/vehicles\/(\d+)\/gefangener\/(\d+)\/?$/
+047522:         );
+047523:         if (!pathMatch || pathMatch[2] !== prisonId) continue;
+047524:         const label = String(
+047525:             link.innerText || link.textContent || ''
+047526:         )
+047527:             .replace(/\s+/g, ' ')
+047528:             .trim();
+047529:         const capacityMatch = label.match(
+047530:             /(?:free|available)\s+cells?\s*:\s*(\d+)/i
+047531:         );
+047532:         if (
+047533:             capacityMatch &&
+047534:             Number(capacityMatch[1]) <= 0
+047535:         ) {
+047536:             continue;
+047537:         }
+047538:         return link;
+047539:     }
+047540:     return null;
+047541: }
+047542: function readAutoPrisonerCellHandoffState() {
+047543:     try {
+047544:         const parsed = JSON.parse(
+047545:             sessionStorage.getItem(
+047546:                 MF_AUTO_PRISONER_CELL_HANDOFF_KEY
+047547:             ) ||
+047548:                 'null'
+047549:         );
+047550:         if (!parsed || typeof parsed !== 'object') return null;
+047551:         return {
+047552:             ownerKey: String(parsed.ownerKey || ''),
+047553:             href: String(parsed.href || ''),
+047554:             clickedAt: Number(parsed.clickedAt || 0),
+047555:             attempts: Math.max(
+047556:                 0,
+047557:                 Math.trunc(Number(parsed.attempts || 0))
+047558:             )
+047559:         };
+047560:     } catch (_error) {
+047561:         return null;
+047562:     }
+047563: }
+047564: function writeAutoPrisonerCellHandoffState(state) {
+047565:     try {
+047566:         sessionStorage.setItem(
+047567:             MF_AUTO_PRISONER_CELL_HANDOFF_KEY,
+047568:             JSON.stringify(state)
+047569:         );
+047570:     } catch (_error) {}
+047571: }
+047572: function clearAutoPrisonerCellHandoffState() {
+047573:     try {
+047574:         sessionStorage.removeItem(
+047575:             MF_AUTO_PRISONER_CELL_HANDOFF_KEY
+047576:         );
+047577:     } catch (_error) {}
+047578: }
+047579: async function handleAutoPrisonerCellBeforeUnitFinder() {
+047580:     let context = getActivePrisonerCellSelectionContext();
+047581:     if (!context) {
+047582:         clearAutoPrisonerCellHandoffState();
+047583:         clearAutoPrisonerReleaseState();
+047584:         return 'none';
+047585:     }
+047586:     updateStatusBox(
+047587:         'Auto Mode: prisoner cell handoff detected. Selecting the first available cell before Unit Finder...'
+047588:     );
+047589:     const destinationWaitStarted = Date.now();
+047590:     let destination =
+047591:         getFirstAvailablePrisonCellDestination(context);
+047592:     while (
+047593:         !destination &&
+047594:         autoModeRunning &&
+047595:         !isManualAutoStopActive() &&
+047596:         Date.now() - destinationWaitStarted <
+047597:             MF_AUTO_PRISONER_CELL_DESTINATION_WAIT_MS
+047598:     ) {
+047599:         await wait(125);
+047600:         context = getActivePrisonerCellSelectionContext();
+047601:         if (!context) {
+047602:             clearAutoPrisonerCellHandoffState();
+047603:             return 'handled';
+047604:         }
+047605:         destination =
+047606:             getFirstAvailablePrisonCellDestination(context);
+047607:     }
+047608:     if (!autoModeRunning || isManualAutoStopActive()) {
+047609:         return 'stuck';
+047610:     }
+047611:     if (!destination) {
+047612:         clearAutoPrisonerCellHandoffState();
+047613:         if (mfDebugEnabled) {
+047614:             debugLog(
+047615:                 'AUTO PRISONER CELL',
+047616:                 'No active cell destination is available. Running the exact Release Prisoners fallback before Unit Finder.'
+047617:             );
+047618:         }
+047619:         updateStatusBox(
+047620:             'Auto Mode: no available prisoner cell remains. Releasing prisoners before Unit Finder...'
+047621:         );
+047622:         const releaseResult =
+047623:             await handleAutoPrisonerReleaseAfterActions();
+047624:         return releaseResult === 'none'
+047625:             ? 'handled'
+047626:             : releaseResult;
+047627:     }
+047628:     const href = String(
+047629:         destination.getAttribute('href') ||
+047630:             destination.href ||
+047631:             ''
+047632:     ).trim();
+047633:     const ownerKey =
+047634:         getCurrentMissionIdForQueueRestart() ||
+047635:         String(window.location.href || '');
+047636:     const previous = readAutoPrisonerCellHandoffState();
+047637:     const sameDestination = !!(
+047638:         previous &&
+047639:         previous.ownerKey === ownerKey &&
+047640:         previous.href === href
+047641:     );
+047642:     const previousAge = sameDestination
+047643:         ? Date.now() - previous.clickedAt
+047644:         : Number.POSITIVE_INFINITY;
+047645:     if (
+047646:         sameDestination &&
+047647:         previousAge >= 0 &&
+047648:         previousAge < MF_AUTO_PRISONER_CELL_CLICK_RETRY_MS
+047649:     ) {
+047650:         updateStatusBox(
+047651:             'Auto Mode: waiting for the prisoner cell handoff to complete before Unit Finder...'
+047652:         );
+047653:         return 'waiting';
+047654:     }
+047655:     const attempts = sameDestination
+047656:         ? previous.attempts + 1
+047657:         : 1;
+047658:     if (attempts > MF_AUTO_PRISONER_CELL_MAX_ATTEMPTS) {
+047659:         if (mfDebugEnabled) {
+047660:             debugLog(
+047661:                 'AUTO PRISONER CELL',
+047662:                 `Destination did not complete after ${previous.attempts} click attempt(s): ${href}`
+047663:             );
+047664:         }
+047665:         return 'stuck';
+047666:     }
+047667:     writeAutoPrisonerCellHandoffState({
+047668:         ownerKey,
+047669:         href,
+047670:         clickedAt: Date.now(),
+047671:         attempts
+047672:     });
+047673:     const destinationLabel = String(
+047674:         destination.innerText ||
+047675:             destination.textContent ||
+047676:             'available cell'
+047677:     )
+047678:         .replace(/\s+/g, ' ')
+047679:         .trim();
+047680:     updateStatusBox(
+047681:         `Auto Mode: assigning prisoner to ${destinationLabel.slice(0, 120)}...`
+047682:     );
+047683:     if (mfDebugEnabled) {
+047684:         debugLog(
+047685:             'AUTO PRISONER CELL',
+047686:             `Clicking first active destination in DOM order | attempt=${attempts} | href=${href} | label="${destinationLabel}"`
+047687:         );
+047688:     }
+047689:     const clicked = realClickForQueueRestart(destination);
+047690:     if (!clicked) {
+047691:         clearAutoPrisonerCellHandoffState();
+047692:         return 'stuck';
+047693:     }
+047694:     await wait(450);
+047695:     return 'clicked';
+047696: }
+047697: function getAutoPrisonerReleaseOwnerContainer(releaseContext) {
+047698:     const releaseDocument =
+047699:         releaseContext?.document ||
+047700:         releaseContext?.alert?.ownerDocument ||
+047701:         releaseContext?.root?.ownerDocument ||
+047702:         null;
+047703:     try {
+047704:         const frame = releaseDocument?.defaultView?.frameElement;
+047705:         const container = frame?.closest?.('.vm--container');
+047706:         if (container) return container;
+047707:     } catch (_error) {}
+047708:     const anchor = releaseContext?.alert || releaseContext?.root || null;
+047709:     try {
+047710:         return anchor?.closest?.('.vm--container') || null;
+047711:     } catch (_error) {
+047712:         return null;
+047713:     }
+047714: }
+047715: function getAutoPrisonerReleaseContainerKey(container) {
+047716:     if (!container?.querySelector) return '';
+047717:     try {
+047718:         return String(
+047719:             container.querySelector('.vm--overlay[data-modal]')
+047720:                 ?.getAttribute('data-modal') || ''
+047721:         ).trim();
+047722:     } catch (_error) {
+047723:         return '';
+047724:     }
+047725: }
+047726: function findAutoPrisonerReleaseContainerByKey(candidateDocument, key) {
+047727:     if (!candidateDocument?.querySelectorAll || !key) return null;
+047728:     return Array.from(candidateDocument.querySelectorAll(
+047729:         '#modals-container .vm--container, .vm--container'
+047730:     )).find(container => {
+047731:         return getAutoPrisonerReleaseContainerKey(container) === key;
+047732:     }) || null;
+047733: }
+047734: function captureAutoPrisonerReleaseOwnerContext(releaseContext) {
+047735:     const container =
+047736:         getAutoPrisonerReleaseOwnerContainer(releaseContext);
+047737:     if (!container?.querySelectorAll) return null;
+047738:     return {
+047739:         document: container.ownerDocument || document,
+047740:         container,
+047741:         containerKey:
+047742:             getAutoPrisonerReleaseContainerKey(container),
+047743:         order: Number.MAX_SAFE_INTEGER
+047744:     };
+047745: }
+047746: function getAutoPrisonerReleaseCloseControl(
+047747:     container,
+047748:     modal,
+047749:     visible
+047750: ) {
+047751:     const scope = modal || container;
+047752:     if (!scope?.querySelectorAll || !container?.contains) return null;
+047753:     const direct = scope.querySelector(
+047754:         '.control-btn-container span.lightbox-close[title="Close"], ' +
+047755:         '.control-btn-container .lightbox-close[title="Close"], ' +
+047756:         'span.lightbox-close[title="Close"], ' +
+047757:         '.lightbox-close[title="Close"]'
+047758:     );
+047759:     if (
+047760:         direct &&
+047761:         container.contains(direct) &&
+047762:         (!modal || modal.contains(direct)) &&
+047763:         visible(direct)
+047764:     ) {
+047765:         return direct;
+047766:     }
+047767:     const markers = Array.from(scope.querySelectorAll(
+047768:         'svg[data-icon="xmark"], ' +
+047769:         'svg.svg-inline--fa.fa-xmark'
+047770:     ));
+047771:     for (const marker of markers) {
+047772:         const control = marker.closest?.(
+047773:             'span.lightbox-close[title="Close"], ' +
+047774:             '.lightbox-close[title="Close"], ' +
+047775:             'button, a[href], [role="button"]'
+047776:         ) || marker.parentElement || null;
+047777:         if (
+047778:             control &&
+047779:             container.contains(control) &&
+047780:             (!modal || modal.contains(control)) &&
+047781:             visible(control)
+047782:         ) {
+047783:             return control;
+047784:         }
+047785:     }
+047786:     return null;
+047787: }
+047788: function getAutoPrisonerReleaseResultDocuments(
+047789:     releaseContext,
+047790:     dismissContext
+047791: ) {
+047792:     const documents = [];
+047793:     const seen = new Set();
+047794:     const addDocument = candidateDocument => {
+047795:         if (
+047796:             !candidateDocument ||
+047797:             !candidateDocument.querySelectorAll ||
+047798:             seen.has(candidateDocument) ||
+047799:             documents.length >= 24
+047800:         ) {
+047801:             return;
+047802:         }
+047803:         seen.add(candidateDocument);
+047804:         documents.push(candidateDocument);
+047805:     };
+047806:     addDocument(releaseContext?.document);
+047807:     addDocument(releaseContext?.alert?.ownerDocument);
+047808:     addDocument(dismissContext?.document);
+047809:     addDocument(dismissContext?.container?.ownerDocument);
+047810:     addDocument(document);
+047811:     if (
+047812:         typeof mfGetAccessibleDocumentsForTransport ===
+047813:         'function'
+047814:     ) {
+047815:         for (const candidateDocument of
+047816:             mfGetAccessibleDocumentsForTransport(true)) {
+047817:             addDocument(candidateDocument);
+047818:         }
+047819:     }
+047820:     for (let index = 0; index < documents.length; index += 1) {
+047821:         const candidateDocument = documents[index];
+047822:         try {
+047823:             addDocument(
+047824:                 candidateDocument.defaultView?.frameElement
+047825:                     ?.ownerDocument
+047826:             );
+047827:         } catch (_error) {}
+047828:         try {
+047829:             const parentWindow =
+047830:                 candidateDocument.defaultView?.parent;
+047831:             if (
+047832:                 parentWindow &&
+047833:                 parentWindow !== candidateDocument.defaultView
+047834:             ) {
+047835:                 addDocument(parentWindow.document);
+047836:             }
+047837:         } catch (_error) {}
+047838:         for (const frame of Array.from(
+047839:             candidateDocument.querySelectorAll('iframe')
+047840:         )) {
+047841:             try {
+047842:                 addDocument(
+047843:                     frame.contentDocument ||
+047844:                     frame.contentWindow?.document
+047845:                 );
+047846:             } catch (_error) {}
+047847:         }
+047848:     }
+047849:     return documents;
+047850: }
+047851: function getAutoPrisonerReleaseSuccessContext(
+047852:     releaseContext,
+047853:     dismissContext
+047854: ) {
+047855:     const currentDismissContext =
+047856:         resolveAutoPrisonerReleaseDismissContext(
+047857:             dismissContext
+047858:         ) || dismissContext || null;
+047859:     const expectedContainer =
+047860:         currentDismissContext?.container || null;
+047861:     const expectedKey = String(
+047862:         currentDismissContext?.containerKey ||
+047863:         getAutoPrisonerReleaseContainerKey(
+047864:             expectedContainer
+047865:         ) || ''
+047866:     ).trim();
+047867:     for (const candidateDocument of
+047868:         getAutoPrisonerReleaseResultDocuments(
+047869:             releaseContext,
+047870:             currentDismissContext
+047871:         )) {
+047872:         const alerts = Array.from(
+047873:             candidateDocument.querySelectorAll(
+047874:                 '.alert.alert-success'
+047875:             )
+047876:         );
+047877:         for (const alert of alerts) {
+047878:             try {
+047879:                 if (!mfIsVisibleInOwnDocument(alert)) continue;
+047880:             } catch (_error) {
+047881:                 continue;
+047882:             }
+047883:             const text = String(
+047884:                 alert.innerText || alert.textContent || ''
+047885:             )
+047886:                 .replace(/\s+/g, ' ')
+047887:                 .trim()
+047888:                 .toLowerCase();
+047889:             if (!/^the prisoners were released\.?$/.test(text)) {
+047890:                 continue;
+047891:             }
+047892:             const resultContainer =
+047893:                 getAutoPrisonerReleaseOwnerContainer({
+047894:                     document: candidateDocument,
+047895:                     alert,
+047896:                     root: alert
+047897:                 });
+047898:             const resultKey =
+047899:                 getAutoPrisonerReleaseContainerKey(
+047900:                     resultContainer
+047901:                 );
+047902:             if (expectedContainer) {
+047903:                 const sameContainer =
+047904:                     resultContainer === expectedContainer;
+047905:                 const sameKey = !!(
+047906:                     expectedKey &&
+047907:                     resultKey &&
+047908:                     resultKey === expectedKey
+047909:                 );
+047910:                 const contained = !!(
+047911:                     !resultContainer &&
+047912:                     expectedContainer.contains?.(alert)
+047913:                 );
+047914:                 if (!sameContainer && !sameKey && !contained) {
+047915:                     continue;
+047916:                 }
+047917:             } else if (!resultContainer) {
+047918:                 continue;
+047919:             }
+047920:             const ownedDismissContext =
+047921:                 currentDismissContext ||
+047922:                 captureAutoPrisonerReleaseOwnerContext({
+047923:                     document: candidateDocument,
+047924:                     alert,
+047925:                     root: alert
+047926:                 });
+047927:             if (!ownedDismissContext) continue;
+047928:             return {
+047929:                 document: candidateDocument,
+047930:                 alert,
+047931:                 dismissContext: ownedDismissContext
+047932:             };
+047933:         }
+047934:     }
+047935:     return null;
+047936: }
+047937: function resolveAutoPrisonerReleaseDismissContext(context) {
+047938:     if (!context) return null;
+047939:     const documents = Array.from(new Set([
+047940:         context.document,
+047941:         document,
+047942:         ...(
+047943:             typeof mfGetAccessibleDocumentsForTransport === 'function'
+047944:                 ? mfGetAccessibleDocumentsForTransport()
+047945:                 : []
+047946:         )
+047947:     ].filter(Boolean)));
+047948:     let container = context.container || null;
+047949:     const key = String(
+047950:         context.containerKey ||
+047951:         getAutoPrisonerReleaseContainerKey(container) || ''
+047952:     ).trim();
+047953:     if (!container || container.isConnected === false) {
+047954:         container = null;
+047955:         for (const candidateDocument of documents) {
+047956:             container = findAutoPrisonerReleaseContainerByKey(
+047957:                 candidateDocument,
+047958:                 key
+047959:             );
+047960:             if (container) break;
+047961:         }
+047962:     }
+047963:     if (!container?.querySelectorAll) return null;
+047964:     const visible = element => {
+047965:         try {
+047966:             return !!element && mfIsVisibleInOwnDocument(element);
+047967:         } catch (_error) {
+047968:             return false;
+047969:         }
+047970:     };
+047971:     const modals = Array.from(container.querySelectorAll(
+047972:         '.vm--modal[role="dialog"], .vm--modal, .modal, .lightbox, #lightbox_box'
+047973:     )).filter(visible);
+047974:     const overlays = Array.from(container.querySelectorAll(
+047975:         '.vm--overlay[aria-expanded="true"], .vm--overlay'
+047976:     )).filter(visible);
+047977:     const modal = modals[modals.length - 1] || null;
+047978:     const overlay = overlays[overlays.length - 1] || null;
+047979:     if (!modal && !overlay) return null;
+047980:     const closeButton = getAutoPrisonerReleaseCloseControl(
+047981:         container,
+047982:         modal,
+047983:         visible
+047984:     );
+047985:     let zIndex = 0;
+047986:     try {
+047987:         const raw = container.ownerDocument?.defaultView
+047988:             ?.getComputedStyle(modal || overlay || container)?.zIndex || '0';
+047989:         const parsed = Number.parseInt(raw, 10);
+047990:         zIndex = Number.isFinite(parsed) ? parsed : 0;
+047991:     } catch (_error) {}
+047992:     return {
+047993:         ...context,
+047994:         document: container.ownerDocument || context.document || document,
+047995:         container,
+047996:         containerKey: key || getAutoPrisonerReleaseContainerKey(container),
+047997:         modal,
+047998:         overlay,
+047999:         closeButton,
+048000:         zIndex
+048001:     };
+048002: }
+048003: function getVisibleAutoPrisonerReleaseDismissContexts(releaseContext = null) {
+048004:     const ownerContainer = getAutoPrisonerReleaseOwnerContainer(releaseContext);
+048005:     if (ownerContainer) {
+048006:         const ownerContext = resolveAutoPrisonerReleaseDismissContext({
+048007:             document: ownerContainer.ownerDocument || document,
+048008:             container: ownerContainer,
+048009:             containerKey: getAutoPrisonerReleaseContainerKey(ownerContainer),
+048010:             order: Number.MAX_SAFE_INTEGER
+048011:         });
+048012:         if (ownerContext?.closeButton) return [ownerContext];
+048013:     }
+048014:     const documents = Array.from(new Set([
+048015:         document,
+048016:         ...(
+048017:             typeof mfGetAccessibleDocumentsForTransport === 'function'
+048018:                 ? mfGetAccessibleDocumentsForTransport()
+048019:                 : []
+048020:         )
+048021:     ].filter(Boolean)));
+048022:     const candidates = [];
+048023:     const seen = new Set();
+048024:     let order = 0;
+048025:     for (const candidateDocument of documents) {
+048026:         if (!candidateDocument?.querySelectorAll) continue;
+048027:         const buttons = Array.from(candidateDocument.querySelectorAll(
+048028:             '#modals-container .vm--container .vm--modal ' +
+048029:             '.control-btn-container span.lightbox-close[title="Close"], ' +
+048030:             '.vm--container .vm--modal span.lightbox-close[title="Close"], ' +
+048031:             'span.lightbox-close[title="Close"]'
+048032:         ));
+048033:         for (const button of buttons) {
+048034:             order += 1;
+048035:             if (!button || button.id?.includes('mf-')) continue;
+048036:             const modal = button.closest('.vm--modal, .modal, .lightbox, #lightbox_box');
+048037:             const container = button.closest('.vm--container') || modal?.parentElement;
+048038:             if (!modal || !container || seen.has(container)) continue;
+048039:             seen.add(container);
+048040:             const resolved = resolveAutoPrisonerReleaseDismissContext({
+048041:                 document: candidateDocument,
+048042:                 container,
+048043:                 containerKey: getAutoPrisonerReleaseContainerKey(container),
+048044:                 order
+048045:             });
+048046:             if (resolved?.closeButton) candidates.push(resolved);
+048047:         }
+048048:     }
+048049:     candidates.sort((left, right) =>
+048050:         left.zIndex - right.zIndex || left.order - right.order
+048051:     );
+048052:     return candidates;
+048053: }
+048054: function getTopmostAutoPrisonerReleaseDismissContext(releaseContext = null) {
+048055:     const candidates = getVisibleAutoPrisonerReleaseDismissContexts(
+048056:         releaseContext
+048057:     );
+048058:     return candidates.length ? candidates[candidates.length - 1] : null;
+048059: }
+048060: function isAutoPrisonerReleaseDismissContextVisible(context) {
+048061:     return !!resolveAutoPrisonerReleaseDismissContext(context);
+048062: }
+048063: async function closeAutoPrisonerReleaseDismissAfterClick(
+048064:     releaseContext = null,
+048065:     initialDismissContext = null
+048066: ) {
+048067:     updateStatusBox(
+048068:         'Auto Mode: Release Prisoners clicked. Waiting for the result screen before restarting the mission cycle...'
+048069:     );
+048070:     let dismissContext =
+048071:         initialDismissContext ||
+048072:         captureAutoPrisonerReleaseOwnerContext(releaseContext) ||
+048073:         getTopmostAutoPrisonerReleaseDismissContext(
+048074:             releaseContext
+048075:         );
+048076:     const resultStarted = Date.now();
+048077:     let successContext =
+048078:         getAutoPrisonerReleaseSuccessContext(
+048079:             releaseContext,
+048080:             dismissContext
+048081:         );
+048082:     while (
+048083:         autoModeRunning &&
+048084:         !isManualAutoStopActive() &&
+048085:         !successContext &&
+048086:         Date.now() - resultStarted < MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS
+048087:     ) {
+048088:         await wait(100);
+048089:         successContext =
+048090:             getAutoPrisonerReleaseSuccessContext(
+048091:                 releaseContext,
+048092:                 dismissContext
+048093:             );
+048094:     }
+048095:     if (!autoModeRunning || isManualAutoStopActive()) return 'stuck';
+048096:     if (!successContext) return 'stuck';
+048097:     dismissContext =
+048098:         successContext.dismissContext || dismissContext;
+048099:     const dismissStarted = Date.now();
+048100:     let liveDismissContext =

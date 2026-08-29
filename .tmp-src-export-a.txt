@@ -1,0 +1,901 @@
+007600: state.runRetries += 1;
+007601: clearPostDispatchWatchdog('manual-retry');
+007602: const candidate = sameOriginUrl(state.currentMissionUrl || state.bootstrapMissionUrl);
+007603: const candidateMissionId = missionIdFromUrl(candidate?.href || '');
+007604: const mission = candidateMissionId && !isMissionTemporarilySkipped(candidateMissionId)
+007605: ? { url: candidate.href }
+007606: : (choosePriorityTarget() || chooseBootstrapMission());
+007607: state.wanted = true;
+007608: state.running = false;
+007609: state.lastError = '';
+007610: resetAutoStartTracking();
+007611: setPersistedBackgroundWanted(true);
+007612: persistRunStart(state.runStartedAt || nowIso());
+007613: clearSharedV2AutoRunning('manual-retry-bootstrap');
+007614: const supply = actionableMissionSupply({
+007615: excludeMissionId: state.lowQueuePaused ? state.lowQueueTriggerMissionId : '',
+007616: });
+007617: if (state.lowQueuePaused || supply.count < MINIMUM_ACTIONABLE_MISSIONS) {
+007618: if (!state.lowQueuePaused) enterLowQueuePause('retry-below-minimum-supply');
+007619: else beginMissionRescan();
+007620: log('Manual retry retained the safe low-queue pause.', {
+007621: observedCount: supply.count,
+007622: minimumMissions: MINIMUM_ACTIONABLE_MISSIONS,
+007623: });
+007624: return;
+007625: }
+007626: const request = transportServiceRequest(refreshRadioTransportRequests());
+007627: if (request && startTransportOnlyWorker(request, 'manual-retry')) return;
+007628: if (!mission?.url) {
+007629: enterLowQueuePause('retry-without-actionable-mission');
+007630: return;
+007631: }
+007632: log('Manual retry requested.');
+007633: pausePipelineController('manual-retry-active-bootstrap', true);
+007634: createWorker(mission.url);
+007635: }
+007636: function readJsonStorage(storage, key, fallback) {
+007637: try {
+007638: const raw = storage?.getItem?.(key);
+007639: if (!raw) return fallback;
+007640: return JSON.parse(raw);
+007641: } catch {
+007642: return fallback;
+007643: }
+007644: }
+007645: function percentileFromSortedNumbers(sorted, percentile) {
+007646: if (!sorted.length) return 0;
+007647: const position = Math.max(0, Math.min(sorted.length - 1, Math.ceil(sorted.length * percentile) - 1));
+007648: return sorted[position];
+007649: }
+007650: function summariseMissionTimingSamples(samples, count, totalMs) {
+007651: const sorted = (Array.isArray(samples) ? samples : [])
+007652: .map(Number)
+007653: .filter(value => Number.isFinite(value) && value >= 0)
+007654: .sort((left, right) => left - right);
+007655: const safeCount = Math.max(0, Number(count || 0));
+007656: const underTenSeconds = sorted.filter(value => value <= 10000).length;
+007657: return {
+007658: count: safeCount,
+007659: samplesRetained: sorted.length,
+007660: sampleLimit: MISSION_TIMING_SAMPLE_LIMIT,
+007661: samplesTruncated: safeCount > sorted.length,
+007662: minimumMs: sorted[0] || 0,
+007663: medianMs: percentileFromSortedNumbers(sorted, 0.5),
+007664: averageMs: safeCount ? Math.round(Math.max(0, Number(totalMs || 0)) / safeCount) : 0,
+007665: p90Ms: percentileFromSortedNumbers(sorted, 0.9),
+007666: p95Ms: percentileFromSortedNumbers(sorted, 0.95),
+007667: maximumMs: sorted[sorted.length - 1] || 0,
+007668: underTenSeconds,
+007669: underTenSecondsPercent: sorted.length ? Math.round((underTenSeconds / sorted.length) * 1000) / 10 : 0,
+007670: };
+007671: }
+007672: function missionFinderRunValueSnapshot(elapsedSeconds) {
+007673: const raw = readJsonStorage(sessionStorage, V2_SESSION_STATS_KEY, {});
+007674: const completedDispatches = Math.max(0, Number(raw?.completed || 0));
+007675: const skipped = Math.max(0, Number(raw?.skipped || 0));
+007676: const updates = Math.max(0, Number(raw?.updates || 0));
+007677: const estimatedMissionValue = Math.max(0, Number(raw?.credits || 0));
+007678: const creditCaptureMisses = Math.max(0, Number(raw?.creditCaptureMisses || 0));
+007679: const hours = Math.max(0, Number(elapsedSeconds || 0)) / 3600;
+007680: return {
+007681: source: 'Mission page average credits captured at successful dispatch; this is estimated mission value, not settled bank income.',
+007682: startedAt: Number(raw?.startedAt || 0) ? new Date(Number(raw.startedAt)).toISOString() : '',
+007683: completedDispatches,
+007684: skipped,
+007685: missionUpdates: updates,
+007686: estimatedMissionValue,
+007687: averageEstimatedValuePerDispatch: completedDispatches
+007688: ? Math.round(estimatedMissionValue / completedDispatches)
+007689: : 0,
+007690: completedDispatchesPerHour: hours > 0
+007691: ? Math.round((completedDispatches / hours) * 10) / 10
+007692: : 0,
+007693: estimatedValuePerHour: hours > 0
+007694: ? Math.round(estimatedMissionValue / hours)
+007695: : 0,
+007696: creditCaptureMisses,
+007697: creditCaptureSuccesses: Math.max(0, completedDispatches - creditCaptureMisses),
+007698: lastCreditCapture: raw?.lastCreditCapture && typeof raw.lastCreditCapture === 'object'
+007699: ? { ...raw.lastCreditCapture }
+007700: : null,
+007701: recentEntries: Array.isArray(raw?.entries) ? raw.entries.slice(0, 25) : [],
+007702: };
+007703: }
+007704: function staffingFailureDiagnosticsSnapshot() {
+007705: const rawHistory = readJsonStorage(sessionStorage, V2_STAFFING_FAILURE_HISTORY_KEY, []);
+007706: const runtimeQuarantine = readJsonStorage(sessionStorage, V2_STAFFING_QUARANTINE_KEY, []);
+007707: const history = (Array.isArray(rawHistory) ? rawHistory : [])
+007708: .filter(record => record && typeof record === 'object');
+007709: const stationMap = new Map();
+007710: const vehicleMap = new Map();
+007711: history.forEach(record => {
+007712: const confirmedEmptyIds = new Set(
+007713: (record.knownEmptyAmbulanceExclusions || []).map(vehicle => vehicle.vehicleId).filter(Boolean)
+007714: );
+007715: const vehicles = Array.from(new Map([
+007716: ...(record.selectedVehicles || []),
+007717: ...(record.knownEmptyAmbulanceExclusions || []),
+007718: ].map(vehicle => [
+007719: vehicle.vehicleId || `${vehicle.stationName}|${vehicle.vehicleName}`,
+007720: vehicle,
+007721: ])).values());
+007722: const eventStations = new Set();
+007723: vehicles.forEach(vehicle => {
+007724: const stationKey = vehicle.stationName || vehicle.stationHref || 'Unknown station';
+007725: const station = stationMap.get(stationKey) || {
+007726: stationName: vehicle.stationName || 'Unknown station',
+007727: stationHref: vehicle.stationHref || '',
+007728: events: 0,
+007729: candidateOccurrences: 0,
+007730: confirmedEmptyOccurrences: 0,
+007731: vehicleIds: new Set(),
+007732: };
+007733: station.candidateOccurrences += 1;
+007734: if (confirmedEmptyIds.has(vehicle.vehicleId)) station.confirmedEmptyOccurrences += 1;
+007735: if (vehicle.vehicleId) station.vehicleIds.add(vehicle.vehicleId);
+007736: stationMap.set(stationKey, station);
+007737: eventStations.add(stationKey);
+007738: if (vehicle.vehicleId) {
+007739: const existingVehicle = vehicleMap.get(vehicle.vehicleId) || {
+007740: ...vehicle,
+007741: failureCandidateOccurrences: 0,
+007742: confirmedEmptyOccurrences: 0,
+007743: };
+007744: existingVehicle.failureCandidateOccurrences += 1;
+007745: if (confirmedEmptyIds.has(vehicle.vehicleId)) existingVehicle.confirmedEmptyOccurrences += 1;
+007746: vehicleMap.set(vehicle.vehicleId, existingVehicle);
+007747: }
+007748: });
+007749: eventStations.forEach(stationKey => {
+007750: const station = stationMap.get(stationKey);
+007751: if (station) station.events += 1;
+007752: });
+007753: });
+007754: const stationSummary = Array.from(stationMap.values())
+007755: .map(station => ({
+007756: ...station,
+007757: vehicleIds: Array.from(station.vehicleIds),
+007758: }))
+007759: .sort((left, right) =>
+007760: right.confirmedEmptyOccurrences - left.confirmedEmptyOccurrences ||
+007761: right.events - left.events ||
+007762: left.stationName.localeCompare(right.stationName)
+007763: );
+007764: return {
+007765: privacyNote: 'Contains vehicle and station identifiers, but never personnel names.',
+007766: currentRunEventCount: history.length,
+007767: currentRunFailureCount: history.filter(record =>
+007768: String(record.eventType || 'dispatch-block') === 'dispatch-block'
+007769: ).length,
+007770: preflightExclusionEventCount: history.filter(record =>
+007771: record.eventType === 'preflight-exclusion'
+007772: ).length,
+007773: currentRunEvents: history,
+007774: currentRunFailures: history.filter(record =>
+007775: String(record.eventType || 'dispatch-block') === 'dispatch-block'
+007776: ),
+007777: stationSummary,
+007778: vehicleSummary: Array.from(vehicleMap.values()).sort((left, right) =>
+007779: right.confirmedEmptyOccurrences - left.confirmedEmptyOccurrences ||
+007780: right.failureCandidateOccurrences - left.failureCandidateOccurrences
+007781: ),
+007782: runtimeQuarantineCount: Array.isArray(runtimeQuarantine) ? runtimeQuarantine.length : 0,
+007783: runtimeQuarantinedVehicles: Array.isArray(runtimeQuarantine)
+007784: ? runtimeQuarantine.slice(-80)
+007785: : [],
+007786: };
+007787: }
+007788: function buildRunFailureDiagnostics(missionValue, staffingFailures) {
+007789: const unitFinderHistory = readJsonStorage(localStorage, V2_UNIT_FINDER_DIAGNOSTICS_KEY, []);
+007790: const snapshots = (Array.isArray(unitFinderHistory) ? unitFinderHistory : [])
+007791: .filter(item => item && typeof item === 'object');
+007792: const byMission = new Map();
+007793: const ensureMission = (missionId, missionName = '') => {
+007794: const id = String(missionId || '');
+007795: if (!id) return null;
+007796: if (!byMission.has(id)) {
+007797: byMission.set(id, {
+007798: missionId: id,
+007799: missionName: cleanMissionCaption(missionName || missionNameForId(id)),
+007800: fulfilment: 'unknown',
+007801: dispatchObserved: false,
+007802: requirements: [],
+007803: selectionShortfalls: [],
+007804: visibleAlerts: [],
+007805: selectedVehicleCount: 0,
+007806: transportEvents: [],
+007807: staffingFailures: [],
+007808: retriesAndRecoveries: [],
+007809: creditCapture: null,
+007810: evidenceCapturedAt: '',
+007811: });
+007812: }
+007813: const record = byMission.get(id);
+007814: if (!record.missionName && missionName) record.missionName = cleanMissionCaption(missionName);
+007815: return record;
+007816: };
+007817: state.runMissionIds.forEach(id => ensureMission(id));
+007818: snapshots.forEach(snapshot => {
+007819: const mission = ensureMission(snapshot?.mission?.missionId, snapshot?.mission?.missionName);
+007820: if (!mission) return;
+007821: const liveRows = Array.isArray(snapshot?.requirementContext?.currentLiveRequirementRows)
+007822: ? snapshot.requirementContext.currentLiveRequirementRows : [];
+007823: const processedRows = Array.isArray(snapshot?.requirementContext?.processedRows)
+007824: ? snapshot.requirementContext.processedRows : [];
+007825: const loadRows = Array.isArray(snapshot?.selectionSummary?.vehicleLoadState?.rows)
+007826: ? snapshot.selectionSummary.vehicleLoadState.rows : [];
+007827: const missingRows = [...liveRows, ...processedRows]
+007828: .filter(row => Number(row?.stillNeeded || 0) > 0)
+007829: .map(row => ({
+007830: name: String(row.unitName || row.mappedName || ''),
+007831: mappedName: String(row.mappedName || ''),
+007832: stillNeeded: Math.max(0, Number(row.stillNeeded || 0)),
+007833: requiredTotal: Math.max(0, Number(row.requiredTotal || 0)),
+007834: source: String(row.source || ''),
+007835: personnelRequirement: String(row.personnelRequirement || ''),
+007836: }));
+007837: const selectionShortfalls = loadRows
+007838: .filter(row => Number(row?.selected || 0) < Number(row?.required || 0))
+007839: .map(row => ({
+007840: name: String(row.originalName || row.mappedName || ''),
+007841: mappedName: String(row.mappedName || ''),
+007842: required: Math.max(0, Number(row.required || 0)),
+007843: selected: Math.max(0, Number(row.selected || 0)),
+007844: shortfall: Math.max(0, Number(row.required || 0) - Number(row.selected || 0)),
+007845: status: String(row.status || ''),
+007846: }));
+007847: mission.requirements = missingRows;
+007848: mission.selectionShortfalls = selectionShortfalls;
+007849: mission.visibleAlerts = Array.isArray(snapshot?.requirementContext?.visibleAlerts)
+007850: ? snapshot.requirementContext.visibleAlerts.slice(0, 20).map(String) : [];
+007851: mission.selectedVehicleCount = Array.isArray(snapshot?.selectionSummary?.selectedVehicles)
+007852: ? snapshot.selectionSummary.selectedVehicles.length : 0;
+007853: mission.dispatchObserved = mission.dispatchObserved || /^before-dispatch/.test(String(snapshot.reason || ''));
+007854: mission.evidenceCapturedAt = String(snapshot.capturedAt || '');
+007855: const ready = snapshot?.execution?.ready === true || snapshot?.selectionSummary?.vehicleLoadState?.ready === true;
+007856: if (missingRows.length || selectionShortfalls.length || snapshot?.execution?.staffingBlockActive === true) {
+007857: mission.fulfilment = mission.selectedVehicleCount > 0 ? 'partially-fulfilled' : 'unfulfilled';
+007858: } else if (ready || mission.dispatchObserved) {
+007859: mission.fulfilment = 'fully-fulfilled';
+007860: }
+007861: });
+007862: state.missionTimingHistory.forEach(timing => {
+007863: const mission = ensureMission(timing?.missionId, timing?.missionName);
+007864: if (!mission) return;
+007865: mission.dispatchObserved = mission.dispatchObserved || Boolean(
+007866: timing?.milestones?.dispatchNext || timing?.milestones?.dispatchShare || timing?.milestones?.finalDispatch
+007867: );
+007868: mission.timing = { ...timing };
+007869: });
+007870: state.runTransportEvents.forEach(event => {
+007871: const mission = ensureMission(event?.missionId);
+007872: if (mission) mission.transportEvents.push({ ...event });
+007873: });
+007874: (staffingFailures?.currentRunEvents || []).forEach(event => {
+007875: const mission = ensureMission(event?.missionId, event?.missionName);
+007876: if (mission) mission.staffingFailures.push({ ...event });
+007877: });
+007878: [
+007879: ['mission-skip', state.missionSkipHistory],
+007880: ['auto-recovery', state.autoRecoveryHistory],
+007881: ['zero-selection', state.zeroSelectionHistory],
+007882: ['transport-recovery', state.transportRecoveryHistory],
+007883: ['post-dispatch-recovery', state.postDispatchRecoveryHistory],
+007884: ['promotion-stall', state.promotionRecoveryHistory],
+007885: ['active-control-dropout', state.activeControlDropoutHistory],
+007886: ].forEach(([category, events]) => (events || []).forEach(event => {
+007887: const mission = ensureMission(event?.missionId || event?.currentMissionId, event?.missionName);
+007888: if (mission) mission.retriesAndRecoveries.push({ category, ...event });
+007889: }));
+007890: (missionValue?.recentEntries || []).forEach(entry => {
+007891: const mission = ensureMission(entry?.missionId, entry?.missionName);
+007892: if (mission) mission.creditCapture = { ...entry };
+007893: });
+007894: const missions = Array.from(byMission.values());
+007895: const stalledTransports = state.runTransportEvents.filter(event =>
+007896: event?.outcome === 'active' ||
+007897: Number(event?.durationMs || 0) >= TRANSPORT_STALL_WARN_MS ||
+007898: /stuck|failed|circuit|recovery/i.test(String(event?.outcome || ''))
+007899: ).map(event => ({ ...event }));
+007900: const stalledTransportMissionIds = new Set(
+007901: stalledTransports.map(event => String(event.missionId || '')).filter(Boolean)
+007902: );
+007903: const unresolvedMissions = missions.filter(mission =>
+007904: mission.fulfilment === 'partially-fulfilled' ||
+007905: mission.fulfilment === 'unfulfilled' ||
+007906: mission.staffingFailures.length ||
+007907: mission.retriesAndRecoveries.length ||
+007908: stalledTransportMissionIds.has(mission.missionId)
+007909: );
+007910: return {
+007911: schemaVersion: 1,
+007912: meaning: {
+007913: fullyFulfilled: 'Unit Finder reported ready with no remaining requirement or selection shortfall at the last captured attempt.',
+007914: partiallyFulfilled: 'Some vehicles were selected, but a requirement, staffing block or selection shortfall remained.',
+007915: unfulfilled: 'No selected vehicle evidence was captured while requirements or a staffing block remained.',
+007916: unknown: 'The run did not retain enough Unit Finder evidence to prove fulfilment. This must not be treated as success.',
+007917: },
+007918: summary: {
+007919: missionsObserved: missions.length,
+007920: fullyFulfilled: missions.filter(item => item.fulfilment === 'fully-fulfilled').length,
+007921: partiallyFulfilled: missions.filter(item => item.fulfilment === 'partially-fulfilled').length,
+007922: unfulfilled: missions.filter(item => item.fulfilment === 'unfulfilled').length,
+007923: unknown: missions.filter(item => item.fulfilment === 'unknown').length,
+007924: dispatchObserved: missions.filter(item => item.dispatchObserved).length,
+007925: missionsWithTransport: missions.filter(item => item.transportEvents.length).length,
+007926: stalledTransportCount: stalledTransports.length,
+007927: staffingFailureCount: Number(staffingFailures?.currentRunFailureCount || 0),
+007928: zeroSelectionRecoveryCount: state.zeroSelectionRecoveries,
+007929: postDispatchHardRecoveryCount: state.postDispatchHardRecoveries,
+007930: transportHardRecoveryCount: state.transportHardRecoveries,
+007931: creditCaptureMisses: Number(missionValue?.creditCaptureMisses || 0),
+007932: },
+007933: currentBlocker: {
+007934: missionId: state.currentMissionId,
+007935: missionName: state.currentMissionName,
+007936: phase: state.phase,
+007937: status: state.status,
+007938: detail: state.detail,
+007939: lastError: state.lastError,
+007940: activeTransport: state.activeTransportEvent ? { ...state.activeTransportEvent } : null,
+007941: postDispatchWatchdog: state.postDispatchWatchdog ? { ...state.postDispatchWatchdog } : null,
+007942: autoStopRecord: readV2AutoStopRecord(),
+007943: },
+007944: stalledTransports,
+007945: unresolvedMissions,
+007946: missions,
+007947: unitFinderSnapshotsRetained: snapshots.length,
+007948: unitFinderHistoryLimitWarning: snapshots.length >= 120
+007949: ? 'Unit Finder history reached its retention limit; older mission-level fulfilment evidence may have been discarded.'
+007950: : '',
+007951: };
+007952: }
+007953: function diagnosticsSnapshot() {
+007954: const href = getWorkerHref();
+007955: const doc = getWorkerDocument();
+007956: const autoControl = findAutoModeControl(doc);
+007957: const candidates = collectMissionCandidates();
+007958: const liveWorkerSnapshot = captureWorkerSnapshot();
+007959: const workerSnapshot = liveWorkerSnapshot || state.lastWorkerSnapshot || {};
+007960: const v2AutoStopRecord = readV2AutoStopRecord();
+007961: const runEndMs = state.runStoppedAt ? Date.parse(state.runStoppedAt) : Date.now();
+007962: const runStartMs = state.runStartedAt ? Date.parse(state.runStartedAt) : 0;
+007963: const elapsedSeconds = runStartMs ? Math.max(0, Math.round((runEndMs - runStartMs) / 1000)) : 0;
+007964: const missionValue = missionFinderRunValueSnapshot(elapsedSeconds);
+007965: const staffingFailures = staffingFailureDiagnosticsSnapshot();
+007966: const failureDiagnostics = buildRunFailureDiagnostics(missionValue, staffingFailures);
+007967: const actionableSupply = actionableMissionSupply({
+007968: excludeMissionId: state.lowQueuePaused ? state.lowQueueTriggerMissionId : '',
+007969: });
+007970: return {
+007971: generatedAt: nowIso(),
+007972: controllerVersion: VERSION,
+007973: masterVersion: MASTER_VERSION,
+007974: missionFinderVersion: MISSION_FINDER_VERSION,
+007975: mergedRuntime: true,
+007976: heavyRuntimeLoaded: window.__MCN_HEAVY_RUNTIME_LOADED__ === true,
+007977: pairedV2Required: false,
+007978: page: {
+007979: origin: location.origin,
+007980: pathname: location.pathname,
+007981: missionListPresent: Boolean(findMissionListRoot()),
+007982: missionCandidateCount: candidates.length,
+007983: nonAllianceLikeCandidateCount: candidates.filter(item => !item.allianceLike).length,
+007984: actionableMissionSupply: actionableSupply.count,
+007985: minimumActionableMissions: MINIMUM_ACTIONABLE_MISSIONS,
+007986: actionableMissionIds: actionableSupply.missionIds,
+007987: topMission: compactMissionCandidate(chooseTopMission()),
+007988: visualTopMission: state.visualTopMission ? { ...state.visualTopMission } : null,
+007989: activeMissionSkips: activeMissionSkipRecords(),
+007990: radioTransportRequests: refreshRadioTransportRequests().map(request => ({ ...request })),
+007991: allianceRadioRequestsIgnored: state.runAllianceRadioIgnored,
+007992: },
+007993: run: {
+007994: startedAt: state.runStartedAt || '',
+007995: stoppedAt: state.runStoppedAt || '',
+007996: elapsedSeconds: runStartMs ? Math.max(0, Math.round((runEndMs - runStartMs) / 1000)) : 0,
+007997: uniqueMissionCount: state.runUniqueMissionCount,
+007998: missionIdsRetained: state.runMissionIds.length,
+007999: missionIdHistoryLimit: RUN_MISSION_ID_HISTORY_LIMIT,
+008000: missionIdsTruncated: state.runUniqueMissionCount > state.runMissionIds.length,
+008001: missionIds: state.runMissionIds.slice(),
+008002: successfulDispatchCount: missionValue.completedDispatches,
+008003: missionValue,
+008004: failureDiagnostics,
+008005: workerLoads: state.runWorkerLoads,
+008006: navigationChanges: state.runNavigations,
+008007: retries: state.runRetries,
+008008: patientTransportContexts: state.runPatientTransports,
+008009: prisonerTransportContexts: state.runPrisonerTransports,
+008010: radioTransportRequestsSeen: state.runRadioTransportRequests,
+008011: allianceRadioRequestsIgnored: state.runAllianceRadioIgnored,
+008012: patientAssistAttempts: state.patientAssistAttempts,
+008013: prisonerAssistAttempts: state.prisonerAssistAttempts,
+008014: nativeMissionAdvances: state.nativeMissionAdvances,
+008015: topPageResumes: state.topPageResumes,
+008016: lowQueuePauses: state.lowQueuePauses,
+008017: lowQueueCompletedPauses: state.lowQueueCompletedPauses,
+008018: lowQueueTotalPausedMs: state.lowQueueTotalPausedMs + (
+008019: state.lowQueuePaused && state.lowQueuePauseSince
+008020: ? Math.max(0, Date.now() - state.lowQueuePauseSince)
+008021: : 0
+008022: ),
+008023: lowQueueLongestPauseMs: Math.max(
+008024: state.lowQueueLongestPauseMs,
+008025: state.lowQueuePaused && state.lowQueuePauseSince
+008026: ? Math.max(0, Date.now() - state.lowQueuePauseSince)
+008027: : 0
+008028: ),
+008029: lowQueueHistory: state.lowQueueHistory.slice(),
+008030: runtimeRecycles: state.runtimeRecycles,
+008031: runtimeRecycleHistory: state.runtimeRecycleHistory.slice(),
+008032: managedRuntimeDisposals: state.managedRuntimeDisposals,
+008033: zeroSelectionRecoveries: state.zeroSelectionRecoveries,
+008034: zeroSelectionHistory: state.zeroSelectionHistory.slice(),
+008035: autoRecoverySkips: state.autoRecoverySkips,
+008036: autoRecoveryHistory: state.autoRecoveryHistory.slice(),
+008037: autoRecoveryWatchdog: state.autoRecoveryCandidateKey ? {
+008038: missionId: state.autoRecoveryCandidateMissionId,
+008039: missionName: missionNameForId(state.autoRecoveryCandidateMissionId),
+008040: category: state.autoRecoveryCandidateCategory,
+008041: reason: state.autoRecoveryCandidateReason,
+008042: elapsedMs: Math.max(0, Date.now() - state.autoRecoveryCandidateSince),
+008043: waitMs: state.autoRecoveryCandidateWaitMs || AUTO_RECOVERY_WATCHDOG_MS,
+008044: evidence: state.autoRecoveryCandidateEvidence,
+008045: } : null,
+008046: recoverableMissionSkips: state.recoverableMissionSkips,
+008047: activeMissionSkips: activeMissionSkipRecords(),
+008048: missionSkipHistory: state.missionSkipHistory.slice(),
+008049: airfieldAliasRewrites: state.airfieldAliasRewrites,
+008050: airfieldAliasHistory: state.airfieldAliasHistory.slice(),
+008051: airfieldSupervisorAssistAttempts: state.airfieldSupervisorAssistAttempts,
+008052: airfieldSupervisorAssistHistory: state.airfieldSupervisorAssistHistory.slice(),
+008053: rescueDogAssistAttempts: state.rescueDogAssistAttempts,
+008054: rescueDogAssistHistory: state.rescueDogAssistHistory.slice(),
+008055: massCasualtyThresholdAttempts: state.massCasualtyThresholdAttempts,
+008056: massCasualtyThresholdHistory: state.massCasualtyThresholdHistory.slice(),
+008057: prisonerReleaseSuccessRehooks: state.prisonerReleaseSuccessRehooks,
+008058: prisonerReleaseSuccessHistory: state.prisonerReleaseSuccessHistory.slice(),
+008059: transportServiceAttempts: state.transportServiceAttempts,
+008060: transportServiceCleared: state.transportServiceCleared,
+008061: transportServiceActive: state.transportServiceActive,
+008062: transportHardRecoveries: state.transportHardRecoveries,
+008063: transportRecoveryCircuitBreakers: state.transportRecoveryCircuitBreakers,
+008064: transportRecoveryHistory: state.transportRecoveryHistory.slice(),
+008065: priorityRedirects: state.priorityRedirects,
+008066: queueFastReleases: state.queueFastReleases,
+008067: queueFastReleaseHistory: state.queueFastReleaseHistory.slice(),
+008068: postDispatchSoftRecoveries: state.postDispatchSoftRecoveries,
+008069: postDispatchHardRecoveries: state.postDispatchHardRecoveries,
+008070: postDispatchCircuitBreakers: state.postDispatchCircuitBreakers,
+008071: postDispatchRecoveryHistory: state.postDispatchRecoveryHistory.slice(),
+008072: postDispatchWatchdog: state.postDispatchWatchdog ? {
+008073: ...state.postDispatchWatchdog,
+008074: effectiveElapsedMs: postDispatchEffectiveElapsed(state.postDispatchWatchdog),
+008075: } : null,
+008076: pipelinePreloadCreates: state.pipelinePreloadCreates,
+008077: pipelinePreloadsReady: state.pipelinePreloadsReady,
+008078: pipelineVehicleLoadClicks: state.pipelineVehicleLoadClicks,
+008079: pipelinePromotions: state.pipelinePromotions,
+008080: pipelineReadyPromotions: state.pipelineReadyPromotions,
+008081: pipelineIsolationFailures: state.pipelineIsolationFailures,
+008082: pipelinePromotionFallbacks: state.pipelinePromotionFallbacks,
+008083: pipelineV2DormantReady: state.pipelineV2DormantReady,
+008084: pipelineV2DormantPromotionFailures: state.pipelineV2DormantPromotionFailures,
+008085: pipelineDuplicateClicksSuppressed: state.pipelineDuplicateClicksSuppressed,
+008086: pipelineHandoffRetentions: state.pipelineHandoffRetentions,
+008087: pipelineDormantInteractionsBlocked: state.pipelineDormantInteractionsBlocked,
+008088: promotionWorkStallRecoveries: state.promotionWorkStallRecoveries,
+008089: promotionRecoveryHistory: state.promotionRecoveryHistory.slice(),
+008090: activeBootstrapRescues: state.activeBootstrapRescues,
+008091: activeBootstrapRescueMissionId: state.activeBootstrapRescueMissionId,
+008092: activeBootstrapRescueAttempts: state.activeBootstrapRescueAttempts,
+008093: activeBootstrapHistory: state.activeBootstrapHistory.slice(),
+008094: activeControlDropoutRescues: state.activeControlDropoutRescues,
+008095: activeControlSoftRecoveries: state.activeControlSoftRecoveries,
+008096: activeControlDropoutCircuitBreakers: state.activeControlDropoutCircuitBreakers,
+008097: activeControlDropoutHistory: state.activeControlDropoutHistory.slice(),
+008098: pipelineActiveOnly: state.pipelineActiveOnly,
+008099: pipelineActiveOnlyReason: state.pipelineActiveOnlyReason,
+008100: pipelineActiveOnlySince: state.pipelineActiveOnlySince
+008101: ? new Date(state.pipelineActiveOnlySince).toISOString()
+008102: : '',
+008103: pipelineOwnershipDemotions: state.pipelineOwnershipDemotions,
+008104: activeOwnershipBootstrapInstalls: state.activeOwnershipBootstrapInstalls,
+008105: activeOwnershipBootstrapFailures: state.activeOwnershipBootstrapFailures,
+008106: activeOwnershipBootstrapHistory: state.activeOwnershipBootstrapHistory.slice(),
+008107: sleepGapRecoveries: state.sleepGapRecoveries,
+008108: sleepGapHistory: state.sleepGapHistory.slice(),
+008109: autoStateDropoutRecoveries: state.autoStateDropoutRecoveries,
+008110: autoStateDropoutReloads: state.autoStateDropoutReloads,
+008111: autoStateActiveOnlyFailures: state.autoStateActiveOnlyFailures,
+008112: autoStateDropoutHistory: state.autoStateDropoutHistory.slice(),
+008113: skippedMissionPrestartRedirects: state.skippedMissionPrestartRedirects,
+008114: pipelineSlots: state.pipelineSlots.map(compactPipelineSlot),
+008115: pipelineHistory: state.pipelineHistory.slice(),
+008116: transportAffinityCorrections: 0,
+008117: postTransportRehooks: state.postTransportRehooks,
+008118: postTransportGuardFastReleases: state.postTransportGuardFastReleases,
+008119: nonMissionRedirectRecoveries: state.nonMissionRedirectRecoveries,
+008120: nonMissionRedirectRecoveryHistory: state.nonMissionRedirectRecoveryHistory.slice(),
+008121: topSyntheticMissionRehooksBlocked: state.topSyntheticMissionRehooksBlocked,
+008122: transportEvents: state.runTransportEvents.map(event => ({ ...event })),
+008123: ruleChangeHistory: state.ruleChangeHistory.slice(),
+008124: radioRequestHistory: state.radioRequestHistory.slice(),
+008125: allianceRadioIgnoredHistory: state.allianceRadioIgnoredHistory.slice(),
+008126: patientAssistHistory: state.patientAssistHistory.slice(),
+008127: prisonerAssistHistory: state.prisonerAssistHistory.slice(),
+008128: transportServiceHistory: state.transportServiceHistory.slice(),
+008129: transportAffinityHistory: state.transportAffinityHistory.slice(),
+008130: statusHistory: state.statusHistory.slice(),
+008131: missionTimingHistory: state.missionTimingHistory.slice(),
+008132: missionTimingSummary: {
+008133: dispatchClick: summariseMissionTimingSamples(
+008134: state.missionDispatchTimingSamplesMs,
+008135: state.missionDispatchTimingCount,
+008136: state.missionDispatchTimingTotalMs
+008137: ),
+008138: fullCycle: summariseMissionTimingSamples(
+008139: state.missionCycleTimingSamplesMs,
+008140: state.missionDispatchTimingCount,
+008141: state.missionCycleTimingTotalMs
+008142: ),
+008143: },
+008144: staffingFailures,
+008145: activeMissionTiming: state.activeMissionTiming ? JSON.parse(JSON.stringify(state.activeMissionTiming)) : null,
+008146: },
+008147: controller: {
+008148: wanted: state.wanted,
+008149: running: state.running,
+008150: stopping: state.stopping,
+008151: phase: state.phase,
+008152: status: state.status,
+008153: detail: state.detail,
+008154: lowQueuePaused: state.lowQueuePaused,
+008155: lowQueuePauseSince: state.lowQueuePauseSince
+008156: ? new Date(state.lowQueuePauseSince).toISOString()
+008157: : '',
+008158: lowQueueObservedCount: state.lowQueueObservedCount,
+008159: lowQueueTriggerMissionId: state.lowQueueTriggerMissionId,
+008160: lowQueueResumeCandidateSince: state.lowQueueResumeCandidateSince
+008161: ? new Date(state.lowQueueResumeCandidateSince).toISOString()
+008162: : '',
+008163: minimumActionableMissions: MINIMUM_ACTIONABLE_MISSIONS,
+008164: runtimeRecycleLastAt: state.runtimeRecycleLastAt
+008165: ? new Date(state.runtimeRecycleLastAt).toISOString()
+008166: : '',
+008167: runtimeRecycleAdvanceBaseline: state.runtimeRecycleAdvanceBaseline,
+008168: runtimeRecycles: state.runtimeRecycles,
+008169: managedRuntimeDisposals: state.managedRuntimeDisposals,
+008170: runtimeRecycleEveryAdvances: CONTROLLER_RUNTIME_RECYCLE_ADVANCES,
+008171: runtimeRecycleMaximumAgeMs: CONTROLLER_RUNTIME_RECYCLE_MAX_AGE_MS,
+008172: usedJSHeapSize: controllerUsedHeapBytes(),
+008173: pipelinePreloadLimit: PIPELINE_PRELOAD_COUNT,
+008174: pipelineMemoryPressureActive: state.pipelineMemoryPressureActive,
+008175: pipelineMemoryPressureSince: state.pipelineMemoryPressureSince,
+008176: pipelineMemoryPressureHeapBytes: state.pipelineMemoryPressureHeapBytes,
+008177: pipelineMemoryPressureActivations: state.pipelineMemoryPressureActivations,
+008178: pipelineMemoryPressureReleases: state.pipelineMemoryPressureReleases,
+008179: pipelineMemoryPressureReason: state.pipelineMemoryPressureReason,
+008180: pipelineMemoryBaselineBytes: state.pipelineMemoryBaselineBytes,
+008181: pipelineMemoryLastBytes: state.pipelineMemoryLastBytes,
+008182: pipelineMemoryPeakBytes: state.pipelineMemoryPeakBytes,
+008183: pipelineMemoryCandidateSince: state.pipelineMemoryCandidateSince,
+008184: pipelineMemoryPressureBelowSince: state.pipelineMemoryPressureBelowSince,
+008185: pipelineMemoryHardCeilingBytes: CONTROLLER_MEMORY_PRESSURE_BYTES,
+008186: pipelineMemoryReleaseCeilingBytes: CONTROLLER_MEMORY_RELEASE_CEILING_BYTES,
+008187: pipelineMemoryReleaseLimitBytes: controllerMemoryPressureReleaseLimit(),
+008188: pipelineMemoryReleaseSustainMs: CONTROLLER_MEMORY_RELEASE_SUSTAIN_MS,
+008189: pipelineMemoryGrowthAllowanceBytes: CONTROLLER_MEMORY_GROWTH_BYTES,
+008190: pipelineMemoryWarmupMs: CONTROLLER_MEMORY_WARMUP_MS,
+008191: pipelineMemorySustainMs: CONTROLLER_MEMORY_SUSTAIN_MS,
+008192: ephemeralCacheSizes: {
+008193: missionNames: state.missionNames.size,
+008194: missionRowSignatures: state.missionRowSignatures.size,
+008195: allianceRadioIgnoredKeys: state.allianceRadioIgnoredKeys.size,
+008196: prisonerReleaseHandledKeys: state.prisonerReleaseHandledKeys.size,
+008197: recentlyNativeAdvanced: state.recentlyNativeAdvanced.size,
+008198: radioRequestFirstSeenAt: state.radioRequestFirstSeenAt.size,
+008199: airfieldObservers: state.airfieldObservers.size,
+008200: },
+008201: currentMissionId: state.currentMissionId,
+008202: currentMissionName: state.currentMissionName || workerSnapshot.missionName || '',
+008203: currentMissionDisplay: missionDisplay(
+008204: state.currentMissionId,
+008205: state.currentMissionName || workerSnapshot.missionName || ''
+008206: ),
+008207: currentIsTopMission: Boolean(
+008208: state.topMission?.missionId &&
+008209: state.currentMissionId === state.topMission.missionId &&
+008210: !state.transportServiceActive
+008211: ),
+008212: currentMissionPath: href ? new URL(href).pathname : (workerSnapshot.path || ''),
+008213: autoStartIssued: state.autoStartIssued,
+008214: watcherActive: Boolean(state.watcherTimer),
+008215: workerDocumentSerial: state.workerDocumentSerial,
+008216: autoStartDocumentSerial: state.autoStartDocumentSerial,
+008217: autoRunningConfirmedDocumentSerial: state.autoRunningConfirmedDocumentSerial,
+008218: autoRunningConfirmedAt: state.autoRunningConfirmedAt
+008219: ? new Date(state.autoRunningConfirmedAt).toISOString()
+008220: : '',
+008221: autoStartAttempts: state.autoStartAttempts,
+008222: promotedDocumentSerial: state.promotedDocumentSerial,
+008223: promotedWorkStartedAt: state.promotedWorkStartedAt
+008224: ? new Date(state.promotedWorkStartedAt).toISOString()
+008225: : '',
+008226: promotedWorkEvidenceAt: state.promotedWorkEvidenceAt
+008227: ? new Date(state.promotedWorkEvidenceAt).toISOString()
+008228: : '',
+008229: promotedWorkEvidenceText: state.promotedWorkEvidenceText,
+008230: promotedWorkAwaitingEvidence: promotedWorkAwaitingEvidence(),
+008231: promotionWorkStallRecoveries: state.promotionWorkStallRecoveries,
+008232: promotionRecoveryPendingMissionId: state.promotionRecoveryPendingMissionId,
+008233: v2AutoStopRecord,
+008234: autoControlFound: Boolean(autoControl) || Boolean(workerSnapshot.autoControlFound),
+008235: autoControlText: autoControl ? elementLabel(autoControl) : (workerSnapshot.autoControlText || state.autoControlText),
+008236: autoLooksRunning: autoControl ? autoControlLooksRunning(autoControl) : Boolean(workerSnapshot.autoLooksRunning),
+008237: autoStopWarned: state.autoStopWarned,
+008238: autoRecoverySkips: state.autoRecoverySkips,
+008239: autoRecoveryWatchdog: state.autoRecoveryCandidateKey ? {
+008240: missionId: state.autoRecoveryCandidateMissionId,
+008241: category: state.autoRecoveryCandidateCategory,
+008242: reason: state.autoRecoveryCandidateReason,
+008243: elapsedMs: Math.max(0, Date.now() - state.autoRecoveryCandidateSince),
+008244: waitMs: state.autoRecoveryCandidateWaitMs || AUTO_RECOVERY_WATCHDOG_MS,
+008245: } : null,
+008246: zeroSelectionRecoveries: state.zeroSelectionRecoveries,
+008247: topPageResumes: state.topPageResumes,
+008248: resumedFromTopNavigation: state.resumedFromTopNavigation,
+008249: persistedBackgroundWanted: persistedBackgroundWanted(),
+008250: storedResumeMissionUrl: storedResumeMissionUrl(),
+008251: transportKind: state.transportKind,
+008252: transportIdentity: state.transportIdentity,
+008253: transportSeconds: state.transportSince ? Math.round((Date.now() - state.transportSince) / 1000) : 0,
+008254: transportHardRecoveries: state.transportHardRecoveries,
+008255: transportRecoveryCircuitBreakers: state.transportRecoveryCircuitBreakers,
+008256: lastError: state.lastError,
+008257: topMission: state.topMission ? { ...state.topMission } : null,
+008258: visualTopMission: state.visualTopMission ? { ...state.visualTopMission } : null,
+008259: activeMissionSkips: activeMissionSkipRecords(),
+008260: recoverableMissionSkips: state.recoverableMissionSkips,
+008261: airfieldAliasRewrites: state.airfieldAliasRewrites,
+008262: airfieldSupervisorAssistAttempts: state.airfieldSupervisorAssistAttempts,
+008263: rescueDogAssistAttempts: state.rescueDogAssistAttempts,
+008264: massCasualtyThresholdAttempts: state.massCasualtyThresholdAttempts,
+008265: massCasualtyThresholdLastMissionId: state.massCasualtyThresholdLastMissionId,
+008266: massCasualtyThresholdLastAmbulanceCount: state.massCasualtyThresholdLastAmbulanceCount,
+008267: prisonerReleaseSuccessRehooks: state.prisonerReleaseSuccessRehooks,
+008268: queueFastReleases: state.queueFastReleases,
+008269: postTransportGuardFastReleases: state.postTransportGuardFastReleases,
+008270: postDispatchSoftRecoveries: state.postDispatchSoftRecoveries,
+008271: postDispatchHardRecoveries: state.postDispatchHardRecoveries,
+008272: postDispatchCircuitBreakers: state.postDispatchCircuitBreakers,
+008273: postDispatchWatchdog: state.postDispatchWatchdog ? {
+008274: missionId: state.postDispatchWatchdog.missionId,
+008275: missionName: state.postDispatchWatchdog.missionName,
+008276: effectiveElapsedMs: postDispatchEffectiveElapsed(state.postDispatchWatchdog),
+008277: paused: Boolean(state.postDispatchWatchdog.pausedAt),
+008278: pauseReason: state.postDispatchWatchdog.pauseReason,
+008279: softRecovered: state.postDispatchWatchdog.softRecovered,
+008280: } : null,
+008281: pipelinePromotions: state.pipelinePromotions,
+008282: pipelineReadyPromotions: state.pipelineReadyPromotions,
+008283: pipelineVehicleLoadClicks: state.pipelineVehicleLoadClicks,
+008284: pipelineIsolationFailures: state.pipelineIsolationFailures,
+008285: pipelinePromotionFallbacks: state.pipelinePromotionFallbacks,
+008286: pipelineV2DormantReady: state.pipelineV2DormantReady,
+008287: pipelineV2DormantPromotionFailures: state.pipelineV2DormantPromotionFailures,
+008288: pipelineDuplicateClicksSuppressed: state.pipelineDuplicateClicksSuppressed,
+008289: pipelineHandoffRetentions: state.pipelineHandoffRetentions,
+008290: pipelineDormantInteractionsBlocked: state.pipelineDormantInteractionsBlocked,
+008291: activeBootstrapRescues: state.activeBootstrapRescues,
+008292: activeBootstrapRescueMissionId: state.activeBootstrapRescueMissionId,
+008293: activeBootstrapRescueAttempts: state.activeBootstrapRescueAttempts,
+008294: activeBootstrapHistory: state.activeBootstrapHistory.slice(),
+008295: activeControlDropoutRescues: state.activeControlDropoutRescues,
+008296: activeControlSoftRecoveries: state.activeControlSoftRecoveries,
+008297: activeControlDropoutCircuitBreakers: state.activeControlDropoutCircuitBreakers,
+008298: activeControlRecentDropouts: state.activeControlDropoutTimes
+008299: .filter(at => Date.now() - Number(at || 0) <= ACTIVE_CONTROL_DROPOUT_WINDOW_MS)
+008300: .length,
+008301: activeControlMissingSeconds: state.activeControlMissingSince
+008302: ? Math.round((Date.now() - state.activeControlMissingSince) / 1000)
+008303: : 0,
+008304: pipelineActiveOnly: state.pipelineActiveOnly,
+008305: pipelineActiveOnlyReason: state.pipelineActiveOnlyReason,
+008306: pipelineOwnershipDemotions: state.pipelineOwnershipDemotions,
+008307: activeOwnershipBootstrapInstalls: state.activeOwnershipBootstrapInstalls,
+008308: activeOwnershipBootstrapFailures: state.activeOwnershipBootstrapFailures,
+008309: sleepGapRecoveries: state.sleepGapRecoveries,
+008310: sleepGapHistory: state.sleepGapHistory.slice(),
+008311: autoStateDropoutRecoveries: state.autoStateDropoutRecoveries,
+008312: autoStateDropoutReloads: state.autoStateDropoutReloads,
+008313: autoStateActiveOnlyFailures: state.autoStateActiveOnlyFailures,
+008314: skippedMissionPrestartRedirects: state.skippedMissionPrestartRedirects,
+008315: nonMissionRedirectRecoveries: state.nonMissionRedirectRecoveries,
+008316: nonMissionRedirectRecoveryInFlight: state.nonMissionRedirectRecoveryInFlight,
+008317: pendingRedirectMissionId: state.redirectTargetMissionId,
+008318: pendingRedirectSeconds: state.redirectTargetMissionId && state.lastPriorityRedirectAt
+008319: ? Math.round((Date.now() - state.lastPriorityRedirectAt) / 1000)
+008320: : 0,
+008321: pipelineSlots: state.pipelineSlots.map(compactPipelineSlot),
+008322: queueGuardState: readSharedV2QueueGuardState(),
+008323: priorityPendingKey: state.priorityPendingKey,
+008324: currentTransportVehicleId: vehicleIdFromUrl(href || workerSnapshot.href || ''),
+008325: transportRequestMissionId: radioRequestForVehicle(
+008326: vehicleIdFromUrl(href || workerSnapshot.href || ''),
+008327: state.radioTransportRequests
+008328: )?.missionId || '',
+008329: transportAffinityCorrections: 0,
+008330: patientAssistAttempts: state.patientAssistAttempts,
+008331: prisonerAssistAttempts: state.prisonerAssistAttempts,
+008332: transportServiceEligible: state.transportServiceEligible,
+008333: transportServiceActive: state.transportServiceActive,
+008334: transportServiceKey: state.transportServiceKey,
+008335: transportServiceVehicleId: state.transportServiceVehicleId,
+008336: transportServiceMissionId: state.transportServiceMissionId,
+008337: transportServiceAttempts: state.transportServiceAttempts,
+008338: transportServiceCleared: state.transportServiceCleared,
+008339: nativeMissionAdvances: state.nativeMissionAdvances,
+008340: topSyntheticMissionRehooksBlocked: state.topSyntheticMissionRehooksBlocked,
+008341: radioTransportRequests: state.radioTransportRequests.map(request => ({ ...request })),
+008342: radioRequestWarningKey: state.radioRequestWarningKey,
+008343: },
+008344: worker: {
+008345: present: Boolean(state.worker?.isConnected),
+008346: storageOwnershipActive: frameOwnsOperationalState(state.worker),
+008347: storageOwnershipSource: (() => {
+008348: try { return normaliseText(frameOwnershipBridge(state.worker)?.source?.() || ''); } catch { return ''; }
+008349: })(),
+008350: frameName: String(state.worker?.name || ''),
+008351: sameOriginReadable: Boolean(doc) || Boolean(workerSnapshot.sameOriginReadable),
+008352: readyState: doc?.readyState || workerSnapshot.readyState || '',
+008353: title: normaliseText(doc?.title || workerSnapshot.title || ''),
+008354: lastCapturedAt: workerSnapshot.capturedAt || '',
+008355: lastPath: workerSnapshot.path || '',
+008356: lastMissionId: workerSnapshot.missionId || '',
+008357: lastMissionName: workerSnapshot.missionName || '',
+008358: nexusWrapperPresent: Boolean(doc?.querySelector('#mission-finder-wrapper')) || Boolean(workerSnapshot.nexusWrapperPresent),
+008359: controlPanelPresent: Boolean(doc?.querySelector('#control-panel')) || Boolean(workerSnapshot.controlPanelPresent),
+008360: patientTransportAnchorPresent: Boolean(workerSnapshot.transport?.patientAnchorCount),
+008361: prisonerControlPresent: Boolean(
+008362: workerSnapshot.transport?.structuredPrisonerRequests ||
+008363: workerSnapshot.transport?.greenPrisonDestinations ||
+008364: workerSnapshot.transport?.releaseLinks
+008365: ),
+008366: transportEvidence: workerSnapshot.transport?.evidence || [],
+008367: visibleMissionFrameOutsideWorker: Boolean(findVisibleForeignMissionFrame()) || Boolean(workerSnapshot.visibleMissionFrameOutsideWorker),
+008368: },
+008369: userAgent: navigator.userAgent,
+008370: log: state.log.slice(-120),
+008371: };
+008372: }
+008373: window.__MCN_V3_DIAGNOSTICS_SNAPSHOT__ = diagnosticsSnapshot;
+008374: function exportDiagnostics() {
+008375: const snapshot = diagnosticsSnapshot();
+008376: const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+008377: const url = URL.createObjectURL(blob);
+008378: const anchor = document.createElement('a');
+008379: anchor.href = url;
+008380: anchor.download = `missionchief-command-nexus-v3-${Date.now()}.json`;
+008381: document.body.appendChild(anchor);
+008382: anchor.click();
+008383: anchor.remove();
+008384: window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+008385: log('Exported Command Nexus V3 diagnostics.');
+008386: }
+008387: function injectStyles() {
+008388: if (document.getElementById(STYLE_ID)) return;
+008389: const style = document.createElement('style');
+008390: style.id = STYLE_ID;
+008391: style.textContent = `
+008392: #${ROOT_ID} {
+008393: --mcn-bg: rgba(8, 16, 30, 0.97);
+008394: --mcn-bg2: rgba(13, 29, 50, 0.98);
+008395: --mcn-border: rgba(104, 168, 255, 0.30);
+008396: --mcn-text: #edf6ff;
+008397: --mcn-muted: #9cb1c8;
+008398: --mcn-accent: #66b7ff;
+008399: --mcn-ok: #74dfaa;
+008400: --mcn-warn: #ffd479;
+008401: --mcn-bad: #ff8989;
+008402: position: relative;
+008403: float: left;
+008404: height: 50px;
+008405: display: flex;
+008406: align-items: center;
+008407: margin-left: 5px;
+008408: z-index: 2147483000;
+008409: font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+008410: color: var(--mcn-text);
+008411: user-select: none;
+008412: }
+008413: #${ROOT_ID} * { box-sizing: border-box; }
+008414: #${ROOT_ID} .mcn-launcher {
+008415: width: 36px;
+008416: height: 36px;
+008417: border-radius: 50%;
+008418: border: 1px solid rgba(109, 185, 255, 0.58);
+008419: background:
+008420: radial-gradient(circle at 34% 28%, rgba(94,190,255,.35), transparent 28%),
+008421: linear-gradient(145deg, #102b4a, #081425 65%);
+008422: box-shadow: 0 10px 30px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.04);
+008423: color: #f2f8ff;
+008424: display: grid;
+008425: place-items: center;
+008426: cursor: pointer;
+008427: position: relative;
+008428: font-weight: 800;
+008429: letter-spacing: -0.06em;
+008430: font-size: 18px;
+008431: outline: none;
+008432: }
+008433: #${ROOT_ID} .mcn-launcher::before {
+008434: content: "";
+008435: position: absolute;
+008436: width: 26px;
+008437: height: 26px;
+008438: border-radius: 50%;
+008439: border: 1px dashed rgba(146,203,255,.52);
+008440: }
+008441: #${ROOT_ID} .mcn-core-n {
+008442: width: 20px;
+008443: height: 23px;
+008444: display: grid;
+008445: place-items: center;
+008446: position: relative;
+008447: z-index: 1;
+008448: background: linear-gradient(145deg, rgba(8,216,255,.95), rgba(139,92,246,.92) 55%, rgba(255,49,88,.90));
+008449: clip-path: polygon(50% 0, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%);
+008450: color: #07111f;
+008451: font-size: 10px;
+008452: font-weight: 950;
+008453: letter-spacing: 0;
+008454: text-shadow: 0 1px 0 rgba(255,255,255,.45);
+008455: }
+008456: #${ROOT_ID} .mcn-dot {
+008457: position: absolute;
+008458: width: 10px;
+008459: height: 10px;
+008460: right: 1px;
+008461: bottom: 4px;
+008462: border-radius: 50%;
+008463: background: #91a2b7;
+008464: border: 2px solid #0b1728;
+008465: box-shadow: 0 0 0 1px rgba(255,255,255,.1);
+008466: }
+008467: #${ROOT_ID}[data-phase="ACTIVE"] .mcn-dot,
+008468: #${ROOT_ID}[data-phase="TRANSPORT"] .mcn-dot { background: var(--mcn-ok); box-shadow: 0 0 12px rgba(116,223,170,.65); }
+008469: #${ROOT_ID}[data-phase="LOADING"] .mcn-dot,
+008470: #${ROOT_ID}[data-phase="PIPELINE_PROMOTE"] .mcn-dot,
+008471: #${ROOT_ID}[data-phase="PROMOTION_VERIFY"] .mcn-dot,
+008472: #${ROOT_ID}[data-phase="PRIORITY_REDIRECT"] .mcn-dot,
+008473: #${ROOT_ID}[data-phase="TRANSPORT_AFFINITY"] .mcn-dot,
+008474: #${ROOT_ID}[data-phase="TRANSPORT_SERVICE"] .mcn-dot,
+008475: #${ROOT_ID}[data-phase="WAITING_NEXUS"] .mcn-dot,
+008476: #${ROOT_ID}[data-phase="STARTING"] .mcn-dot,
+008477: #${ROOT_ID}[data-phase="WAITING_MISSION"] .mcn-dot,
+008478: #${ROOT_ID}[data-phase="LOW_QUEUE_PAUSED"] .mcn-dot,
+008479: #${ROOT_ID}[data-phase="MEMORY_RECYCLE"] .mcn-dot,
+008480: #${ROOT_ID}[data-phase="RESUMING"] .mcn-dot { background: var(--mcn-accent); }
+008481: #${ROOT_ID}[data-phase="TRANSPORT_WARN"] .mcn-dot,
+008482: #${ROOT_ID}[data-phase="PROMOTION_RECOVERY"] .mcn-dot,
+008483: #${ROOT_ID}[data-phase="CONTROL_RECOVERY"] .mcn-dot,
+008484: #${ROOT_ID}[data-phase="NAVIGATION_RECOVERY"] .mcn-dot,
+008485: #${ROOT_ID}[data-phase="AUTO_RECOVERY_WAIT"] .mcn-dot,
+008486: #${ROOT_ID}[data-phase="AUTO_STOPPED"] .mcn-dot,
+008487: #${ROOT_ID}[data-phase="MISSION_SKIPPED"] .mcn-dot,
+008488: #${ROOT_ID}[data-phase="BACKGROUND_ESCAPE_WARN"] .mcn-dot { background: var(--mcn-warn); }
+008489: #${ROOT_ID}[data-phase="ERROR"] .mcn-dot { background: var(--mcn-bad); }
+008490: #${ROOT_ID} .mcn-panel {
+008491: position: fixed;
+008492: top: 58px;
+008493: left: 150px;
+008494: width: min(320px, calc(100vw - 24px));
+008495: margin: 0;
+008496: border: 1px solid var(--mcn-border);
+008497: border-radius: 14px;
+008498: background: linear-gradient(160deg, var(--mcn-bg2), var(--mcn-bg));
+008499: box-shadow: 0 18px 54px rgba(0,0,0,.46);
+008500: overflow: hidden;
