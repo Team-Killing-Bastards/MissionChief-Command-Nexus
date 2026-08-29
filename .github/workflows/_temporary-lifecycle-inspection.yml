@@ -1,4 +1,4 @@
-name: Temporary lifecycle source inspection
+name: Temporary lifecycle diagnostics build
 
 on:
   push:
@@ -9,68 +9,348 @@ permissions:
   contents: write
 
 jobs:
-  inspect:
-    if: ${{ !contains(github.event.head_commit.message, '[skip lifecycle inspection]') }}
+  build:
+    if: ${{ !contains(github.event.head_commit.message, '[lifecycle build complete]') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Check out branch
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Build exact lifecycle ranges
+      - name: Build diagnostic-only 3.0.34 candidate
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
 
-          path = Path('src/missionchief-command-nexus.user.js')
-          lines = path.read_text(encoding='utf-8').splitlines()
+          SOURCE = Path('src/missionchief-command-nexus.user.js')
 
-          def write_range(name, start, end):
-              start = max(1, start)
-              end = min(len(lines), end)
-              content = [f'{number:06d}: {lines[number - 1]}' for number in range(start, end + 1)]
-              Path(name).write_text('\n'.join(content) + '\n', encoding='utf-8')
+          def replace_once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected one match, found {count}')
+              return text.replace(old, new, 1)
 
-          write_range('.tmp-src-controller-core.txt', 1, 900)
-          write_range('.tmp-src-controller-worker.txt', 1600, 1900)
-          write_range('.tmp-src-controller-pipeline.txt', 2920, 4310)
-          write_range('.tmp-src-controller-transport.txt', 4610, 5745)
-          write_range('.tmp-src-controller-admission.txt', 5740, 7525)
-          write_range('.tmp-src-controller-export.txt', 7860, 8380)
-          write_range('.tmp-src-mf-bootstrap.txt', 18200, 19250)
-          write_range('.tmp-src-mf-diagnostics.txt', 20480, 21600)
+          source = SOURCE.read_text(encoding='utf-8')
+          source = source.replace('3.0.33', '3.0.34')
 
-          terms = [
-              '__MCN_BOOT_TRACE__',
-              'isMfV3ManagedActiveWorker',
-              'mission-observer-managed-active-owner',
-              'mission-observer-inactive-owner',
-              'MF_FRAME_RUNTIME_RECONCILE',
-              'V2_FRAME_RUNTIME_RECONCILE',
-              'managed-active-owner',
-              'bootstrapTrace',
-          ]
-          report = []
-          for number, line in enumerate(lines, 1):
-              if any(term.lower() in line.lower() for term in terms):
-                  start = max(1, number - 12)
-                  end = min(len(lines), number + 24)
-                  report.append(f'\n===== {number} [{start}-{end}] =====')
-                  for line_number in range(start, end + 1):
-                      report.append(f'{line_number:06d}: {lines[line_number - 1]}')
-          Path('.tmp-src-bootstrap-map.txt').write_text('\n'.join(report) + '\n', encoding='utf-8')
+          source = replace_once(
+              source,
+              "let activeOwner = Boolean(initialActive);\nconst originalGetItem = StorageCtor.prototype.getItem;",
+              """let activeOwner = Boolean(initialActive);
+let lastBlockedStorage = '';
+const traceOwnership = event => {
+const history = targetWindow.__MCN_V3_OWNERSHIP_TRACE__ ||= [];
+history.push({ at: Date.now(), event, active: activeOwner });
+if (history.length > 40) history.shift();
+};
+const traceBlockedStorage = (operation, key) => {
+const marker = `${operation}:${String(key || '')}`;
+if (marker === lastBlockedStorage) return;
+lastBlockedStorage = marker;
+traceOwnership(`blocked:${marker}`);
+};
+traceOwnership(`install:${source}`);
+const originalGetItem = StorageCtor.prototype.getItem;""",
+              'ownership trace installation',
+          )
+
+          source = replace_once(
+              source,
+              """StorageCtor.prototype.getItem = function(key) {
+if (!activeOwner && isOperationalV2StorageKey(key)) return null;
+return originalGetItem.call(this, key);
+};
+StorageCtor.prototype.setItem = function(key, value) {
+if (!activeOwner && isOperationalV2StorageKey(key)) return undefined;
+return originalSetItem.call(this, key, value);
+};
+StorageCtor.prototype.removeItem = function(key) {
+if (!activeOwner && isOperationalV2StorageKey(key)) return undefined;
+return originalRemoveItem.call(this, key);
+};""",
+              """StorageCtor.prototype.getItem = function(key) {
+if (!activeOwner && isOperationalV2StorageKey(key)) { traceBlockedStorage('get', key); return null; }
+return originalGetItem.call(this, key);
+};
+StorageCtor.prototype.setItem = function(key, value) {
+if (!activeOwner && isOperationalV2StorageKey(key)) { traceBlockedStorage('set', key); return undefined; }
+return originalSetItem.call(this, key, value);
+};
+StorageCtor.prototype.removeItem = function(key) {
+if (!activeOwner && isOperationalV2StorageKey(key)) { traceBlockedStorage('remove', key); return undefined; }
+return originalRemoveItem.call(this, key);
+};""",
+              'blocked storage trace',
+          )
+
+          source = replace_once(
+              source,
+              """activate() { activeOwner = true; return true; },
+deactivate() { activeOwner = false; return true; },
+promote() { activeOwner = true; return true; },
+demote() { activeOwner = false; return true; },""",
+              """activate() { activeOwner = true; traceOwnership('activate'); return true; },
+deactivate() { activeOwner = false; traceOwnership('deactivate'); return true; },
+promote() { activeOwner = true; traceOwnership('promote'); return true; },
+demote() { activeOwner = false; traceOwnership('demote'); return true; },""",
+              'ownership transitions',
+          )
+
+          source = replace_once(
+              source,
+              """try {
+snapshot.bootstrapTrace = JSON.parse(JSON.stringify(doc?.defaultView?.__MCN_BOOT_TRACE__ || null));
+} catch {
+snapshot.bootstrapTrace = null;
+}
+state.lastWorkerSnapshot = snapshot;""",
+              """try {
+snapshot.bootstrapTrace = JSON.parse(JSON.stringify(doc?.defaultView?.__MCN_BOOT_TRACE__ || null));
+} catch {
+snapshot.bootstrapTrace = null;
+}
+try {
+snapshot.ownershipTrace = JSON.parse(JSON.stringify(doc?.defaultView?.__MCN_V3_OWNERSHIP_TRACE__ || []));
+} catch {
+snapshot.ownershipTrace = [];
+}
+state.lastWorkerSnapshot = snapshot;""",
+              'worker ownership snapshot',
+          )
+
+          source = replace_once(
+              source,
+              """state.log.push(entry);
+if (state.log.length > LOG_LIMIT) state.log.splice(0, state.log.length - LOG_LIMIT);
+render();
+}
+function setPhase(phase, status, detail = '') {""",
+              """state.log.push(entry);
+if (state.log.length > LOG_LIMIT) state.log.splice(0, state.log.length - LOG_LIMIT);
+render();
+}
+window.__MCN_V3_LIFECYCLE_MARK__ = (stage, detail = {}) => log(
+`Worker lifecycle: ${normaliseText(stage)}`,
+{ workerGeneration: state.workerGeneration, documentSerial: state.workerDocumentSerial, missionId: state.currentMissionId, workerName: state.worker?.name || '', path: pathFromUrl(getWorkerHref()), detail }
+);
+function setPhase(phase, status, detail = '') {""",
+              'controller lifecycle bridge',
+          )
+
+          source = replace_once(
+              source,
+              """function setPhase(phase, status, detail = '') {
+state.phase = phase;
+state.status = status;
+state.detail = detail;
+render();
+}""",
+              """function setPhase(phase, status, detail = '') {
+state.phase = phase;
+state.status = status;
+state.detail = detail;
+log('Controller lifecycle phase.', { phase, status, detail: normaliseText(detail).slice(0, 400), workerGeneration: state.workerGeneration, documentSerial: state.workerDocumentSerial, missionId: state.currentMissionId });
+render();
+}""",
+              'controller phase history',
+          )
+
+          source = replace_once(
+              source,
+              """function exportDiagnostics() {
+const snapshot = diagnosticsSnapshot();""",
+              """window.__MCN_V3_DIAGNOSTICS_SNAPSHOT__ = diagnosticsSnapshot;
+function exportDiagnostics() {
+const snapshot = diagnosticsSnapshot();""",
+              'controller snapshot bridge',
+          )
+
+          source = replace_once(
+              source,
+              """  const bootMark = (stage, detail = '') => {
+    bootTrace.events.push({ at: Date.now(), stage: String(stage), detail: String(detail || '').slice(0, 300) });
+    if (bootTrace.events.length > 30) bootTrace.events.shift();
+  };""",
+              """  const bootMark = (stage, detail = '') => {
+    const entry = { at: Date.now(), stage: String(stage), detail: String(detail || '').slice(0, 300) };
+    bootTrace.events.push(entry);
+    if (bootTrace.events.length > 60) bootTrace.events.shift();
+    try {
+      if (window.top !== window) window.top.__MCN_V3_LIFECYCLE_MARK__?.(entry.stage, { detail: entry.detail, frameName: String(window.name || ''), path: String(location.pathname || ''), visibility: document.visibilityState, ownership: window.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__?.role?.() || '' });
+    } catch {}
+  };""",
+              'boot lifecycle forwarding',
+          )
+
+          source = replace_once(
+              source,
+              """  window.addEventListener('error', event => bootError('error', event));
+  window.addEventListener('unhandledrejection', event => bootError('unhandledrejection', event));
+  bootMark('embedded-wrapper-entered', document.readyState);""",
+              """  window.addEventListener('error', event => bootError('error', event));
+  window.addEventListener('unhandledrejection', event => bootError('unhandledrejection', event));
+  for (const type of ['pageshow', 'pagehide', 'beforeunload']) window.addEventListener(type, () => bootMark(type, document.readyState), true);
+  document.addEventListener('visibilitychange', () => bootMark('visibilitychange', document.visibilityState), true);
+  bootMark('embedded-wrapper-entered', document.readyState);""",
+              'document lifecycle listeners',
+          )
+
+          source = replace_once(
+              source,
+              """            exportVersion: 1,
+            exportedAt: new Date().toISOString(),
+            privacyNote:
+                'Contains mission IDs, vehicle names, training-code evidence and browser memory/DOM counts. It does not include cookies, passwords or personnel names.',""",
+              """            exportVersion: 2,
+            exportedAt: new Date().toISOString(),
+            privacyNote:
+                'Contains mission IDs, vehicle names, lifecycle/frame evidence, training-code evidence and browser memory/DOM counts. It does not include cookies, passwords or personnel names.',""",
+              'diagnostic export schema',
+          )
+
+          source = replace_once(
+              source,
+              """            memoryDiagnostics:
+                mfCollectMemoryDiagnostics(),
+            current,
+            history""",
+              """            memoryDiagnostics:
+                mfCollectMemoryDiagnostics(),
+            lifecycleDiagnostics: {
+                localBootTrace: window.__MCN_BOOT_TRACE__ || null,
+                localOwnershipTrace: window.__MCN_V3_OWNERSHIP_TRACE__ || [],
+                controller: (() => {
+                    try { return window.top.__MCN_V3_DIAGNOSTICS_SNAPSHOT__?.() || null; }
+                    catch (_error) { return null; }
+                })()
+            },
+            current,
+            history""",
+              'combined lifecycle diagnostics export',
+          )
+
+          SOURCE.write_text(source, encoding='utf-8')
+
+          changelog = Path('CHANGELOG.md')
+          text = changelog.read_text(encoding='utf-8')
+          entry = """## [3.0.34] - 2026-08-29
+
+### Added
+
+- Add bounded diagnostic-only Worker A ownership traces for bridge installation, activation, demotion, promotion and blocked operational storage access.
+- Forward worker document lifecycle and existing boot markers into the parent controller log, including page show/hide, unload preparation, visibility, frame name, route and current ownership role.
+- Include the complete parent controller lifecycle snapshot, local boot trace and local ownership trace in the normal Unit Finder diagnostics export without changing admission, dispatch, transport, overlay or Auto Mode decisions.
+- Increased the unified userscript version from `3.0.33` to `3.0.34`; Mission Finder remains `V10.6.177` on the restored `3.0.29` runtime.
+
+"""
+          text = replace_once(text, '## [Unreleased]\n\n', '## [Unreleased]\n\n' + entry, 'changelog insertion')
+          changelog.write_text(text, encoding='utf-8')
+
+          replacements = {
+              'README.md': [
+                  ('**Current version:** `3.0.33`', '**Current version:** `3.0.34`'),
+                  ('Version 3.0.33 restores the proven 3.0.29 runtime after the Worker A ownership changes in 3.0.30–3.0.32 caused false holds, rejected workers and missing mission controls.', 'Version 3.0.34 keeps the proven 3.0.29 runtime and adds bounded diagnostic-only Worker A lifecycle evidence without changing ownership, dispatch or visible mission controls.'),
+              ],
+              'docs/ARCHITECTURE.md': [
+                  ('current MissionChief Command Nexus v3.0.33 source', 'current MissionChief Command Nexus v3.0.34 source'),
+              ],
+              'docs/DEVELOPER_HANDOFF.md': [
+                  ('| Command Nexus version | `3.0.33` |', '| Command Nexus version | `3.0.34` |'),
+              ],
+              'docs/MIGRATION.md': [
+                  ('The current Command Nexus `3.0.33` source restores the proven `3.0.29` runtime', 'The current Command Nexus `3.0.34` source retains the proven `3.0.29` runtime and adds diagnostic-only Worker A lifecycle evidence'),
+              ],
+              'docs/README.md': [
+                  ('The current baseline is Command Nexus `3.0.33` with Mission Finder `V10.6.177`, restoring the proven `3.0.29` runtime.', 'The current baseline is Command Nexus `3.0.34` with Mission Finder `V10.6.177`, retaining the proven `3.0.29` runtime with diagnostic-only Worker A lifecycle evidence.'),
+              ],
+              'docs/ROADMAP.md': [
+                  ('## Current production baseline — v3.0.33', '## Current production baseline — v3.0.34'),
+                  ('Publish Command Nexus `3.0.33` with Mission Finder `V10.6.177` and the proven `3.0.29` runtime, rolling back the Worker A ownership changes from `3.0.30`–`3.0.32` while retaining', 'Publish Command Nexus `3.0.34` with Mission Finder `V10.6.177`, the proven `3.0.29` runtime and diagnostic-only Worker A lifecycle evidence, while retaining'),
+              ],
+              'src/README.md': [
+                  ('| Command Nexus version | `3.0.33` |', '| Command Nexus version | `3.0.34` |'),
+              ],
+          }
+          for filename, pairs in replacements.items():
+              path = Path(filename)
+              text = path.read_text(encoding='utf-8')
+              for old, new in pairs:
+                  text = replace_once(text, old, new, f'{filename}: {old[:40]}')
+              path.write_text(text, encoding='utf-8')
+
+          regression = Path('scripts/check-worker-lifecycle-diagnostics-v3034.mjs')
+          regression.write_text("""#!/usr/bin/env node
+import fs from 'node:fs';
+
+const source = fs.readFileSync('src/missionchief-command-nexus.user.js', 'utf8');
+const required = [
+  "// @version      3.0.34",
+  "const VERSION = '3.0.34';",
+  "const MASTER_VERSION = '3.0.34';",
+  '__MCN_V3_OWNERSHIP_TRACE__',
+  "traceOwnership('activate')",
+  "traceOwnership('deactivate')",
+  "traceOwnership('promote')",
+  "traceOwnership('demote')",
+  "traceBlockedStorage('get', key)",
+  'snapshot.ownershipTrace',
+  '__MCN_V3_LIFECYCLE_MARK__',
+  "Worker lifecycle: ${normaliseText(stage)}",
+  "['pageshow', 'pagehide', 'beforeunload']",
+  "bootMark('visibilitychange'",
+  '__MCN_V3_DIAGNOSTICS_SNAPSHOT__ = diagnosticsSnapshot',
+  'exportVersion: 2',
+  'lifecycleDiagnostics:',
+  'localBootTrace:',
+  'localOwnershipTrace:',
+  'window.top.__MCN_V3_DIAGNOSTICS_SNAPSHOT__?.()',
+];
+for (const marker of required) {
+  if (!source.includes(marker)) throw new Error(`Missing lifecycle diagnostic marker: ${marker}`);
+}
+if (!/if \(managedFrameRole\) \{[\s\S]*?managedFrameRole === 'ACTIVE'[\s\S]*?return;\n\}/.test(source)) {
+  throw new Error('The restored managed-frame admission contract changed unexpectedly.');
+}
+if (!source.includes("const MISSION_FINDER_VERSION = '10.6.177';")) {
+  throw new Error('Diagnostic-only release changed the Mission Finder engine version.');
+}
+console.log('Worker lifecycle diagnostics v3.0.34 regression passed.');
+""", encoding='utf-8')
+
+          # Remove all one-use discovery/build material before validation and commit.
+          for path in Path('.').glob('.tmp-lifecycle-*.txt'):
+              path.unlink()
+          for path in Path('.').glob('.tmp-src-*.txt'):
+              path.unlink()
+          Path('.github/workflows/_temporary-lifecycle-inspection.yml').unlink()
+
+          size = SOURCE.stat().st_size
+          print(f'Candidate userscript size: {size} bytes')
+          if size > 2 * 1024 * 1024:
+              raise SystemExit(f'Candidate exceeds the 2 MiB Greasy Fork ceiling: {size}')
           PY
 
-      - name: Commit exact lifecycle ranges
+      - name: Validate exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          for check in scripts/check-*.mjs; do
+            echo "Running ${check}"
+            node "${check}"
+          done
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Commit clean candidate
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .tmp-src-*.txt
-          if git diff --cached --quiet; then
-            exit 0
-          fi
-          git commit -m "Add exact lifecycle source ranges [skip lifecycle inspection]"
+          git add -A
+          git commit -m "Add diagnostic-only Worker A lifecycle tracing [lifecycle build complete]"
           git push origin HEAD:build/lifecycle-diagnostics-v3034
