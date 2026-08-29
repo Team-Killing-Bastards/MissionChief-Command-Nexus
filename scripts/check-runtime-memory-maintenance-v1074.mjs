@@ -250,7 +250,7 @@ expect(livePrune.includes('MF_LIVE_TRAINING_VERIFY_CACHE_MS'), 'Live training ca
 expect(livePrune.includes('MF_LIVE_TRAINING_VERIFY_CACHE_LIMIT'), 'Live training cache must prune by hard size');
 expect(source.includes('markLiveTrainingVehicleVerified('), 'Live verification writes must use the bounded cache helper');
 
-expect(source.includes('const MF_UNIT_FINDER_DIAGNOSTICS_MAX_STORAGE_CHARS = 750000;'), 'Diagnostic history must have a storage-size cap');
+expect(source.includes('const MF_UNIT_FINDER_DIAGNOSTICS_MAX_STORAGE_CHARS = 2500000;'), 'Expanded diagnostic history must retain a bounded storage-size cap');
 const boundHistory = extractFunction('mfBoundUnitFinderDiagnosticHistory');
 expect(boundHistory.includes('MF_UNIT_FINDER_DIAGNOSTICS_MAX_STORAGE_CHARS'), 'Diagnostic history must enforce its storage-size cap');
 expect(boundHistory.includes('bounded = bounded.slice(1)'), 'Diagnostic history must drop oldest snapshots first');

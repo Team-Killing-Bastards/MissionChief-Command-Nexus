@@ -107,8 +107,8 @@ expect(source.includes("code:\n                    'search_and_rescue'"),
   'Search Advisor must remain in trained-profile parsing');
 expect(source.includes('missionDefinitionRequiredPersonnel:\n                                    true'),
   'Composite SAR rows must retain mission-definition authority');
-expect(source.includes('const MF_UNIT_FINDER_DIAGNOSTICS_LIMIT = 24;'),
-  'Diagnostic history limit must be 24');
+expect(source.includes('const MF_UNIT_FINDER_DIAGNOSTICS_LIMIT = 120;'),
+  'Diagnostic history limit must retain 120 current-run snapshots');
 expect(source.includes('emptyMissionUpdateSnapshot'),
   'Empty Mission Update diagnostic snapshots must be suppressed');
 

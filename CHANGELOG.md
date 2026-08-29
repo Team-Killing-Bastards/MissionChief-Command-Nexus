@@ -6,6 +6,20 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.23] - 2026-08-29
+
+### Added
+
+- Command Nexus exports now include a mission-by-mission failure assessment with fully fulfilled, partially fulfilled, unfulfilled and unknown outcomes. Requirement shortfalls, selected-unit evidence, visible alerts, staffing failures, retries, recovery actions, credit capture and patient/prisoner transport events are correlated to the affected mission.
+- Export summaries now identify stalled transports, unresolved missions, the current blocker, active watchdog/transport state and retained Unit Finder evidence. Unit Finder retention was raised to 120 snapshots and is reset at the start of each Nexus run.
+
+### Fixed
+
+- Auto Mode now enforces at least one normal road ambulance after Unit Finder and again immediately before a completed dispatch. If no usable type-`5` ambulance can be selected, Dispatch is blocked and the failure is captured in diagnostics.
+- Standalone Station Overview pop-outs now hydrate Unit Naming and Station Naming inventories from their live native rows. Service, Station Type, Unit Class and Start From cascades populate alongside the already-working Dispatch Centre filter.
+- Added permanent regression coverage for the expanded export, mandatory ambulance gate and pop-out cascade hydration.
+- Increased the unified userscript version from `3.0.22` to `3.0.23`.
+
 ## [3.0.22] - 2026-08-27
 
 ### Fixed
