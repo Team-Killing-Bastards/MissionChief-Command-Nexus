@@ -6,6 +6,15 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.28] - 2026-08-29
+
+### Fixed
+
+- Removed trained-personnel register gating from all ordinary type-`5` Ambulance selection, including patient demand, mission-upgrade `Any vehicle` handling and the mandatory Auto Mode Ambulance. Live enabled MissionChief vehicle rows are now authoritative for standard Ambulances.
+- Qualification-dependent medical units retain their existing exact training and staffing safeguards.
+- Added a permanent regression guard preventing the stale `known unstaffed` filter from being reconnected to ordinary Ambulance selection.
+- Increased the unified userscript version from `3.0.27` to `3.0.28`.
+
 ## [3.0.27] - 2026-08-29
 
 ### Fixed

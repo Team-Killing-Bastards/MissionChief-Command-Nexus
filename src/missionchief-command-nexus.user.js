@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.27
+// @version      3.0.28
 // @description  MissionChief safe background automation.
 // @author       MartyBlyth
 // @license      MIT
@@ -145,8 +145,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.27';
-const MASTER_VERSION = '3.0.27';
+const VERSION = '3.0.28';
+const MASTER_VERSION = '3.0.28';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -21046,7 +21046,7 @@ bootMark('heavy-runtime-start');
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.27',
+                commandNexus: '3.0.28',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },
@@ -23918,14 +23918,11 @@ function isRoadRailUnitVehicleCheckbox(input) {
         }
         if (isAnyVehicleAmbulanceRequirement(originalName, mappedName)) {
             return sortVehicleCheckboxesByBestArrival(
-                filterKnownUnstaffedAmbulanceCandidates(
-                    getVehicleCheckboxSnapshot().filter(input => {
-                        if (input.disabled) return false;
-                        if (!includeChecked && input.checked) return false;
-                        return isNormalAmbulanceVehicleCheckbox(input);
-                    }),
-                    'mission-upgrade-any-vehicle'
-                )
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isNormalAmbulanceVehicleCheckbox(input);
+                })
             );
         }
         const eodResponseMode =
@@ -24103,14 +24100,11 @@ function isRoadRailUnitVehicleCheckbox(input) {
         if (standardAmbulanceEtaPreferred) {
             const orderedAmbulanceMatches =
                 sortVehicleCheckboxesByBestArrival(
-                    filterKnownUnstaffedAmbulanceCandidates(
-                        getVehicleCheckboxSnapshot().filter(input => {
-                            if (input.disabled) return false;
-                            if (!includeChecked && input.checked) return false;
-                            return isStandardAmbulanceEtaVehicleCheckbox(input);
-                        }),
-                        'ordinary-ambulance-demand'
-                    )
+                    getVehicleCheckboxSnapshot().filter(input => {
+                        if (input.disabled) return false;
+                        if (!includeChecked && input.checked) return false;
+                        return isStandardAmbulanceEtaVehicleCheckbox(input);
+                    })
                 );
             if (mfDebugEnabled) {
                 const roadCount = orderedAmbulanceMatches.filter(input =>

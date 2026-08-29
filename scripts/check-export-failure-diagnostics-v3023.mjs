@@ -43,5 +43,10 @@ if (minimumAmbulance.includes('filterKnownUnstaffedAmbulanceCandidates') || mini
   console.error('Minimum ambulance gate must not re-enter the mixed type-5/type-9 patient route.');
   process.exit(1);
 }
+const ordinaryAmbulanceFilterCalls = source.match(/filterKnownUnstaffedAmbulanceCandidates\(/g) || [];
+if (ordinaryAmbulanceFilterCalls.length !== 1 || source.includes("'ordinary-ambulance-demand'") || source.includes("'mission-upgrade-any-vehicle'")) {
+  console.error('Ordinary type-5 Ambulances must not be gated by the trained-personnel register.');
+  process.exit(1);
+}
 
 console.log('V3.0.23 export failure diagnostics, pop-out cascades and minimum ambulance checks passed.');
