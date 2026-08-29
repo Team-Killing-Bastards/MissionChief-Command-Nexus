@@ -1,0 +1,824 @@
+===== scripts/check-runtime-memory-maintenance-v1074.mjs =====
+#!/usr/bin/env node
+import fs from 'node:fs';
+import vm from 'node:vm';
+
+const source = fs.readFileSync('src/missionchief-command-nexus.user.js', 'utf8');
+
+function fail(message) {
+  console.error(`ERROR: ${message}`);
+  process.exit(1);
+}
+
+function expect(condition, message) {
+  if (!condition) fail(message);
+}
+
+function extractFunction(name) {
+  const marker = `function ${name}(`;
+  const start = source.indexOf(marker);
+  if (start < 0) fail(`Missing function ${name}`);
+  const parameterStart = source.indexOf('(', start);
+  let parameterDepth = 0;
+  let bodyStart = -1;
+  let quote = '';
+  let escaped = false;
+
+  for (let index = parameterStart; index < source.length; index += 1) {
+    const character = source[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (character === '\\') escaped = true;
+      else if (character === quote) quote = '';
+      continue;
+    }
+    if (character === '"' || character === "'" || character === '`') {
+      quote = character;
+      continue;
+    }
+    if (character === '(') parameterDepth += 1;
+    if (character === ')') {
+      parameterDepth -= 1;
+      if (parameterDepth === 0) {
+        bodyStart = source.indexOf('{', index);
+        break;
+      }
+    }
+  }
+
+  if (bodyStart < 0) fail(`Missing body for ${name}`);
+  let depth = 0;
+  quote = '';
+  escaped = false;
+
+  for (let index = bodyStart; index < source.length; index += 1) {
+    const character = source[index];
+    const next = source[index + 1] || '';
+
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (character === '\\') escaped = true;
+      else if (character === quote) quote = '';
+      continue;
+    }
+
+    if (character === '"' || character === "'" || character === '`') {
+      quote = character;
+      continue;
+    }
+
+    if (character === '/' && next === '/') {
+      const lineEnd = source.indexOf('\n', index + 2);
+      index = lineEnd < 0 ? source.length : lineEnd;
+      continue;
+    }
+
+    if (character === '/' && next === '*') {
+      const blockEnd = source.indexOf('*/', index + 2);
+      if (blockEnd < 0) fail(`Unclosed comment in ${name}`);
+      index = blockEnd + 1;
+      continue;
+    }
+
+    if (character === '{') depth += 1;
+    if (character === '}') {
+      depth -= 1;
+      if (depth === 0) return source.slice(start, index + 1);
+    }
+  }
+
+  fail(`Unable to extract ${name}`);
+}
+
+expect(source.includes('480 * 1024 * 1024'), 'Soft cache flush threshold must be 480 MiB');
+expect(source.includes('640 * 1024 * 1024'), 'Guarded frame recycle threshold must remain 640 MiB');
+expect(source.includes("'missionchief-nexus-frame-runtime-reconcile-v1074'"), 'Missing frame-runtime reconciliation event');
+
+const namingModuleStart = source.slice(
+  source.indexOf("if (window.__MC_NAMING_TOOLS_V428__) return;"),
+  source.indexOf("const UNIT_VERSION = '")
+);
+expect(namingModuleStart.includes('window.top === window.self'), 'Naming/personnel runtime must identify its top-window owner');
+expect(namingModuleStart.includes('TOOL_IS_STATION_OVERVIEW_ROUTE'), 'Naming/personnel runtime must share one exact Stations overview route classifier');
+expect(namingModuleStart.includes('TOOL_IS_STANDALONE_STATION_OVERVIEW'), 'Naming/personnel runtime must recognise the standalone Stations overview window');
+expect(namingModuleStart.includes('TOOL_IS_STATION_OVERVIEW_FRAME'), 'Naming/personnel runtime must recognise the exact Stations overview lightbox');
+expect(namingModuleStart.includes('window.top.location.origin !== location.origin'), 'Stations overview lightbox ownership must remain same-origin');
+expect(namingModuleStart.includes('leitstellenansicht'), 'Stations overview lightbox ownership must remain route-scoped');
+expect(namingModuleStart.includes('if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;'), 'Naming/personnel runtime must remain excluded from mission and unrelated child frames');
+expect(!namingModuleStart.includes('if (!TOOL_IS_TOP_WINDOW) return;'), 'Blanket child-frame exclusion must not suppress the Stations overview lightbox');
+
+const frameOwner = extractFunction('shouldKeepMissionFinderObserverForCurrentFrame');
+expect(frameOwner.includes('if (MF_IS_TOP_WINDOW) return true'), 'Top MissionChief document must retain its observer');
+expect(frameOwner.includes('if (isMfV3ManagedActiveWorker()) return true'), 'Verified managed Worker A must outrank stale or competing mission documents');
+expect(frameOwner.includes('getPrimaryMissionRequirementDocument() === document'), 'Child observer ownership must follow the visible primary mission document');
+expect(frameOwner.indexOf('isMfV3ManagedActiveWorker()') < frameOwner.indexOf('getPrimaryMissionRequirementDocument()'), 'Managed Worker A authority must be checked before generic cross-frame visibility ranking');
+const ownerDocument = { body: {} };
+const ownerContext = vm.createContext({
+  MF_IS_TOP_WINDOW: false,
+  document: ownerDocument,
+  isMissionPage: () => true,
+  isMfV3ManagedActiveWorker: () => true,
+  getPrimaryMissionRequirementDocument: () => ({ stale: true }),
+  result: null,
+});
+vm.runInContext(`${frameOwner}\nresult = shouldKeepMissionFinderObserverForCurrentFrame();`, ownerContext);
+expect(ownerContext.result === true, 'Verified managed Worker A must remain active when a stale visible mission document wins generic ranking');
+ownerContext.isMfV3ManagedActiveWorker = () => false;
+vm.runInContext('result = shouldKeepMissionFinderObserverForCurrentFrame();', ownerContext);
+expect(ownerContext.result === false, 'An unowned child frame must still yield to the primary visible mission document');
+
+const inactiveSuspend = extractFunction('suspendMissionFinderRuntimeForInactiveFrame');
+for (const token of [
+  'mfMainMutationObserver.disconnect()',
+  'mfMainMutationObserver = null',
+  'stopSessionRuntimeTicker()',
+  'stopMissionFinderRuntimeMemoryMaintenance()',
+  'removeMissionFinderRuntimeMemoryActivityTracking()',
+  "document.getElementById(\n            'mission-finder-wrapper'\n        )?.remove()",
+  'invalidateVehicleCheckboxCache()',
+  'invalidateMissionContextCaches()',
+  'invalidateTransportCaches()',
+  'mfVehicleMatchCandidateCache.clear()',
+  'mfRuntimeSuspendedForInactiveFrame = true',
+]) {
+  expect(inactiveSuspend.includes(token), `Inactive-frame suspension missing ${token}`);
+}
+expect(!inactiveSuspend.includes('resetMissionRequirementPreloadCache'), 'Inactive-frame suspension must not mutate authoritative mission requirements through the normal cache reset path');
+
+const frameReconcile = extractFunction('reconcileMissionFinderFrameRuntime');
+expect(frameReconcile.includes('suspendMissionFinderRuntimeForInactiveFrame(reason)'), 'Inactive frame must be suspended by ownership reconciliation');
+expect(frameReconcile.includes('startMissionFinderObserver()'), 'A frame that becomes primary must restore its observer');
+expect(frameReconcile.includes('initialize()'), 'A restored primary frame must remount Mission Control');
+expect(frameReconcile.includes('startMissionFinderRuntimeMemoryMaintenance()'), 'A restored primary frame must restart memory maintenance');
+
+const topSupervisor = extractFunction('installBackgroundWatcherSupervisor');
+expect(topSupervisor.includes('reconcileMissionFinderFrameRuntimesFromTop()'), 'Top supervisor must reconcile child frame owners');
+expect(topSupervisor.includes('setInterval('), 'Top supervisor must retain a bounded periodic ownership safety net');
+
+const releaseRemoved = extractFunction('releaseRemovedMissionFinderFrameRuntimes');
+expect(releaseRemoved.includes('record.removedNodes'), 'Removed iframe cleanup must inspect removed DOM nodes');
+expect(releaseRemoved.includes('removed: true'), 'Removed iframe cleanup must request a full child runtime teardown');
+
+const observer = extractFunction('startMissionFinderObserver');
+const ownerGateIndex = observer.indexOf('shouldKeepMissionFinderObserverForCurrentFrame()');
+const mutationObserverIndex = observer.indexOf('new MutationObserver');
+expect(ownerGateIndex >= 0 && ownerGateIndex < mutationObserverIndex, 'Child ownership must be checked before attaching the whole-document observer');
+expect(observer.includes('releaseRemovedMissionFinderFrameRuntimes(records)'), 'Top observer must release removed iframe runtimes');
+expect(observer.includes('startMissionFinderRuntimeMemoryMaintenance()'), 'Active mission observer must start memory maintenance');
+
+const maintenance = extractFunction('runMissionFinderRuntimeMemoryMaintenance');
+for (const token of [
+  'pruneLiveTrainingVerifyCache()',
+  'pruneMissionFinderIphoneNativePickerDocuments()',
+  'MF_RUNTIME_MEMORY_SOFT_FLUSH_THRESHOLD_BYTES',
+  'flushMissionFinderEphemeralMemory(',
+  'shouldRecycleIdleMissionMemory()',
+  'requestMissionFinderMemoryRecycle(',
+]) {
+  expect(maintenance.includes(token), `Runtime maintenance missing ${token}`);
+}
+
+const softFlush = extractFunction('flushMissionFinderEphemeralMemory');
+for (const token of [
+  'invalidateVehicleCheckboxCache()',
+  'invalidateMissionContextCaches()',
+  'invalidatePatientCountCache()',
+  'invalidateTransportCaches()',
+  'mfVehicleMatchCandidateCache.clear()',
+  'pruneLiveTrainingVerifyCache()',
+]) {
+  expect(softFlush.includes(token), `Soft memory flush missing ${token}`);
+}
+for (const forbidden of [
+  'resetMissionRequirementPreloadCache',
+  'mfMissionRequirementPreloadCache =',
+  'vehicleLoadState =',
+  'localStorage.removeItem(MF_PERSONNEL_TRAINING_REGISTRY_KEY)',
+]) {
+  expect(!softFlush.includes(forbidden), `Soft memory flush must preserve operational state: ${forbidden}`);
+}
+
+const idleGuard = extractFunction('shouldRecycleIdleMissionMemory');
+for (const token of [
+  'autoModeRunning',
+  'isCurrentMissionExecutionOwner(',
+  "document.visibilityState === 'hidden'",
+  'vehicleLoadState.ready',
+  'isMissionFinderMemoryWorkActive()',
+  'hasSelectedMissionVehiclesForMemoryRecycle()',
+  'mfMissionRequirementPreloadPromise',
+  "mfMissionRequirementPreloadCache.status === 'loading'",
+  'MF_RUNTIME_MEMORY_IDLE_MS',
+  'MF_RUNTIME_MEMORY_STABLE_MS',
+  'MF_AUTO_MEMORY_RECYCLE_HEAP_THRESHOLD_BYTES',
+  'MF_AUTO_MEMORY_RECYCLE_COOLDOWN_MS',
+]) {
+  expect(idleGuard.includes(token), `Idle frame recycle guard missing ${token}`);
+}
+
+const workGuard = extractFunction('isMissionFinderMemoryWorkActive');
+for (const token of [
+  'mfRuntimeMemoryOperationDepth > 0',
+  'autoModeLoopActive',
+  'mfSilentQueueOpening',
+  'mfGlobalTransportClicking',
+  'mfTransportSequenceActive',
+  'mfTransportContinuationRunning',
+  'mfAutoAdvanceResumeActive',
+  'mfAutoUpgradeResumeActive',
+  'readAutoAdvanceAfterDispatchState()',
+  'readAllyStealPendingState()',
+  'readAutoPostDispatchUpgradeState()',
+  'isPostTransportRehookPending()',
+]) {
+  expect(workGuard.includes(token), `Active-work guard missing ${token}`);
+}
+
+const unitFinderControl = source.slice(
+  source.indexOf("unitFinderBtn.addEventListener('click'"),
+  source.indexOf("const allyStealBtn")
+);
+expect(unitFinderControl.includes('runMissionFinderMemorySensitiveOperation('), 'Manual Unit Finder must hold the memory operation lock');
+const allyControl = source.slice(source.indexOf("allyStealBtn.addEventListener('click'"), source.indexOf('const missionUpdateBtn'));
+expect(allyControl.includes('runMissionFinderMemorySensitiveOperation('), 'Manual Ally Steal must hold the memory operation lock');
+const missionUpdateControl = source.slice(source.indexOf("missionUpdateBtn.addEventListener("), source.indexOf('const dispatchBtn'));
+expect(missionUpdateControl.includes('beginMissionFinderMemorySensitiveOperation('), 'Manual Mission Update must acquire the memory operation lock');
+expect(missionUpdateControl.includes('endMissionFinderMemorySensitiveOperation('), 'Manual Mission Update must release the memory operation lock');
+
+expect(source.includes('const MF_LIVE_TRAINING_VERIFY_CACHE_LIMIT = 600;'), 'Live training verification cache must have a hard entry limit');
+const livePrune = extractFunction('pruneLiveTrainingVerifyCache');
+expect(livePrune.includes('MF_LIVE_TRAINING_VERIFY_CACHE_MS'), 'Live training cache must prune expired entries');
+expect(livePrune.includes('MF_LIVE_TRAINING_VERIFY_CACHE_LIMIT'), 'Live training cache must prune by hard size');
+expect(source.includes('markLiveTrainingVehicleVerified('), 'Live verification writes must use the bounded cache helper');
+
+expect(source.includes('const MF_UNIT_FINDER_DIAGNOSTICS_MAX_STORAGE_CHARS = 2500000;'), 'Expanded diagnostic history must retain a bounded storage-size cap');
+const boundHistory = extractFunction('mfBoundUnitFinderDiagnosticHistory');
+expect(boundHistory.includes('MF_UNIT_FINDER_DIAGNOSTICS_MAX_STORAGE_CHARS'), 'Diagnostic history must enforce its storage-size cap');
+expect(boundHistory.includes('bounded = bounded.slice(1)'), 'Diagnostic history must drop oldest snapshots first');
+const persistDiagnostic = extractFunction('mfPersistUnitFinderDiagnostic');
+expect(persistDiagnostic.includes('mfBoundUnitFinderDiagnosticHistory(history)'), 'Diagnostic writes must use the byte-bounded history');
+
+const storageMaintenance = extractFunction('compactMissionFinderPersistentStorage');
+expect(storageMaintenance.includes('localStorage.removeItem(MF_RECORDER_KEY)'), 'Removed Issue Recorder payload must be deleted');
+expect(storageMaintenance.includes('mfBoundUnitFinderDiagnosticHistory('), 'Existing diagnostic history must be compacted on startup');
+expect(!storageMaintenance.includes('MF_PERSONNEL_TRAINING_REGISTRY_KEY'), 'Storage maintenance must never remove the authoritative Personnel Register');
+expect(!storageMaintenance.includes('mcPersonnelVehicleTrainingRegistry_v1'), 'Storage maintenance must never name or delete the authoritative Personnel Register key');
+
+const diagnostics = extractFunction('mfCollectMemoryDiagnostics');
+for (const token of [
+  'runtimeSuspendedForInactiveFrame',
+  'memoryMaintenanceTimerActive',
+  'memorySoftFlushCount',
+  'memoryInactiveSuspendCount',
+  'storageMaintenance',
+]) {
+  expect(diagnostics.includes(token), `Memory diagnostics missing ${token}`);
+}
+
+console.log('Runtime memory maintenance, inactive-frame ownership and storage bounds checks passed.');
+
+
+===== scripts/check-v3-completed-prisoner-destination-return.mjs =====
+#!/usr/bin/env node
+
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
+
+const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
+
+function extractFunction(name) {
+  const start = source.indexOf(`function ${name}(`);
+  assert.ok(start >= 0, `${name} must exist`);
+  const bodyStart = source.indexOf('{', start);
+  let depth = 0;
+  let quote = '';
+  let escaped = false;
+  let lineComment = false;
+  let blockComment = false;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    const character = source[index];
+    const next = source[index + 1] || '';
+    if (lineComment) {
+      if (character === '\n') lineComment = false;
+      continue;
+    }
+    if (blockComment) {
+      if (character === '*' && next === '/') {
+        blockComment = false;
+        index += 1;
+      }
+      continue;
+    }
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (character === '\\') escaped = true;
+      else if (character === quote) quote = '';
+      continue;
+    }
+    if (character === '/' && next === '/') {
+      lineComment = true;
+      index += 1;
+      continue;
+    }
+    if (character === '/' && next === '*') {
+      blockComment = true;
+      index += 1;
+      continue;
+    }
+    if (character === "'" || character === '"' || character === '`') {
+      quote = character;
+      continue;
+    }
+    if (character === '{') depth += 1;
+    if (character === '}' && --depth === 0) return source.slice(start, index + 1);
+  }
+  assert.fail(`${name} is unterminated`);
+}
+
+assert.ok(
+  source.includes('const COMPLETED_PRISONER_DESTINATION_RETURN_MS = 6000;'),
+  'completed prisoner destinations need a bounded settle window'
+);
+
+const completedContextFunction = extractFunction('isCompletedPrisonerDestinationContext');
+const returnFunction = extractFunction('maybeReturnFromCompletedPrisonerDestination');
+const hardRecoveryFunction = extractFunction('maybeRecoverStalledTransportContext');
+const watcher = extractFunction('watchWorker');
+
+assert.ok(
+  watcher.indexOf('maybeReturnFromCompletedPrisonerDestination(context, href, radioRequests)') <
+    watcher.indexOf('maybeRecoverStalledTransportContext(context, href, radioRequests)'),
+  'the lightweight completed-destination return must run before generic hard recovery'
+);
+assert.match(
+  hardRecoveryFunction,
+  /isCompletedPrisonerDestinationContext\(context, href\)[\s\S]*!radioRequestForVehicle\(vehicleIdFromUrl\(href\), requests\)[\s\S]*return false;/,
+  'the generic watchdog must not rebuild a cleared bare prisoner destination'
+);
+for (const unsafePattern of [/\.click\s*\(/, /createWorker\s*\(/, /removeWorker\s*\(/, /startTransportOnlyWorker\s*\(/]) {
+  assert.doesNotMatch(returnFunction, unsafePattern, 'the completed return must reuse Worker A without page actions');
+}
+
+function createHarness({ now = 10_000, liveRequest = false, contextOverrides = {}, recoveryUrl } = {}) {
+  const calls = { replaces: [], phases: [], logs: [], errors: [], recoveries: [] };
+  const href = 'https://www.missionchief.co.uk/vehicles/7505698/gefangener/2591924';
+  const context = {
+    kind: 'PRISONER',
+    prisonerPath: '/vehicles/7505698/gefangener/2591924',
+    structuredPrisonerRequests: 0,
+    cellSelectionAlerts: 0,
+    greenPrisonDestinations: 0,
+    releaseLinks: 0,
+    releaseSuccessAlerts: 0,
+    evidence: ['prisoner-route:/vehicles/7505698/gefangener/2591924'],
+    ...contextOverrides,
+  };
+  const worker = {
+    isConnected: true,
+    contentWindow: {
+      location: { replace(value) { calls.replaces.push(value); } },
+    },
+    src: href,
+  };
+  const state = {
+    wanted: true,
+    stopping: false,
+    transportServiceActive: false,
+    worker,
+    transportSince: 3_000,
+    currentMissionId: '259030749',
+    currentMissionName: 'Demonstration against the construction of a motorway project',
+    activeTransportEvent: { kind: 'PRISONER' },
+    nonMissionRedirectRecoveries: 0,
+    nonMissionRedirectRecoveryHistory: [],
+    running: true,
+    transportKind: 'PRISONER',
+    transportIdentity: 'PRISONER:7505698:2591924',
+    transportWarned: false,
+    redirectFromMissionId: '',
+    redirectTargetMissionId: '',
+    lastPriorityRedirectAt: 0,
+    currentMissionUrl: href,
+  };
+  const routePath = value => {
+    try { return new URL(value, 'https://www.missionchief.co.uk').pathname; }
+    catch { return ''; }
+  };
+  const sandbox = vm.createContext({
+    Number,
+    Boolean,
+    String,
+    Date: { now: () => now },
+    state,
+    COMPLETED_PRISONER_DESTINATION_RETURN_MS: 6_000,
+    NON_MISSION_REDIRECT_RECOVERY_HISTORY_LIMIT: 40,
+    exactPrisonerPath(value) {
+      const path = routePath(value);
+      return /^\/vehicles\/\d+\/gefangener\/\d+\/?$/.test(path) ? path : '';
+    },
+    vehicleIdFromUrl(value) { return routePath(value).match(/^\/vehicles\/(\d+)/)?.[1] || ''; },
+    radioRequestForVehicle(vehicleId) {
+      return liveRequest && vehicleId === '7505698' ? { vehicleId, missionId: '259030749' } : null;
+    },
+    sleepRecoveryMissionUrl() {
+      return recoveryUrl === undefined
+        ? 'https://www.missionchief.co.uk/missions/259030749'
+        : recoveryUrl;
+    },
+    missionIdFromUrl(value) { return routePath(value).match(/^\/missions\/(\d+)/)?.[1] || ''; },
+    transportContextIdentity: () => 'PRISONER:7505698:2591924',
+    missionNameForId: () => state.currentMissionName,
+    pathFromUrl: routePath,
+    nowIso: () => '2026-08-24T20:55:30.000Z',
+    recordTransportRecovery(event) { calls.recoveries.push(event); },
+    endTransportEvent() { state.activeTransportEvent = null; },
+    clearPostDispatchWatchdog() {},
+    clearAutoRecoveryWatchdog() {},
+    clearSharedV2QueueGuard() {},
+    clearSharedV2AutoRunning() {},
+    resetAutoStartTracking() {},
+    clearPromotedWorkTracking() {},
+    persistResumeMission() {},
+    missionDisplay: (_id, name) => name,
+    setPhase(...args) { calls.phases.push(args); },
+    log(...args) { calls.logs.push(args); },
+    setError(...args) { calls.errors.push(args); },
+  });
+  vm.runInContext(
+    `${completedContextFunction}\n${returnFunction}\nthis.runReturn = maybeReturnFromCompletedPrisonerDestination;`,
+    sandbox
+  );
+  return { calls, context, href, run: sandbox.runReturn, state, worker };
+}
+
+const completed = createHarness();
+assert.equal(completed.run(completed.context, completed.href, []), true);
+assert.deepEqual(
+  completed.calls.replaces,
+  ['https://www.missionchief.co.uk/missions/259030749'],
+  'the diagnostic route must return the existing worker to the exact same mission'
+);
+assert.equal(completed.calls.recoveries[0]?.action, 'return-existing-worker-after-completed-prisoner-destination');
+assert.equal(completed.state.transportKind, '');
+assert.equal(completed.calls.errors.length, 0);
+assert.equal(completed.worker.isConnected, true, 'Worker A must be preserved');
+
+for (const variant of [
+  { now: 8_999 },
+  { liveRequest: true },
+  { contextOverrides: { greenPrisonDestinations: 1 } },
+  { contextOverrides: { releaseLinks: 1, cellSelectionAlerts: 1, prisonerPath: '' } },
+]) {
+  const guarded = createHarness(variant);
+  assert.equal(guarded.run(guarded.context, guarded.href, []), false);
+  assert.equal(guarded.calls.replaces.length, 0);
+}
+
+const wrongMission = createHarness({ recoveryUrl: 'https://www.missionchief.co.uk/missions/999' });
+assert.equal(wrongMission.run(wrongMission.context, wrongMission.href, []), true);
+assert.equal(wrongMission.calls.replaces.length, 0);
+assert.equal(wrongMission.calls.errors.length, 1, 'a mismatched mission target must fail closed');
+
+console.log('V3 completed prisoner destination return regression checks passed.');
+
+
+===== scripts/check-v3-transport-context-recovery.mjs =====
+#!/usr/bin/env node
+
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
+
+const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
+
+function extractFunction(name) {
+  const marker = `function ${name}(`;
+  const start = source.indexOf(marker);
+  assert.ok(start >= 0, `function ${name} must exist`);
+  const brace = source.indexOf('{', start);
+  let depth = 0;
+  let quote = '';
+  let escaped = false;
+  let lineComment = false;
+  let blockComment = false;
+  for (let index = brace; index < source.length; index += 1) {
+    const character = source[index];
+    const next = source[index + 1] || '';
+    if (lineComment) {
+      if (character === '\n') lineComment = false;
+      continue;
+    }
+    if (blockComment) {
+      if (character === '*' && next === '/') {
+        blockComment = false;
+        index += 1;
+      }
+      continue;
+    }
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (character === '\\') escaped = true;
+      else if (character === quote) quote = '';
+      continue;
+    }
+    if (character === '/' && next === '/') {
+      lineComment = true;
+      index += 1;
+      continue;
+    }
+    if (character === '/' && next === '*') {
+      blockComment = true;
+      index += 1;
+      continue;
+    }
+    if (character === "'" || character === '"' || character === '`') {
+      quote = character;
+      continue;
+    }
+    if (character === '{') depth += 1;
+    if (character === '}' && --depth === 0) return source.slice(start, index + 1);
+  }
+  assert.fail(`function ${name} is unterminated`);
+}
+
+for (const token of [
+  'const TRANSPORT_HARD_RECOVERY_MS = 20000;',
+  'const TRANSPORT_RECOVERY_LIMIT = 1;',
+  'const TRANSPORT_RECOVERY_WINDOW_MS = 2 * 60 * 1000;',
+  'const TRANSPORT_ASSIST_DELAY_MS = 8000;',
+]) assert.ok(source.includes(token), `missing bounded transport contract: ${token}`);
+
+const identityFunction = extractFunction('transportContextIdentity');
+const routePath = value => {
+  try { return new URL(value, 'https://www.missionchief.co.uk').pathname; }
+  catch { return ''; }
+};
+const identityContext = vm.createContext({
+  state: {
+    transportServiceVehicleId: '',
+    transportServiceMissionId: '',
+    currentMissionId: '9001',
+  },
+  exactPatientPath(value) {
+    const path = routePath(value);
+    return /^\/vehicles\/\d+\/patient\/\d+\/?$/i.test(path) ? path : '';
+  },
+  exactPrisonerPath(value) {
+    const path = routePath(value);
+    return /^\/vehicles\/\d+\/gefangener\/\d+\/?$/i.test(path) ? path : '';
+  },
+  vehicleIdFromUrl(value) {
+    return routePath(value).match(/^\/vehicles\/(\d+)/)?.[1] || '';
+  },
+});
+vm.runInContext(`${identityFunction}\nthis.identity = transportContextIdentity;`, identityContext);
+assert.equal(
+  identityContext.identity(
+    { kind: 'PATIENT', patientPath: '/vehicles/5141045/patient/111' },
+    'https://www.missionchief.co.uk/vehicles/5141045/patient/111'
+  ),
+  'PATIENT:5141045:111'
+);
+assert.equal(
+  identityContext.identity(
+    { kind: 'PATIENT', patientPath: '/vehicles/5005589/patient/222' },
+    'https://www.missionchief.co.uk/vehicles/5005589/patient/222'
+  ),
+  'PATIENT:5005589:222',
+  'a new patient vehicle/subject must be treated as a new transport context'
+);
+assert.equal(
+  identityContext.identity(
+    { kind: 'PRISONER', prisonerPath: '/vehicles/7007/gefangener/333' },
+    'https://www.missionchief.co.uk/vehicles/7007/gefangener/333'
+  ),
+  'PRISONER:7007:333'
+);
+
+const releaseFallbackFunction = extractFunction('isPrisonerReleaseFallbackContext');
+const releaseFallbackContext = vm.createContext({ Number, Boolean });
+vm.runInContext(
+  `${releaseFallbackFunction}\nthis.isReleaseFallback = isPrisonerReleaseFallbackContext;`,
+  releaseFallbackContext
+);
+const noCellReleaseEvidence = {
+  kind: 'PRISONER',
+  cellSelectionAlerts: 1,
+  releaseLinks: 1,
+  prisonerPath: '',
+  greenPrisonDestinations: 0,
+};
+assert.equal(
+  releaseFallbackContext.isReleaseFallback(noCellReleaseEvidence),
+  true,
+  'the diagnostic no-cell/release-only screen must be owned by Release Prisoners'
+);
+assert.equal(
+  releaseFallbackContext.isReleaseFallback({
+    ...noCellReleaseEvidence,
+    prisonerPath: '/vehicles/7007/gefangener/333',
+    greenPrisonDestinations: 24,
+  }),
+  false,
+  'an exact usable prisoner destination must remain on the normal transport path'
+);
+
+const watcher = extractFunction('watchWorker');
+for (const token of [
+  'contextIdentity !== state.transportIdentity',
+  "'context-identity-changed'",
+  'maybeRecoverStalledTransportContext(context, href, radioRequests)',
+]) assert.ok(watcher.includes(token), `watcher lost exact transport progression check: ${token}`);
+
+const recovery = extractFunction('maybeRecoverStalledTransportContext');
+for (const token of [
+  'TRANSPORT_HARD_RECOVERY_MS',
+  'TRANSPORT_RECOVERY_LIMIT',
+  "'reopen-exact-personal-transport'",
+  "'rebuild-worker-a-at-exact-mission'",
+  "'fail-closed-after-bounded-recovery'",
+  "startTransportOnlyWorker(exactRequest, 'transport-stall-recovery')",
+  'if (isPrisonerReleaseFallbackContext(context)) return false;',
+]) assert.ok(recovery.includes(token), `transport recovery lost ${token}`);
+assert.ok(
+  recovery.indexOf('if (isPrisonerReleaseFallbackContext(context)) return false;') <
+    recovery.indexOf('TRANSPORT_HARD_RECOVERY_MS'),
+  'the exact prisoner release flow must be exempt before the generic transport watchdog fires'
+);
+assert.doesNotMatch(recovery, /\.click\s*\(|clickDispatch\s*\(/, 'hard recovery must never click Dispatch or another page action');
+assert.doesNotMatch(recovery, /skip(?:Current)?Mission\s*\(/i, 'hard recovery must never skip the mission');
+
+const releaseWatchdogContext = vm.createContext({
+  Number,
+  Boolean,
+  state: {
+    wanted: true,
+    stopping: false,
+    transportServiceActive: false,
+    transportSince: Date.now() - 60_000,
+  },
+});
+vm.runInContext(
+  `${releaseFallbackFunction}\n${recovery}\nthis.recover = maybeRecoverStalledTransportContext;`,
+  releaseWatchdogContext
+);
+assert.equal(
+  releaseWatchdogContext.recover(
+    noCellReleaseEvidence,
+    'https://www.missionchief.co.uk/missions/258908831',
+    []
+  ),
+  false,
+  'V3 must not rebuild Worker A while the exact Release Prisoners fallback owns the no-cell screen'
+);
+
+const wakeRecovery = extractFunction('recoverFromSuspendedTimerGap');
+for (const token of [
+  'removeWorker(false)',
+  'state.radioRequestFirstSeenAt = new Map()',
+  'state.transportServiceDeferredUntil = new Map()',
+  "startTransportOnlyWorker(preferredRequest, 'wake-recovery-oldest-personal-transport')",
+]) assert.ok(wakeRecovery.includes(token), `sleep recovery lost ${token}`);
+assert.ok(
+  wakeRecovery.indexOf('removeWorker(false)') < wakeRecovery.indexOf('window.setTimeout'),
+  'wake recovery must end stale Worker A before scheduling replacement work'
+);
+
+const staffingQuarantine = extractFunction('mfQuarantineExactStaffingVehicle');
+assert.ok(staffingQuarantine.includes('if (exactIds.length !== 1) return null'));
+assert.ok(staffingQuarantine.includes("data-mf-staffing-quarantined"));
+assert.doesNotMatch(staffingQuarantine, /localStorage\.(?:clear|removeItem)/);
+
+const staffingLabelContext = vm.createContext({});
+vm.runInContext(
+  `${extractFunction('mfStaffingAlertVehicleLabel')}\nthis.parseLabel = mfStaffingAlertVehicleLabel;`,
+  staffingLabelContext
+);
+assert.equal(
+  staffingLabelContext.parseLabel('UPPER FALLS-AS1-AB-4 has not enough personnel'),
+  'UPPER FALLS-AS1-AB-4'
+);
+assert.equal(
+  staffingLabelContext.parseLabel('ICCU has not enough personnel'),
+  'ICCU',
+  'generic labels remain visible to the unique-match fail-closed gate'
+);
+
+const creditContext = vm.createContext({ Number });
+vm.runInContext(
+  `${extractFunction('parseCreditValueFromText')}\nthis.parseCredits = parseCreditValueFromText;`,
+  creditContext
+);
+assert.equal(creditContext.parseCredits('Average Credits: £12,345'), 12345);
+assert.equal(creditContext.parseCredits('Average mission credits ~ 9,876'), 9876);
+assert.equal(creditContext.parseCredits('Credits: £1,234,567'), 0, 'the account balance must not be mistaken for mission value');
+assert.equal(creditContext.parseCredits('No reward is displayed'), 0);
+
+for (const token of [
+  '"Any vehicle": "Ambulance"',
+  '"Airfield Operations Supervisors": "Airfield Operations Supervisor"',
+  '"Rescue Dog": "Search Dog Unit"',
+  '"Maximum amount of cars to tow": "Flatbed Recovery Vehicle"',
+  '"Maximum amount of trucks to tow": "HGV Recovery Vehicle"',
+]) assert.ok(source.includes(token), `preserved cross-reference missing: ${token}`);
+
+console.log(
+  'PASS: exact transport identity, immediate no-cell prisoner release ownership, one bounded no-dispatch rebuild, sleep recovery, staffing quarantine, credit parsing, and banked vehicle cross-references are preserved.'
+);
+
+
+===== scripts/check-v3-worker-b-transport-separation.mjs =====
+#!/usr/bin/env node
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
+
+function extractFunction(name, from = 0) {
+  const start = source.indexOf(`function ${name}(`, from);
+  assert.ok(start >= 0, `${name} must exist`);
+  const brace = source.indexOf('{', start);
+  let depth = 0;
+  let quote = '';
+  let escaped = false;
+  for (let index = brace; index < source.length; index += 1) {
+    const char = source[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === '\\') escaped = true;
+      else if (char === quote) quote = '';
+      continue;
+    }
+    if (char === "'" || char === '"' || char === '`') { quote = char; continue; }
+    if (char === '{') depth += 1;
+    if (char === '}' && --depth === 0) return source.slice(start, index + 1);
+  }
+  assert.fail(`${name} is unterminated`);
+}
+
+assert.match(source, /const PIPELINE_PRELOAD_COUNT = 0;/,
+  'the B slot must no longer create mission preloads');
+assert.match(source, /workerRole: '',/);
+assert.match(source, /function createWorker\(url, role = 'MISSION_A'\)/);
+assert.match(source, /'TRANSPORT_B'/);
+assert.match(source, /ACTIVE_WORKER_NAME_PREFIX\}\$\{transportWorker \? 'transport-b-' : ''\}/,
+  'transport B must remain a managed active frame while retaining an explicit role name');
+
+const handoff = extractFunction('redirectWorkerToTransportService');
+assert.ok(handoff.includes("state.workerRole !== 'MISSION_A'"));
+assert.ok(handoff.includes("pausePipelineController('transport-worker-b-handoff', true)"));
+assert.ok(handoff.indexOf('removeWorker(false)') < handoff.indexOf('startTransportOnlyWorker('),
+  'mission A must be removed before transport B can start');
+assert.doesNotMatch(handoff, /state\.worker\.contentWindow\.location\.(?:replace|assign)/,
+  'A must never be navigated into transport');
+
+const startB = extractFunction('startTransportOnlyWorker');
+assert.ok(startB.includes("createWorker(url.href, 'TRANSPORT_B')"));
+assert.ok(startB.includes("clearSharedV2AutoRunning('transport-worker-b-start')"));
+assert.doesNotMatch(startB, /Dispatch|Unit Finder/);
+
+const finishB = extractFunction('returnToTopMissionAfterTransport');
+assert.ok(finishB.includes("state.workerRole !== 'TRANSPORT_B'"));
+assert.ok(finishB.indexOf('removeWorker(false)') < finishB.indexOf('createWorker(mission.url)'),
+  'transport B must be removed before fresh mission A starts');
+assert.doesNotMatch(finishB, /redirectWorkerToPriority/,
+  'a transport iframe must never be promoted or redirected into mission work');
+
+const watch = extractFunction('watchWorker');
+assert.match(watch, /state\.workerRole === 'TRANSPORT_B' && isMissionUrl\(href\)/);
+assert.match(watch, /state\.workerRole === 'MISSION_A' && !controlRunning/);
+const load = extractFunction('onWorkerLoad');
+assert.match(load, /state\.workerRole === 'TRANSPORT_B' && isMissionUrl\(href\)/);
+
+const missionModule = source.indexOf('MODULE 2: MISSION FINDER');
+assert.ok(missionModule >= 0);
+const initialise = extractFunction('initialize', missionModule);
+assert.match(initialise, /mcn-v3-active-worker-transport-b-/,
+  'transport B must fail closed before Mission Finder mounts dispatch controls');
+assert.match(source, /!isMfV3ManagedTransportWorker\(\) &&\s*\(/,
+  'transport B must not inherit shared Auto Mode running state');
+const transportAllowed = extractFunction('isTransportAutomationAllowed', missionModule);
+assert.match(transportAllowed, /isMfV3ManagedTransportWorker\(\)/,
+  'B must receive local transport authority without shared Auto Mode state');
+const transportHandler = extractFunction('handleTransportRequestsAfterDispatch', missionModule);
+assert.match(transportHandler, /autoModeRunning \|\| isMfV3ManagedTransportWorker\(\)/,
+  'the existing destination engine must continue while the current frame is B');
+const observer = extractFunction('startMissionFinderObserver', missionModule);
+assert.match(observer, /clearAllTransportAutomationFlags\('transport-worker-b'\)/,
+  'B must clear stale shared Mission Finder rehook state before acting');
+assert.match(observer, /handleTransportRequestsAfterDispatch\('worker-b'\)/,
+  'every B transport document must bootstrap the existing transport engine');
+assert.doesNotMatch(observer, /runAutoModeLoop\(/,
+  'B transport bootstrap must never start the mission Auto Mode loop');
+const exactTransportClick = extractFunction('clickExactApproachTransportButton', missionModule);
+const bruteTransportClick = extractFunction('mfBruteClickFirstApproach', missionModule);
+for (const body of [exactTransportClick, bruteTransportClick]) {
+  assert.match(body, /!isMfV3ManagedTransportWorker\(\)/,
+    'B transport clicks must not publish shared Auto Mode or rehook flags');
+}
+assert.match(source, /A: paused \| B: transport/);
+assert.match(source, /B: transport standby/);
+
+console.log('PASS: Worker A is mission-only, Worker B is on-demand transport-only, and the two active roles never coexist.');
+
