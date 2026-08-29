@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.36
+// @version      3.0.37
 // @description  MissionChief safe background automation.
 // @author       MartyBlyth
 // @license      MIT
@@ -152,8 +152,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.36';
-const MASTER_VERSION = '3.0.36';
+const VERSION = '3.0.37';
+const MASTER_VERSION = '3.0.37';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -8634,7 +8634,7 @@ bootMark('heavy-runtime-start');
     window.__MC_COMPLETE_TOOLS_MERGED_V10668_V428__ = true;
     try {
         /* ==================================================================
-         * MODULE 1: UNIT, STATION & PERSONNEL TOOLS V4.2.8
+         * MODULE 1: UNIT, STATION & PERSONNEL TOOLS V4.2.9
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function () {
@@ -8668,8 +8668,8 @@ bootMark('heavy-runtime-start');
         return true;
     })();
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
-    const UNIT_VERSION = '3.3.27';
-    const STATION_VERSION = '1.3.22';
+    const UNIT_VERSION = '3.3.28';
+    const STATION_VERSION = '1.3.23';
     const PERSONNEL_VERSION = '1.3.12';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
@@ -9203,15 +9203,17 @@ bootMark('heavy-runtime-start');
     }
     function getStationOverviewEntries(root = document) {
         const groups = new Map();
-        root.querySelectorAll(STATION_OVERVIEW_LINK_SELECTOR).forEach(link => {
-            if (link.closest?.('#mc-namer-panel')) return;
-            const href = normaliseStationOverviewHref(link.getAttribute?.('href'));
-            if (!href) return;
-            const container = getStationOverviewContainer(link);
-            if (!container && !link.matches?.('.lightbox-open.list-group-item.active')) return;
-            const candidates = groups.get(href) || [];
-            candidates.push({ link, container });
-            groups.set(href, candidates);
+        getNamingDispatchCentreStationRowDocuments(root).forEach(candidateDocument => {
+            candidateDocument.querySelectorAll(STATION_OVERVIEW_LINK_SELECTOR).forEach(link => {
+                if (link.closest?.('#mc-namer-panel')) return;
+                const href = normaliseStationOverviewHref(link.getAttribute?.('href'));
+                if (!href) return;
+                const container = getStationOverviewContainer(link);
+                if (!container && !link.matches?.('.lightbox-open.list-group-item.active')) return;
+                const candidates = groups.get(href) || [];
+                candidates.push({ link, container });
+                groups.set(href, candidates);
+            });
         });
         return [...groups.entries()].map(([href, candidates], index) => {
             candidates.sort((a, b) =>
@@ -9414,28 +9416,42 @@ bootMark('heavy-runtime-start');
         });
         return centres;
     }
-    function getNamingDispatchCentreStationRowDocuments() {
+    function getNamingDispatchCentreStationRowDocuments(root = document) {
         const documents = [];
-        const addDocument = candidate => {
-            if (!candidate?.querySelectorAll || documents.includes(candidate)) return;
-            documents.push(candidate);
+        const queue = [];
+        const queuedDocuments = new Set();
+        const seenDocuments = new Set();
+        const enqueue = candidate => {
+            if (
+                !candidate?.querySelectorAll ||
+                seenDocuments.has(candidate) ||
+                queuedDocuments.has(candidate)
+            ) return;
+            queuedDocuments.add(candidate);
+            queue.push(candidate);
         };
-        const addFrameDocuments = candidateDocument => {
+        enqueue(root);
+        if (root === document) {
+            try { enqueue(window.top?.document); } catch (_) {}
+        }
+        while (queue.length && documents.length < 32) {
+            const candidateDocument = queue.shift();
+            queuedDocuments.delete(candidateDocument);
+            if (!candidateDocument || seenDocuments.has(candidateDocument)) continue;
+            seenDocuments.add(candidateDocument);
+            documents.push(candidateDocument);
             try {
-                candidateDocument?.querySelectorAll?.('iframe').forEach(frame => {
+                candidateDocument.querySelectorAll('iframe').forEach(frame => {
                     try {
-                        addDocument(frame.contentDocument);
+                        enqueue(
+                            frame.contentDocument ||
+                            frame.contentWindow?.document ||
+                            null
+                        );
                     } catch (_) {}
                 });
             } catch (_) {}
-        };
-        addDocument(document);
-        addFrameDocuments(document);
-        try {
-            const topDocument = window.top?.document;
-            addDocument(topDocument);
-            addFrameDocuments(topDocument);
-        } catch (_) {}
+        }
         return documents;
     }
     function collectNamingDispatchCentresFromStationRows() {
@@ -12564,11 +12580,10 @@ bootMark('heavy-runtime-start');
         }
         setStationUiValue('status', 'Refreshing stations...');
         stationLog('Refreshing station list and reading MissionChief building type IDs...', 'info');
+        await loadNamingDispatchCentreList(false);
+        await yieldNamingDispatchCentreRefreshPaint();
+        await loadNamingDispatchCentreData(true);
         const stationEntries = getStationOverviewEntries();
-        await Promise.all([
-            loadNamingDispatchCentreList(false),
-            loadNamingDispatchCentreData(true)
-        ]);
         STATION_STATE.stations = stationEntries
             .map((entry, index) => {
                 const typeInfo = getStationNamingTypeInfo(
@@ -18053,11 +18068,10 @@ bootMark('heavy-runtime-start');
         setStatus('Refreshing stations...');
         log('Refreshing station list...', 'info');
         log(`Unit class filter: ${getUnitClassDisplayLabel()}`, 'info');
+        await loadNamingDispatchCentreList(false);
+        await yieldNamingDispatchCentreRefreshPaint();
+        await loadNamingDispatchCentreData(true);
         const stationEntries = getStationOverviewEntries();
-        await Promise.all([
-            loadNamingDispatchCentreList(false),
-            loadNamingDispatchCentreData(true)
-        ]);
         STATE.stations = stationEntries.map((entry, index) => {
             const stationType =
                 STATION_BUILDING_TYPE_INFO[entry.buildingTypeId]?.stationType ||
@@ -20707,7 +20721,7 @@ bootMark('heavy-runtime-start');
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.36',
+                commandNexus: '3.0.37',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },
