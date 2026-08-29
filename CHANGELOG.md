@@ -6,6 +6,13 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.31] - 2026-08-29
+
+### Changed
+
+- Replace mutable bridge-only Worker A startup authority with exact parent-verified frame identity and generation tokens. Publish Worker A identity before iframe document-start can execute, removing the recycle/navigation race. Make stale or unrelated managed frames fail closed before heavy Mission Finder runtime admission. Add permanent regression coverage for prisoner-return ownership after worker and memory recycling.
+- Increased the unified userscript version from `3.0.30` to `3.0.31`.
+
 ## [3.0.30] - 2026-08-29
 
 ### Fixed

@@ -24,11 +24,14 @@ const heavyEnd = source.indexOf('\n  };', heavyStart) + 5;
 assert.ok(heavyStart >= 0 && heavyEnd > heavyStart, 'heavy-runtime host gate must exist');
 const heavyGate = source.slice(heavyStart, heavyEnd);
 
-function heavyRuntimeAllowed({ path = '/', name = '', missionDom = false } = {}) {
+function heavyRuntimeAllowed({ path = '/', name = '', missionDom = false, verifiedActive = false } = {}) {
   const context = vm.createContext({
     window: { name },
     location: { pathname: path },
     document: { querySelector: () => missionDom ? {} : null },
+    ACTIVE_WORKER_NAME_PREFIX: 'mcn-v3-active-worker-',
+    PIPELINE_PRELOAD_NAME_PREFIX: 'mcn-v3-pipeline-preload-',
+    isParentVerifiedActiveWorker: () => verifiedActive,
     result: null,
   });
   vm.runInContext(`${heavyGate}\nresult = shouldStartHeavyCommandNexusRuntime();`, context);
@@ -41,7 +44,8 @@ assert.equal(heavyRuntimeAllowed({ path: '/missions/123' }), true, 'a mission pa
 assert.equal(heavyRuntimeAllowed({ path: '/vehicles/12/patient/34' }), true, 'patient transport needs Mission Finder');
 assert.equal(heavyRuntimeAllowed({ path: '/vehicles/12/gefangener/34' }), true, 'prisoner transport needs Mission Finder');
 assert.equal(heavyRuntimeAllowed({ path: '/leitstellenansicht' }), true, 'Stations workspace needs Resource Administration');
-assert.equal(heavyRuntimeAllowed({ name: 'mcn-v3-active-worker-1-123' }), true, 'Worker A needs the full runtime');
+assert.equal(heavyRuntimeAllowed({ name: 'mcn-v3-active-worker-1-123', verifiedActive: true }), true, 'Parent-verified Worker A needs the full runtime');
+assert.equal(heavyRuntimeAllowed({ name: 'mcn-v3-active-worker-1-123' }), false, 'a stale active-looking frame name must remain lightweight');
 assert.equal(heavyRuntimeAllowed({ name: 'mcn-v3-pipeline-preload-0-123' }), false, 'warm Worker B must not allocate the heavy engine');
 assert.equal(heavyRuntimeAllowed({ missionDom: true }), true, 'an embedded mission DOM must remain supported');
 

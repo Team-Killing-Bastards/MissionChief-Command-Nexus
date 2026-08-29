@@ -120,6 +120,7 @@ const ownerContext = vm.createContext({
   isMissionPage: () => true,
   isMfV3ManagedActiveWorker: () => true,
   isMfV3ManagedActiveFrame: () => true,
+  isMfV3ParentVerifiedActiveWorker: () => true,
   getMfV3OperationalOwnershipBridge: () => ({ activate: () => true, isActive: () => true }),
   getPrimaryMissionRequirementDocument: () => ({ stale: true }),
   result: null,
@@ -129,6 +130,9 @@ expect(ownerContext.result === true, 'Verified managed Worker A must remain acti
 ownerContext.isMfV3ManagedActiveWorker = () => false;
 vm.runInContext('result = shouldKeepMissionFinderObserverForCurrentFrame();', ownerContext);
 expect(ownerContext.result === true, 'A named returning Worker A must repair its dropped ownership latch');
+ownerContext.isMfV3ParentVerifiedActiveWorker = () => false;
+vm.runInContext('result = shouldKeepMissionFinderObserverForCurrentFrame();', ownerContext);
+expect(ownerContext.result === false, 'A stale named frame must fail closed without exact parent identity proof');
 ownerContext.isMfV3ManagedActiveFrame = () => false;
 vm.runInContext('result = shouldKeepMissionFinderObserverForCurrentFrame();', ownerContext);
 expect(ownerContext.result === false, 'An unrelated unowned child frame must still yield to the primary visible mission document');
