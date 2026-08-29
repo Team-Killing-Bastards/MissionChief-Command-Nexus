@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.31
+// @version      3.0.32
 // @description  MissionChief safe background automation.
 // @author       MartyBlyth
 // @license      MIT
@@ -146,8 +146,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.31';
-const MASTER_VERSION = '3.0.31';
+const VERSION = '3.0.32';
+const MASTER_VERSION = '3.0.32';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -562,14 +562,13 @@ dragging: false,
 dragOffsetX: 0,
 dragOffsetY: 0,
 };
-window.__MCN_V3_VERIFY_ACTIVE_WORKER__ = (candidateWindow, generationToken = '') => {
+window.__MCN_V3_VERIFY_ACTIVE_WORKER__ = (generationToken = '') => {
 try {
 const frame = state.worker;
 if (
 !state.wanted ||
 state.stopping ||
-!frame?.isConnected ||
-frame.contentWindow !== candidateWindow
+!frame?.isConnected
 ) return false;
 const expectedGeneration = String(state.workerGeneration);
 return Boolean(
@@ -8987,7 +8986,7 @@ resumePersistedBackground();
       return Boolean(
         generationToken &&
         typeof verifier === 'function' &&
-        verifier(window, generationToken) === true
+        verifier(generationToken) === true
       );
     } catch (_error) {
       return false;
@@ -21107,7 +21106,7 @@ bootMark('heavy-runtime-start');
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.31',
+                commandNexus: '3.0.32',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },
@@ -52394,6 +52393,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
     function shouldKeepMissionFinderObserverForCurrentFrame() {
         if (MF_IS_TOP_WINDOW) return true;
         if (!document.body || !isMissionPage()) return false;
+        if (isVisibleManualMissionFrame()) return true;
         if (isMfV3ManagedActiveWorker()) return true;
         if (isMfV3ManagedActiveFrame()) {
             if (!isMfV3ParentVerifiedActiveWorker()) return false;
@@ -52403,6 +52403,21 @@ async function handleAutoPrisonerReleaseAfterActions() {
         }
         try {
             return getPrimaryMissionRequirementDocument() === document;
+        } catch (_error) {
+            return true;
+        }
+    }
+    function isVisibleManualMissionFrame() {
+        if (MF_IS_TOP_WINDOW) return false;
+        if (!document.body || !isMissionPage()) return false;
+        if (
+            isMfV3ManagedActiveFrame() ||
+            mfV3DormantPreload
+        ) {
+            return false;
+        }
+        try {
+            return isMissionDocumentVisible(document);
         } catch (_error) {
             return true;
         }

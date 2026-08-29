@@ -108,6 +108,7 @@ expect(!namingModuleStart.includes('if (!TOOL_IS_TOP_WINDOW) return;'), 'Blanket
 
 const frameOwner = extractFunction('shouldKeepMissionFinderObserverForCurrentFrame');
 expect(frameOwner.includes('if (MF_IS_TOP_WINDOW) return true'), 'Top MissionChief document must retain its observer');
+expect(frameOwner.includes('if (isVisibleManualMissionFrame()) return true'), 'Visible manual mission frames must retain Mission Control independently of Worker A');
 expect(frameOwner.includes('if (isMfV3ManagedActiveWorker()) return true'), 'Verified managed Worker A must outrank stale or competing mission documents');
 expect(frameOwner.includes('if (isMfV3ManagedActiveFrame())'), 'A returned Worker A must be able to repair a dropped ownership latch');
 expect(frameOwner.includes('bridge?.activate?.()'), 'Returned Worker A ownership repair must reactivate the document-start bridge');
@@ -118,6 +119,7 @@ const ownerContext = vm.createContext({
   MF_IS_TOP_WINDOW: false,
   document: ownerDocument,
   isMissionPage: () => true,
+  isVisibleManualMissionFrame: () => false,
   isMfV3ManagedActiveWorker: () => true,
   isMfV3ManagedActiveFrame: () => true,
   isMfV3ParentVerifiedActiveWorker: () => true,

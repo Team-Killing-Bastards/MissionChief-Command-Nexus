@@ -6,6 +6,15 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.32] - 2026-08-29
+
+### Fixed
+
+- Restore genuine Worker A startup after patient/prisoner transport return by validating the exact current generation token without relying on cross-realm `WindowProxy` identity, which rejected the real iframe in `3.0.31` before Mission Finder could mount.
+- Permanently protect the visible mission-screen Mission Control overlay and its manual Unit Finder, Mission Update, Ally Steal, Dispatch, Dispatch & Share and Auto Mode controls from background ownership ranking and inactive-frame suspension.
+- Add regression coverage for the supplied `heavy-runtime-rejected` sequence and the owner-locked visible manual workflow contract.
+- Increased the unified userscript version from `3.0.31` to `3.0.32`.
+
 ## [3.0.31] - 2026-08-29
 
 ### Changed
