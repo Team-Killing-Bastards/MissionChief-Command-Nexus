@@ -55,6 +55,21 @@ vm.runInNewContext(
 expect(carContext.result.car.every(Boolean), `Restored car towing alias rejected: ${JSON.stringify(carContext.result.car)}`);
 expect(carContext.result.notHgv.every(value => value === false), `HGV towing leaked into Flatbed matcher: ${JSON.stringify(carContext.result.notHgv)}`);
 
+const carNormaliser = extractFunction('getCarsToTowVehicleRequirement');
+const carNormaliserContext = { result: null };
+vm.runInNewContext(
+  `${carMatcher}\n${carNormaliser}\nresult = {\n` +
+  `  maximum: getCarsToTowVehicleRequirement('Maximum amount of cars to tow', 4),\n` +
+  `  embedded: getCarsToTowVehicleRequirement('Required 3 cars to tow', 99)\n` +
+  `};`,
+  carNormaliserContext
+);
+expect(
+  JSON.stringify(carNormaliserContext.result.maximum) === JSON.stringify({ unitName: 'Cars to tow', carsRequired: 4, stillNeeded: 4 }),
+  `Maximum car amount did not preserve one Flatbed Recovery per car: ${JSON.stringify(carNormaliserContext.result.maximum)}`
+);
+expect(carNormaliserContext.result.embedded.stillNeeded === 3, 'Embedded car quantity must override the supplied table count');
+
 const hgvMatcher = extractFunction('isHgvTowRequirementName');
 const hgvContext = { result: null };
 vm.runInNewContext(
@@ -97,6 +112,7 @@ expect(source.includes('matches = isHgvRecoveryVehicleCheckbox(input);'), 'HGV s
 expect(source.includes('isHgvRecoveryVehicleRequirement(originalName, mappedName) ||'), 'HGV strict fallback guard missing');
 expect(source.includes('"Maximum amount of trucks to tow": "HGV Recovery Vehicle"'), 'Maximum truck wording cross-reference missing');
 expect(source.includes('extractTowHgvRequirementRows(doc).forEach(row => rows.push(row));'), 'Mission-help maximum truck extractor is not wired into Unit Finder');
+expect(extractFunction('extractTowCarRequirementRows').includes('const flatbedsNeeded = maximumCarsToTow;'), 'New-mission Other information must send one Flatbed Recovery per maximum car count');
 expect(source.includes('const hgvTowRequirement ='), 'Mission Update is missing the HGV towing normalisation route');
 expect(source.includes("source: 'data-raw-html-missing-vehicles'"), 'Escaped data-raw-html missing-vehicle ingestion must remain active');
 expect(source.includes('getGenericMissingVehicleRowsFromText(text).forEach(row => {'), 'Missing-vehicle generic parser path must remain active for truck-to-tow text');

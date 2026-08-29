@@ -52,8 +52,8 @@ const towing = Function(
 
 for (const [label, cars, expectedVehicles] of [
   ['Car to tow', 1, 1],
-  ['Cars to tow', 2, 1],
-  ['Cars to tow', 3, 2],
+  ['Cars to tow', 2, 2],
+  ['Cars to tow', 3, 3],
 ]) {
   const result = towing(label, cars);
   if (!result || result.stillNeeded !== expectedVehicles) {

@@ -6,6 +6,14 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.25] - 2026-08-29
+
+### Fixed
+
+- New-mission `Other information` now preserves the full `Maximum amount of cars to tow` value and sends that number of exact type-`105` Flatbed Recovery Vehicles. The previous two-cars-per-flatbed conversion has been removed.
+- `Maximum amount of trucks to tow` continues to send the full displayed number of exact type-`106` HGV Recovery Vehicles, with permanent regression coverage for both quantity rules.
+- Increased the unified userscript version from `3.0.24` to `3.0.25`.
+
 ## [3.0.24] - 2026-08-29
 
 ### Fixed

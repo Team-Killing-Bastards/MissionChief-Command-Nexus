@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.24
+// @version      3.0.25
 // @description  MissionChief safe background automation.
 // @author       MartyBlyth
 // @license      MIT
@@ -145,8 +145,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.24';
-const MASTER_VERSION = '3.0.24';
+const VERSION = '3.0.25';
+const MASTER_VERSION = '3.0.25';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -21046,7 +21046,7 @@ bootMark('heavy-runtime-start');
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.24',
+                commandNexus: '3.0.25',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },
@@ -34202,7 +34202,7 @@ let sessionRuntimeTicker = null;
             });
         });
         if (maximumCarsToTow > 0) {
-            const flatbedsNeeded = Math.ceil(maximumCarsToTow / 2);
+            const flatbedsNeeded = maximumCarsToTow;
             rows.push({
                 unitName: 'Cars to tow',
                 stillNeeded: flatbedsNeeded
@@ -34273,7 +34273,7 @@ let sessionRuntimeTicker = null;
         return {
             unitName: 'Cars to tow',
             carsRequired: cars,
-            stillNeeded: Math.ceil(cars / 2)
+            stillNeeded: cars
         };
     }
     function getHgvTowVehicleRequirement(unitName, trucksRequired) {
