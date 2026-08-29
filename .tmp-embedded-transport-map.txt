@@ -1,0 +1,2440 @@
+lines=53244 bytes=2095937
+terms=['patient transport', 'prisoner transport', 'transport request', 'select hospital', 'hospital', 'cell selection', 'release prisoners', 'mfHandle', 'mfProcess', 'mfTransport', 'transportState', '/patient/', '/gefangene/', 'Release Prisoners']
+
+===== context-1 [1662-1730] =====
+001662: let structuredPrisonerRequests = 0;
+001663: let greenPrisonDestinations = 0;
+001664: let releaseLinks = 0;
+001665: let releaseSuccessAlerts = 0;
+001666: let cellSelectionAlerts = 0;
+001667: for (const scope of documents) {
+001668: let links = [];
+001669: try { links = Array.from(scope.querySelectorAll('a[href]')); } catch {}
+001670: for (const link of links) {
+001671: const rawHref = link.getAttribute('href') || link.href || '';
+001672: const patient = exactPatientPath(rawHref);
+001673: if (patient) {
+001674: const looksExactV2Anchor = link.matches?.('a.btn-success[href*="/patient/"]') || link.classList?.contains('btn-success');
+001675: if (looksExactV2Anchor) patientAnchorCount += 1;
+001676: if (!firstPatientPath) firstPatientPath = patient;
+001677: const patientRoute = patient.match(/^\/vehicles\/(\d+)\/patient\/(\d+)/i);
+001678: if (!patientPath && routeVehicleId && patientRoute?.[1] === routeVehicleId) {
+001679: patientPath = patient;
+001680: }
+001681: }
+001682: const prisoner = exactPrisonerPath(rawHref);
+001683: if (prisoner) {
+001684: if (!firstPrisonerPath) firstPrisonerPath = prisoner;
+001685: const prisonerRoute = prisoner.match(/^\/vehicles\/(\d+)\/gefangener\/(\d+)/i);
+001686: if (!prisonerPath && routeVehicleId && prisonerRoute?.[1] === routeVehicleId) {
+001687: prisonerPath = prisoner;
+001688: }
+001689: }
+001690: }
+001691: try {
+001692: structuredPrisonerRequests += scope.querySelectorAll('[data-transport-request="true"][data-transport-request-type="prisoner"]').length;
+001693: greenPrisonDestinations += scope.querySelectorAll('a.btn.btn-success[data-prison-id][href*="/gefangener/"]').length;
+001694: releaseLinks += scope.querySelectorAll('a.btn.btn-danger[data-method="post"][href*="/gefangene/entlassen"]').length;
+001695: } catch {}
+001696: let infoAlerts = [];
+001697: let successAlerts = [];
+001698: try { infoAlerts = Array.from(scope.querySelectorAll('.alert.alert-info')); } catch {}
+001699: try { successAlerts = Array.from(scope.querySelectorAll('.alert.alert-success')); } catch {}
+001700: for (const alert of infoAlerts) {
+001701: const text = normaliseText(alert.textContent || alert.innerText).toLowerCase();
+001702: if (text.includes('cell selection') || text.includes('the prisoners should be placed in a cell')) cellSelectionAlerts += 1;
+001703: }
+001704: for (const alert of successAlerts) {
+001705: const text = normaliseText(alert.textContent || alert.innerText).toLowerCase();
+001706: if (text.includes('the prisoners were released')) releaseSuccessAlerts += 1;
+001707: }
+001708: }
+001709: patientPath = patientPath || firstPatientPath;
+001710: prisonerPath = prisonerPath || firstPrisonerPath;
+001711: if (patientPath) evidence.push(`patient-route:${patientPath}`);
+001712: if (patientAnchorCount) evidence.push(`exact-patient-anchors:${patientAnchorCount}`);
+001713: if (structuredPrisonerRequests) evidence.push(`structured-prisoner-requests:${structuredPrisonerRequests}`);
+001714: if (cellSelectionAlerts) evidence.push(`cell-selection-alerts:${cellSelectionAlerts}`);
+001715: if (greenPrisonDestinations) evidence.push(`green-cell-destinations:${greenPrisonDestinations}`);
+001716: if (prisonerPath) evidence.push(`prisoner-route:${prisonerPath}`);
+001717: if (releaseLinks) evidence.push(`release-links:${releaseLinks}`);
+001718: if (releaseSuccessAlerts) evidence.push(`release-success-alerts:${releaseSuccessAlerts}`);
+001719: let kind = '';
+001720: if (patientPath || patientAnchorCount) kind = 'PATIENT';
+001721: if (structuredPrisonerRequests || cellSelectionAlerts || greenPrisonDestinations || prisonerPath || releaseLinks || releaseSuccessAlerts) {
+001722: kind = 'PRISONER';
+001723: }
+001724: return {
+001725: kind,
+001726: evidence,
+001727: documentsScanned: documents.length,
+001728: patientPath,
+001729: patientAnchorCount,
+001730: structuredPrisonerRequests,
+
+===== context-2 [4733-4900] =====
+004733: document.addEventListener('click', blockSyntheticTopMissionRehook, true);
+004734: function chooseBootstrapMission() {
+004735: return chooseTopMission({ actionableOnly: true });
+004736: }
+004737: function collectRadioTransportRequests() {
+004738: const rows = Array.from(document.querySelectorAll(
+004739: '#radio_messages_important li, #radio_messages li'
+004740: ));
+004741: const requests = [];
+004742: const seen = new Set();
+004743: for (const row of rows) {
+004744: const status5 = row.querySelector(
+004745: '.building_list_fms_5[title="Transport Request"], .building_list_fms[title="Transport Request"]'
+004746: );
+004747: const rowText = normaliseText(row.textContent);
+004748: if (!status5 && !/\bTransport Request\b/i.test(rowText)) continue;
+004749: const classMatch = String(row.className || '').match(/\bradio_message_vehicle_(\d+)\b/);
+004750: const vehicleId = classMatch?.[1] ||
+004751: normaliseText(row.querySelector('[vehicle_id]')?.getAttribute('vehicle_id')) ||
+004752: '';
+004753: const missionAnchor = row.querySelector('a.mission-radio-button[href*="/missions/"], a[href*="/missions/"]');
+004754: const missionUrl = sameOriginUrl(missionAnchor?.getAttribute('href') || missionAnchor?.href || '');
+004755: const missionId = missionIdFromUrl(missionUrl?.href || '');
+004756: if (!vehicleId || !missionId || !missionUrl) continue;
+004757: const missionAnchorText = normaliseText(missionAnchor?.textContent || '');
+004758: const allianceLike = /\[alliance\]/i.test(rowText) || /\[alliance\]/i.test(missionAnchorText);
+004759: const key = `${vehicleId}:${missionId}`;
+004760: if (allianceLike) {
+004761: if (!state.allianceRadioIgnoredKeys.has(key)) {
+004762: state.allianceRadioIgnoredKeys.add(key);
+004763: trimOldestSetEntries(state.allianceRadioIgnoredKeys, ALLIANCE_RADIO_IGNORED_KEY_CACHE_LIMIT);
+004764: state.runAllianceRadioIgnored += 1;
+004765: const ignored = {
+004766: at: nowIso(),
+004767: key,
+004768: vehicleId,
+004769: missionId,
+004770: vehicleLabel: normaliseText(row.querySelector(`a[href^="/vehicles/${CSS.escape(vehicleId)}"]`)?.textContent),
+004771: rowText,
+004772: };
+004773: if (state.runAllianceRadioIgnored <= 5 || state.runAllianceRadioIgnored % 250 === 0) {
+004774: state.allianceRadioIgnoredHistory.push(ignored);
+004775: if (state.allianceRadioIgnoredHistory.length > RADIO_HISTORY_LIMIT) {
+004776: state.allianceRadioIgnoredHistory.splice(0, state.allianceRadioIgnoredHistory.length - RADIO_HISTORY_LIMIT);
+004777: }
+004778: log('Ignored sampled Alliance Radio Transport Request; it cannot enter the personal V3 work queue.', ignored);
+004779: }
+004780: }
+004781: continue;
+004782: }
+004783: if (seen.has(key)) continue;
+004784: seen.add(key);
+004785: requests.push({
+004786: key,
+004787: vehicleId,
+004788: missionId,
+004789: missionUrl: missionUrl.href,
+004790: vehicleLabel: normaliseText(row.querySelector(`a[href^="/vehicles/${CSS.escape(vehicleId)}"]`)?.textContent),
+004791: rowText,
+004792: });
+004793: }
+004794: return requests;
+004795: }
+004796: function restoreAfterResolvedRadioTransportWarning(warnedKey, remainingRequests = []) {
+004797: if (
+004798: !warnedKey ||
+004799: state.phase !== 'TRANSPORT_WARN' ||
+004800: !/personal radio transport request may be stalled/i.test(state.status || '') ||
+004801: state.transportServiceActive ||
+004802: state.transportKind ||
+004803: state.autoStopWarned ||
+004804: state.lastError
+004805: ) return false;
+004806: if ((remainingRequests || []).some(request => request?.key === warnedKey)) return false;
+004807: if (state.lowQueuePaused) {
+004808: setPhase(
+004809: 'LOW_QUEUE_PAUSED',
+004810: 'Paused - waiting for 2 missions',
+004811: `The warned personal transport request cleared. ${state.lowQueueObservedCount} actionable personal mission${state.lowQueueObservedCount === 1 ? '' : 's'} remain; no mission worker was started.`
+004812: );
+004813: } else if (state.postDispatchWatchdog) {
+004814: setPhase(
+004815: 'POST_DISPATCH_RECOVERY',
+004816: 'Waiting for the verified mission handoff',
+004817: `${missionDisplay(state.postDispatchWatchdog.missionId, state.postDispatchWatchdog.missionName)} remains protected by the dispatch watchdog. The cleared transport request no longer blocks recovery.`
+004818: );
+004819: } else if (state.wanted && state.worker?.isConnected) {
+004820: const doc = getWorkerDocument();
+004821: const status = findUsefulNexusStatus(doc);
+004822: setPhase(
+004823: 'ACTIVE',
+004824: 'Background Auto Mode running',
+004825: status || `${missionDisplay(state.currentMissionId, state.currentMissionName)} is active. The previous transport warning cleared.`
+004826: );
+004827: } else {
+004828: setPhase(
+004829: 'WAITING_MISSION',
+004830: 'Waiting for the next mission',
+004831: 'The warned personal transport request cleared and no transport work remains.'
+004832: );
+004833: }
+004834: log('Cleared stale Radio Transport warning after the exact request disappeared.', {
+004835: key: warnedKey,
+004836: remainingPersonalRequests: (remainingRequests || []).length,
+004837: });
+004838: return true;
+004839: }
+004840: function refreshRadioTransportRequests() {
+004841: const observedAt = Date.now();
+004842: if (state.radioScanAt && observedAt - state.radioScanAt < RADIO_SCAN_INTERVAL_MS) {
+004843: return state.radioTransportRequests.map(request => ({
+004844: ...request,
+004845: pendingMs: Math.max(0, observedAt - Number(request.firstSeenAt || observedAt)),
+004846: }));
+004847: }
+004848: state.radioScanAt = observedAt;
+004849: const observedRequests = collectRadioTransportRequests();
+004850: const nextKeys = new Set(observedRequests.map(request => request.key));
+004851: for (const request of observedRequests) {
+004852: if (!state.radioRequestFirstSeenAt.has(request.key)) {
+004853: state.radioRequestFirstSeenAt.set(request.key, observedAt);
+004854: }
+004855: if (state.radioRequestKeys.has(request.key)) continue;
+004856: state.runRadioTransportRequests += 1;
+004857: const event = {
+004858: at: nowIso(),
+004859: event: 'appeared',
+004860: key: request.key,
+004861: vehicleId: request.vehicleId,
+004862: missionId: request.missionId,
+004863: vehicleLabel: request.vehicleLabel,
+004864: };
+004865: state.radioRequestHistory.push(event);
+004866: log('Radio Transport Request appeared.', event);
+004867: }
+004868: for (const oldKey of state.radioRequestKeys) {
+004869: if (nextKeys.has(oldKey)) continue;
+004870: const event = { at: nowIso(), event: 'cleared', key: oldKey };
+004871: state.radioRequestHistory.push(event);
+004872: log('Radio Transport Request cleared.', event);
+004873: state.radioRequestFirstSeenAt.delete(oldKey);
+004874: state.transportServiceDeferredUntil.delete(oldKey);
+004875: schedulePostTransportRehook(oldKey);
+004876: }
+004877: if (state.radioRequestHistory.length > RADIO_HISTORY_LIMIT) {
+004878: state.radioRequestHistory.splice(0, state.radioRequestHistory.length - RADIO_HISTORY_LIMIT);
+004879: }
+004880: const requests = observedRequests
+004881: .map((request, domOrder) => {
+004882: const firstSeenAt = Number(state.radioRequestFirstSeenAt.get(request.key) || observedAt);
+004883: return {
+004884: ...request,
+004885: firstSeenAt,
+004886: pendingMs: Math.max(0, observedAt - firstSeenAt),
+004887: domOrder,
+004888: };
+004889: })
+004890: .sort((left, right) =>
+004891: left.firstSeenAt - right.firstSeenAt ||
+004892: left.domOrder - right.domOrder
+004893: )
+004894: .map(({ domOrder, ...request }) => request);
+004895: const previousFirstKey = state.radioTransportRequests[0]?.key || '';
+004896: const nextFirstKey = requests[0]?.key || '';
+004897: const warnedKey = state.radioRequestWarningKey;
+004898: if (nextFirstKey !== previousFirstKey) {
+004899: state.radioRequestSince = nextFirstKey
+004900: ? Number(state.radioRequestFirstSeenAt.get(nextFirstKey) || observedAt)
+
+===== context-3 [5010-5083] =====
+005010: }
+005011: state.prisonerAssistLastClickKey = clickKey;
+005012: state.prisonerAssistLastClickAt = Date.now();
+005013: state.prisonerAssistAttempts += 1;
+005014: const event = {
+005015: at: nowIso(),
+005016: vehicleId: prisoner.vehicleId,
+005017: missionId: prisoner.request.missionId,
+005018: prisonId: destination.prisonId,
+005019: freeCells: destination.freeCells,
+005020: label: destination.label,
+005021: path: pathFromUrl(href),
+005022: reason: 'V2 prisoner Cell Selection remained unchanged after fallback delay',
+005023: };
+005024: state.prisonerAssistHistory.push(event);
+005025: if (state.prisonerAssistHistory.length > AFFINITY_HISTORY_LIMIT) {
+005026: state.prisonerAssistHistory.splice(0, state.prisonerAssistHistory.length - AFFINITY_HISTORY_LIMIT);
+005027: }
+005028: setPhase(
+005029: 'PRISONER_ASSIST',
+005030: 'Completing prisoner transport',
+005031: `V2 did not advance the personal prisoner Cell Selection. Using the first exact usable green cell for vehicle ${prisoner.vehicleId} on mission ${prisoner.request.missionId}.`
+005032: );
+005033: log('Prisoner assist clicked the first exact usable green cell after V2 had first chance.', event);
+005034: try {
+005035: destination.link.click();
+005036: return true;
+005037: } catch (error) {
+005038: log('Prisoner assist click failed.', { ...event, error: String(error?.message || error) });
+005039: return false;
+005040: }
+005041: }
+005042: function resetPatientAssistTracking() {
+005043: state.patientAssistKey = '';
+005044: state.patientAssistSince = 0;
+005045: }
+005046: function findExactPersonalPatientAnchor(doc, href, requests) {
+005047: if (!doc) return null;
+005048: const routeVehicleId = vehicleIdFromUrl(href);
+005049: if (!routeVehicleId) return null;
+005050: const request = radioRequestForVehicle(routeVehicleId, requests);
+005051: if (!request) return null;
+005052: for (const scope of getAccessibleTransportDocuments(doc)) {
+005053: let anchors = [];
+005054: try {
+005055: anchors = Array.from(scope.querySelectorAll('a.btn-success[href*="/patient/"]'));
+005056: } catch {}
+005057: for (const anchor of anchors) {
+005058: if (!anchor?.isConnected || anchor.hidden) continue;
+005059: if (anchor.classList?.contains('disabled') || anchor.classList?.contains('btn-danger')) continue;
+005060: if (String(anchor.getAttribute?.('aria-disabled') || '').toLowerCase() === 'true') continue;
+005061: const url = sameOriginUrl(anchor.getAttribute?.('href') || anchor.href || '');
+005062: if (!url) continue;
+005063: const route = url.pathname.match(/^\/vehicles\/(\d+)\/patient\/(\d+)\/?$/i);
+005064: if (!route || route[1] !== routeVehicleId) continue;
+005065: return {
+005066: anchor,
+005067: vehicleId: routeVehicleId,
+005068: patientId: route[2],
+005069: request,
+005070: href: url.href,
+005071: };
+005072: }
+005073: }
+005074: return null;
+005075: }
+005076: function maybeAssistPatientTransport(doc, href, context, requests) {
+005077: if (!state.wanted || state.stopping || context?.kind !== 'PATIENT') {
+005078: resetPatientAssistTracking();
+005079: return false;
+005080: }
+005081: if (exactPatientPath(href)) {
+005082: resetPatientAssistTracking();
+005083: return false;
+
+===== context-4 [5105-5156] =====
+005105: resetPatientAssistTracking();
+005106: return false;
+005107: }
+005108: state.patientAssistLastClickKey = clickKey;
+005109: state.patientAssistLastClickAt = Date.now();
+005110: state.patientAssistAttempts += 1;
+005111: const event = {
+005112: at: nowIso(),
+005113: vehicleId: patient.vehicleId,
+005114: missionId: patient.request.missionId,
+005115: patientId: patient.patientId,
+005116: path: pathFromUrl(href),
+005117: reason: 'V2 patient transport approach remained unchanged after fallback delay',
+005118: };
+005119: state.patientAssistHistory.push(event);
+005120: if (state.patientAssistHistory.length > TRANSPORT_SERVICE_HISTORY_LIMIT) {
+005121: state.patientAssistHistory.splice(0, state.patientAssistHistory.length - TRANSPORT_SERVICE_HISTORY_LIMIT);
+005122: }
+005123: setPhase(
+005124: 'PATIENT_ASSIST',
+005125: 'Opening patient transport',
+005126: `${missionDisplay(patient.request.missionId, missionNameForId(patient.request.missionId))} | vehicle ${patient.vehicleId}.`
+005127: );
+005128: log('Patient assist clicked the exact personal patient transport route after V2 had first chance.', event);
+005129: try {
+005130: patient.anchor.click();
+005131: return true;
+005132: } catch (error) {
+005133: log('Patient assist click failed.', { ...event, error: String(error?.message || error) });
+005134: return false;
+005135: }
+005136: }
+005137: function transportServiceRequest(requests = state.radioTransportRequests) {
+005138: const now = Date.now();
+005139: for (const request of requests || []) {
+005140: const deferredUntil = Number(state.transportServiceDeferredUntil.get(request.key) || 0);
+005141: if (deferredUntil > now) continue;
+005142: return request;
+005143: }
+005144: return null;
+005145: }
+005146: function recordTransportService(event) {
+005147: state.transportServiceHistory.push({ at: nowIso(), ...event });
+005148: if (state.transportServiceHistory.length > TRANSPORT_SERVICE_HISTORY_LIMIT) {
+005149: state.transportServiceHistory.splice(0, state.transportServiceHistory.length - TRANSPORT_SERVICE_HISTORY_LIMIT);
+005150: }
+005151: }
+005152: function clearTransportServiceState() {
+005153: state.transportServiceActive = false;
+005154: state.transportServiceKey = '';
+005155: state.transportServiceVehicleId = '';
+005156: state.transportServiceMissionId = '';
+
+===== context-5 [5504-5544] =====
+005504: `${context.kind === 'PATIENT' ? 'Patient' : 'Prisoner'} transport ${identity} stalled again after the single bounded Worker-A rebuild. All workers were released; Dispatch was not clicked and the mission was not skipped.`
+005505: );
+005506: return true;
+005507: }
+005508: if (!exactRequest && !recoveryUrl) {
+005509: state.transportRecoveryCircuitBreakers += 1;
+005510: recordTransportRecovery({
+005511: ...baseEvent,
+005512: action: 'fail-closed-no-exact-recovery-target',
+005513: });
+005514: setError(
+005515: 'Transport recovery target was unavailable',
+005516: `No exact personal transport request or mission URL could be verified for ${identity}. All workers were released without clicking Dispatch.`
+005517: );
+005518: return true;
+005519: }
+005520: state.transportHardRecoveries += 1;
+005521: recordTransportRecovery({
+005522: ...baseEvent,
+005523: action: exactRequest
+005524: ? 'reopen-exact-personal-transport'
+005525: : 'rebuild-worker-a-at-exact-mission',
+005526: recoveryPath: exactRequest
+005527: ? `/vehicles/${exactRequest.vehicleId}`
+005528: : pathFromUrl(recoveryUrl),
+005529: });
+005530: if (state.activeTransportEvent) {
+005531: endTransportEvent('bounded-hard-recovery', context, href);
+005532: }
+005533: clearTimer('watcherTimer', window.clearInterval);
+005534: clearTimer('nexusDiscoveryTimer');
+005535: pausePipelineController('transport-context-hard-recovery', true);
+005536: clearPostDispatchWatchdog('transport-context-hard-recovery');
+005537: clearAutoRecoveryWatchdog('transport-context-hard-recovery');
+005538: clearSharedV2QueueGuard('transport-context-hard-recovery', baseEvent.missionId);
+005539: clearSharedV2AutoRunning('transport-context-hard-recovery');
+005540: resetAutoStartTracking();
+005541: clearPromotedWorkTracking();
+005542: state.running = false;
+005543: state.transportKind = '';
+005544: state.transportIdentity = '';
+
+===== context-6 [7284-7331] =====
+007284: captureWorkerSnapshot();
+007285: return;
+007286: }
+007287: if (maybeRunPostDispatchWatchdog(doc, href, context)) {
+007288: captureWorkerSnapshot();
+007289: return;
+007290: }
+007291: if (radioRequests.length && state.radioRequestSince) {
+007292: const radioElapsed = Date.now() - state.radioRequestSince;
+007293: if (radioElapsed >= RADIO_REQUEST_STALL_WARN_MS && !state.radioRequestWarned) {
+007294: state.radioRequestWarned = true;
+007295: state.radioRequestWarningKey = String(radioRequests[0]?.key || '');
+007296: log('Radio Transport Request has remained uncleared.', {
+007297: elapsedMs: radioElapsed,
+007298: request: radioRequests[0],
+007299: });
+007300: if (!kind && !state.autoRecoveryCandidateKey && !state.autoStopWarned) {
+007301: setPhase(
+007302: 'TRANSPORT_WARN',
+007303: 'Personal Radio transport request may be stalled',
+007304: `Vehicle ${radioRequests[0].vehicleId} still requests transport for mission ${radioRequests[0].missionId} after ${Math.round(radioElapsed / 1000)} seconds.`
+007305: );
+007306: }
+007307: }
+007308: }
+007309: const control = findAutoModeControl(doc);
+007310: if (maybeRecoverStalledPromotedWorker(doc, href, control, speedStatus)) {
+007311: captureWorkerSnapshot();
+007312: return;
+007313: }
+007314: if (maybeRecoverMissingActiveControl(doc, href, kind, control, speedStatus)) {
+007315: captureWorkerSnapshot();
+007316: return;
+007317: }
+007318: maybeEnforcePriority(doc, href, context, radioRequests);
+007319: const foreignMissionFrame = findVisibleForeignMissionFrame();
+007320: if (foreignMissionFrame && !state.foreignMissionUiWarned) {
+007321: state.foreignMissionUiWarned = true;
+007322: log('V2 opened or retained a visible native mission frame outside the background worker.');
+007323: if (!kind) {
+007324: setPhase(
+007325: 'BACKGROUND_ESCAPE_WARN',
+007326: 'Auto Mode escaped to a visible mission frame',
+007327: 'The background-worker concept is not fully isolated on this live layout yet. Stop and export diagnostics; do not treat this as a finished V3 behaviour.'
+007328: );
+007329: }
+007330: }
+007331: if (control) {
+
+===== context-7 [9207-9249] =====
+009207:             ems_mobile_command:
+009208:                 'Ambulance Officer',
+009209:             midwife:
+009210:                 'Midwifery Training',
+009211:             paramedic_advanced:
+009212:                 'Specialist Paramedic Training'
+009213:         });
+009214:     const POLICE_RULES = Object.freeze({ publicOrderLevel1: makePoliceRule({ id: 'police_public_order_level_1', label: 'Level 1 Public Order', vehicleTypeIds: [ '8' ], vehicleLabel: 'Incident Response Vehicle', target: 2, trainingAll: [ 'level_1_public_order' ], trainingLabel: 'Level 1 Public Order', sharedVehiclePool: true }), publicOrderLevel2: makePoliceRule({ id: 'police_public_order_level_2', label: 'Level 2 Public Order', vehicleTypeIds: [ '8' ], vehicleLabel: 'Incident Response Vehicle', target: 2, trainingAll: [ 'level_2_public_order' ], trainingLabel: 'Level 2 Public Order', sharedVehiclePool: true }), publicOrderSergeant: makePoliceRule({ id: 'police_public_order_sergeant', label: 'Police Sergeant', vehicleTypeIds: [ '8' ], vehicleLabel: 'Incident Response Vehicle', target: 2, trainingAll: [ 'police_sergeant' ], trainingLabel: 'Police Sergeant', sharedVehiclePool: true }), publicOrderMedic: makePoliceRule({ id: 'police_public_order_medic', label: 'Police Medic', vehicleTypeIds: [ '8' ], vehicleLabel: 'Incident Response Vehicle', target: 2, trainingAll: [ 'police_medic' ], trainingLabel: 'Police Medic', sharedVehiclePool: true }), publicOrderCombined: makePoliceRule({ id: 'police_public_order_combined', label: 'Public Order L1 + L2 + Sergeant + Police Medic', vehicleTypeIds: ['8'], vehicleLabel: 'Incident Response Vehicle', target: 2, trainingAll: ['level_1_public_order', 'level_2_public_order', 'police_sergeant', 'police_medic'], trainingLabel: 'Level 1 + Level 2 + Sergeant + Police Medic', sharedVehiclePool: true }), inspector: makePoliceRule({ id: 'police_inspector', label: 'Police Inspector', vehicleTypeIds: ['8'], vehicleLabel: 'Incident Response Vehicle', target: 2, trainingAll: ['police_inspector'], trainingLabel: 'Police Inspector', sharedVehiclePool: true }), roads: makePoliceRule({ id: 'police_roads_firearms', label: 'Roads Policing + Firearms', vehicleTypeIds: ['25'], vehicleLabel: 'Armed Traffic Car', target: 2, trainingAll: ['traffic_police', 'swat'], trainingLabel: 'Roads Policing + Firearms' }), firearms: makePoliceRule({ id: 'police_mrav_firearms', label: 'Firearms', vehicleTypeIds: ['56'], vehicleLabel: 'Multi-Role Armoured Vehicle', target: 6, trainingAll: ['swat'], trainingLabel: 'Firearms', preferWithout: ['traffic_police'] }), mounted: makePoliceRule({ id: 'police_mounted', label: 'Mounted Officers', vehicleTypeIds: ['55'], vehicleLabel: 'Mounted Unit', target: 1, trainingAll: ['police_horse'], trainingLabel: 'Mounted Officers' }), dog: makePoliceRule({ id: 'police_dog', label: 'Dog handling', vehicleTypeIds: ['12'], vehicleLabel: 'Dog Support Unit', target: 1, trainingAll: ['k9'], trainingLabel: 'Dog handling' }), searchAdvisor: makePoliceRule({ id: 'police_drone_search_advisor', label: 'Drone Operator + Police Search Advisor', vehicleTypeIds: ['91'], vehicleLabel: 'Police Drone Vehicle', target: 2, trainingAll: ['drone', 'search_and_rescue'], trainingLabel: 'Drone Operator + Police Search Advisor', sharedVehiclePool: true }), drone: makePoliceRule({ id: 'police_drone', label: 'Drone Operator', vehicleTypeIds: ['91'], vehicleLabel: 'Police Drone Vehicle', target: 2, trainingAll: ['drone'], trainingLabel: 'Drone Operator', preferWithout: ['search_and_rescue'], sharedVehiclePool: true }), aviation: makePoliceRule({ id: 'police_aviation', label: 'Police aviation', vehicleTypeIds: ['11'], vehicleLabel: 'Police Helicopter', target: 3, trainingAll: ['polizeihubschrauber'], trainingLabel: 'Police aviation' }), mobileOperations: makePoliceRule({ id: 'police_mobile_operations', label: 'Mobile Operations Management', vehicleTypeIds: ['108'], vehicleLabel: 'EIU', target: 2, trainingAll: ['railway_police_command'], trainingLabel: 'Mobile Operations Manager' }), railway: makePoliceRule({ id: 'police_railway', label: 'Railway Police Officer', vehicleTypeIds: ['8'], vehicleLabel: 'Railway Policing IRV', target: 2, trainingAll: ['railway_police'], trainingLabel: 'Railway Police Officer', preferWithout: ['railway_police_command'], sharedVehiclePool: true }), eodCommander: makePoliceRule({ id: 'police_eod_commander', label: 'EOD Commander', vehicleTypeIds: ['109'], vehicleLabel: 'EOD Commander Vehicle', target: 2, trainingAll: ['bomb_disposal_command'], trainingLabel: 'EOD Commander' }), eodResponse: makePoliceRule({ id: 'police_eod_response', label: 'Bomb Disposal', vehicleTypeIds: ['110'], vehicleLabel: 'EOD Response Vehicle', target: 4, trainingAll: ['bomb_disposal'], trainingLabel: 'Bomb Disposal', preferWithout: ['bomb_disposal_command'] }), eodMedium: makePoliceRule({ id: 'police_eod_medium', label: 'Bomb Disposal', vehicleTypeIds: ['111'], vehicleLabel: 'EOD Medium Equipment Van', target: 3, trainingAll: ['bomb_disposal'], trainingLabel: 'Bomb Disposal', preferWithout: ['bomb_disposal_command'] }), eodHeavy: makePoliceRule({ id: 'police_eod_heavy', label: 'Bomb Disposal', vehicleTypeIds: ['112'], vehicleLabel: 'EOD Heavy Equipment Vehicle', target: 2, trainingAll: ['bomb_disposal'], trainingLabel: 'Bomb Disposal', preferWithout: ['bomb_disposal_command'] }), marineResponse: makePoliceRule({ id: 'police_marine_eod_response', label: 'Marine Bomb Disposal', vehicleTypeIds: ['113'], vehicleLabel: 'Marine EOD Response Vehicle', target: 4, trainingAll: ['bomb_disposal_diver'], trainingLabel: 'Marine Bomb Disposal' }), marineEquipment: makePoliceRule({ id: 'police_marine_eod_equipment', label: 'Marine Bomb Disposal', vehicleTypeIds: ['114'], vehicleLabel: 'Marine EOD Equipment Van', target: 3, trainingAll: ['bomb_disposal_diver'], trainingLabel: 'Marine Bomb Disposal' }) }); const FIRE_RULES = Object.freeze({ arffFoam: makePoliceRule({ id: 'fire_arff_major_foam', label: 'Aircraft Rescue and Firefighting', vehicleTypeIds: ['75'], vehicleLabel: 'Major Foam Tender', target: 4, trainingAll: ['arff'], trainingLabel: 'ARFF' }), arffRiv: makePoliceRule({ id: 'fire_arff_riv', label: 'Aircraft Rescue and Firefighting', vehicleTypeIds: ['76'], vehicleLabel: 'RIV', target: 4, trainingAll: ['arff'], trainingLabel: 'ARFF' }), arffCommand: makePoliceRule({ id: 'fire_arff_command', label: 'Aircraft Rescue and Firefighting', vehicleTypeIds: ['77'], vehicleLabel: 'Airfield Firefighting Command Vehicle', target: 2, trainingAll: ['arff'], trainingLabel: 'ARFF' }), arffStairs: makePoliceRule({ id: 'fire_arff_rescue_stairs', label: 'Aircraft Rescue and Firefighting', vehicleTypeIds: ['78'], vehicleLabel: 'Rescue Stairs', target: 2, trainingAll: ['arff'], trainingLabel: 'ARFF' }), coResponder: makePoliceRule({ id: 'fire_co_responder', label: 'Co-Responder Training', vehicleTypeIds: ['18'], vehicleLabel: 'Co-Responder Vehicle', target: 1, trainingAll: ['coresponder'], trainingLabel: 'Co-Responder' }), drone: makePoliceRule({ id: 'fire_drone', label: 'Drone Operator Training', vehicleTypeIds: ['90'], vehicleLabel: 'Fire Station Drone Vehicle', target: 2, trainingAll: ['drone'], trainingLabel: 'Drone Operator' }), highVolumePump: makePoliceRule({ id: 'fire_high_volume_pump', label: 'High Volume Pump Training', vehicleTypeIds: ['40'], companionVehicleTypeIds: ['50'], vehicleLabel: 'Prime Mover linked to an HVP pod', target: 2, trainingAll: ['pump'], trainingLabel: 'High Volume Pump' }), lifeguard: makePoliceRule({ id: 'fire_lifeguard', label: 'Lifeguard Training', vehicleTypeIds: ['73'], companionVehicleTypeIds: ['74'], vehicleLabel: 'Light 4x4 linked to a Boat Trailer', target: 4, trainingAll: ['gw_wasserrettung'], trainingLabel: 'Lifeguard' }), incidentCommand: makePoliceRule({ id: 'fire_level_1_incident_command', label: 'Level 1 Incident Commander Training', vehicleTypeIds: ['15'], vehicleLabel: 'Incident Command and Control Unit', target: 3, trainingAll: ['elw2'], trainingLabel: 'Level 1 Incident Commander Training' }), hazmatOsu: makePoliceRule({ id: 'fire_hazmat_osu', label: 'HazMat Unit', vehicleTypeIds: ['39'], vehicleLabel: 'Operational Support Unit', target: 6, trainingAll: ['gw_gefahrgut'], trainingLabel: 'HazMat Unit' }), railway: makePoliceRule({ id: 'fire_railway', label: 'Railway Fire', vehicleTypeIds: ['107'], vehicleLabel: 'RRU', target: 2, trainingAll: ['railway_fire'], trainingLabel: 'Railway Fire' }) }); const FIRE_ALL_RULES = Object.freeze([ FIRE_RULES.arffCommand, FIRE_RULES.arffStairs, FIRE_RULES.arffFoam, FIRE_RULES.arffRiv, FIRE_RULES.highVolumePump, FIRE_RULES.coResponder, FIRE_RULES.drone, FIRE_RULES.lifeguard, FIRE_RULES.incidentCommand, FIRE_RULES.hazmatOsu, FIRE_RULES.railway ]); const SAR_RULES = Object.freeze({ caveRescue: makePoliceRule({ id: 'sar_cave_rescue', label: 'Cave Rescue Training', vehicleTypeIds: ['93', '99'], vehicleLabel: 'SAR or Mountain Rescue 4x4', target: 4, trainingAll: ['mountain_cave_rescue'], trainingLabel: 'Cave Rescue Specialist' }), coastalAir: makePoliceRule({ id: 'sar_coastal_air_rescue', label: 'Coastal Air Rescue Operations Training', vehicleTypeIds: ['64', '65'], vehicleLabel: 'Coastguard Rescue Helicopter', target: 4, trainingAll: ['coastal_rescue_pilot'], trainingLabel: 'Coastal Air Rescue Pilot' }), coastalCommand: makePoliceRule({ id: 'sar_coastal_command', label: 'Coastal Command Training', vehicleTypeIds: ['60'], vehicleLabel: 'Coastguard Commander', target: 5, trainingAll: ['coastal_command'], trainingLabel: 'Coastal Commander' }), searchAdvisor: makePoliceRule({ id: 'sar_search_advisor', label: 'Coastguard Search Advisor Training', vehicleTypeIds: ['86'], vehicleLabel: 'Operational Support Van', target: 3, trainingAll: ['search_and_rescue'], trainingLabel: 'Search Advisor' }), dogHandling: makePoliceRule({ id: 'sar_dog_handling', label: 'Dog handling', vehicleTypeIds: ['101', '102'], vehicleLabel: 'Search Dog Unit', target: 1, trainingAll: ['rescue_dogs'], trainingLabel: 'Search Dog Handler' }), drone: makePoliceRule({ id: 'sar_drone', label: 'Drone Operator Training', vehicleTypeIds: ['89'], vehicleLabel: 'SAR HQ Drone Vehicle', target: 2, trainingAll: ['drone'], trainingLabel: 'Drone Operator' }), floodCrv: makePoliceRule({ id: 'sar_flood_crv', label: 'Flood First Responder Training', vehicleTypeIds: ['57'], companionVehicleTypeIds: ['61'], vehicleLabel: 'CRV linked to a Flood Rescue Unit', target: 5, trainingAll: ['flood_equipment'], trainingLabel: 'Flood First Responder' }), floodMud: makePoliceRule({ id: 'sar_flood_mud', label: 'Flood First Responder Training', vehicleTypeIds: ['58'], companionVehicleTypeIds: ['61'], vehicleLabel: 'Mud Rescue Unit linked to a Flood Rescue Unit', target: 5, trainingAll: ['flood_equipment'], trainingLabel: 'Flood First Responder' }), floodRope: makePoliceRule({ id: 'sar_flood_rope', label: 'Flood First Responder Training', vehicleTypeIds: ['59'], companionVehicleTypeIds: ['61'], vehicleLabel: 'Rope Rescue Unit linked to a Flood Rescue Unit', target: 5, trainingAll: ['flood_equipment'], trainingLabel: 'Flood First Responder' }), floodCommander: makePoliceRule({ id: 'sar_flood_commander', label: 'Flood First Responder Training', vehicleTypeIds: ['60'], companionVehicleTypeIds: ['61'], vehicleLabel: 'Coastguard Commander linked to a Flood Rescue Unit', target: 5, trainingAll: ['flood_equipment'], trainingLabel: 'Flood First Responder' }), floodSupport: makePoliceRule({ id: 'sar_flood_support', label: 'Flood First Responder Training', vehicleTypeIds: ['63'], companionVehicleTypeIds: ['61'], vehicleLabel: 'Support Unit linked to a Flood Rescue Unit', target: 8, trainingAll: ['flood_equipment'], trainingLabel: 'Flood First Responder' }), floodLifeboat4x4: makePoliceRule({ id: 'sar_flood_lifeboat_4x4', label: 'Flood First Responder Training', vehicleTypeIds: ['66'], companionVehicleTypeIds: ['61'], vehicleLabel: '4x4 linked to a Flood Rescue Unit', target: 4, trainingAll: ['flood_equipment'], trainingLabel: 'Flood First Responder' }), floodControlVan: makePoliceRule({ id: 'sar_flood_control_van', label: 'Flood First Responder Training', vehicleTypeIds: ['85'], companionVehicleTypeIds: ['88'], vehicleLabel: 'Control Van linked to a SAR Flood Rescue Trailer', target: 3, trainingAll: ['flood_equipment'], trainingLabel: 'Flood First Responder' }), floodSupportVan: makePoliceRule({ id: 'sar_flood_support_van', label: 'Flood First Responder Training', vehicleTypeIds: ['86'], companionVehicleTypeIds: ['88'], vehicleLabel: 'Operational Support Van linked to a SAR Flood Rescue Trailer', target: 3, trainingAll: ['flood_equipment'], trainingLabel: 'Flood First Responder' }), floodDrone: makePoliceRule({ id: 'sar_flood_drone', label: 'Flood First Responder Training', vehicleTypeIds: ['89'], companionVehicleTypeIds: ['88'], vehicleLabel: 'Drone Vehicle linked to a SAR Flood Rescue Trailer', target: 2, trainingAll: ['flood_equipment'], trainingLabel: 'Flood First Responder' }), floodRrv: makePoliceRule({ id: 'sar_flood_rrv', label: 'Flood First Responder Training', vehicleTypeIds: ['94'], companionVehicleTypeIds: ['88'], vehicleLabel: 'SAR RRV linked to a SAR Flood Rescue Trailer', target: 1, trainingAll: ['flood_equipment'], trainingLabel: 'Flood First Responder' }), hovercraft: makePoliceRule({ id: 'sar_hovercraft', label: 'Hovercraft Commander Training', vehicleTypeIds: ['72'], companionVehicleTypeIds: ['71'], vehicleLabel: 'Hovercraft Transporter linked to a Hovercraft Trailer', target: 3, trainingAll: ['hover_boat_elw'], trainingLabel: 'Hovercraft Commander' }), jetSki: makePoliceRule({ id: 'sar_jet_ski', label: 'Jet Ski Handling', vehicleTypeIds: ['66'], companionVehicleTypeIds: ['70'], vehicleLabel: '4x4 linked to a Rescue Watercraft Trailer', target: 4, trainingAll: ['jetski'], trainingLabel: 'Jet Ski Handling' }), lifeboatIlb: makePoliceRule({ id: 'sar_lifeboat_ilb', label: 'Lifeboat Operations Training', vehicleTypeIds: ['68'], vehicleLabel: 'ILB', target: 4, trainingAll: ['ocean_navigation'], trainingLabel: 'Lifeboat Operator' }), lifeboatAlb: makePoliceRule({ id: 'sar_lifeboat_alb', label: 'Lifeboat Operations Training', vehicleTypeIds: ['69'], vehicleLabel: 'ALB', target: 7, trainingAll: ['ocean_navigation'], trainingLabel: 'Lifeboat Operator' }), lifeguard: makePoliceRule({ id: 'sar_lifeguard', label: 'Lifeguard Training', vehicleTypeIds: ['66'], companionVehicleTypeIds: ['67'], vehicleLabel: '4x4 linked to an Inland Rescue Boat', target: 4, trainingAll: ['gw_wasserrettung'], trainingLabel: 'Lifeguard' }), mudRescue: makePoliceRule({ id: 'sar_mud_rescue', label: 'Mud Rescue Training', vehicleTypeIds: ['58'], vehicleLabel: 'Coastguard Mud Rescue Unit', target: 5, trainingAll: ['coastal_mud_rescue'], trainingLabel: 'Mud Rescue Operator' }), ropeRescue: makePoliceRule({ id: 'sar_rope_rescue', label: 'Rope Rescue Training', vehicleTypeIds: ['59'], vehicleLabel: 'Coastguard Rope Rescue Unit', target: 5, trainingAll: ['gw_hoehenrettung'], trainingLabel: 'Rope Rescue Operator' }), searchManagement: makePoliceRule({ id: 'sar_search_management', label: 'Search Management Training', vehicleTypeIds: ['85', '100'], vehicleLabel: 'SAR or Mountain Rescue Control Van', target: 3, trainingAll: ['search_and_rescue_command'], trainingLabel: 'SAR Commander' }) }); const SAR_ALL_RULES = Object.freeze([ SAR_RULES.coastalAir, SAR_RULES.coastalCommand, SAR_RULES.searchManagement, SAR_RULES.searchAdvisor, SAR_RULES.caveRescue, SAR_RULES.mudRescue, SAR_RULES.ropeRescue, SAR_RULES.floodCrv, SAR_RULES.floodMud, SAR_RULES.floodRope, SAR_RULES.floodCommander, SAR_RULES.floodSupport, SAR_RULES.floodLifeboat4x4, SAR_RULES.floodControlVan, SAR_RULES.floodSupportVan, SAR_RULES.floodDrone, SAR_RULES.floodRrv, SAR_RULES.hovercraft, SAR_RULES.jetSki, SAR_RULES.lifeboatIlb, SAR_RULES.lifeboatAlb, SAR_RULES.lifeguard, SAR_RULES.dogHandling, SAR_RULES.drone ]); const FIRE_PROFILE_BUILDING_TYPE_IDS = Object.freeze(['0', '18']); const SAR_PROFILE_BUILDING_TYPE_IDS = Object.freeze({ caveRescue: Object.freeze(['22', '31', '33']), coastalAir: Object.freeze(['30']), coastalCommand: Object.freeze(['22', '28']), searchAdvisor: Object.freeze(['31']), dogHandling: Object.freeze(['22', '31', '33']), drone: Object.freeze(['31']), flood: Object.freeze(['22', '27', '28', '31']), hovercraft: Object.freeze(['27']), jetSki: Object.freeze(['27']), lifeboat: Object.freeze(['27']), lifeguard: Object.freeze(['27']), mudRescue: Object.freeze(['28']), ropeRescue: Object.freeze(['28']), searchManagement: Object.freeze(['31', '33']), all: Object.freeze(['22', '27', '28', '30', '31', '33']) }); const MEDICAL_RULES = Object.freeze({ ambulanceOfficer: makePoliceRule({ id: 'medical_ambulance_officer', label: 'Ambulance Officer', vehicleTypeIds: ['34'], vehicleLabel: 'Ambulance Officer vehicle', target: 1, trainingAll: ['ems_mobile_command'], trainingLabel: 'Ambulance Officer' }), hart: makePoliceRule({ id: 'medical_hart', label: 'HART Training', vehicleTypeIds: ['27', '28', '30'], vehicleLabel: 'PRV, SRV or ATV Carrier', target: 2, trainingAll: ['hazard_response_ems'], trainingLabel: 'HART Training' }), tacticalCommand: makePoliceRule({ id: 'medical_tactical_command', label: 'Tactical Command Course', vehicleTypeIds: ['31'], vehicleLabel: 'Ambulance Control Unit', target: 2, trainingAll: ['elw2_ems'], trainingLabel: 'Tactical Command Course' }), sort: makePoliceRule({ id: 'medical_sort', label: 'SORT Training', vehicleTypeIds: ['32', '33'], vehicleLabel: 'CBRN Vehicle or Mass Casualty Equipment', target: 2, trainingAll: ['special_operation_response'], trainingLabel: 'SORT Training' }), midwifery: makePoliceRule({ id: 'medical_midwifery', label: 'Midwifery Training', vehicleTypeIds: ['95'], vehicleLabel: 'Community Midwife vehicle', target: 2, trainingAll: ['midwife'], trainingLabel: 'Midwifery Training' }), specialistParamedic: makePoliceRule({ id: 'medical_specialist_paramedic', label: 'Specialist Paramedic Training', vehicleTypeIds: ['96'], vehicleLabel: 'Specialist Paramedic RRV', target: 2, trainingAll: ['paramedic_advanced'], trainingLabel: 'Specialist Paramedic Training' }), criticalCare: makePoliceRule({ id: 'medical_critical_care', label: 'Critical Care', vehicleTypeIds: ['5'], vehicleLabel: 'Ambulance', target: 1, trainingAll: ['critical_care'], trainingLabel: 'Critical Care' }) }); const MEDICAL_ALL_RULES = Object.freeze([ MEDICAL_RULES.ambulanceOfficer, MEDICAL_RULES.hart, MEDICAL_RULES.tacticalCommand, MEDICAL_RULES.sort, MEDICAL_RULES.midwifery, MEDICAL_RULES.specialistParamedic, MEDICAL_RULES.criticalCare ]); const MEDICAL_PROFILE_BUILDING_TYPE_IDS = Object.freeze({ ambulanceOfficer: Object.freeze(['2', '20', '22', '25']), hart: Object.freeze(['25']), tacticalCommand: Object.freeze(['2', '20', '21', '25']), sort: Object.freeze(['2', '20', '21', '25']), midwifery: Object.freeze(['2', '20', '21', '22', '32']), specialistParamedic: Object.freeze(['2', '20', '21', '22', '32']), all: Object.freeze(['2', '20', '21', '22', '25', '32']) }); const POLICE_ALL_RULES = Object.freeze([ POLICE_RULES.eodCommander, POLICE_RULES.searchAdvisor, POLICE_RULES.mobileOperations, POLICE_RULES.roads, POLICE_RULES.inspector, POLICE_RULES.railway, POLICE_RULES.publicOrderCombined, POLICE_RULES.aviation, POLICE_RULES.marineResponse, POLICE_RULES.marineEquipment, POLICE_RULES.eodResponse, POLICE_RULES.eodMedium, POLICE_RULES.eodHeavy, POLICE_RULES.firearms, POLICE_RULES.mounted, POLICE_RULES.dog, POLICE_RULES.drone ]); const livePoliceProfile = (id, label, vehicle, requirement, policy, rules, stationTypes = ['POLICE']) => ({ id, label, vehicle, requirement, policy, live: true, engine: 'police', stationTypes, rules }); const liveFireProfile = (id, label, vehicle, requirement, policy, rules) => ({ id, label, vehicle, requirement, policy, live: true, engine: 'personnel-rules', stationTypes: [], buildingTypeIds: FIRE_PROFILE_BUILDING_TYPE_IDS, rules }); const liveSarProfile = (id, label, vehicle, requirement, policy, rules, buildingTypeIds) => ({ id, label, vehicle, requirement, policy, live: true, engine: 'personnel-rules', stationTypes: [], buildingTypeIds, rules }); const liveMedicalProfile = ( id, label, vehicle, requirement, policy, rules, buildingTypeIds ) => ({ id, label, vehicle, requirement, policy, live: true, engine: 'personnel-rules', stationTypes: [], buildingTypeIds, rules }); const PERSONNEL_SERVICE_DEFINITIONS = {
+009215:         medical: { label: 'Medical', icon: '🚑', profiles: [ { id: 'critical_care', label: 'Critical Care', vehicle: 'Normal Ambulance', requirement: '1 Critical Care-trained staff per Ambulance', policy: 'LIVE ENGINE: Critical Care is used only for normal Ambulances. Existing assignments are preserved and vehicles are safely topped up to 1 trained staff.', live: true, engine: 'medical-critical-care', stationTypes: ['AMBULANCE'] }, liveMedicalProfile( 'ambulance_officer', 'Ambulance Officer', 'Ambulance Officer vehicle', '1 Ambulance Officer-trained member per vehicle', 'LIVE: fills each exact type-34 Ambulance Officer vehicle to 1/1 with ems_mobile_command-trained personnel.', [MEDICAL_RULES.ambulanceOfficer], MEDICAL_PROFILE_BUILDING_TYPE_IDS.ambulanceOfficer ), liveMedicalProfile( 'hart', 'HART Training', 'PRV / SRV / ATV Carrier', '2 HART-trained personnel per vehicle', 'LIVE: fills exact type-27 PRVs, type-28 SRVs and type-30 ATV Carriers to 2/2 with hazard_response_ems-trained personnel.', [MEDICAL_RULES.hart], MEDICAL_PROFILE_BUILDING_TYPE_IDS.hart ), liveMedicalProfile( 'midwifery', 'Midwifery Training', 'Community Midwife vehicle', '2 Midwifery-trained personnel per vehicle', 'LIVE: fills each exact type-95 Community Midwife vehicle to 2/2 with midwife-trained personnel.', [MEDICAL_RULES.midwifery], MEDICAL_PROFILE_BUILDING_TYPE_IDS.midwifery ), liveMedicalProfile( 'sort', 'SORT Training', 'CBRN Vehicle / Mass Casualty Equipment', '2 SORT-trained personnel per vehicle', 'LIVE: fills exact type-32 CBRN Vehicles and type-33 Mass Casualty Equipment to 2/2 with special_operation_response-trained personnel.', [MEDICAL_RULES.sort], MEDICAL_PROFILE_BUILDING_TYPE_IDS.sort ), liveMedicalProfile( 'specialist_paramedic', 'Specialist Paramedic Training', 'Specialist Paramedic RRV', '2 Specialist Paramedic-trained personnel per vehicle', 'LIVE: fills each exact type-96 Specialist Paramedic RRV to 2/2 with paramedic_advanced-trained personnel.', [MEDICAL_RULES.specialistParamedic], MEDICAL_PROFILE_BUILDING_TYPE_IDS.specialistParamedic ), liveMedicalProfile( 'tactical_command', 'Tactical Command Course', 'Ambulance Control Unit', '2 Tactical Command-trained personnel per vehicle', 'LIVE: fills each exact type-31 Ambulance Control Unit to 2/2 with elw2_ems-trained personnel. ATV Carriers remain HART-only.', [MEDICAL_RULES.tacticalCommand], MEDICAL_PROFILE_BUILDING_TYPE_IDS.tacticalCommand ), { id: 'all_medical', label: 'Run all Medical profiles', vehicle: 'All mapped medical vehicle groups', requirement: 'Specialist profiles first; Critical Care Ambulances last', policy: 'LIVE BATCH: preserves current assignments, fills every exact specialist medical vehicle first, fills normal Ambulances with Critical Care personnel last, then verifies the station-wide result.', live: true, engine: 'personnel-rules', stationTypes: [], buildingTypeIds: MEDICAL_PROFILE_BUILDING_TYPE_IDS.all, rules: MEDICAL_ALL_RULES, batch: true } ] },
+009216:         fire: { label: 'Fire / Airfield', icon: '🚒✈️', profiles: [ liveFireProfile('fire_aircraft_rescue', 'Aircraft Rescue and Firefighting', 'Major Foam Tender / RIV / Airfield Command / Rescue Stairs', 'Foam and RIV 4/4; Command and Rescue Stairs 2/2', 'LIVE: fills exact Airfield types 75 and 76 to 4 ARFF-trained personnel and types 77 and 78 to 2 while preserving existing occupants.', [FIRE_RULES.arffFoam, FIRE_RULES.arffRiv, FIRE_RULES.arffCommand, FIRE_RULES.arffStairs]), liveFireProfile('fire_co_responder', 'Co-Responder Training', 'Co-Responder Vehicle', '1 Co-Responder-trained member per vehicle', 'LIVE: fills each exact type-18 Co-Responder Vehicle to 1/1 with coresponder-trained personnel.', [FIRE_RULES.coResponder]), liveFireProfile('fire_drone_operator', 'Drone Operator Training', 'Fire Station Drone Vehicle', '2 Drone Operators per vehicle', 'LIVE: fills each exact type-90 Fire Station Drone Vehicle to 2/2 with drone-trained personnel.', [FIRE_RULES.drone]), liveFireProfile('fire_hazmat', 'HazMat Unit', 'Operational Support Unit (OSU)', '6 HazMat-trained personnel per OSU', 'LIVE: fills each exact type-39 Fire OSU with 6 gw_gefahrgut-trained personnel. Type-7 HazMat Units are excluded.', [FIRE_RULES.hazmatOsu]), liveFireProfile('fire_high_volume_pump', 'High Volume Pump Training', 'Prime Mover linked to an HVP pod', '2 High Volume Pump-trained members per linked Prime Mover', 'LIVE: reads the station vehicle API and fills only an exact type-40 Prime Mover linked to a type-50 HVP pod. Ambiguous links are skipped.', [FIRE_RULES.highVolumePump]), liveFireProfile('fire_lifeguard', 'Lifeguard Training', 'Light 4x4 linked to a Boat Trailer', '4 Lifeguards per linked Light 4x4', 'LIVE: reads the station vehicle API and fills only an exact type-73 Light 4x4 linked to a type-74 Boat Trailer. Ambiguous links are skipped.', [FIRE_RULES.lifeguard]), liveFireProfile('fire_mobile_command', 'Level 1 Incident Commander Training', 'Incident Command and Control Unit (ICCU)', '3 Level 1 Incident Commanders per ICCU', "LIVE: fills each exact type-15 ICCU with 3 elw2-trained personnel while preserving its remaining seats.", [FIRE_RULES.incidentCommand]), liveFireProfile('fire_railway', 'Railway Fire', 'RRU', '2 Railway Fire-trained personnel per RRU', 'LIVE: fills each exact type-107 RRU to 2/2 with railway_fire-trained personnel.', [FIRE_RULES.railway]), { id: 'all_fire', label: 'Run all Fire / Airfield profiles', vehicle: 'All mapped Fire and Airfield vehicle groups', requirement: 'Process all verified Fire and Airfield profiles in safe priority order', policy: 'LIVE BATCH: preserves current occupants, resolves actual trailer and pod links, merges overlapping requirements onto one crew, and verifies every processed vehicle.', live: true, engine: 'personnel-rules', stationTypes: [], buildingTypeIds: FIRE_PROFILE_BUILDING_TYPE_IDS, rules: FIRE_ALL_RULES, batch: true, mergeOverlappingVehicleRules: true } ] },
+009217:         police: { label: 'Police', icon: '🚓', profiles: [ livePoliceProfile('police_bomb_disposal', 'Bomb Disposal', 'EOD Response, Medium and Heavy vehicles', 'Fill each mapped EOD vehicle to its verified maximum with Bomb Disposal personnel', 'LIVE: EOD Commander vehicles are processed first by Run all Police, then Response 4/4, Medium 3/3 and Heavy 2/2. Existing assignments are preserved.', [POLICE_RULES.eodResponse, POLICE_RULES.eodMedium, POLICE_RULES.eodHeavy], ['EOD']), livePoliceProfile('police_dog_handling', 'Dog handling', 'Dog Support Unit', 'At least 1 Dog Handler per DSU', 'LIVE: safely meets the game-confirmed minimum of one Dog Handler per DSU without moving existing staff.', [POLICE_RULES.dog]), livePoliceProfile('police_drone_operator', 'Drone Operator Training', 'Police Drone Vehicle', '2 Drone Operators per Police Drone Vehicle', 'LIVE: fills Police Drone Vehicles to 2/2. Search Advisor dual-trained personnel are preserved where possible.', [POLICE_RULES.drone]), livePoliceProfile('police_eod_commander', 'EOD Commander', 'EOD Commander Vehicle', '2 EOD Commanders per vehicle', 'LIVE: fills EOD Commander vehicles to 2/2 before general Bomb Disposal vehicles in the full Police run.', [POLICE_RULES.eodCommander], ['EOD']), livePoliceProfile('police_firearms', 'Firearms training', 'Multi-Role Armoured Vehicle', '6 Firearms-trained officers per MRAV', 'LIVE: fills every MRAV to 6/6 with Firearms-trained personnel and preserves Roads Policing dual-trained officers where possible.', [POLICE_RULES.firearms]), livePoliceProfile( 'police_public_order_1', 'Level 1 Public Order Training', 'Normal Police IRV', '2 Level 1 Public Order officers per IRV', 'LIVE INDIVIDUAL PROFILE: checks and assigns Level 1 Public Order training only. Other Police qualifications do not affect this result.', [ POLICE_RULES .publicOrderLevel1 ] ), livePoliceProfile( 'police_public_order_2', 'Level 2 Public Order Training', 'Normal Police IRV', '2 Level 2 Public Order officers per IRV', 'LIVE INDIVIDUAL PROFILE: checks and assigns Level 2 Public Order training only. Other Police qualifications do not affect this result.', [ POLICE_RULES .publicOrderLevel2 ] ), livePoliceProfile('police_marine_bomb_disposal', 'Marine Bomb Disposal', 'Marine EOD Response and Equipment vehicles', 'Response 4/4; Equipment Van 3/3', 'LIVE: fills Marine EOD Response vehicles to 4/4 and Equipment Vans to 3/3 with Marine Bomb Disposal personnel.', [POLICE_RULES.marineResponse, POLICE_RULES.marineEquipment], ['EOD']), livePoliceProfile('police_mobile_operations_management', 'Mobile Operations Management', 'EIU', '2 Mobile Operations Managers per EIU', 'LIVE: fills each EIU to 2/2 with railway_police_command-trained personnel.', [POLICE_RULES.mobileOperations]), livePoliceProfile('police_mounted', 'Mounted Training', 'Mounted Unit', 'At least 1 Mounted Officer per vehicle', 'LIVE: meets the verified native minimum of one Mounted Officer per Mounted Unit. It does not fill the remaining passenger seats.', [POLICE_RULES.mounted]), livePoliceProfile('police_inspector', 'Police Inspector Training', 'Normal Police IRV', '2 Police Inspectors per allocated IRV', 'LIVE: uses normal IRVs and fills allocated vehicles to 2/2 with police_inspector-trained officers.', [POLICE_RULES.inspector]), livePoliceProfile( 'police_medic', 'Police Medic Training', 'Normal Police IRV', '2 Police Medics per IRV', 'LIVE INDIVIDUAL PROFILE: checks and assigns Police Medic training only. Run all Police profiles retains the combined four-course crew rule.', [ POLICE_RULES .publicOrderMedic ] ), livePoliceProfile('police_search_advisor', 'Police Search Advisor Training', 'Police Drone Vehicle', '2 dual-trained Drone/Search Advisor personnel', 'LIVE: both personnel must hold drone and search_and_rescue training.', [POLICE_RULES.searchAdvisor]), livePoliceProfile( 'police_sergeant', 'Police Sergeant Training', 'Normal Police IRV', '2 Police Sergeants per IRV', 'LIVE INDIVIDUAL PROFILE: checks and assigns Police Sergeant training only. Run all Police profiles retains the combined four-course crew rule.', [ POLICE_RULES .publicOrderSergeant ] ), livePoliceProfile('police_aviation', 'Police aviation', 'Police Helicopter', '3 Police Aviation personnel per helicopter', 'LIVE: fills each Police Helicopter to 3/3 with polizeihubschrauber-trained personnel.', [POLICE_RULES.aviation], ['AIR']), livePoliceProfile('police_railway', 'Railway Policing', 'Railway Policing IRV', '2 Railway Police Officers per IRV', 'LIVE: fills Railway Unit IRVs to 2/2 with railway_police-trained personnel and preserves Mobile Operations Managers where possible.', [POLICE_RULES.railway]), livePoliceProfile('police_roads', 'Roads Policing Officer Training', 'Armed Traffic Car', '2 dual-trained Roads Policing + Firearms officers', 'LIVE: both officers must hold traffic_police and swat.', [POLICE_RULES.roads]), { id: 'all_police', label: 'Run all Police profiles', vehicle: 'All verified Police, Aviation and EOD vehicle groups', requirement: 'Process verified profiles in safe reservation order', policy: 'LIVE BATCH: preserves current assignments, assigns specialist and dual-trained roles first, allocates shared IRV/Drone pools safely, then verifies the station-wide result.', live: true, engine: 'police', stationTypes: ['POLICE', 'AIR', 'EOD'], rules: POLICE_ALL_RULES, batch: true } ] },
+009218:         coastguard: { label: 'SAR / Mountain Rescue / Coastguard', icon: '🌊⛰️', profiles: [ liveSarProfile('sar_cave_rescue', 'Cave Rescue Training', 'SAR or Mountain Rescue 4x4', '4 Cave Rescue Specialists per vehicle', 'LIVE: fills exact type-93 and type-99 4x4 vehicles to their live configured 4-seat maximum with mountain_cave_rescue-trained personnel.', [SAR_RULES.caveRescue], SAR_PROFILE_BUILDING_TYPE_IDS.caveRescue), liveSarProfile('sar_coastal_air_rescue', 'Coastal Air Rescue Operations Training', 'Coastguard Rescue Helicopter', '4 Coastal Air Rescue Pilots per helicopter', 'LIVE: fills exact type-64 and type-65 Coastguard Rescue Helicopters to 4/4 with coastal_rescue_pilot-trained personnel.', [SAR_RULES.coastalAir], SAR_PROFILE_BUILDING_TYPE_IDS.coastalAir), liveSarProfile('sar_coastal_command', 'Coastal Command Training', 'Coastguard Commander', '5 Coastal Commanders per vehicle', 'LIVE: fills each exact type-60 Coastguard Commander to 5/5 with coastal_command-trained personnel.', [SAR_RULES.coastalCommand], SAR_PROFILE_BUILDING_TYPE_IDS.coastalCommand), liveSarProfile('sar_search_advisor', 'Coastguard Search Advisor Training', 'Operational Support Van', '3 Search Advisors per vehicle', 'LIVE: fills each exact type-86 Operational Support Van to 3/3 with search_and_rescue-trained personnel.', [SAR_RULES.searchAdvisor], SAR_PROFILE_BUILDING_TYPE_IDS.searchAdvisor), liveSarProfile('sar_dog_handling', 'Dog handling', 'Search Dog Unit', '1 Search Dog Handler per vehicle', 'LIVE: fills exact type-101 and type-102 Search Dog Units to 1/1 with rescue_dogs-trained personnel.', [SAR_RULES.dogHandling], SAR_PROFILE_BUILDING_TYPE_IDS.dogHandling), liveSarProfile('sar_drone_operator', 'Drone Operator Training', 'SAR HQ Drone Vehicle', '2 Drone Operators per vehicle', 'LIVE: fills each exact type-89 SAR HQ Drone Vehicle to 2/2 with drone-trained personnel.', [SAR_RULES.drone], SAR_PROFILE_BUILDING_TYPE_IDS.drone), liveSarProfile('sar_flood_first_responder', 'Flood First Responder Training', 'Vehicle linked to a Flood Rescue trailer', 'Fill every seat of the actual linked towing vehicle', 'LIVE: resolves type-61 and type-88 flood trailers through the station API, then fills only their actual eligible towing vehicle with flood_equipment-trained personnel. Ambiguous links are skipped.', [SAR_RULES.floodCrv, SAR_RULES.floodMud, SAR_RULES.floodRope, SAR_RULES.floodCommander, SAR_RULES.floodSupport, SAR_RULES.floodLifeboat4x4, SAR_RULES.floodControlVan, SAR_RULES.floodSupportVan, SAR_RULES.floodDrone, SAR_RULES.floodRrv], SAR_PROFILE_BUILDING_TYPE_IDS.flood), liveSarProfile('sar_hovercraft_commander', 'Hovercraft Commander Training', 'Hovercraft Transporter linked to a Hovercraft Trailer', '3 Hovercraft Commanders per linked transporter', 'LIVE: fills only an exact type-72 Hovercraft Transporter linked to a type-71 trailer, using the live 3-seat maximum from supplied evidence.', [SAR_RULES.hovercraft], SAR_PROFILE_BUILDING_TYPE_IDS.hovercraft), liveSarProfile('sar_jet_ski', 'Jet Ski Handling', '4x4 linked to a Rescue Watercraft Trailer', '4 Jet Ski-trained personnel per linked 4x4', 'LIVE: fills only an exact type-66 4x4 linked to a type-70 Rescue Watercraft Trailer. Ambiguous links are skipped.', [SAR_RULES.jetSki], SAR_PROFILE_BUILDING_TYPE_IDS.jetSki), liveSarProfile('sar_lifeboat_operations', 'Lifeboat Operations Training', 'ILB / ALB', 'ILB 4/4; ALB 7/7', 'LIVE: fills exact type-68 ILBs to 4/4 and type-69 ALBs to 7/7 with ocean_navigation-trained personnel.', [SAR_RULES.lifeboatIlb, SAR_RULES.lifeboatAlb], SAR_PROFILE_BUILDING_TYPE_IDS.lifeboat), liveSarProfile('sar_lifeguard', 'Lifeguard Training', '4x4 linked to an Inland Rescue Boat', '4 Lifeguards per linked 4x4', 'LIVE: fills only an exact type-66 4x4 linked to a type-67 Inland Rescue Boat Trailer. Ambiguous links are skipped.', [SAR_RULES.lifeguard], SAR_PROFILE_BUILDING_TYPE_IDS.lifeguard), liveSarProfile('sar_mud_rescue', 'Mud Rescue Training', 'Coastguard Mud Rescue Unit', '5 Mud Rescue Operators per vehicle', 'LIVE: fills each exact type-58 Mud Rescue Unit to 5/5 with coastal_mud_rescue-trained personnel.', [SAR_RULES.mudRescue], SAR_PROFILE_BUILDING_TYPE_IDS.mudRescue), liveSarProfile('sar_rope_rescue', 'Rope Rescue Training', 'Coastguard Rope Rescue Unit', '5 Rope Rescue Operators per vehicle', 'LIVE: fills each exact type-59 Rope Rescue Unit to 5/5 with gw_hoehenrettung-trained personnel.', [SAR_RULES.ropeRescue], SAR_PROFILE_BUILDING_TYPE_IDS.ropeRescue), liveSarProfile('sar_search_management', 'Search Management Training', 'SAR or Mountain Rescue Control Van', '3 SAR Commanders per vehicle', 'LIVE: fills exact type-85 and type-100 Control Vans to 3/3 with search_and_rescue_command-trained personnel.', [SAR_RULES.searchManagement], SAR_PROFILE_BUILDING_TYPE_IDS.searchManagement), { id: 'all_sar', label: 'Run all SAR / Mountain Rescue profiles', vehicle: 'All mapped SAR, Mountain Rescue, Coastguard and Water Rescue vehicle groups', requirement: 'Process all verified profiles and combine overlapping training on each crew', policy: 'LIVE BATCH: preserves current occupants, resolves each actual trailer-to-tractor link, combines overlapping qualifications on the same vehicle, and verifies the station-wide result.', live: true, engine: 'personnel-rules', stationTypes: [], buildingTypeIds: SAR_PROFILE_BUILDING_TYPE_IDS.all, rules: SAR_ALL_RULES, batch: true, mergeOverlappingVehicleRules: true } ] },
+009219:         all_services: { label: 'All Services', icon: '🧭', profiles: [{ id: 'all_services_profiles', label: 'Run all service profiles — future option', vehicle: 'All supported service vehicles', requirement: 'Process services and profiles in safe priority order', policy: 'This future option will only be enabled after each individual service is fully tested and live.', live: false, stationTypes: [] }] } }; const TYPE_ID_TO_VEHICLE_TYPE = { "3": "Fire Officer", "4": "Rescue Support Unit (RSU)", "5": "Ambulance", "6": "Water Carrier", "7": "HazMat Unit", "8": "Police Car", "9": "Air Ambulance", "10": "RRV", "11": "Police Helicopter", "12": "DSU", "13": "Armed Response Vehicle", "15": "Incident Command and Control Unit", "16": "Rescue Pump", "17": "Combined Aerial Rescue Pump", "18": "Co-Responder Vehicle", "19": "Joint Response Unit", "20": "OTL", "24": "Traffic Car", "25": "Armed Traffic Car", "26": "Heavy 4x4 Tanker", "27": "PRV", "28": "SRV", "29": "Welfare Vehicle", "30": "ATV", "31": "Ambulance Control Unit", "33": "Mass Casualty Equipment", "34": "Ambulance Officer", "35": "BFU", "36": "F/WrC", "38": "RPF", "39": "Operational Support Unit", "40": "PM", "50": "HVP", "51": "PSU Carrier", "52": "Firearms Personnel Carrier", "54": "Detention Van", "55": "Mounted Unit", "56": "MRAV", "57": "Coastguard Rescue Vehicle", "58": "Mud Rescue Unit", "59": "Coastguard Rope Rescue Unit", "60": "Coastguard Commander", "61": "Flood Rescue Unit Trailer", "62": "Flood Rescue Unit", "63": "Support Unit", "64": "Coastguard Rescue Helicopter", "65": "Coastguard Rescue Helicopter Large", "66": "4x4 Vehicle", "67": "Inland Rescue Boat (Trailer)", "68": "ILB", "69": "ALB", "70": "Rescue Watercraft Trailer", "71": "Hovercraft Trailer", "72": "Hovercraft Transporter", "73": "Light 4x4", "74": "Boat Trailer", "75": "Major Foam Tender", "76": "RIV", "77": "Airfield Command", "78": "Rescue Stairs", "79": "Airfield Operations Vehicle", "80": "Airfield Operations Supervisor", "81": "Medical Equipment Trailer", "85": "Control Van SAR", "86": "Operational Support Van", "87": "Operational Support Trailer", "88": "SAR Flood Rescue Trailer", "89": "Drone Vehicle SAR HQ", "90": "Drone Vehicle (Fire Station)", "91": "Police Drone Vehicle", "92": "Personal SAR Vehicle", "93": "SAR 4x4", "94": "RRV", "96": "Specialist Paramedic RRV", "97": "Patient Transport Service Ambulance", "98": "Critical Care Transfer Ambulance", "99": "Mountain Rescue 4x4", "100": "Control Van (Mountain Rescue)", "102": "Search Dog Unit SAR", "105": "Recovery Vehicle", "106": "HGV Recovery Vehicle", "107": "Road Rail Unit", "108": "EIU", "109": "EOD Commander", "110": "EOD Response Vehicle", "111": "EOD Medium Equipment Van", "112": "EOD Heavy Equipment Vehicle", "113": "Marine EOD Response Vehicle", "114": "Marine EOD Equipment Van", "115": "Welfare Vehicle", "116": "Cell Van" };
+009220: 
+009221:     const VEHICLE_INFO = { "Ambulance": { code: "AB", icon: "🚑" }, "Ambulance Officer": { code: "AO", icon: "🚑🎖️" }, "Ambulance Control Unit": { code: "ACU", icon: "🚑📡" }, "Air Ambulance": { code: "AA", icon: "🚁" }, "Rescue Pump": { code: "RP", icon: "🚒" }, "Combined Aerial Rescue Pump": { code: "CARP", icon: "🚒🪜" }, "Co-Responder Vehicle": { code: "CoR", icon: "🚒🚑" }, "Fire Officer": { code: "FO", icon: "🧑‍🚒" }, "Police Car": { code: "PC", icon: "🚔" }, "Armed Response Vehicle": { code: "ARV", icon: "🚔🎯" }, "Joint Response Unit": { code: "JRU", icon: "🚔🚑" }, "Traffic Car": { code: "TC", icon: "🚔🚗" }, "Armed Traffic Car": { code: "ATC", icon: "🚔🔫" }, "Firearms Personnel Carrier": { code: "FPC", icon: "🚔🛡️" }, "Operational Support Unit": { code: "OSU", icon: "☢️🤿🦺" }, "PM": { code: "PM", icon: "🚒🚛" }, "HVP": { code: "HVP", icon: "🚒💦" }, "Mass Casualty Equipment": { code: "MCE", icon: "🏥" }, "Welfare Vehicle": { code: "WV", icon: "🚌" }, "HazMat Unit": { code: "HMAT", icon: "☢️" }, "Water Carrier": { code: "WrC", icon: "🚒💦" }, "Incident Command and Control Unit": { code: "ICCU", icon: "🔥🚒🔥" }, "Heavy 4x4 Tanker": { code: "H4x4T", icon: "🚒💦" }, "Police Helicopter": { code: "POLHELI", icon: "🚔🚁" }, "Police Drone Vehicle": { code: "PDV", icon: "🚔🚁" }, "EIU": { code: "EIU", icon: "🚔📡" }, "PSU Carrier": { code: "PSU", icon: "🚔🚌" }, "Detention Van": { code: "DV", icon: "🚔🥅" }, "Mounted Unit": { code: "MU", icon: "🚔🐎" }, "Coastguard Rescue Vehicle": { code: "CRV", icon: "⚠️🛻" }, "Mud Rescue Unit": { code: "MRU", icon: "⚠️🟤" }, "Coastguard Rope Rescue Unit": { code: "CRRU", icon: "⚠️🧗" }, "Coastguard Commander": { code: "CGC", icon: "⚠️👨‍✈️" }, "Coastguard Rescue Helicopter Large": { code: "CGH", icon: "🚁⚠️" }, "Coastguard Rescue Helicopter": { code: "CGH", icon: "🚁⚠️" }, "Flood Rescue Unit Trailer": { code: "FRUT", icon: "🛟" }, "Flood Rescue Unit": { code: "FRU", icon: "🛟" }, "Support Unit": { code: "SU", icon: "⚠️🚐" }, "4x4 Vehicle": { code: "4x4", icon: "🛟" }, "Inland Rescue Boat (Trailer)": { code: "IRB", icon: "🚤" }, "ILB": { code: "ILB", icon: "🚤" }, "ALB": { code: "ALB", icon: "🚤" }, "Boat Trailer": { code: "BT", icon: "🚤" }, "Rescue Watercraft Trailer": { code: "RWC", icon: "🚤" }, "Hovercraft Trailer": { code: "HCT", icon: "🛥️" }, "Hovercraft Transporter": { code: "HCTR", icon: "🛥️" }, "Light 4x4": { code: "L4x4", icon: "🚙" }, "Major Foam Tender": { code: "MFT", icon: "🚒✈️" }, "RIV": { code: "RIV", icon: "🚒✈️" }, "Airfield Command": { code: "AirCommand", icon: "🚒✈️" }, "Rescue Stairs": { code: "RS", icon: "✈️🪜" }, "Airfield Operations Vehicle": { code: "AOV", icon: "✈️🚗" }, "Airfield Operations Supervisor": { code: "AOS", icon: "✈️👷" }, "Medical Equipment Trailer": { code: "MET", icon: "🚒⚕️" }, "Control Van SAR": { code: "CV", icon: "📡" }, "Operational Support Van": { code: "OSV", icon: "🛠️" }, "Operational Support Trailer": { code: "OST", icon: "🛠️" }, "SAR Flood Rescue Trailer": { code: "SFR", icon: "🌊" }, "Drone Vehicle SAR HQ": { code: "DRV", icon: "🚁" }, "Drone Vehicle (Fire Station)": { code: "FDV", icon: "🚒🚁" }, "Personal SAR Vehicle": { code: "PSV", icon: "🟡🚙" }, "SAR 4x4": { code: "SAR4x4", icon: "🟡" }, "Specialist Paramedic RRV": { code: "SP-RRV", icon: "🚑" }, "Patient Transport Service Ambulance": { code: "PTS", icon: "🚑" }, "Critical Care Transfer Ambulance": { code: "CCT", icon: "🚑❤️" }, "Mountain Rescue 4x4": { code: "MR4x4", icon: "🏔️" }, "Control Van (Mountain Rescue)": { code: "CV", icon: "🏔️📡" }, "Search Dog Unit SAR": { code: "K9", icon: "🐕" }, "Recovery Vehicle": { code: "FRV", icon: "🛻" }, "Flatbed Recovery Vehicle": { code: "FRV", icon: "🛻" }, "HGV Recovery Vehicle": { code: "HGV", icon: "🚛" }, "RRV": { code: "RRV", icon: "🚑" }, "Road Rail Unit": { code: "RRU", icon: "🚒🚆" }, "Rescue Support Unit (RSU)": { code: "RSU", icon: "🚒🛠️" }, "DSU": { code: "DSU", icon: "🚔🐕" }, "OTL": { code: "OTL", icon: "🚔" }, "PRV": { code: "PRV", icon: "🚑1️⃣" }, "SRV": { code: "SRV", icon: "🚑2️⃣" }, "ATV": { code: "ATV", icon: "🚑🦺" }, "BFU": { code: "BFU", icon: "🚒✈️" }, "F/WrC": { code: "FWrC", icon: "🚒💦" }, "RPF": { code: "RPF", icon: "🚒🫧" }, "MRAV": { code: "MRAV", icon: "🚔🔫" }, "EOD Commander": { code: "EODC", icon: "💣" }, "EOD Response Vehicle": { code: "EOD", icon: "💣🚐" }, "EOD Medium Equipment Van": { code: "EODM", icon: "💣🚐" }, "EOD Heavy Equipment Vehicle": { code: "EODH", icon: "💣🚚" }, "Marine EOD Response Vehicle": { code: "MEOD", icon: "💣🚤" }, "Marine EOD Equipment Van": { code: "MEODV", icon: "💣🚐" }, "Cell Van": { code: "CVAN", icon: "🚔🚐" } };
+009222: 
+009223:     const UNIT_CLASS_ALL = 'ALL'; const UNIT_CLASS_TYPE_IDS_BY_STATION_TYPE = Object.freeze({ AMBULANCE: Object.freeze([ '5', '10', '27', '28', '30', '31', '33', '34', '96', '97', '98' ]), FIRE: Object.freeze([ '3', '4', '6', '7', '15', '16', '17', '26', '29', '35', '36', '38', '39', '107' ]), POLICE: Object.freeze([ '8', '11', '12', '13', '19', '20', '24', '25', '51', '52', '54', '55', '56', '91', '108', '115', '116' ]), AIR: Object.freeze([ '9', '11', '65' ]), AIRFIELD: Object.freeze([ '73', '75', '76', '77', '78', '79', '80', '81' ]), COASTGUARD: Object.freeze([ '57', '58', '59', '60', '61', '62', '63', '65', '66', '70', '71', '72' ]), RNLI: Object.freeze([ '67', '68', '69', '70', '74' ]), SAR: Object.freeze([ '61', '62', '63', '66', '70', '71', '72', '85', '86', '87', '88', '89', '93', '99', '102' ]), EOD: Object.freeze([ '109', '110', '111', '112', '113', '114' ]), RECOVERY: Object.freeze([ '105', '106' ]) });
+009224: 
+009225:     const STATION_TYPES = { ALL: "All station types", AMBULANCE: "Ambulance", FIRE: "Fire", POLICE: "Police", AIR: "Air / Heli", COASTGUARD: "Coastguard", RNLI: "RNLI / Lifeboat", SAR: "SAR", AIRFIELD: "Airfield", EOD: "EOD / Bomb", RECOVERY: "Recovery", OTHER: "Other" }; const STATION_NAMING_MODE_TOWN_ONLY = 'TOWN_ONLY';
+009226: 
+009227:     // MissionChief's own building type IDs.
+009228:     const STATION_BUILDING_TYPE_INFO = {
+009229:         0:  { stationType: 'FIRE',       suffix: '-FS',   label: 'Fire station' },
+009230:         18: { stationType: 'FIRE',       suffix: '-FS',   label: 'Small fire station' },
+009231:         2:  { stationType: 'AMBULANCE',  suffix: '-AS',   label: 'Ambulance station' },
+009232:         20: { stationType: 'AMBULANCE',  suffix: '-AS',   label: 'Small ambulance station' },
+009233:         6:  { stationType: 'POLICE',     suffix: '-PS',   label: 'Police station' },
+009234:         19: { stationType: 'POLICE',     suffix: '-PS',   label: 'Small police station' },
+009235:         5:  { stationType: 'AIR',        suffix: '-AA',   label: 'Air ambulance station' },
+009236:         13: { stationType: 'AIR',        suffix: '-PH',   label: 'Police helicopter station' },
+009237:         22: {
+009238:             stationType: 'OTHER',
+009239:             suffix: '',
+009240:             namingMode: STATION_NAMING_MODE_TOWN_ONLY,
+009241:             label: 'Response location'
+009242:         },
+009243:         27: { stationType: 'RNLI',       suffix: '-RNLI', label: 'RNLI / lifeboat station' },
+009244:         28: { stationType: 'COASTGUARD', suffix: '-CG',   label: 'Coastguard station' },
+009245:         30: { stationType: 'COASTGUARD', suffix: '-CG',   label: 'Coastguard helicopter station' },
+009246:         31: { stationType: 'SAR',        suffix: '-SAR',  label: 'Search and Rescue HQ' },
+009247:         33: { stationType: 'SAR',        suffix: '-SAR',  label: 'Mountain Rescue station' },
+009248:         34: { stationType: 'RECOVERY',   suffix: '-REC',  label: 'Recovery station' },
+009249:         35: { stationType: 'EOD',        suffix: '-EOD',  label: 'EOD / bomb disposal station' }
+
+===== context-8 [19116-19165] =====
+019116:     let mfQueueRestartThreshold = parseInt(localStorage.getItem('mf_next_queue_restart_threshold_v10_1_3') || '20', 10);
+019117:     let mfQueueRestartWaiting = false;
+019118:     let mfSilentQueueWatcherTimer = null;
+019119:     let mfSilentQueueOpening = false;
+019120:     let mfGlobalTransportWatcherTimer = null;
+019121:     let mfGlobalTransportClicking = false;
+019122:     let mfLastTransportFingerprint = '';
+019123:     let mfLastTransportClickAt = 0;
+019124:     let mfBruteApproachWatcherTimer = null;
+019125:     let mfBruteApproachClicking = false;
+019126:     let mfBruteLastFingerprint = '';
+019127:     let mfBruteLastClickAt = 0;
+019128:     let mfTransportApproachClicking = false;
+019129:     let mfTransportLastClickAt = 0;
+019130:     let mfTransportSequenceActive = false;
+019131:     let mfTransportContinuationRunning = false;
+019132:     let mfPostTransportRehookTimer = null;
+019133:     let mfPostTransportOpening = false;
+019134:     let mfTransportOwnerModal = null;
+019135:     let mfTransportOwnerApproachGoneAt = 0;
+019136:     let mfTransportOwnerCloseAttemptedAt = 0;
+019137:     let mfTransportMainStableAt = 0;
+019138:     let mfMissionUpdateFirstPassRequired = true;
+019139:     let mfMissionUpdateFirstPassMissionKey = '';
+019140:     let mfMissionUpdateFirstPassCompletedAt = 0;
+019141:     let mfLastQueueThresholdStatusAt = 0;
+019142:     let mfLastQueueThresholdStatusKey = '';
+019143:     const MF_MANUAL_AUTO_STOP_FLAG = 'mf_manual_auto_stop_v10_3_9u';
+019144:     const MF_AUTO_STOP_RECORD_KEY =
+019145:         'mf_auto_stop_record_v10_6_153';
+019146:     const MF_MAIN_MISSION_OPEN_LOCK_KEY = 'mf_main_mission_open_lock_until_v10_3_9v';
+019147:     const MF_MAIN_MISSION_OPEN_REASON_KEY = 'mf_main_mission_open_reason_v10_3_9v';
+019148:     const MF_TRANSPORT_REHOOK_LOCK_KEY = 'mf_transport_rehook_lock_until_v10_3_9x';
+019149:     const MF_TRANSPORT_REHOOK_REASON_KEY = 'mf_transport_rehook_reason_v10_3_9x';
+019150:     const MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY = 'mf_transport_rehook_recent_until_v10_3_9y';
+019151:     const MF_MAIN_MISSION_PENDING_UNTIL_KEY = 'mf_main_mission_pending_until_v10_3_9zc';
+019152:     const MF_MAIN_MISSION_PENDING_TARGET_KEY = 'mf_main_mission_pending_target_v10_3_9zc';
+019153:     const MF_MAIN_MISSION_PENDING_REASON_KEY = 'mf_main_mission_pending_reason_v10_3_9zc';
+019154:     const MF_TRANSPORT_CLICK_LOCK_UNTIL_KEY = 'mf_transport_click_lock_until_v10_3_9zd';
+019155:     const MF_TRANSPORT_LAST_CLICK_AT_KEY = 'mf_transport_last_click_at_v10_3_9zd';
+019156:     const MF_TRANSPORT_LAST_CLICK_REASON_KEY = 'mf_transport_last_click_reason_v10_3_9zd';
+019157:     const MF_TRANSPORT_SHELL_WAIT_MS = 7000;
+019158:     const MF_TRANSPORT_MAIN_STABLE_MS = 3000;
+019159:     const MF_UPDATE_FIRST_MIN_WAIT_MS = 500;
+019160:     const MF_UPDATE_FIRST_MAX_WAIT_MS = 2200;
+019161:     const MF_UPDATE_FIRST_STABLE_MS = 250;
+019162:     const MF_AUTO_UPGRADE_PENDING_KEY =
+019163:         'mf_auto_upgrade_pending_v10_6_13';
+019164:     const MF_AUTO_ADVANCE_AFTER_DISPATCH_KEY =
+019165:         'mf_advance_after_dispatch_v10_6_24_share_only';
+
+===== context-9 [19892-19981] =====
+019892:             diagnosticCharsBefore,
+019893:             diagnosticCharsAfter
+019894:         };
+019895:     }
+019896:     function isMissionFinderMemoryWorkActive() {
+019897:         return Boolean(
+019898:             mfRuntimeMemoryOperationDepth > 0 ||
+019899:             autoModeLoopActive ||
+019900:             mfSilentQueueOpening ||
+019901:             mfQueueRestartWaiting ||
+019902:             mfGlobalTransportClicking ||
+019903:             mfBruteApproachClicking ||
+019904:             mfTransportApproachClicking ||
+019905:             mfTransportSequenceActive ||
+019906:             mfTransportContinuationRunning ||
+019907:             mfPostTransportOpening ||
+019908:             mfAutoAdvanceResumeActive ||
+019909:             mfAutoUpgradeResumeActive ||
+019910:             sessionStorage.getItem(
+019911:                 MF_QUEUE_OPENING_MISSION_FLAG
+019912:             ) === 'true' ||
+019913:             sessionStorage.getItem(
+019914:                 MF_FINAL_QUEUE_DISPATCH_FLAG
+019915:             ) === 'true' ||
+019916:             readAutoAdvanceAfterDispatchState() ||
+019917:             readAllyStealPendingState() ||
+019918:             readAutoPostDispatchUpgradeState() ||
+019919:             isPostTransportRehookPending()
+019920:         );
+019921:     }
+019922:     function flushMissionFinderEphemeralMemory(
+019923:         reason = 'runtime memory maintenance'
+019924:     ) {
+019925:         invalidateVehicleCheckboxCache();
+019926:         invalidateMissionContextCaches();
+019927:         invalidatePatientCountCache();
+019928:         invalidateTransportCaches();
+019929:         mfVehicleMatchCandidateCache.clear();
+019930:         pruneLiveTrainingVerifyCache();
+019931:         pruneMissionFinderIphoneNativePickerDocuments();
+019932:         invalidateLiveTrainedPersonnelDisplayCache();
+019933:         if (
+019934:             mfTransportOwnerModal &&
+019935:             !mfTransportOwnerModal.isConnected
+019936:         ) {
+019937:             mfTransportOwnerModal = null;
+019938:         }
+019939:         mfRuntimeMemoryLastSoftFlushAt = Date.now();
+019940:         mfRuntimeMemorySoftFlushCount += 1;
+019941:         mfRuntimeMemoryLastReason = String(reason || '');
+019942:     }
+019943:     function releaseMissionFinderLargeEphemeralState(reason = '') {
+019944:         cancelTrainedPersonnelPanelRefresh();
+019945:         resetMissionRequirementPreloadCache(reason);
+019946:         resetVehicleLoadState();
+019947:         mfUnitFinderDiagnosticContext = {
+019948:             missionKey: '', mode: 'idle', sourceLabel: '',
+019949:             suppliedRows: [], processedRows: [], updatedAt: 0
+019950:         };
+019951:         mfLastMissionDefinitionRawRows = [];
+019952:         mfPatientSelectionLedgerCache = null;
+019953:         mfTransportOwnerModal = null;
+019954:     }
+019955:     function shouldRecycleIdleMissionMemory() {
+019956:         if (
+019957:             autoModeRunning ||
+019958:             sessionStorage.getItem(
+019959:                 'mf_auto_mode_running'
+019960:             ) === 'true' ||
+019961:             !isMissionPage() ||
+019962:             !isCurrentMissionExecutionOwner(
+019963:                 'idle memory maintenance'
+019964:             ) ||
+019965:             document.visibilityState === 'hidden' ||
+019966:             mfRuntimeSuspendedForPageHide ||
+019967:             mfRuntimeSuspendedForInactiveFrame ||
+019968:             vehicleLoadState.ready ||
+019969:             isMissionFinderMemoryWorkActive() ||
+019970:             hasSelectedMissionVehiclesForMemoryRecycle() ||
+019971:             mfMissionRequirementPreloadPromise ||
+019972:             mfMissionRequirementPreloadCache.status === 'loading'
+019973:         ) {
+019974:             return null;
+019975:         }
+019976:         const heap = getAutoMemoryHeapSnapshot();
+019977:         if (
+019978:             !heap ||
+019979:             heap.usedJSHeapSize <
+019980:                 MF_AUTO_MEMORY_RECYCLE_HEAP_THRESHOLD_BYTES
+019981:         ) {
+
+===== context-10 [20192-20236] =====
+020192:         'requires drone',
+020193:         'requires drones'
+020194:     ]);
+020195:     let mfMissionDocumentCache = {
+020196:         expiresAt: 0,
+020197:         documents: []
+020198:     };
+020199:     let mfMissionContextCache = {
+020200:         expiresAt: 0,
+020201:         missionKey: '',
+020202:         contexts: []
+020203:     };
+020204:     let mfTransportDocumentCache = {
+020205:         expiresAt: 0,
+020206:         documents: []
+020207:     };
+020208:     let mfTransportScopeCache = {
+020209:         expiresAt: 0,
+020210:         scopes: []
+020211:     };
+020212:     let mfPatientCountCache = {
+020213:         expiresAt: 0,
+020214:         missionKey: '',
+020215:         value: 0
+020216:     };
+020217:     let mfDispatchReadinessExpensiveCache = {
+020218:         expiresAt: 0,
+020219:         updateRowsSignature: '',
+020220:         staffingText: ''
+020221:     };
+020222:     let mfMissionUpdateRowsCache = {
+020223:         expiresAt: 0,
+020224:         missionKey: '',
+020225:         rows: [],
+020226:         ambulanceOfficerSatisfied: false
+020227:     };
+020228:     let mfCurrentMissionInstanceKey = '';
+020229:     const MF_INSTANCE_TOKEN =
+020230:         `mf-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+020231:     const MF_SHARED_ACTIVE_INSTANCE_KEY =
+020232:         '__missionFinderActiveMissionInstanceV10_6_57';
+020233:     const MF_PATIENT_SELECTION_LEDGER_KEY =
+020234:         'mf_patient_selection_ledger_v10_6_50';
+020235:     let mfPatientSelectionLedgerCache = null;
+020236:     let mfMainMutationFlags = {
+
+===== context-11 [21021-21063] =====
+021021:                     mfVehicleMatchCandidateCache.size,
+021022:                 cachedVehicleCheckboxes:
+021023:                     cachedVehicleNodes.length,
+021024:                 detachedCachedVehicleCheckboxes:
+021025:                     cachedVehicleNodes.filter(node =>
+021026:                         node?.isConnected === false
+021027:                     ).length,
+021028:                 missionDocuments:
+021029:                     mfMissionDocumentCache.documents.length,
+021030:                 missionContexts:
+021031:                     mfMissionContextCache.contexts.length,
+021032:                 transportDocuments:
+021033:                     mfTransportDocumentCache.documents.length,
+021034:                 transportScopes:
+021035:                     mfTransportScopeCache.scopes.length,
+021036:                 iphoneNativePickerDocuments:
+021037:                     mfIphoneNativePickerDocuments.size
+021038:             },
+021039:             documents: {
+021040:                 accessibleCount: documents.length,
+021041:                 sampledCount: documentSnapshots.length,
+021042:                 totalElements: documentSnapshots.reduce(
+021043:                     (total, item) =>
+021044:                         total + item.elementCount,
+021045:                     0
+021046:                 ),
+021047:                 totalVehicleCheckboxes:
+021048:                     documentSnapshots.reduce(
+021049:                         (total, item) =>
+021050:                             total + item.vehicleCheckboxCount,
+021051:                         0
+021052:                     ),
+021053:                 hiddenOwnerFrames:
+021054:                     documentSnapshots.filter(item =>
+021055:                         !item.ownerFrameVisible
+021056:                     ).length,
+021057:                 detachedOwnerFrames:
+021058:                     documentSnapshots.filter(item =>
+021059:                         !item.ownerFrameConnected
+021060:                     ).length,
+021061:                 samples: documentSnapshots
+021062:             }
+021063:         };
+
+===== context-12 [33687-33727] =====
+033687:         if (/^min\.?\s*pump\s*capacity$/i.test(cleanedName)) return true;
+033688:         if (/^minimum\s*pump\s*capacity$/i.test(cleanedName)) return true;
+033689:         if (/^pump\s*capacity$/i.test(cleanedName)) return true;
+033690:         if (/^water\s*to\s*pump$/i.test(cleanedName)) return true;
+033691:         if (/water\s*damage\s*pump\s*extension/i.test(cleanedName)) return true;
+033692:         if (/\bextension\b/i.test(cleanedName) && !/vehicle|unit|officer|car|engine|pump$/i.test(cleanedName)) return true;
+033693:         if (/only required/.test(text)) return true;
+033694:         if (/^probability of /i.test(cleanedName)) return true;
+033695:         if (/\bprobability\b/.test(text)) return true;
+033696:         if (/personnel/.test(text)) return true;
+033697:         if (/patients?/.test(text)) return true;
+033698:         if (/prisoners?/.test(text)) return true;
+033699:         if (/transport request/.test(text)) return true;
+033700:         if (/chance/.test(text)) return true;
+033701:         return false;
+033702:     }
+033703:     function findMissionRequirementTable(
+033704:         doc,
+033705:         suppliedTables = null
+033706:     ) {
+033707:         if (!doc) return null;
+033708:         const tables = Array.isArray(suppliedTables)
+033709:             ? suppliedTables
+033710:             : Array.from(
+033711:                 doc.querySelectorAll(
+033712:                     'table.table, table'
+033713:                 )
+033714:             );
+033715:         let bestTable = null;
+033716:         let bestScore = 0;
+033717:         const normalise = value => {
+033718:             return String(value || '')
+033719:                 .replace(/\s+/g, ' ')
+033720:                 .trim();
+033721:         };
+033722:         tables.forEach(table => {
+033723:             const headings = Array.from(
+033724:                 table.querySelectorAll(
+033725:                     'thead th, thead td, th'
+033726:                 )
+033727:             ).map(cell => normalise(
+
+===== context-13 [46183-46228] =====
+046183:         if (mfGlobalTransportWatcherTimer) {
+046184:             clearInterval(mfGlobalTransportWatcherTimer);
+046185:             mfGlobalTransportWatcherTimer = null;
+046186:         }
+046187:         if (mfBruteApproachWatcherTimer) {
+046188:             clearInterval(mfBruteApproachWatcherTimer);
+046189:             mfBruteApproachWatcherTimer = null;
+046190:         }
+046191:         if (mfPostTransportRehookTimer) {
+046192:             clearInterval(mfPostTransportRehookTimer);
+046193:             mfPostTransportRehookTimer = null;
+046194:         }
+046195:         mfTransportSequenceActive = false;
+046196:         mfTransportContinuationRunning = false;
+046197:         mfPostTransportOpening = false;
+046198:         mfGlobalTransportClicking = false;
+046199:         mfBruteApproachClicking = false;
+046200:         mfTransportApproachClicking = false;
+046201:         mfSilentQueueOpening = false;
+046202:         releaseMainMissionOpenLock(reason || 'stop timers');
+046203:         releaseTransportRehookLock(reason || 'stop timers');
+046204:         if (mfDebugEnabled) {
+046205:             debugLog('AUTO STOP GUARD', `Stopped background timers. reason=${reason || 'unknown'}`);
+046206:         }
+046207:     }
+046208:     function setManualAutoStop(reason) {
+046209:         sessionStorage.setItem(MF_MANUAL_AUTO_STOP_FLAG, 'true');
+046210:         localStorage.setItem(MF_MANUAL_AUTO_STOP_FLAG, 'true');
+046211:         autoModeRunning = false;
+046212:         autoModeLoopActive = false;
+046213:         sessionStorage.setItem('mf_auto_mode_running', 'false');
+046214:         localStorage.setItem('mf_auto_mode_running', 'false');
+046215:         clearQueueWaitFlags(reason || 'manual stop');
+046216:         clearAllTransportAutomationFlags(reason || 'manual stop');
+046217:         stopAllBackgroundAutomationTimers(reason || 'manual stop');
+046218:         if (mfDebugEnabled) {
+046219:             debugLog('AUTO STOP GUARD', `Manual stop set. reason=${reason || 'unknown'}`);
+046220:         }
+046221:     }
+046222:     function getCurrentMissionAlertScopes() {
+046223:         return Array.from(
+046224:             new Set(
+046225:                 getActiveMissionRequirementContexts()
+046226:                     .map(
+046227:                         context =>
+046228:                             context.root
+
+===== context-14 [46426-46466] =====
+046426:                         `${sarPersonnelConversion.personnelRequirement} -> ${sarPersonnelConversion.unitName} x${sarPersonnelConversion.stillNeeded} (${sarPersonnelConversion.personnelPerVehicle} personnel per vehicle)`
+046427:                     );
+046428:                 }
+046429:             }
+046430:             const lower = cleanName.toLowerCase();
+046431:             if (
+046432:                 lower.includes('patient badge') ||
+046433:                 lower.includes('credits') ||
+046434:                 lower.includes('reward') ||
+046435:                 lower.includes('mission') ||
+046436:                 lower.includes('alliance') ||
+046437:                 lower.includes('dispatch') ||
+046438:                 lower.includes('transport requested') ||
+046439:                 lower.includes('next mission') ||
+046440:                 lower.includes('start') ||
+046441:                 lower.includes('status')
+046442:             ) {
+046443:                 return;
+046444:             }
+046445:             const mappedName =
+046446:                 crossReference[cleanName] ||
+046447:                 crossReference[cleanName.replace(/s$/i, '')] ||
+046448:                 resolveUnitName(cleanName) ||
+046449:                 cleanName;
+046450:             const key = `${cleanName.toLowerCase()}|${mappedName}|${required}`;
+046451:             if (seen.has(key)) return;
+046452:             seen.add(key);
+046453:             const structuredShortage =
+046454:                 source === 'visible-structured-missing-vehicles';
+046455:             rows.push({
+046456:                 unitName: cleanName,
+046457:                 originalName: cleanName,
+046458:                 mappedName,
+046459:                 stillNeeded: required,
+046460:                 required,
+046461:                 selected: 0,
+046462:                 status: 'pending',
+046463:                 source: source || 'visible fallback',
+046464:                 liveRequirementDetails: structuredShortage
+046465:                     ? {
+046466:                         dispatchTargetMode: 'total',
+
+===== context-15 [46577-46617] =====
+046577:         } catch (error) {}
+046578:         try {
+046579:             vehicleTransport = !!(
+046580:                 typeof isVehicleTransportModalVisible === 'function' &&
+046581:                 isVehicleTransportModalVisible()
+046582:             );
+046583:         } catch (error) {}
+046584:         try {
+046585:             policeTransport = !!mfIsPoliceOrPrisonerTransportActive();
+046586:         } catch (error) {}
+046587:         const lastTransportClick = Math.max(
+046588:             typeof mfLastTransportClickAt !== 'undefined' ? mfLastTransportClickAt || 0 : 0,
+046589:             typeof mfTransportLastClickAt !== 'undefined' ? mfTransportLastClickAt || 0 : 0,
+046590:             typeof mfBruteLastClickAt !== 'undefined' ? mfBruteLastClickAt || 0 : 0
+046591:         );
+046592:         const lastClickAge = Date.now() - lastTransportClick;
+046593:         const refreshingAfterApproach =
+046594:             lastTransportClick > 0 &&
+046595:             lastClickAge >= 0 &&
+046596:             lastClickAge < 6500;
+046597:         const blocked =
+046598:             visibleApproach ||
+046599:             vehicleTransport ||
+046600:             policeTransport ||
+046601:             refreshingAfterApproach;
+046602:         if (blocked && mfDebugEnabled) {
+046603:             debugLog(
+046604:                 'TRANSPORT REHOOK BLOCK',
+046605:                 `${reason || 'check'} | approach=${visibleApproach ? 'yes' : 'no'} | vehicle=${vehicleTransport ? 'yes' : 'no'} | police=${policeTransport ? 'yes' : 'no'} | lastClickAge=${lastClickAge}`
+046606:             );
+046607:         }
+046608:         return blocked;
+046609:     }
+046610:     function getTransportRehookLockRemaining() {
+046611:         const until = parseInt(sessionStorage.getItem(MF_TRANSPORT_REHOOK_LOCK_KEY) || '0', 10);
+046612:         return Math.max(0, until - Date.now());
+046613:     }
+046614:     function isTransportRehookLockActive(reason) {
+046615:         const remaining = getTransportRehookLockRemaining();
+046616:         if (remaining > 0) {
+046617:             if (mfDebugEnabled) {
+
+===== context-16 [46805-46876] =====
+046805:                 recordIssueEvent('MAIN LIST OPEN BLOCKED', {
+046806:                     reason: reason || 'unknown',
+046807:                     problemAlert: getVisibleInlineProblemAlertText(),
+046808:                     finalFlag: sessionStorage.getItem(MF_FINAL_QUEUE_DISPATCH_FLAG),
+046809:                     queueOpening: sessionStorage.getItem(MF_QUEUE_OPENING_MISSION_FLAG)
+046810:                 }, true);
+046811:             } catch (error) {}
+046812:             return false;
+046813:         }
+046814:         return true;
+046815:     }
+046816:     function invalidateTransportCaches() {
+046817:         mfTransportDocumentCache = {
+046818:             expiresAt: 0,
+046819:             documents: []
+046820:         };
+046821:         mfTransportScopeCache = {
+046822:             expiresAt: 0,
+046823:             scopes: []
+046824:         };
+046825:     }
+046826:     function mfGetAccessibleDocumentsForTransport(forceRefresh = false) {
+046827:         const now = Date.now();
+046828:         const cachedDocuments = mfTransportDocumentCache.documents;
+046829:         if (
+046830:             !forceRefresh &&
+046831:             now < mfTransportDocumentCache.expiresAt &&
+046832:             cachedDocuments.every(isCachedMissionDocumentUsable)
+046833:         ) {
+046834:             return cachedDocuments;
+046835:         }
+046836:         const docs = [document];
+046837:         Array.from(document.querySelectorAll('iframe')).forEach(iframe => {
+046838:             try {
+046839:                 const doc =
+046840:                     iframe.contentDocument ||
+046841:                     iframe.contentWindow?.document;
+046842:                 if (doc?.body && !docs.includes(doc)) {
+046843:                     docs.push(doc);
+046844:                 }
+046845:             } catch (_error) {
+046846:             }
+046847:         });
+046848:         mfTransportDocumentCache = {
+046849:             expiresAt: now + 500,
+046850:             documents: docs
+046851:         };
+046852:         return docs;
+046853:     }
+046854:     function mfHasPotentialTransportUi() {
+046855:         for (const candidateDocument of mfGetAccessibleDocumentsForTransport()) {
+046856:             try {
+046857:                 const path = candidateDocument.location?.pathname || '';
+046858:                 if (path.startsWith('/vehicles/')) {
+046859:                     return true;
+046860:                 }
+046861:             } catch (_error) {}
+046862:             try {
+046863:                 const surface = candidateDocument.querySelector(
+046864:                     '.vehicle-window, .redesign-wrapper[type="vehicle"]'
+046865:                 );
+046866:                 if (surface && mfIsVisibleInOwnDocument(surface)) {
+046867:                     return true;
+046868:                 }
+046869:             } catch (_error) {}
+046870:             try {
+046871:                 const approachButtons = candidateDocument.querySelectorAll(
+046872:                     '.vm--modal button.btn-success, ' +
+046873:                     '.modal button.btn-success, ' +
+046874:                     '.lightbox button.btn-success'
+046875:                 );
+046876:                 for (const button of approachButtons) {
+
+===== context-17 [46918-47131] =====
+046918:             String(now)
+046919:         );
+046920:         sessionStorage.setItem(
+046921:             MF_TRANSPORT_LAST_CLICK_REASON_KEY,
+046922:             String(reason || 'unknown')
+046923:         );
+046924:         return true;
+046925:     }
+046926:     function mfMarkTransportOwner(button, reason) {
+046927:         const modal = button && button.closest
+046928:             ? button.closest('.vm--modal, .modal, .lightbox')
+046929:             : null;
+046930:         mfTransportOwnerModal = modal;
+046931:         mfTransportOwnerApproachGoneAt = 0;
+046932:         mfTransportOwnerCloseAttemptedAt = 0;
+046933:         mfTransportMainStableAt = 0;
+046934:         if (modal) {
+046935:             try {
+046936:                 modal.setAttribute('data-mf-transport-owner', 'true');
+046937:                 modal.setAttribute(
+046938:                     'data-mf-transport-owner-reason',
+046939:                     String(reason || 'unknown')
+046940:                 );
+046941:             } catch (error) {}
+046942:         }
+046943:         if (mfDebugEnabled) {
+046944:             debugLog(
+046945:                 'TRANSPORT MODAL OWNER',
+046946:                 `Marked | reason=${reason || 'unknown'} | modal=${modal ? 'yes' : 'no'}`
+046947:             );
+046948:         }
+046949:     }
+046950:     function mfGetTransportOwnerModal() {
+046951:         if (mfTransportOwnerModal && mfTransportOwnerModal.isConnected) {
+046952:             return mfTransportOwnerModal;
+046953:         }
+046954:         for (const doc of mfGetAccessibleDocumentsForTransport()) {
+046955:             try {
+046956:                 const marked = doc.querySelector(
+046957:                     '[data-mf-transport-owner="true"]'
+046958:                 );
+046959:                 if (marked) {
+046960:                     mfTransportOwnerModal = marked;
+046961:                     return marked;
+046962:                 }
+046963:             } catch (error) {}
+046964:         }
+046965:         const lastClickAt = mfGetSharedTransportLastClickAt();
+046966:         if (
+046967:             isPostTransportRehookPending() &&
+046968:             lastClickAt > 0 &&
+046969:             Date.now() - lastClickAt < 30000
+046970:         ) {
+046971:             for (const doc of mfGetAccessibleDocumentsForTransport()) {
+046972:                 try {
+046973:                     const modals = Array.from(
+046974:                         doc.querySelectorAll('.vm--modal, .modal, .lightbox')
+046975:                     ).filter(modal => {
+046976:                         if (!mfIsVisibleInOwnDocument(modal)) return false;
+046977:                         const modalText = (
+046978:                             modal.innerText ||
+046979:                             modal.textContent ||
+046980:                             ''
+046981:                         ).replace(/\s+/g, ' ').trim();
+046982:                         const hasMission = !!modal.querySelector(
+046983:                             '#mission_general_info, #mission_content, #mission_caption, #missionH1'
+046984:                         );
+046985:                         const hasApproach =
+046986:                             mfGetExactVisibleApproachButtons(modal).length > 0;
+046987:                         return !hasMission &&
+046988:                             !hasApproach &&
+046989:                             modalText.length < 160;
+046990:                     });
+046991:                     if (modals.length) {
+046992:                         const modal = modals[modals.length - 1];
+046993:                         modal.setAttribute(
+046994:                             'data-mf-transport-owner',
+046995:                             'true'
+046996:                         );
+046997:                         mfTransportOwnerModal = modal;
+046998:                         return modal;
+046999:                     }
+047000:                 } catch (error) {}
+047001:             }
+047002:         }
+047003:         return null;
+047004:     }
+047005:     function mfClearTransportOwner(reason) {
+047006:         for (const doc of mfGetAccessibleDocumentsForTransport()) {
+047007:             try {
+047008:                 doc.querySelectorAll(
+047009:                     '[data-mf-transport-owner="true"]'
+047010:                 ).forEach(modal => {
+047011:                     modal.removeAttribute('data-mf-transport-owner');
+047012:                     modal.removeAttribute(
+047013:                         'data-mf-transport-owner-reason'
+047014:                     );
+047015:                 });
+047016:             } catch (error) {}
+047017:         }
+047018:         mfTransportOwnerModal = null;
+047019:         mfTransportOwnerApproachGoneAt = 0;
+047020:         mfTransportOwnerCloseAttemptedAt = 0;
+047021:         mfTransportMainStableAt = 0;
+047022:         if (mfDebugEnabled) {
+047023:             debugLog(
+047024:                 'TRANSPORT MODAL OWNER',
+047025:                 `Cleared | reason=${reason || 'unknown'}`
+047026:             );
+047027:         }
+047028:     }
+047029:     function mfTransportShellReadyForRehook(reason) {
+047030:         const now = Date.now();
+047031:         const lastClickAt = Math.max(
+047032:             mfGetSharedTransportLastClickAt(),
+047033:             mfTransportLastClickAt || 0,
+047034:             mfBruteLastClickAt || 0,
+047035:             mfLastTransportClickAt || 0
+047036:         );
+047037:         const modal = mfGetTransportOwnerModal();
+047038:         if (modal) {
+047039:             let visible = false;
+047040:             try {
+047041:                 visible = mfIsVisibleInOwnDocument(modal);
+047042:             } catch (error) {}
+047043:             if (visible) {
+047044:                 mfTransportMainStableAt = 0;
+047045:                 if (
+047046:                     mfGetExactVisibleApproachButtons(modal).length > 0
+047047:                 ) {
+047048:                     mfTransportOwnerApproachGoneAt = 0;
+047049:                     return false;
+047050:                 }
+047051:                 if (!mfTransportOwnerApproachGoneAt) {
+047052:                     mfTransportOwnerApproachGoneAt = now;
+047053:                     if (mfDebugEnabled) {
+047054:                         debugLog(
+047055:                             'TRANSPORT MODAL OWNER',
+047056:                             `${reason || 'check'} | Approach gone but grey shell still visible. Waiting.`
+047057:                         );
+047058:                     }
+047059:                     return false;
+047060:                 }
+047061:                 const emptyFor =
+047062:                     now - mfTransportOwnerApproachGoneAt;
+047063:                 if (emptyFor < MF_TRANSPORT_SHELL_WAIT_MS) {
+047064:                     return false;
+047065:                 }
+047066:                 if (
+047067:                     !mfTransportOwnerCloseAttemptedAt ||
+047068:                     now - mfTransportOwnerCloseAttemptedAt > 10000
+047069:                 ) {
+047070:                     const closeButton = modal.querySelector(
+047071:                         '.control-btn-container span.lightbox-close[title="Close"], span.lightbox-close[title="Close"], #lightbox_close_inside, button.close'
+047072:                     );
+047073:                     mfTransportOwnerCloseAttemptedAt = now;
+047074:                     if (closeButton) {
+047075:                         if (mfDebugEnabled) {
+047076:                             debugLog(
+047077:                                 'TRANSPORT MODAL OWNER',
+047078:                                 `${reason || 'check'} | Closing stale grey transport shell after ${emptyFor}ms.`
+047079:                             );
+047080:                         }
+047081:                         realClickForQueueRestart(closeButton);
+047082:                     }
+047083:                 }
+047084:                 return false;
+047085:             }
+047086:         }
+047087:         if (
+047088:             lastClickAt > 0 &&
+047089:             now - lastClickAt < MF_TRANSPORT_SHELL_WAIT_MS
+047090:         ) {
+047091:             return false;
+047092:         }
+047093:         if (!mfTransportMainStableAt) {
+047094:             mfTransportMainStableAt = now;
+047095:             if (mfDebugEnabled) {
+047096:                 debugLog(
+047097:                     'TRANSPORT MODAL OWNER',
+047098:                     `${reason || 'check'} | Shell gone. Starting main-screen settle timer.`
+047099:                 );
+047100:             }
+047101:             return false;
+047102:         }
+047103:         return now - mfTransportMainStableAt >=
+047104:             MF_TRANSPORT_MAIN_STABLE_MS;
+047105:     }
+047106:     function mfIsVisibleInOwnDocument(element) {
+047107:         if (!element) return false;
+047108:         try {
+047109:             const rect = element.getBoundingClientRect();
+047110:             const style = element.ownerDocument.defaultView.getComputedStyle(element);
+047111:             return rect.width > 0
+047112:                 && rect.height > 0
+047113:                 && style.display !== 'none'
+047114:                 && style.visibility !== 'hidden'
+047115:                 && style.opacity !== '0';
+047116:         } catch (error) {
+047117:             try {
+047118:                 return !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
+047119:             } catch (innerError) {
+047120:                 return false;
+047121:             }
+047122:         }
+047123:     }
+047124:     function mfGetExactVisibleApproachButtons(scope) {
+047125:         if (!scope || !scope.querySelectorAll) return [];
+047126:         return Array.from(scope.querySelectorAll(
+047127:             'button, a, input[type="button"], input[type="submit"]'
+047128:         )).filter(button => {
+047129:             if (!mfIsVisibleInOwnDocument(button)) return false;
+047130:             const text = [
+047131:                 button.textContent || '',
+
+===== context-18 [47194-47353] =====
+047194:             capacity: null,
+047195:             rowText
+047196:         };
+047197:     }
+047198:     function mfChoosePreferredApproachButton(scope) {
+047199:         const buttons = mfGetExactVisibleApproachButtons(scope);
+047200:         if (!buttons.length) return null;
+047201:         const scopeText = (scope.innerText || scope.textContent || '')
+047202:             .replace(/\s+/g, ' ')
+047203:             .trim()
+047204:             .toLowerCase();
+047205:         const prisonerScreen =
+047206:             scopeText.includes('release prisoners') ||
+047207:             scopeText.includes('free cells') ||
+047208:             scopeText.includes('cells:') ||
+047209:             scopeText.includes('prisoner');
+047210:         const patientScreen =
+047211:             scopeText.includes('discharge patient') ||
+047212:             scopeText.includes('free beds') ||
+047213:             scopeText.includes('hospitals:') ||
+047214:             scopeText.includes('hospital distance');
+047215:         const inspected = buttons.map(button => ({
+047216:             button,
+047217:             info: mfGetApproachCapacityInfo(button),
+047218:             rowText: (
+047219:                 button.closest('tr')?.innerText ||
+047220:                 button.closest('tr')?.textContent ||
+047221:                 ''
+047222:             ).replace(/\s+/g, ' ').trim()
+047223:         }));
+047224:         const validForScreen = inspected.filter(item => {
+047225:             const lowerRow = item.rowText.toLowerCase();
+047226:             if (prisonerScreen) {
+047227:                 if (
+047228:                     lowerRow.includes('hospital') ||
+047229:                     lowerRow.includes('free beds') ||
+047230:                     lowerRow.includes('department')
+047231:                 ) {
+047232:                     return false;
+047233:                 }
+047234:             }
+047235:             if (patientScreen && !prisonerScreen) {
+047236:                 if (
+047237:                     lowerRow.includes('police') ||
+047238:                     lowerRow.includes('custody') ||
+047239:                     lowerRow.includes('free cells')
+047240:                 ) {
+047241:                     return false;
+047242:                 }
+047243:             }
+047244:             return true;
+047245:         });
+047246:         const positive = validForScreen.find(item =>
+047247:             item.info.hasCapacityColumn &&
+047248:             Number.isFinite(item.info.capacity) &&
+047249:             item.info.capacity > 0
+047250:         );
+047251:         if (positive) {
+047252:             if (mfDebugEnabled) {
+047253:                 debugLog(
+047254:                     prisonerScreen ? 'POLICE TRANSPORT' : 'PATIENT TRANSPORT',
+047255:                     `Selected Approach with free capacity=${positive.info.capacity} | row="${positive.info.rowText || positive.rowText}"`
+047256:                 );
+047257:             }
+047258:             return positive.button;
+047259:         }
+047260:         const hasCapacityColumns = validForScreen.some(item => item.info.hasCapacityColumn);
+047261:         if (hasCapacityColumns) {
+047262:             if (mfDebugEnabled) {
+047263:                 debugLog(
+047264:                     prisonerScreen ? 'POLICE TRANSPORT' : 'PATIENT TRANSPORT',
+047265:                     `No valid destination with free capacity. Valid rows=${validForScreen.length}.`
+047266:                 );
+047267:             }
+047268:             return null;
+047269:         }
+047270:         return validForScreen.length ? validForScreen[0].button : null;
+047271:     }
+047272:     function mfGetTransportModalScore(modal) {
+047273:         if (!modal) return -1;
+047274:         let score = 0;
+047275:         try {
+047276:             const style = modal.ownerDocument.defaultView.getComputedStyle(modal);
+047277:             const zIndex = parseInt(style.zIndex || '0', 10);
+047278:             if (Number.isFinite(zIndex)) score += zIndex * 1000;
+047279:         } catch (error) {}
+047280:         try {
+047281:             const siblings = Array.from(modal.ownerDocument.querySelectorAll('.vm--modal, .modal, .lightbox'));
+047282:             score += Math.max(0, siblings.indexOf(modal));
+047283:         } catch (error) {}
+047284:         return score;
+047285:     }
+047286:     function mfGetTransportActiveScopes(forceRefresh = false) {
+047287:         const now = Date.now();
+047288:         const cachedScopes = mfTransportScopeCache.scopes;
+047289:         const cacheStillConnected = cachedScopes.every(
+047290:             scope => scope?.isConnected !== false
+047291:         );
+047292:         if (
+047293:             !forceRefresh &&
+047294:             now < mfTransportScopeCache.expiresAt &&
+047295:             cacheStillConnected
+047296:         ) {
+047297:             return cachedScopes;
+047298:         }
+047299:         const scopes = buildTransportActiveScopes();
+047300:         mfTransportScopeCache = {
+047301:             expiresAt: now + 250,
+047302:             scopes
+047303:         };
+047304:         return scopes;
+047305:     }
+047306:     function buildTransportActiveScopes() {
+047307:         const modalCandidates = [];
+047308:         mfGetAccessibleDocumentsForTransport().forEach(doc => {
+047309:             const modals = Array.from(doc.querySelectorAll('.vm--modal, .modal, .lightbox'));
+047310:             modals.forEach(modal => {
+047311:                 if (!mfIsVisibleInOwnDocument(modal)) return;
+047312:                 const buttons = mfGetExactVisibleApproachButtons(modal);
+047313:                 if (!buttons.length) return;
+047314:                 const text = (modal.innerText || modal.textContent || '')
+047315:                     .replace(/\s+/g, ' ')
+047316:                     .trim()
+047317:                     .toLowerCase();
+047318:                 const hasTransportContext =
+047319:                     !!modal.querySelector('.vehicle-window, .redesign-wrapper[type="vehicle"]') ||
+047320:                     text.includes('patient / prisoner handoff') ||
+047321:                     text.includes('discharge patient') ||
+047322:                     text.includes('release prisoners') ||
+047323:                     text.includes('free cells') ||
+047324:                     text.includes('free beds') ||
+047325:                     text.includes('hospitals:') ||
+047326:                     text.includes('cells:');
+047327:                 if (!hasTransportContext) return;
+047328:                 modalCandidates.push({
+047329:                     scope: modal,
+047330:                     score: mfGetTransportModalScore(modal)
+047331:                 });
+047332:             });
+047333:             try {
+047334:                 const path = doc.location && doc.location.pathname || '';
+047335:                 if (
+047336:                     path.startsWith('/vehicles/') &&
+047337:                     mfGetExactVisibleApproachButtons(doc.body).length > 0
+047338:                 ) {
+047339:                     modalCandidates.push({
+047340:                         scope: doc.body,
+047341:                         score: -1
+047342:                     });
+047343:                 }
+047344:             } catch (error) {}
+047345:         });
+047346:         if (!modalCandidates.length) return [];
+047347:         modalCandidates.sort((a, b) => b.score - a.score);
+047348:         return [modalCandidates[0].scope];
+047349:     }
+047350:     function mfFindAnyVisibleApproachButtonDeep() {
+047351:         const scopes = mfGetTransportActiveScopes();
+047352:         for (const scope of scopes) {
+047353:             const button = mfChoosePreferredApproachButton(scope);
+
+===== context-19 [47604-47644] =====
+047604:         }
+047605:         destination =
+047606:             getFirstAvailablePrisonCellDestination(context);
+047607:     }
+047608:     if (!autoModeRunning || isManualAutoStopActive()) {
+047609:         return 'stuck';
+047610:     }
+047611:     if (!destination) {
+047612:         clearAutoPrisonerCellHandoffState();
+047613:         if (mfDebugEnabled) {
+047614:             debugLog(
+047615:                 'AUTO PRISONER CELL',
+047616:                 'No active cell destination is available. Running the exact Release Prisoners fallback before Unit Finder.'
+047617:             );
+047618:         }
+047619:         updateStatusBox(
+047620:             'Auto Mode: no available prisoner cell remains. Releasing prisoners before Unit Finder...'
+047621:         );
+047622:         const releaseResult =
+047623:             await handleAutoPrisonerReleaseAfterActions();
+047624:         return releaseResult === 'none'
+047625:             ? 'handled'
+047626:             : releaseResult;
+047627:     }
+047628:     const href = String(
+047629:         destination.getAttribute('href') ||
+047630:             destination.href ||
+047631:             ''
+047632:     ).trim();
+047633:     const ownerKey =
+047634:         getCurrentMissionIdForQueueRestart() ||
+047635:         String(window.location.href || '');
+047636:     const previous = readAutoPrisonerCellHandoffState();
+047637:     const sameDestination = !!(
+047638:         previous &&
+047639:         previous.ownerKey === ownerKey &&
+047640:         previous.href === href
+047641:     );
+047642:     const previousAge = sameDestination
+047643:         ? Date.now() - previous.clickedAt
+047644:         : Number.POSITIVE_INFINITY;
+
+===== context-20 [48056-48096] =====
+048056:         releaseContext
+048057:     );
+048058:     return candidates.length ? candidates[candidates.length - 1] : null;
+048059: }
+048060: function isAutoPrisonerReleaseDismissContextVisible(context) {
+048061:     return !!resolveAutoPrisonerReleaseDismissContext(context);
+048062: }
+048063: async function closeAutoPrisonerReleaseDismissAfterClick(
+048064:     releaseContext = null,
+048065:     initialDismissContext = null
+048066: ) {
+048067:     updateStatusBox(
+048068:         'Auto Mode: Release Prisoners clicked. Waiting for the result screen before restarting the mission cycle...'
+048069:     );
+048070:     let dismissContext =
+048071:         initialDismissContext ||
+048072:         captureAutoPrisonerReleaseOwnerContext(releaseContext) ||
+048073:         getTopmostAutoPrisonerReleaseDismissContext(
+048074:             releaseContext
+048075:         );
+048076:     const resultStarted = Date.now();
+048077:     let successContext =
+048078:         getAutoPrisonerReleaseSuccessContext(
+048079:             releaseContext,
+048080:             dismissContext
+048081:         );
+048082:     while (
+048083:         autoModeRunning &&
+048084:         !isManualAutoStopActive() &&
+048085:         !successContext &&
+048086:         Date.now() - resultStarted < MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS
+048087:     ) {
+048088:         await wait(100);
+048089:         successContext =
+048090:             getAutoPrisonerReleaseSuccessContext(
+048091:                 releaseContext,
+048092:                 dismissContext
+048093:             );
+048094:     }
+048095:     if (!autoModeRunning || isManualAutoStopActive()) return 'stuck';
+048096:     if (!successContext) return 'stuck';
+
+===== context-21 [48108-48148] =====
+048108:         Date.now() - dismissStarted < MF_AUTO_PRISONER_RELEASE_DISMISS_WAIT_MS
+048109:     ) {
+048110:         await wait(100);
+048111:         liveDismissContext =
+048112:             resolveAutoPrisonerReleaseDismissContext(
+048113:                 dismissContext
+048114:             );
+048115:     }
+048116:     if (!autoModeRunning || isManualAutoStopActive()) return 'stuck';
+048117:     if (!liveDismissContext?.closeButton) return 'stuck';
+048118:     dismissContext = liveDismissContext;
+048119:     updateStatusBox(
+048120:         'Auto Mode: closing the Release Prisoners result screen before restarting the mission cycle...'
+048121:     );
+048122:     const closeStarted = Date.now();
+048123:     let attempt = 0;
+048124:     while (
+048125:         autoModeRunning &&
+048126:         !isManualAutoStopActive() &&
+048127:         Date.now() - closeStarted < MF_AUTO_PRISONER_RELEASE_DISMISS_CLOSE_WAIT_MS
+048128:     ) {
+048129:         const current =
+048130:             resolveAutoPrisonerReleaseDismissContext(dismissContext);
+048131:         if (!current) {
+048132:             clearAutoPrisonerReleaseState();
+048133:             updateStatusBox(
+048134:                 'Auto Mode: prisoner result screen closed. Restarting the mission cycle...'
+048135:             );
+048136:             return 'closed';
+048137:         }
+048138:         dismissContext = current;
+048139:         if (!current.closeButton) {
+048140:             await wait(180);
+048141:             continue;
+048142:         }
+048143:         attempt += 1;
+048144:         if (mfDebugEnabled) {
+048145:             debugLog(
+048146:                 'AUTO PRISONER RELEASE',
+048147:                 `Closing exact prisoner lightbox | attempt=${attempt} | key=${current.containerKey || 'none'}`
+048148:             );
+
+===== context-22 [48186-48264] =====
+048186:     return 'stuck';
+048187: }
+048188: function getExactAutoReleasePrisonersLink(context) {
+048189:     if (!context || !context.root || !context.root.querySelectorAll) {
+048190:         return null;
+048191:     }
+048192:     const missionId = String(
+048193:         getCurrentMissionIdForQueueRestart() || ''
+048194:     ).trim();
+048195:     if (!/^\d+$/.test(missionId)) return null;
+048196:     const links = Array.from(
+048197:         context.root.querySelectorAll(
+048198:             'a.btn.btn-danger[data-method="post"][href*="/gefangene/entlassen"]'
+048199:         )
+048200:     );
+048201:     for (const link of links) {
+048202:         try {
+048203:             if (!mfIsVisibleInOwnDocument(link)) continue;
+048204:         } catch (_error) {
+048205:             continue;
+048206:         }
+048207:         if (
+048208:             link.hidden ||
+048209:             link.classList.contains('disabled') ||
+048210:             link.classList.contains('hidden') ||
+048211:             link.classList.contains('d-none') ||
+048212:             link.getAttribute('aria-disabled') === 'true'
+048213:         ) {
+048214:             continue;
+048215:         }
+048216:         const text = String(
+048217:             link.innerText || link.textContent || ''
+048218:         )
+048219:             .replace(/\s+/g, ' ')
+048220:             .trim()
+048221:             .toLowerCase();
+048222:         if (text !== 'release prisoners') continue;
+048223:         let releaseUrl;
+048224:         try {
+048225:             releaseUrl = new URL(
+048226:                 link.getAttribute('href') || link.href || '',
+048227:                 context.document.location?.origin ||
+048228:                     window.location.origin
+048229:             );
+048230:         } catch (_error) {
+048231:             continue;
+048232:         }
+048233:         if (
+048234:             releaseUrl.origin !== window.location.origin ||
+048235:             releaseUrl.pathname !==
+048236:                 `/missions/${missionId}/gefangene/entlassen`
+048237:         ) {
+048238:             continue;
+048239:         }
+048240:         return link;
+048241:     }
+048242:     return null;
+048243: }
+048244: function readAutoPrisonerReleaseState() {
+048245:     try {
+048246:         const parsed = JSON.parse(
+048247:             sessionStorage.getItem(
+048248:                 MF_AUTO_PRISONER_RELEASE_STATE_KEY
+048249:             ) ||
+048250:                 'null'
+048251:         );
+048252:         if (!parsed || typeof parsed !== 'object') return null;
+048253:         return {
+048254:             ownerKey: String(parsed.ownerKey || ''),
+048255:             href: String(parsed.href || ''),
+048256:             clickedAt: Number(parsed.clickedAt || 0),
+048257:             attempts: Math.max(
+048258:                 0,
+048259:                 Math.trunc(Number(parsed.attempts || 0))
+048260:             )
+048261:         };
+048262:     } catch (_error) {
+048263:         return null;
+048264:     }
+
+===== context-23 [48290-48422] =====
+048290:         clearAutoPrisonerReleaseState();
+048291:         updateStatusBox(
+048292:             'Auto Mode: an available cell is still listed. Restarting the cell handoff before release fallback...'
+048293:         );
+048294:         return 'cell-available';
+048295:     }
+048296:     const releaseLink =
+048297:         getExactAutoReleasePrisonersLink(context);
+048298:     if (!releaseLink) {
+048299:         if (mfDebugEnabled) {
+048300:             debugLog(
+048301:                 'AUTO PRISONER RELEASE',
+048302:                 'The prisoner alert remained after all actions, but the exact current-mission Release Prisoners link was not available.'
+048303:             );
+048304:         }
+048305:         return 'stuck';
+048306:     }
+048307:     const href = String(
+048308:         releaseLink.getAttribute('href') ||
+048309:             releaseLink.href ||
+048310:             ''
+048311:     ).trim();
+048312:     const ownerKey = String(
+048313:         getCurrentMissionIdForQueueRestart() ||
+048314:             window.location.href ||
+048315:             ''
+048316:     );
+048317:     const previous = readAutoPrisonerReleaseState();
+048318:     const sameRelease = !!(
+048319:         previous &&
+048320:         previous.ownerKey === ownerKey &&
+048321:         previous.href === href
+048322:     );
+048323:     const previousAge = sameRelease
+048324:         ? Date.now() - previous.clickedAt
+048325:         : Number.POSITIVE_INFINITY;
+048326:     if (
+048327:         sameRelease &&
+048328:         previousAge >= 0 &&
+048329:         previousAge < MF_AUTO_PRISONER_RELEASE_CLICK_RETRY_MS
+048330:     ) {
+048331:         updateStatusBox(
+048332:             'Auto Mode: waiting for Release Prisoners to complete before dispatch...'
+048333:         );
+048334:         return 'waiting';
+048335:     }
+048336:     const attempts = sameRelease
+048337:         ? previous.attempts + 1
+048338:         : 1;
+048339:     if (attempts > MF_AUTO_PRISONER_RELEASE_MAX_ATTEMPTS) {
+048340:         if (mfDebugEnabled) {
+048341:             debugLog(
+048342:                 'AUTO PRISONER RELEASE',
+048343:                 `Release Prisoners did not complete after ${previous.attempts} click attempt(s): ${href}`
+048344:             );
+048345:         }
+048346:         return 'stuck';
+048347:     }
+048348:     writeAutoPrisonerReleaseState({
+048349:         ownerKey,
+048350:         href,
+048351:         clickedAt: Date.now(),
+048352:         attempts
+048353:     });
+048354:     updateStatusBox(
+048355:         'Auto Mode: no usable cell remains. Releasing the remaining prisoners before continuing...'
+048356:     );
+048357:     if (mfDebugEnabled) {
+048358:         debugLog(
+048359:             'AUTO PRISONER RELEASE',
+048360:             `Clicking exact current-mission Release Prisoners fallback | attempt=${attempts} | href=${href}`
+048361:         );
+048362:     }
+048363:     const dismissContextBeforeClick =
+048364:         captureAutoPrisonerReleaseOwnerContext(context) ||
+048365:         getTopmostAutoPrisonerReleaseDismissContext(context);
+048366:     const clicked = realClickForQueueRestart(releaseLink);
+048367:     if (!clicked) {
+048368:         clearAutoPrisonerReleaseState();
+048369:         return 'stuck';
+048370:     }
+048371:     await wait(250);
+048372:     const dismissResult =
+048373:         await closeAutoPrisonerReleaseDismissAfterClick(
+048374:             context,
+048375:             dismissContextBeforeClick
+048376:         );
+048377:     if (dismissResult === 'stuck') {
+048378:         return 'stuck';
+048379:     }
+048380:     clearAutoPrisonerReleaseState();
+048381:     return 'clicked';
+048382: }
+048383:     function mfIsPoliceOrPrisonerTransportActive() {
+048384:         if (getActivePrisonerCellSelectionContext()) return true;
+048385:         const scopes = mfGetTransportActiveScopes();
+048386:         return scopes.some(scope => {
+048387:             const text = (scope.innerText || scope.textContent || '')
+048388:                 .replace(/\s+/g, ' ')
+048389:                 .trim()
+048390:                 .toLowerCase();
+048391:             return (
+048392:                 mfGetExactVisibleApproachButtons(scope).length > 0 &&
+048393:                 (
+048394:                     text.includes('release prisoners') ||
+048395:                     text.includes('free cells') ||
+048396:                     text.includes('police cell') ||
+048397:                     text.includes('custody') ||
+048398:                     text.includes('prisoner')
+048399:                 )
+048400:             );
+048401:         });
+048402:     }
+048403:     function isNextMissionButtonElement(element) {
+048404:         if (!element) return false;
+048405:         const title = (element.getAttribute && element.getAttribute('title') || '').replace(/\s+/g, ' ').trim().toLowerCase();
+048406:         const text = (element.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+048407:         const href = (element.getAttribute && element.getAttribute('href') || '').toLowerCase();
+048408:         return element.id === 'mission_next_mission_btn' ||
+048409:             !!(element.closest && element.closest('#mission_next_mission_btn')) ||
+048410:             title.includes('next mission') ||
+048411:             text === 'next mission' ||
+048412:             href.includes('/missions/mission_next');
+048413:     }
+048414:     function isInsideCurrentMissionWindow(element) {
+048415:         if (!element || !element.closest) return false;
+048416:         return !!element.closest(
+048417:             '#mission_general_info, #mission_caption, #missionH1, #iframe-inside-container, #mission_content, .mission_content, #lightbox_box, .lightbox, .vm--modal, .modal'
+048418:         );
+048419:     }
+048420:     function getInlinePersonnelQualificationAlertText() {
+048421:         const scopes = getCurrentMissionAlertScopes();
+048422:         if (!scopes.length) return '';
+
+===== context-24 [48781-48839] =====
+048781:         const text = getButtonTextForTransport(element);
+048782:         const cls = (element.className || '').toString().toLowerCase();
+048783:         let score = 0;
+048784:         if (text === 'approach') score += 100;
+048785:         if (text.includes('approach')) score += 90;
+048786:         if (text.includes('transport')) score += 70;
+048787:         if (text.includes('send')) score += 50;
+048788:         if (cls.includes('btn-success')) score += 25;
+048789:         if (cls.includes('btn-primary')) score += 15;
+048790:         if (cls.includes('btn')) score += 5;
+048791:         const container = element.closest('tr, li, .panel, .card, .well, .modal-body, div');
+048792:         const containerText = container ? (container.innerText || '').replace(/\s+/g, ' ').trim().toLowerCase() : '';
+048793:         if (containerText.includes('hospital')) score += 10;
+048794:         if (containerText.includes('police cell')) score += 10;
+048795:         if (containerText.includes('cell')) score += 5;
+048796:         if (containerText.includes('patient')) score += 5;
+048797:         if (containerText.includes('prisoner')) score += 5;
+048798:         return score;
+048799:     }
+048800:     function mfIsExactPatientTransportAnchor(element) {
+048801:         if (!element || String(element.tagName || '').toLowerCase() !== 'a') return false;
+048802:         const href = String(element.getAttribute?.('href') || '').trim();
+048803:         const className = String(element.className || '');
+048804:         if (!/(?:^|\s)btn-success(?:\s|$)/.test(className)) return false;
+048805:         if (!/^\/vehicles\/\d+\/patient\/\d+\/?(?:[?#].*)?$/.test(href)) return false;
+048806:         if (element.getAttribute?.('aria-disabled') === 'true') return false;
+048807:         if (element.classList?.contains?.('disabled')) return false;
+048808:         return true;
+048809:     }
+048810:     function mfFindExactPatientTransportAnchor(root = document) {
+048811:         const candidates = Array.from(root?.querySelectorAll?.('a.btn-success[href*="/patient/"]') || []);
+048812:         for (const candidate of candidates) {
+048813:             if (!mfIsExactPatientTransportAnchor(candidate)) continue;
+048814:             try { if (!isElementVisible(candidate)) continue; } catch (error) { continue; }
+048815:             return candidate;
+048816:         }
+048817:         return null;
+048818:     }
+048819:     function mfGetExactPatientTransportRoots() {
+048820:         const roots = [];
+048821:         const seenDocuments = new Set();
+048822:         const addDocument = candidate => {
+048823:             let doc = null;
+048824:             if (candidate?.nodeType === 9) {
+048825:                 doc = candidate;
+048826:             } else if (candidate?.ownerDocument?.nodeType === 9) {
+048827:                 doc = candidate.ownerDocument;
+048828:             }
+048829:             if (!doc || seenDocuments.has(doc)) return;
+048830:             seenDocuments.add(doc);
+048831:             roots.push(doc);
+048832:             for (const frame of Array.from(doc.querySelectorAll?.('iframe') || [])) {
+048833:                 try {
+048834:                     if (frame.contentDocument) addDocument(frame.contentDocument);
+048835:                 } catch (error) {
+048836:                 }
+048837:             }
+048838:         };
+048839:         addDocument(document);
+
+===== context-25 [48884-48997] =====
+048884:         const modal = document.querySelector('.vm--modal');
+048885:         if (!modal || !isElementVisible(modal)) return false;
+048886:         const modalText = (modal.innerText || '').replace(/\s+/g, ' ').trim().toLowerCase();
+048887:         return (
+048888:             !!modal.querySelector('.vehicle-window, .redesign-wrapper[type="vehicle"]') ||
+048889:             modalText.includes('approach') ||
+048890:             modalText.includes('prisoner') ||
+048891:             modalText.includes('police cell') ||
+048892:             modalText.includes('cell') ||
+048893:             modalText.includes('custody')
+048894:         ) && (
+048895:             modalText.includes('patient / prisoner handoff') ||
+048896:             modalText.includes('hospital') ||
+048897:             modalText.includes('free beds') ||
+048898:             modalText.includes('approach') ||
+048899:             modalText.includes('prisoner') ||
+048900:             modalText.includes('police cell') ||
+048901:             modalText.includes('cell') ||
+048902:             modalText.includes('custody')
+048903:         );
+048904:     }
+048905:     function isAnyTransportModalOrApproachVisible() {
+048906:         return !!(
+048907:             findExactFirstApproachTransportButton() ||
+048908:             (typeof mfBruteFindFirstApproachButton === 'function' && mfBruteFindFirstApproachButton()) ||
+048909:             (typeof mfBruteFindVehicleTransportModal === 'function' && mfBruteFindVehicleTransportModal()) ||
+048910:             (typeof isVehicleTransportModalVisible === 'function' && isVehicleTransportModalVisible())
+048911:         );
+048912:     }
+048913:     function markTransportSequenceActive() {
+048914:         mfTransportSequenceActive = true;
+048915:         sessionStorage.setItem('mf_transport_sequence_active_v1', 'true');
+048916:         sessionStorage.setItem('mf_post_transport_rehook_pending_v1', 'true');
+048917:         localStorage.setItem('mf_post_transport_rehook_pending_v1', 'true');
+048918:         localStorage.setItem('mf_auto_mode_running', 'true');
+048919:         const rehookUntil = Date.now() + 120000;
+048920:         sessionStorage.setItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY, String(rehookUntil));
+048921:         localStorage.setItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY, String(rehookUntil));
+048922:     }
+048923:     function clearTransportSequenceActive() {
+048924:         mfTransportSequenceActive = false;
+048925:         sessionStorage.removeItem('mf_transport_sequence_active_v1');
+048926:         sessionStorage.removeItem('mf_brute_transport_sent_v1');
+048927:         sessionStorage.removeItem('mf_transport_sent_in_vehicle_modal_v1');
+048928:     }
+048929:     function clearPostTransportRehookPending() {
+048930:         clearTransportSequenceActive();
+048931:         sessionStorage.removeItem('mf_post_transport_rehook_pending_v1');
+048932:         localStorage.removeItem('mf_post_transport_rehook_pending_v1');
+048933:         mfClearTransportOwner('post-transport complete');
+048934:     }
+048935:     function isRecentTransportRehookWindowActive() {
+048936:         if (isManualAutoStopActive()) return false;
+048937:         const until = Math.max(
+048938:             parseInt(sessionStorage.getItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY) || '0', 10) || 0,
+048939:             parseInt(localStorage.getItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY) || '0', 10) || 0
+048940:         );
+048941:         if (until > Date.now()) return true;
+048942:         sessionStorage.removeItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY);
+048943:         localStorage.removeItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY);
+048944:         return false;
+048945:     }
+048946:     function isPostTransportRehookPending() {
+048947:         if (isManualAutoStopActive()) return false;
+048948:         return sessionStorage.getItem('mf_post_transport_rehook_pending_v1') === 'true' ||
+048949:             localStorage.getItem('mf_post_transport_rehook_pending_v1') === 'true' ||
+048950:             wasTransportSequenceActive() ||
+048951:             isRecentTransportRehookWindowActive();
+048952:     }
+048953:     function isAutoModeActiveFlagSet() {
+048954:         if (isManualAutoStopActive()) return false;
+048955:         return autoModeRunning === true ||
+048956:             sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
+048957:             localStorage.getItem('mf_auto_mode_running') === 'true';
+048958:     }
+048959:     function isTransportAutomationAllowed() {
+048960:         if (isManualAutoStopActive()) return false;
+048961:         return isAutoModeActiveFlagSet() || isPostTransportRehookPending();
+048962:     }
+048963:     function clearAllTransportAutomationFlags(reason) {
+048964:         mfTransportSequenceActive = false;
+048965:         mfTransportContinuationRunning = false;
+048966:         mfPostTransportOpening = false;
+048967:         mfGlobalTransportClicking = false;
+048968:         mfBruteApproachClicking = false;
+048969:         mfTransportApproachClicking = false;
+048970:         sessionStorage.removeItem('mf_transport_sequence_active_v1');
+048971:         sessionStorage.removeItem('mf_post_transport_rehook_pending_v1');
+048972:         sessionStorage.removeItem('mf_brute_transport_sent_v1');
+048973:         sessionStorage.removeItem('mf_transport_sent_in_vehicle_modal_v1');
+048974:         localStorage.removeItem('mf_post_transport_rehook_pending_v1');
+048975:         sessionStorage.removeItem(MF_TRANSPORT_CLICK_LOCK_UNTIL_KEY);
+048976:         sessionStorage.removeItem(MF_TRANSPORT_LAST_CLICK_AT_KEY);
+048977:         sessionStorage.removeItem(MF_TRANSPORT_LAST_CLICK_REASON_KEY);
+048978:         mfClearTransportOwner(reason || 'transport flags cleared');
+048979:         const clearRecentRehook =
+048980:             String(reason || '').toLowerCase().includes('manual') ||
+048981:             String(reason || '').toLowerCase().includes('stopped');
+048982:         if (clearRecentRehook) {
+048983:             sessionStorage.removeItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY);
+048984:             localStorage.removeItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY);
+048985:         }
+048986:         if (mfDebugEnabled) {
+048987:             debugLog('AUTO GUARD', `Cleared all transport automation flags. reason=${reason || 'unknown'}`);
+048988:         }
+048989:     }
+048990:     function hasVisibleApproachButtonForTransportRehook() {
+048991:         return !!(
+048992:             (typeof mfFindAnyVisibleApproachButtonDeep === 'function' && mfFindAnyVisibleApproachButtonDeep()) ||
+048993:             (typeof mfFindAnyVisibleApproachButtonInModal === 'function' && mfFindAnyVisibleApproachButtonInModal())
+048994:         );
+048995:     }
+048996:     function forceAutoModeBackOnForTransportRehook() {
+048997:         if (isManualAutoStopActive()) {
+
+===== context-26 [49004-49076] =====
+049004:         autoModeLoopActive = false;
+049005:         sessionStorage.setItem('mf_auto_mode_running', 'true');
+049006:         localStorage.setItem('mf_auto_mode_running', 'true');
+049007:         return true;
+049008:     }
+049009:     function findAnyMainScreenMissionOpenButton() {
+049010:         return findFirstMissionButtonForQueueRestart();
+049011:     }
+049012:     async function hardOpenFirstMissionFromMainAfterTransport(reason) {
+049013:         if (!MF_IS_TOP_WINDOW) return false;
+049014:         if (isManualAutoStopActive()) return false;
+049015:         if (!isTransportAutomationAllowed()) return false;
+049016:         if (!mfTransportShellReadyForRehook(`hard-${reason}`)) return false;
+049017:         if (!acquireTransportRehookLock(`hard-rehook-${reason}`, 28000)) return false;
+049018:         try {
+049019:             if (shouldBlockOpeningNewMissionForTransport(`hard-rehook-${reason}`)) {
+049020:                 return false;
+049021:             }
+049022:             if (isCurrentMissionWindowStillOpenForSafeOpen(`hard-rehook-${reason}`)) {
+049023:                 if (mfDebugEnabled) {
+049024:                     debugLog('TRANSPORT REHOOK', `${reason}: mission window still open; waiting for next rehook tick.`);
+049025:                 }
+049026:                 return false;
+049027:             }
+049028:             if (!forceAutoModeBackOnForTransportRehook()) return false;
+049029:             if (mfDebugEnabled) {
+049030:                 debugLog('TRANSPORT REHOOK', `${reason}: hard main-screen open attempt started.`);
+049031:             }
+049032:             if (window.location.pathname.startsWith('/vehicles/')) {
+049033:                 if (mfDebugEnabled) {
+049034:                     debugLog('TRANSPORT REHOOK', `${reason}: on vehicle page after transport, loading main page for mission count.`);
+049035:                 }
+049036:                 sessionStorage.setItem('mf_post_transport_rehook_pending_v1', 'true');
+049037:                 localStorage.setItem('mf_post_transport_rehook_pending_v1', 'true');
+049038:                 const rehookUntil = Date.now() + 120000;
+049039:                 sessionStorage.setItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY, String(rehookUntil));
+049040:                 localStorage.setItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY, String(rehookUntil));
+049041:                 window.location.href = '/';
+049042:                 return false;
+049043:             }
+049044:             const started = Date.now();
+049045:             let filterClickedAt = 0;
+049046:             while (Date.now() - started < 120000) {
+049047:                 if (isManualAutoStopActive()) return false;
+049048:                 if (!mfTransportShellReadyForRehook(`hard-loop-${reason}`)) {
+049049:                     await wait(800);
+049050:                     continue;
+049051:                 }
+049052:                 if (hasVisibleApproachButtonForTransportRehook()) {
+049053:                     if (mfDebugEnabled) {
+049054:                         debugLog('TRANSPORT REHOOK', `${reason}: Approach visible again; pausing rehook.`);
+049055:                     }
+049056:                     return false;
+049057:                 }
+049058:                 if (isCurrentMissionWindowStillOpenForSafeOpen(`hard-rehook-${reason}`)) {
+049059:                     if (mfDebugEnabled) {
+049060:                         debugLog('TRANSPORT REHOOK', `${reason}: current mission window still open; retrying shortly.`);
+049061:                     }
+049062:                     await wait(1000);
+049063:                     continue;
+049064:                 }
+049065:                 if (isMissionPage() && isMissionScreenVisibleForQueueRestart()) {
+049066:                     clearPostTransportRehookPending();
+049067:                     if (mfDebugEnabled) {
+049068:                         debugLog('TRANSPORT REHOOK', `${reason}: mission modal visible; restarting Auto Mode.`);
+049069:                     }
+049070:                     forceAutoModeBackOnForTransportRehook();
+049071:                     setTimeout(() => {
+049072:                         if (autoModeRunning && !autoModeLoopActive) runAutoModeLoop();
+049073:                     }, 1000);
+049074:                     return true;
+049075:                 }
+049076:                 if (hasVisibleQueueOpenModal(`hard-rehook-${reason}`)) {
+
+===== context-27 [49187-49348] =====
+049187:                 }
+049188:                 await wait(1000);
+049189:             }
+049190:             if (mfDebugEnabled) {
+049191:                 debugLog('TRANSPORT REHOOK', `${reason}: hard main-screen rehook timed out.`);
+049192:             }
+049193:             return false;
+049194:         } finally {
+049195:             releaseTransportRehookLock(`hard-rehook-${reason}-finally`);
+049196:         }
+049197:     }
+049198:     function wasTransportSequenceActive() {
+049199:         return mfTransportSequenceActive ||
+049200:             sessionStorage.getItem('mf_transport_sequence_active_v1') === 'true' ||
+049201:             sessionStorage.getItem('mf_brute_transport_sent_v1') === 'true' ||
+049202:             sessionStorage.getItem('mf_transport_sent_in_vehicle_modal_v1') === 'true';
+049203:     }
+049204:     async function openFirstMissionAfterTransportAutoClose(reason) {
+049205:         if (!MF_IS_TOP_WINDOW) return false;
+049206:         if (isManualAutoStopActive()) return false;
+049207:         if (!isTransportAutomationAllowed()) return false;
+049208:         if (isTransportRehookLockActive(`open-after-transport-${reason}`)) {
+049209:             return false;
+049210:         }
+049211:         if (mfTransportContinuationRunning || mfPostTransportOpening) {
+049212:             return false;
+049213:         }
+049214:         if (!isPostTransportRehookPending()) return false;
+049215:         if (hasVisibleApproachButtonForTransportRehook()) return false;
+049216:         if (!mfTransportShellReadyForRehook(reason)) return false;
+049217:         mfTransportContinuationRunning = true;
+049218:         mfPostTransportOpening = true;
+049219:         try {
+049220:             forceAutoModeBackOnForTransportRehook();
+049221:             if (mfDebugEnabled) {
+049222:                 debugLog(
+049223:                     'TRANSPORT REHOOK',
+049224:                     `${reason}: old transport shell gone; starting one rehook.`
+049225:                 );
+049226:             }
+049227:             updateStatusBox(
+049228:                 'Transport complete. Main screen stable; opening one mission...'
+049229:             );
+049230:             if (
+049231:                 isMissionPage() &&
+049232:                 isMissionScreenVisibleForQueueRestart()
+049233:             ) {
+049234:                 clearPostTransportRehookPending();
+049235:                 setTimeout(() => {
+049236:                     forceAutoModeBackOnForTransportRehook();
+049237:                     if (!autoModeLoopActive) runAutoModeLoop();
+049238:                 }, 1000);
+049239:                 return true;
+049240:             }
+049241:             return await hardOpenFirstMissionFromMainAfterTransport(reason);
+049242:         } finally {
+049243:             mfTransportContinuationRunning = false;
+049244:             mfPostTransportOpening = false;
+049245:         }
+049246:     }
+049247:     function startPostTransportRehookWatcher() {
+049248:         if (!MF_IS_TOP_WINDOW) return;
+049249:         if (mfPostTransportRehookTimer) return;
+049250:         mfPostTransportRehookTimer = setInterval(async () => {
+049251:             if (isManualAutoStopActive()) return;
+049252:             if (!isTransportAutomationAllowed()) return;
+049253:             if (!isPostTransportRehookPending()) return;
+049254:             if (mfPostTransportOpening || mfTransportContinuationRunning) return;
+049255:             if (isMainMissionOpeningPending('post-transport-watch')) return;
+049256:             if (hasVisibleApproachButtonForTransportRehook()) return;
+049257:             await openFirstMissionAfterTransportAutoClose(
+049258:                 'post-transport-watch'
+049259:             );
+049260:         }, 1200);
+049261:     }
+049262:     function closeVehicleTransportModalIfDone(reason) {
+049263:         return false;
+049264:     }
+049265:     async function clickExactApproachTransportButton(reason) {
+049266:         if (isManualAutoStopActive()) return false;
+049267:         if (!isTransportAutomationAllowed()) return false;
+049268:         if (mfGlobalTransportClicking) return false;
+049269:         if (mfTransportApproachClicking) return false;
+049270:         if (Date.now() - mfTransportLastClickAt < 2500) return false;
+049271:         const button = findExactFirstApproachTransportButton();
+049272:         if (!button) return false;
+049273:         if (!mfAcquireSharedTransportClick(
+049274:             `exact-${reason || 'unknown'}`
+049275:         )) {
+049276:             return false;
+049277:         }
+049278:         mfMarkTransportOwner(
+049279:             button,
+049280:             `exact-${reason || 'unknown'}`
+049281:         );
+049282:         const activeScopes = mfGetTransportActiveScopes();
+049283:         if (
+049284:             activeScopes.length &&
+049285:             !activeScopes[0].contains(button) &&
+049286:             activeScopes[0] !== button.ownerDocument.body
+049287:         ) {
+049288:             if (mfDebugEnabled) {
+049289:                 debugLog('GLOBAL TRANSPORT', 'Blocked stale Approach button from a background transport modal.');
+049290:             }
+049291:             return false;
+049292:         }
+049293:         const fingerprint = getTransportScreenFingerprint();
+049294:         const now = Date.now();
+049295:         if (fingerprint && fingerprint === mfLastTransportFingerprint && now - mfLastTransportClickAt < 2500) {
+049296:             return false;
+049297:         }
+049298:         mfGlobalTransportClicking = true;
+049299:         mfTransportApproachClicking = true;
+049300:         mfLastTransportFingerprint = fingerprint || '';
+049301:         mfLastTransportClickAt = now;
+049302:         mfTransportLastClickAt = now;
+049303:         markTransportSequenceActive();
+049304:         try {
+049305:             const row = button.closest('tr');
+049306:             const rowText = row ? (row.innerText || '').replace(/\s+/g, ' ').trim() : '';
+049307:             const text = (button.textContent || 'Approach').replace(/\s+/g, ' ').trim();
+049308:             if (mfDebugEnabled) {
+049309:                 debugLog('GLOBAL TRANSPORT', `${reason}: clicking "${text}" | row="${rowText}"`);
+049310:             }
+049311:             try {
+049312:                 updateStatusBox(`Transport handoff: clicking ${text}...`);
+049313:             } catch (error) {}
+049314:             sessionStorage.setItem('mf_transport_sent_in_vehicle_modal_v1', 'true');
+049315:             realClickForQueueRestart(button);
+049316:             await wait(4000);
+049317:             return true;
+049318:         } finally {
+049319:             mfGlobalTransportClicking = false;
+049320:             mfTransportApproachClicking = false;
+049321:         }
+049322:     }
+049323:     function isAutoModeSessionActiveForTransportWatcher() {
+049324:         return isTransportAutomationAllowed();
+049325:     }
+049326:     function startGlobalTransportApproachWatcher() {
+049327:         return;
+049328:     }
+049329:     function mfBruteNormaliseText(value) {
+049330:         return String(value || '').replace(/\s+/g, ' ').trim();
+049331:     }
+049332:     function mfFindAnyVisibleApproachButtonInModal() {
+049333:         const deepButton = mfFindAnyVisibleApproachButtonDeep();
+049334:         if (deepButton) return deepButton;
+049335:         const modals = Array.from(document.querySelectorAll(
+049336:             '.vm--modal, .modal, .lightbox, .vehicle-window, .redesign-wrapper[type="vehicle"]'
+049337:         )).filter(modal => {
+049338:             try {
+049339:                 return mfIsVisibleInOwnDocument(modal);
+049340:             } catch (error) {
+049341:                 return false;
+049342:             }
+049343:         });
+049344:         for (const modal of modals) {
+049345:             const button = mfChoosePreferredApproachButton(modal);
+049346:             if (button) return button;
+049347:         }
+049348:         return null;
+
+===== context-28 [49355-49395] =====
+049355:         if (simpleButton) {
+049356:             return simpleButton.closest('.vm--modal, .modal, .lightbox, .vehicle-window, body') || null;
+049357:         }
+049358:         const scopes = mfGetTransportActiveScopes();
+049359:         if (scopes.length) {
+049360:             return scopes[0];
+049361:         }
+049362:         const modals = Array.from(document.querySelectorAll('.vm--modal'));
+049363:         for (const modal of modals) {
+049364:             const modalText = mfBruteNormaliseText(modal.innerText).toLowerCase();
+049365:             const hasVehicleWindow = !!modal.querySelector('.vehicle-window, .redesign-wrapper[type="vehicle"]');
+049366:             const hasTransportWords =
+049367:                 modalText.includes('hospital') ||
+049368:                 modalText.includes('free beds') ||
+049369:                 modalText.includes('patient') ||
+049370:                 modalText.includes('handoff') ||
+049371:                 modalText.includes('prisoner') ||
+049372:                 modalText.includes('police cell') ||
+049373:                 modalText.includes('cell') ||
+049374:                 modalText.includes('custody') ||
+049375:                 modalText.includes('transport');
+049376:             if ((hasVehicleWindow && hasTransportWords) || modalText.includes('approach')) {
+049377:                 return modal;
+049378:             }
+049379:         }
+049380:         return null;
+049381:     }
+049382:     function mfBruteFindFirstApproachButton() {
+049383:         const exactPatientAnchor = mfFindExactPatientTransportAnchorDeep();
+049384:         if (exactPatientAnchor) return exactPatientAnchor;
+049385:         const simpleButton = mfFindAnyVisibleApproachButtonInModal();
+049386:         if (simpleButton) return simpleButton;
+049387:         const modal = mfBruteFindVehicleTransportModal();
+049388:         if (!modal) return null;
+049389:         const rowButtons = Array.from(
+049390:             modal.querySelectorAll(
+049391:                 'table tbody tr button.btn.btn-success, ' +
+049392:                 'table tbody tr button.btn-success'
+049393:             )
+049394:         );
+049395:         for (const button of rowButtons) {
+
+===== context-29 [49448-49543] =====
+049448:             }
+049449:             return true;
+049450:         } catch (error) {
+049451:             return false;
+049452:         }
+049453:     }
+049454:     function mfBruteCloseTransportModalIfDone() {
+049455:         return false;
+049456:     }
+049457:     async function mfBruteClickFirstApproach(reason) {
+049458:         if (!isTransportAutomationAllowed()) return false;
+049459:         if (mfBruteApproachClicking) return false;
+049460:         if (mfTransportApproachClicking) return false;
+049461:         if (Date.now() - mfTransportLastClickAt < 2500) return false;
+049462:         const button = mfBruteFindFirstApproachButton();
+049463:         if (!button) return false;
+049464:         if (!mfAcquireSharedTransportClick(
+049465:             `brute-${reason || 'unknown'}`
+049466:         )) {
+049467:             return false;
+049468:         }
+049469:         mfMarkTransportOwner(
+049470:             button,
+049471:             `brute-${reason || 'unknown'}`
+049472:         );
+049473:         const activeScopes = mfGetTransportActiveScopes();
+049474:         if (
+049475:             activeScopes.length &&
+049476:             !activeScopes[0].contains(button) &&
+049477:             activeScopes[0] !== button.ownerDocument.body
+049478:         ) {
+049479:             if (mfDebugEnabled) {
+049480:                 debugLog('TRANSPORT APPROACH', 'Blocked stale Approach button from a background transport modal.');
+049481:             }
+049482:             return false;
+049483:         }
+049484:         const now = Date.now();
+049485:         mfBruteApproachClicking = true;
+049486:         mfTransportApproachClicking = true;
+049487:         mfBruteLastFingerprint = mfBruteTransportFingerprint(button) || '';
+049488:         mfBruteLastClickAt = now;
+049489:         mfTransportLastClickAt = now;
+049490:         markTransportSequenceActive();
+049491:         try {
+049492:             const row = button.closest('tr');
+049493:             const rowText = row ? mfBruteNormaliseText(row.innerText) : '';
+049494:             const buttonText = mfBruteNormaliseText(button.textContent);
+049495:             const capacityInfo = mfGetApproachCapacityInfo(button);
+049496:             try {
+049497:                 updateStatusBox(
+049498:                     capacityInfo.hasCapacityColumn
+049499:                         ? `Transport handoff: clicking Approach with ${capacityInfo.capacity} free place(s)...`
+049500:                         : 'Transport handoff: clicking first Approach...'
+049501:                 );
+049502:             } catch (error) {}
+049503:             if (mfDebugEnabled) {
+049504:                 debugLog(
+049505:                     'TRANSPORT APPROACH',
+049506:                     `chosenCapacity=${capacityInfo.hasCapacityColumn ? capacityInfo.capacity : 'n/a'} | row="${capacityInfo.rowText || rowText}"`
+049507:                 );
+049508:             }
+049509:             sessionStorage.setItem('mf_brute_transport_sent_v1', 'true');
+049510:             const clicked = mfBruteClickElement(button);
+049511:             await wait(4000);
+049512:             return clicked;
+049513:         } finally {
+049514:             mfBruteApproachClicking = false;
+049515:             mfTransportApproachClicking = false;
+049516:         }
+049517:     }
+049518:     function startBruteApproachTransportWatcher() {
+049519:         if (!MF_IS_TOP_WINDOW) return;
+049520:         if (mfBruteApproachWatcherTimer) return;
+049521:         mfBruteApproachWatcherTimer = setInterval(async () => {
+049522:             if (isManualAutoStopActive()) return;
+049523:             if (!isTransportAutomationAllowed()) return;
+049524:             if (!mfHasPotentialTransportUi()) return;
+049525:             const button = mfBruteFindFirstApproachButton();
+049526:             if (button) {
+049527:                 await mfBruteClickFirstApproach('global-brute-watch');
+049528:                 return;
+049529:             }
+049530:         }, 1000);
+049531:     }
+049532:     function findTransportSendButton() {
+049533:         const exactApproachButton = findExactFirstApproachTransportButton();
+049534:         if (exactApproachButton) {
+049535:             return exactApproachButton;
+049536:         }
+049537:         const candidates = Array.from(document.querySelectorAll('button, a, input[type="button"], input[type="submit"]'))
+049538:             .filter(element => isElementVisible(element))
+049539:             .filter(element => !isBadTransportButtonCandidate(element))
+049540:             .map(element => ({
+049541:                 element,
+049542:                 score: scoreTransportButtonCandidate(element)
+049543:             }))
+
+===== context-30 [49553-49623] =====
+049553:                 return true;
+049554:             }
+049555:             await wait(250);
+049556:         }
+049557:         return false;
+049558:     }
+049559:     async function handleTransportRequestsAfterDispatch(reason) {
+049560:         if (!isTransportAutomationAllowed()) return 'none';
+049561:         const firstFound = await waitForTransportScreenAfterDispatch(5000);
+049562:         if (!firstFound) {
+049563:             return 'none';
+049564:         }
+049565:         updateStatusBox('Transport request detected. Sending transport...');
+049566:         if (mfDebugEnabled) {
+049567:             debugLog('AUTO TRANSPORT', `${reason}: transport request detected.`);
+049568:         }
+049569:         let sentCount = 0;
+049570:         const started = Date.now();
+049571:         while (autoModeRunning && Date.now() - started < 90000 && sentCount < 25) {
+049572:             if (!isTransportScreenBlockingQueueRestart()) {
+049573:                 break;
+049574:             }
+049575:             const sendButton = findTransportSendButton();
+049576:             if (!sendButton) {
+049577:                 if (mfDebugEnabled) {
+049578:                     debugLog('AUTO TRANSPORT', `${reason}: transport screen found but no send/approach button found.`);
+049579:                 }
+049580:                 updateStatusBox('Transport request detected, but no transport send button was found.');
+049581:                 return sentCount > 0 ? 'partial' : 'stuck';
+049582:             }
+049583:             const clicked = await clickExactApproachTransportButton(`auto-transport-${reason}`);
+049584:             if (!clicked) {
+049585:                 const bruteClicked = await mfBruteClickFirstApproach(`auto-transport-police-brute-${reason}`);
+049586:                 if (!bruteClicked) {
+049587:                     if (mfDebugEnabled) {
+049588:                         debugLog('AUTO TRANSPORT', `${reason}: Approach found but click helper did not click yet; waiting for Vue/iframe update.`);
+049589:                     }
+049590:                     await wait(900);
+049591:                     continue;
+049592:                 }
+049593:             }
+049594:             sentCount += 1;
+049595:             updateStatusBox(`Transport sent (${sentCount}). Checking for more transport requests...`);
+049596:         }
+049597:         if (sentCount > 0) {
+049598:             await wait(1200);
+049599:             const rehookWaitStarted = Date.now();
+049600:             while (
+049601:                 isPostTransportRehookPending() &&
+049602:                 !isManualAutoStopActive() &&
+049603:                 Date.now() - rehookWaitStarted < 60000
+049604:             ) {
+049605:                 await wait(500);
+049606:             }
+049607:         }
+049608:         if (mfDebugEnabled) {
+049609:             debugLog('AUTO TRANSPORT', `${reason}: completed. sent=${sentCount}`);
+049610:         }
+049611:         return sentCount > 0 ? 'sent' : 'none';
+049612:     }
+049613:     async function waitForQueueRestartAndOpenMission(reason) {
+049614:         if (mfQueueRestartWaiting) return false;
+049615:         if (
+049616:             requestV3LowQueuePause(
+049617:                 getNextMissionQueueState(),
+049618:                 `final dispatch reached V3 controller handoff (${reason})`,
+049619:                 { finalDispatch: true }
+049620:             )
+049621:         ) {
+049622:             updateStatusBox(
+049623:                 'V3 final dispatch confirmed. Waiting for the controller to recycle Worker A safely...'
+
+===== context-31 [50013-50056] =====
+050013:             if (
+050014:                 mode === 'auto' &&
+050015:                 isTransportScreenBlockingQueueRestart()
+050016:             ) {
+050017:                 const transportResult =
+050018:                     await handleTransportRequestsAfterDispatch(
+050019:                         `advance-resume-${source}`
+050020:                     );
+050021:                 if (
+050022:                     transportResult === 'stuck'
+050023:                 ) {
+050024:                     clearAutoAdvanceAfterDispatchState(
+050025:                         'transport request stuck'
+050026:                     );
+050027:                     stopAutoMode(
+050028:                         'Auto stopped: transport request found but no send button was found.'
+050029:                     );
+050030:                     return false;
+050031:                 }
+050032:                 if (
+050033:                     transportResult === 'sent' ||
+050034:                     transportResult === 'partial'
+050035:                 ) {
+050036:                     clearAutoAdvanceAfterDispatchState(
+050037:                         'transport rehook owns continuation'
+050038:                     );
+050039:                     return true;
+050040:                 }
+050041:             }
+050042:             return await clickExactNextMissionAfterDispatch(
+050043:                 state
+050044:             );
+050045:         } finally {
+050046:             mfAutoAdvanceResumeActive = false;
+050047:         }
+050048:     }
+050049:     function readAutoPostDispatchUpgradeState() {
+050050:         clearAutoPostDispatchUpgradeState(
+050051:             'post-dispatch upgrade workflow retired'
+050052:         );
+050053:         return null;
+050054:     }
+050055:     function writeAutoPostDispatchUpgradeState(
+050056:         state
+
+===== context-32 [50901-50941] =====
+050901:                 return;
+050902:             }
+050903:             const prisonerCellGate =
+050904:                 await handleAutoPrisonerCellBeforeUnitFinder();
+050905:             if (prisonerCellGate !== 'none') {
+050906:                 clearAutoSelectionMissionGuard(
+050907:                     'prisoner cell handoff before Unit Finder'
+050908:                 );
+050909:                 resetVehicleLoadState();
+050910:                 changeDispatchBoxColor(false);
+050911:                 if (prisonerCellGate === 'stuck') {
+050912:                     stopAutoMode(
+050913:                         'Auto stopped: no prisoner cell could be selected and the exact Release Prisoners fallback could not be completed. Unit Finder was not started.'
+050914:                     );
+050915:                     break;
+050916:                 }
+050917:                 await wait(
+050918:                     prisonerCellGate === 'waiting'
+050919:                         ? 500
+050920:                         : 850
+050921:                 );
+050922:                 continue;
+050923:             }
+050924:             clearAutoSelectionMissionGuard(
+050925:                 'starting Auto mission cycle'
+050926:             );
+050927:             resetVehicleLoadState();
+050928:             changeDispatchBoxColor(
+050929:                 false
+050930:             );
+050931:             resetStaffingBlockForCurrentMission(
+050932:                 'Auto Mode cycle'
+050933:             );
+050934:             const earlyUpdateRows =
+050935:                 await waitForMissionUpdateBeforeUnitFinder(
+050936:                     'auto-cycle-before-vehicle-load'
+050937:                 );
+050938:             if (
+050939:                 !autoModeRunning ||
+050940:                 isManualAutoStopActive()
+050941:             ) {
