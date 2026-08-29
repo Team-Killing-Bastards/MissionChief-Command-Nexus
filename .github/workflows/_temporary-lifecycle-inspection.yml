@@ -19,7 +19,19 @@ jobs:
           fetch-depth: 0
 
       - name: Build diagnostic-only 3.0.34 candidate
-        run: python3 scripts/_temporary-build-lifecycle-v3034.py
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/_temporary-build-lifecycle-v3034.py')
+          text = path.read_text(encoding='utf-8')
+          old = "text = replace_once(text, '## [Unreleased]\\n\\n', '## [Unreleased]\\n\\n' + entry, 'changelog insertion')"
+          new = "text = text.replace('## [Unreleased]\\n\\n', '## [Unreleased]\\n\\n' + entry, 1)"
+          if old not in text:
+              raise SystemExit('Temporary changelog patch marker was not found.')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+          python3 scripts/_temporary-build-lifecycle-v3034.py
 
       - name: Validate exact candidate
         shell: bash
