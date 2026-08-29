@@ -46,36 +46,32 @@ jobs:
           from pathlib import Path
           path = Path('scripts/check-v3-low-queue-memory-lifecycle.mjs')
           text = path.read_text(encoding='utf-8')
-          old = """assert.ok(
-  pausedTransport.includes('`/vehicles/${request.vehicleId}`') &&
-    pausedTransport.includes('createWorker(url.href)'),
-  'paused transport must create only the exact vehicle worker'
-);"""
-          new = """assert.ok(
-  pausedTransport.includes('`/vehicles/${request.vehicleId}`') &&
-    pausedTransport.includes(\"createWorker(url.href, 'TRANSPORT_B')\"),
-  'paused transport must create only the exact vehicle route as explicit Worker B'
-);"""
+          old = "pausedTransport.includes('createWorker(url.href)')"
+          new = "pausedTransport.includes(\"createWorker(url.href, 'TRANSPORT_B')\")"
           if old not in text:
               raise SystemExit('Low-queue explicit TRANSPORT_B assertion marker was not found.')
           text = text.replace(old, new, 1)
-          old = """assert.ok(
-  transportReturn.includes(\"event: 'return-to-low-queue-pause'\") &&
-    transportReturn.includes('removeWorker(false)') &&
-    transportReturn.includes('beginMissionRescan()'),
-  'a pause transport worker must release itself and return to the mission wait'
-);"""
-          new = """assert.ok(
-  transportReturn.includes(\"state.workerRole !== 'TRANSPORT_B'\") &&
-    transportReturn.includes(\"event: 'transport-worker-b-complete'\") &&
-    transportReturn.includes('removeWorker(false)') &&
-    transportReturn.includes('if (paused)') &&
-    transportReturn.includes('beginMissionRescan()'),
-  'transport Worker B must release itself before returning to the mission wait'
-);"""
+          text = text.replace(
+              "'paused transport must create only the exact vehicle worker'",
+              "'paused transport must create only the exact vehicle route as explicit Worker B'",
+              1,
+          )
+          old = "transportReturn.includes(\"event: 'return-to-low-queue-pause'\") &&"
+          new = "transportReturn.includes(\"state.workerRole !== 'TRANSPORT_B'\") &&\n    transportReturn.includes(\"event: 'transport-worker-b-complete'\") &&"
           if old not in text:
               raise SystemExit('Low-queue transport-B completion assertion marker was not found.')
-          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          text = text.replace(old, new, 1)
+          text = text.replace(
+              "transportReturn.includes('removeWorker(false)') &&\n    transportReturn.includes('beginMissionRescan()'),",
+              "transportReturn.includes('removeWorker(false)') &&\n    transportReturn.includes('if (paused)') &&\n    transportReturn.includes('beginMissionRescan()'),",
+              1,
+          )
+          text = text.replace(
+              "'a pause transport worker must release itself and return to the mission wait'",
+              "'transport Worker B must release itself before returning to the mission wait'",
+              1,
+          )
+          path.write_text(text, encoding='utf-8')
           PY
 
       - name: Validate exact candidate
