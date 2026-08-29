@@ -1,0 +1,237 @@
+===== getStationOverviewEntries =====
+function getStationOverviewEntries(root = document) {
+        const groups = new Map();
+        root.querySelectorAll(STATION_OVERVIEW_LINK_SELECTOR).forEach(link => {
+            if (link.closest?.('#mc-namer-panel')) return;
+            const href = normaliseStationOverviewHref(link.getAttribute?.('href'));
+            if (!href) return;
+            const container = getStationOverviewContainer(link);
+            if (!container && !link.matches?.('.lightbox-open.list-group-item.active')) return;
+            const candidates = groups.get(href) || [];
+            candidates.push({ link, container });
+            groups.set(href, candidates);
+        });
+        return [...groups.entries()].map(([href, candidates], index) => {
+            candidates.sort((a, b) =>
+                scoreStationOverviewLink(b.link, href) -
+                scoreStationOverviewLink(a.link, href)
+            );
+            const selected = candidates[0];
+            const container = selected.container || getStationOverviewContainer(selected.link);
+            return {
+                index,
+                href,
+                buildingId: getBuildingIdFromHref(href),
+                displayName: readStationOverviewName(selected.link, container, href),
+                buildingTypeId: readStationBuildingTypeId(selected.link, container),
+                link: selected.link,
+                container
+            };
+        });
+    }
+
+===== hydrateNamingInventoriesFromCurrentOverview =====
+function hydrateNamingInventoriesFromCurrentOverview() {
+        const entries = getStationOverviewEntries();
+        if (!entries.length) return 0;
+        const unitStations = [];
+        const stationNamingStations = [];
+        entries.forEach((entry, index) => {
+            if (!entry?.href || !entry?.buildingId) return;
+            const typeInfo = getStationNamingTypeInfo(
+                entry.buildingTypeId,
+                entry.displayName
+            );
+            const stationType = typeInfo.stationType ||
+                STATION_BUILDING_TYPE_INFO[entry.buildingTypeId]?.stationType ||
+                detectStationType(entry.displayName);
+            const common = {
+                index,
+                href: entry.href,
+                buildingId: entry.buildingId,
+                displayName: entry.displayName,
+                buildingTypeId: entry.buildingTypeId,
+                dispatchCentreId: getNamingDispatchCentreId(entry.buildingId),
+                stationType,
+                service: getNamingServiceForStation({
+                    buildingTypeId: entry.buildingTypeId,
+                    stationType
+                })
+            };
+            unitStations.push({
+                ...common,
+                callsignBase: createCallsignBase(entry.displayName)
+            });
+            stationNamingStations.push({
+                ...common,
+                suffix: typeInfo.suffix,
+                namingMode: typeInfo.namingMode || '',
+                typeLabel: typeInfo.label
+            });
+        });
+        if (unitStations.length) STATE.stations = unitStations;
+        if (stationNamingStations.length) {
+            STATION_STATE.stations = stationNamingStations;
+        }
+        return Math.max(unitStations.length, stationNamingStations.length);
+    }
+
+===== syncNamingStationDispatchCentreAssignments =====
+function syncNamingStationDispatchCentreAssignments(stations) {
+        (stations || []).forEach(station => {
+            if (!station) return;
+            station.dispatchCentreId = getNamingDispatchCentreId(
+                station.buildingId
+            );
+        });
+        return stations || [];
+    }
+
+===== getNamingDispatchCentreStationRowDocuments =====
+function getNamingDispatchCentreStationRowDocuments() {
+        const documents = [];
+        const addDocument = candidate => {
+            if (!candidate?.querySelectorAll || documents.includes(candidate)) return;
+            documents.push(candidate);
+        };
+        const addFrameDocuments = candidateDocument => {
+            try {
+                candidateDocument?.querySelectorAll?.('iframe').forEach(frame => {
+                    try {
+                        addDocument(frame.contentDocument);
+                    } catch (_) {}
+                });
+            } catch (_) {}
+        };
+        addDocument(document);
+        addFrameDocuments(document);
+        try {
+            const topDocument = window.top?.document;
+            addDocument(topDocument);
+            addFrameDocuments(topDocument);
+        } catch (_) {}
+        return documents;
+    }
+
+===== refreshStations =====
+async function refreshStations() {
+        if (PERSONNEL_STATE.running) {
+            log('Personnel Assignment is currently running. Stop it before refreshing Unit Naming.', 'error');
+            return;
+        }
+        if (STATE.running) {
+            log('Cannot refresh while running. Stop first.', 'error');
+            return;
+        }
+        populateUnitClassDropdown();
+        STATE.selectedUnitClass = getSelectedUnitClass();
+        setStatus('Refreshing stations...');
+        log('Refreshing station list...', 'info');
+        log(`Unit class filter: ${getUnitClassDisplayLabel()}`, 'info');
+        const stationEntries = getStationOverviewEntries();
+        await Promise.all([
+            loadNamingDispatchCentreList(false),
+            loadNamingDispatchCentreData(true)
+        ]);
+        STATE.stations = stationEntries.map((entry, index) => {
+            const stationType =
+                STATION_BUILDING_TYPE_INFO[entry.buildingTypeId]?.stationType ||
+                detectStationType(entry.displayName);
+            return {
+                index,
+                href: entry.href,
+                buildingId: entry.buildingId,
+                displayName: entry.displayName,
+                buildingTypeId: entry.buildingTypeId,
+                dispatchCentreId: getNamingDispatchCentreId(entry.buildingId),
+                callsignBase: createCallsignBase(entry.displayName),
+                stationType,
+                service: getNamingServiceForStation({
+                    buildingTypeId: entry.buildingTypeId,
+                    stationType
+                })
+            };
+        });
+        populateNamingDispatchCentreFilter('mc-namer-dispatch-centre');
+        populateNamingServiceFilter('mc-namer-service', 'mc-namer-dispatch-centre', STATE.stations);
+        populateNamingStationTypeFilter('mc-namer-station-type', 'mc-namer-dispatch-centre', 'mc-namer-service', STATE.stations);
+        populateStartDropdown();
+        setStatus('Ready');
+        setProgress(0, STATE.filteredStations.length);
+        log(`Stations found: ${STATE.stations.length}`, 'info');
+        log(`Matching filter: ${STATE.filteredStations.length}`, 'info');
+        if (STATE.filteredStations.length) {
+            log(`First match: ${STATE.filteredStations[0].displayName}`, 'info');
+            log(`Last match : ${STATE.filteredStations[STATE.filteredStations.length - 1].displayName}`, 'info');
+        }
+    }
+
+===== refreshStationNamingStations =====
+async function refreshStationNamingStations() {
+        if (PERSONNEL_STATE.running) {
+            stationLog('Personnel Assignment is currently running. Stop it before refreshing Station Naming.', 'error');
+            setStationUiValue('status', 'Blocked by Personnel Assignment');
+            return;
+        }
+        if (STATE.running) {
+            stationLog('Unit Naming is currently running. Stop it before refreshing Station Naming.', 'error');
+            setStationUiValue('status', 'Blocked by Unit Naming');
+            return;
+        }
+        if (STATION_STATE.running) {
+            stationLog('Stop Station Naming before refreshing the station list.', 'error');
+            return;
+        }
+        setStationUiValue('status', 'Refreshing stations...');
+        stationLog('Refreshing station list and reading MissionChief building type IDs...', 'info');
+        const stationEntries = getStationOverviewEntries();
+        await Promise.all([
+            loadNamingDispatchCentreList(false),
+            loadNamingDispatchCentreData(true)
+        ]);
+        STATION_STATE.stations = stationEntries
+            .map((entry, index) => {
+                const typeInfo = getStationNamingTypeInfo(
+                    entry.buildingTypeId,
+                    entry.displayName
+                );
+                return {
+                    index,
+                    href: entry.href,
+                    buildingId: entry.buildingId,
+                    displayName: entry.displayName,
+                    buildingTypeId: entry.buildingTypeId,
+                    dispatchCentreId: getNamingDispatchCentreId(entry.buildingId),
+                    stationType: typeInfo.stationType,
+                    service: getNamingServiceForStation({
+                        buildingTypeId: entry.buildingTypeId,
+                        stationType: typeInfo.stationType
+                    }),
+                    suffix: typeInfo.suffix,
+                    namingMode: typeInfo.namingMode || '',
+                    typeLabel: typeInfo.label
+                };
+            })
+            .filter(station => station.href && station.buildingId);
+        populateNamingDispatchCentreFilter('mc-station-dispatch-centre');
+        populateNamingServiceFilter('mc-station-service', 'mc-station-dispatch-centre', STATION_STATE.stations);
+        populateNamingStationTypeFilter('mc-station-type', 'mc-station-dispatch-centre', 'mc-station-service', STATION_STATE.stations);
+        populateStationNamingStartDropdown();
+        setStationUiValue('status', 'Ready');
+        stationLog(`Stations found: ${STATION_STATE.stations.length}`, 'info');
+        stationLog(`Matching filter: ${STATION_STATE.filteredStations.length}`, 'info');
+        if (STATION_STATE.filteredStations.length) {
+            stationLog(`First match: ${STATION_STATE.filteredStations[0].displayName}`, 'info');
+            stationLog(`Last match : ${STATION_STATE.filteredStations[STATION_STATE.filteredStations.length - 1].displayName}`, 'info');
+        }
+    }
+
+===== handleUnitDispatchCentreChange =====
+async function handleUnitDispatchCentreChange() {
+        await refreshStations();
+    }
+
+===== handleStationDispatchCentreChange =====
+async function handleStationDispatchCentreChange() {
+        await refreshStationNamingStations();
+    }
