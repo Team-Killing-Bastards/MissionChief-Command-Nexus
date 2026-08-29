@@ -1,4 +1,4 @@
-name: Temporary v3.0.35 transport runtime audit
+name: Temporary v3.0.35 transport-only runtime correction
 
 on:
   push:
@@ -9,36 +9,43 @@ permissions:
   contents: write
 
 jobs:
-  audit:
-    if: ${{ !contains(github.event.head_commit.message, '[skip transport runtime audit]') }}
+  build:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Extract exact transport runtime
+      - name: Add local transport authority to Worker B
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+          source_path = Path('src/missionchief-command-nexus.user.js')
+          source = source_path.read_text(encoding='utf-8')
 
-          def function_span(name, start_at=0):
-              start = source.find(f'function {name}(', start_at)
+          def replace_once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected one match, found {count}')
+              return text.replace(old, new, 1)
+
+          def function_span(text, name, start_at=0):
+              start = text.find(f'function {name}(', start_at)
               if start < 0:
-                  return None
-              brace = source.find('{', start)
+                  raise SystemExit(f'Function not found: {name}')
+              brace = text.find('{', start)
               depth = 0
               quote = ''
               escaped = False
               line_comment = False
               block_comment = False
               index = brace
-              while index < len(source):
-                  char = source[index]
-                  nxt = source[index + 1] if index + 1 < len(source) else ''
+              while index < len(text):
+                  char = text[index]
+                  nxt = text[index + 1] if index + 1 < len(text) else ''
                   if line_comment:
                       if char == '\n': line_comment = False
                       index += 1; continue
@@ -58,66 +65,176 @@ jobs:
                       depth -= 1
                       if depth == 0: return start, index + 1
                   index += 1
-              return None
+              raise SystemExit(f'Unterminated function: {name}')
 
           mission_module = source.find('MODULE 2: MISSION FINDER')
-          names = [
-              'isAutoModeActiveFlagSet',
-              'isTransportAutomationAllowed',
-              'handleTransportRequestsAfterDispatch',
-              'startBruteApproachTransportWatcher',
-              'syncBackgroundAutomationWatchers',
-              'startMissionFinderObserver',
-              'initialize',
-              'runAutoModeLoop',
-              'resumeAutoAdvanceAfterDispatch',
-          ]
-          report = []
-          for name in names:
-              span = function_span(name, mission_module)
-              report.append(f'===== {name} =====')
-              report.append(source[span[0]:span[1]] if span else 'NOT FOUND')
-              report.append('')
-          Path('.tmp-v3035-transport-runtime-functions.txt').write_text('\n'.join(report), encoding='utf-8')
+          if mission_module < 0:
+              raise SystemExit('Mission Finder module marker not found.')
 
-          terms = [
-              'handleTransportRequestsAfterDispatch(',
-              'startMissionFinderObserver(',
-              'syncBackgroundAutomationWatchers(',
-              'runAutoModeLoop(',
-              'isMfV3ManagedTransportWorker()',
-              'isTransportAutomationAllowed()',
-          ]
-          lines = source.splitlines()
-          contexts = []
-          for number, line in enumerate(lines, 1):
-              if any(term in line for term in terms):
-                  start = max(1, number - 12)
-                  end = min(len(lines), number + 24)
-                  contexts.append((start, end))
-          merged = []
-          for start, end in contexts:
-              if merged and start <= merged[-1][1] + 2:
-                  merged[-1] = (merged[-1][0], max(merged[-1][1], end))
-              else:
-                  merged.append((start, end))
-          out = []
-          for index, (start, end) in enumerate(merged, 1):
-              out.append(f'===== context-{index} [{start}-{end}] =====')
-              out.extend(f'{i:06d}: {lines[i-1]}' for i in range(start, end + 1))
-              out.append('')
-          Path('.tmp-v3035-transport-runtime-calls.txt').write_text('\n'.join(out), encoding='utf-8')
+          source = replace_once(
+              source,
+              """function isTransportAutomationAllowed() {
+        if (isManualAutoStopActive()) return false;
+        return isAutoModeActiveFlagSet() || isPostTransportRehookPending();
+    }""",
+              """function isTransportAutomationAllowed() {
+        if (isManualAutoStopActive()) return false;
+        return isMfV3ManagedTransportWorker() ||
+            isAutoModeActiveFlagSet() || isPostTransportRehookPending();
+    }""",
+              'transport B local authority',
+          )
 
-          tail_start = max(mission_module, len(source) - 45000)
-          tail = source[tail_start:]
-          Path('.tmp-v3035-mission-module-tail.txt').write_text(tail, encoding='utf-8')
+          start, end = function_span(source, 'handleTransportRequestsAfterDispatch', mission_module)
+          handler = source[start:end]
+          handler = replace_once(
+              handler,
+              'while (autoModeRunning && Date.now() - started < 90000 && sentCount < 25) {',
+              'while ((autoModeRunning || isMfV3ManagedTransportWorker()) && Date.now() - started < 90000 && sentCount < 25) {',
+              'transport B continuation loop',
+          )
+          source = source[:start] + handler + source[end:]
+
+          mark_count = source.count('        markTransportSequenceActive();')
+          if mark_count != 2:
+              raise SystemExit(f'Expected two transport sequence markers, found {mark_count}')
+          source = source.replace(
+              '        markTransportSequenceActive();',
+              '        if (!isMfV3ManagedTransportWorker()) markTransportSequenceActive();',
+          )
+          source = replace_once(
+              source,
+              "            sessionStorage.setItem('mf_transport_sent_in_vehicle_modal_v1', 'true');",
+              "            if (!isMfV3ManagedTransportWorker()) sessionStorage.setItem('mf_transport_sent_in_vehicle_modal_v1', 'true');",
+              'exact transport shared flag guard',
+          )
+          source = replace_once(
+              source,
+              "            sessionStorage.setItem('mf_brute_transport_sent_v1', 'true');",
+              "            if (!isMfV3ManagedTransportWorker()) sessionStorage.setItem('mf_brute_transport_sent_v1', 'true');",
+              'brute transport shared flag guard',
+          )
+
+          start, end = function_span(source, 'clearAllTransportAutomationFlags', mission_module)
+          clearer = source[start:end]
+          clearer = replace_once(
+              clearer,
+              """        const clearRecentRehook =
+            String(reason || '').toLowerCase().includes('manual') ||
+            String(reason || '').toLowerCase().includes('stopped');""",
+              """        const clearReason = String(reason || '').toLowerCase();
+        const clearRecentRehook = clearReason.includes('manual') ||
+            clearReason.includes('stopped') || clearReason.includes('transport-worker-b');""",
+              'transport B shared rehook cleanup',
+          )
+          source = source[:start] + clearer + source[end:]
+
+          start, end = function_span(source, 'startMissionFinderObserver', mission_module)
+          observer = source[start:end]
+          observer = replace_once(
+              observer,
+              '        scheduleAutoMemoryRecycleResume();',
+              """        scheduleAutoMemoryRecycleResume();
+        if (isMfV3ManagedTransportWorker()) {
+            clearAllTransportAutomationFlags('transport-worker-b');
+            void (async () => {
+                for (let pass = 0; pass < 2 && isMfV3ManagedTransportWorker(); pass += 1) {
+                    await handleTransportRequestsAfterDispatch('worker-b');
+                    await wait(400);
+                }
+            })();
+        }""",
+              'transport B document bootstrap',
+          )
+          source = source[:start] + observer + source[end:]
+
+          # Reclaim source bytes from verbose role handoff text only; behaviour is unchanged.
+          compact = {
+              "'Pausing mission Worker A'": "'Pausing A for B'",
+              'Worker B will clear ${request.vehicleLabel || `vehicle ${request.vehicleId}`} before A restarts.': 'B clears ${request.vehicleLabel || `vehicle ${request.vehicleId}`}; then A restarts.',
+              "'Worker B clearing transport during mission pause'": "'B transport during mission pause'",
+              "'Worker B clearing personal transport'": "'B clearing personal transport'",
+              '. Worker A is not loaded.': '.',
+              "'Created transport B with A absent.'": "'Created transport B.'",
+              'Worker B was released. ${state.lowQueueObservedCount} actionable personal mission${state.lowQueueObservedCount === 1 ? \'\' : \'s\'} remain.': 'B released; ${state.lowQueueObservedCount} mission${state.lowQueueObservedCount === 1 ? \'\' : \'s\'} remain.',
+              "'Transport cleared; waiting for mission'": "'B cleared; waiting for mission'",
+              "'Worker B was released and no actionable personal mission is currently available.'": "'B released; no mission available.'",
+              "'Worker B cleared; rebuilding mission Worker A'": "'B cleared; starting mission A'",
+              '${missionDisplay(mission.missionId, state.currentMissionName)} is the next mission target.': '${missionDisplay(mission.missionId, state.currentMissionName)}',
+              "'Released B before starting fresh A.'": "'Released B; starting A.'",
+              "`Created off-screen ${transportWorker ? 'transport Worker B' : 'mission Worker A'}.`": "`Created ${transportWorker ? 'transport B' : 'mission A'}.`",
+              "`Removed ${role === 'TRANSPORT_B' ? 'transport Worker B' : 'mission Worker A'}.`": "`Removed ${role === 'TRANSPORT_B' ? 'transport B' : 'mission A'}.`",
+          }
+          for old, new in compact.items():
+              if old in source:
+                  source = source.replace(old, new, 1)
+
+          source_path.write_text(source, encoding='utf-8')
+
+          test_path = Path('scripts/check-v3-worker-b-transport-separation.mjs')
+          test = test_path.read_text(encoding='utf-8')
+          marker = """assert.match(source, /!isMfV3ManagedTransportWorker\\(\\) &&\\s*\\(/,
+  'transport B must not inherit shared Auto Mode running state');"""
+          addition = marker + """
+const transportAllowed = extractFunction('isTransportAutomationAllowed', missionModule);
+assert.match(transportAllowed, /isMfV3ManagedTransportWorker\\(\\)/,
+  'B must receive local transport authority without shared Auto Mode state');
+const transportHandler = extractFunction('handleTransportRequestsAfterDispatch', missionModule);
+assert.match(transportHandler, /autoModeRunning \\|\\| isMfV3ManagedTransportWorker\\(\\)/,
+  'the existing destination engine must continue while the current frame is B');
+const observer = extractFunction('startMissionFinderObserver', missionModule);
+assert.match(observer, /clearAllTransportAutomationFlags\\('transport-worker-b'\\)/,
+  'B must clear stale shared Mission Finder rehook state before acting');
+assert.match(observer, /handleTransportRequestsAfterDispatch\\('worker-b'\\)/,
+  'every B transport document must bootstrap the existing transport engine');
+assert.doesNotMatch(observer, /runAutoModeLoop\\(/,
+  'B transport bootstrap must never start the mission Auto Mode loop');
+const exactTransportClick = extractFunction('clickExactApproachTransportButton', missionModule);
+const bruteTransportClick = extractFunction('mfBruteClickFirstApproach', missionModule);
+for (const body of [exactTransportClick, bruteTransportClick]) {
+  assert.match(body, /!isMfV3ManagedTransportWorker\\(\\)/,
+    'B transport clicks must not publish shared Auto Mode or rehook flags');
+}"""
+          if marker not in test:
+              raise SystemExit('Worker B regression insertion marker not found.')
+          test_path.write_text(test.replace(marker, addition, 1), encoding='utf-8')
+
+          changelog = Path('CHANGELOG.md')
+          text = changelog.read_text(encoding='utf-8')
+          old = '- Prevented transport Worker B from inheriting Auto Mode state, mounting mission dispatch controls or entering Unit Finder/Dispatch when a transport flow reaches a mission route.\n'
+          new = old + '- Start the established transport destination engine locally in each Worker B document while suppressing shared Auto Mode and post-transport rehook flags; the parent controller remains the only B-to-A handoff authority.\n'
+          if old not in text:
+              raise SystemExit('Changelog transport-runtime marker not found.')
+          changelog.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          for path in Path('.').glob('.tmp-v3035-*.txt'):
+              path.unlink()
+          Path('.github/workflows/_temporary-v3035-transport-runtime-audit.yml').unlink()
+
+          size = source_path.stat().st_size
+          print(f'Candidate userscript size: {size} bytes')
+          if size > 2 * 1024 * 1024:
+              raise SystemExit(f'Candidate exceeds 2 MiB: {size}')
           PY
 
-      - name: Commit audit maps
+      - name: Validate exact corrected candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          for check in scripts/check-*.mjs; do
+            echo "Running ${check}"
+            node "${check}"
+          done
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Commit clean corrected candidate
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .tmp-v3035-*.txt
-          git commit -m "Add exact v3.0.35 transport runtime audit [skip transport runtime audit]"
+          git add -A
+          git commit -m "Enable transport-only runtime in Worker B"
           git push origin HEAD:feature/v3035-worker-b-transport
