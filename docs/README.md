@@ -1,6 +1,6 @@
 # Command Nexus Documentation
 
-This directory separates current operating guidance from versioned historical records. The current candidate baseline is Command Nexus `3.0.23` with Mission Finder `V10.6.177`.
+This directory separates current operating guidance from versioned historical records. The current candidate baseline is Command Nexus `3.0.24` with Mission Finder `V10.6.177`.
 
 ## Current operational documentation
 

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.23
+// @version      3.0.24
 // @description  MissionChief safe background automation.
 // @author       MartyBlyth
 // @license      MIT
@@ -145,8 +145,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.23';
-const MASTER_VERSION = '3.0.23';
+const VERSION = '3.0.24';
+const MASTER_VERSION = '3.0.24';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -297,6 +297,7 @@ const CONTROLLER_MEMORY_RELEASE_GROWTH_BYTES = 96 * 1024 * 1024;
 const CONTROLLER_RESUME_HANDOFF_MAX_AGE_MS = 15 * 1000;
 const CONTROLLER_RECYCLE_RESTART_DELAY_MS = 900;
 const CONTROLLER_RUNTIME_RECYCLE_HISTORY_LIMIT = 40;
+const CONTROLLER_FULL_PAGE_RECYCLE_EVERY_RUNTIME_CYCLES = 3;
 const CONTROLLER_IDENTITY_CACHE_LIMIT = 400;
 const CONTROLLER_EVENT_KEY_CACHE_LIMIT = 120;
 const ALLIANCE_RADIO_IGNORED_KEY_CACHE_LIMIT = 4000;
@@ -3356,6 +3357,8 @@ ageMs: due.ageMs,
 reason: due.reason,
 };
 state.runtimeRecycles += 1;
+const fullPageRecycle =
+state.runtimeRecycles % CONTROLLER_FULL_PAGE_RECYCLE_EVERY_RUNTIME_CYCLES === 0;
 state.pipelineMemoryRecyclePending = false;
 state.runtimeRecycleLastAt = Date.now();
 state.runtimeRecycleAdvanceBaseline = state.nativeMissionAdvances;
@@ -3379,10 +3382,24 @@ compactControllerEphemeralMemory();
 saveRunContinuity();
 setPhase(
 'MEMORY_RECYCLE',
-'Refreshing background workers',
-`${missionDisplay(nextMissionId, event.missionName)} is the verified next mission. A/B were ended at this safe boundary and a fresh Worker A will resume it; station, unit and personnel registers were not touched.`
+fullPageRecycle ? 'Refreshing controller memory' : 'Refreshing background workers',
+fullPageRecycle
+? `${missionDisplay(nextMissionId, event.missionName)} is saved as the verified next mission. The controller page will refresh once to release native iframe/DOM memory, then Auto Mode will resume automatically.`
+: `${missionDisplay(nextMissionId, event.missionName)} is the verified next mission. A/B were ended at this safe boundary and a fresh Worker A will resume it; station, unit and personnel registers were not touched.`
 );
-log('Scheduled boundary recycle released A/B before starting a fresh Worker A.', event);
+log(fullPageRecycle
+? 'Scheduled full controller recycle released A/B and will refresh the top realm.'
+: 'Scheduled boundary recycle released A/B before starting a fresh Worker A.', {
+...event,
+fullPageRecycle,
+});
+if (fullPageRecycle) {
+window.setTimeout(() => {
+if (!state.wanted || state.stopping) return;
+window.location.reload();
+}, 250);
+return true;
+}
 window.setTimeout(() => {
 if (!state.wanted || state.stopping || state.lowQueuePaused || state.worker?.isConnected) return;
 createWorker(url.href);
@@ -3450,7 +3467,7 @@ lastAuditAt: slot.lastAuditAt ? new Date(slot.lastAuditAt).toISOString() : '',
 };
 }
 function disposeManagedFrameRuntime(frame, reason = 'managed-frame-release') {
-if (!frame?.isConnected) return false;
+if (!frame) return false;
 try {
 const loadHandler = frame.__mcnV3LoadHandler;
 if (loadHandler) frame.removeEventListener('load', loadHandler);
@@ -3479,11 +3496,13 @@ frame.addEventListener('load', handler);
 function removePipelineSlot(slot, reason = 'removed', removeFrame = true) {
 if (!slot) return;
 state.pipelineSlots = state.pipelineSlots.filter(item => item !== slot);
-if (removeFrame && slot.frame?.isConnected) {
-setFrameOwnership(slot.frame, false, `preload-remove:${reason}`);
-disposeManagedFrameRuntime(slot.frame, `preload-remove:${reason}`);
-try { slot.frame.src = 'about:blank'; } catch {}
-try { slot.frame.remove(); } catch {}
+const frame = slot.frame || null;
+if (removeFrame && frame) {
+setFrameOwnership(frame, false, `preload-remove:${reason}`);
+disposeManagedFrameRuntime(frame, `preload-remove:${reason}`);
+try { frame.removeAttribute('srcdoc'); } catch {}
+try { frame.src = 'about:blank'; } catch {}
+try { frame.remove(); } catch {}
 }
 pipelineRecord('preload-removed', {
 missionId: slot.missionId,
@@ -3491,6 +3510,7 @@ missionName: slot.missionName,
 status: slot.status,
 reason,
 });
+slot.frame = null;
 }
 function removeAllPipelinePreloads(reason = 'pipeline-stop') {
 for (const slot of state.pipelineSlots.slice()) removePipelineSlot(slot, reason, true);
@@ -21026,7 +21046,7 @@ bootMark('heavy-runtime-start');
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.23',
+                commandNexus: '3.0.24',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },

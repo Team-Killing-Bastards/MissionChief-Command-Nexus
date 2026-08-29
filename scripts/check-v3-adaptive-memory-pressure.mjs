@@ -68,6 +68,7 @@ assert.match(source, /const CONTROLLER_MEMORY_RELEASE_GROWTH_BYTES = 96 \* 1024 
 assert.match(source, /const CONTROLLER_PRESSURE_RECYCLE_ADVANCES = 8;/);
 assert.match(source, /const CONTROLLER_PRESSURE_RECYCLE_MAX_AGE_MS = 4 \* 60 \* 1000;/);
 assert.match(source, /const CONTROLLER_RECYCLE_RESTART_DELAY_MS = 900;/);
+assert.match(source, /const CONTROLLER_FULL_PAGE_RECYCLE_EVERY_RUNTIME_CYCLES = 3;/);
 
 const disconnectObservers = extractFunction('disconnectAirfieldOperationsSupervisorObservers');
 const installObservers = extractFunction('installAirfieldOperationsSupervisorObservers');
@@ -209,12 +210,17 @@ const recycle = extractFunction('recycleControllerRuntimeAtMissionBoundary');
 assert.ok(recycle.includes('state.pipelineMemoryRecyclePending = false'));
 assert.ok(recycle.includes('CONTROLLER_RECYCLE_RESTART_DELAY_MS'));
 assert.ok(recycle.includes('removeWorker(false)'));
+assert.ok(recycle.includes('window.location.reload()'), 'native iframe memory must get a periodic full-realm recycle');
+assert.ok(recycle.includes('CONTROLLER_FULL_PAGE_RECYCLE_EVERY_RUNTIME_CYCLES'));
 assert.doesNotMatch(recycle, /localStorage\.(?:clear|removeItem)/);
 
 const dispose = extractFunction('disposeManagedFrameRuntime');
 assert.ok(dispose.includes("removeEventListener('load', loadHandler)"));
 assert.ok(dispose.includes('contentWindow?.stop?.()'));
 assert.ok(dispose.includes('V2_FRAME_RUNTIME_RECONCILE_EVENT'));
+const removeSlot = extractFunction('removePipelineSlot');
+assert.ok(removeSlot.includes('slot.frame = null'), 'removed preload slots must release their iframe document edge');
+assert.ok(removeSlot.includes("frame.src = 'about:blank'"));
 
 const largeRelease = extractFunction('releaseMissionFinderLargeEphemeralState');
 for (const token of [

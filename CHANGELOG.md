@@ -6,6 +6,15 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.24] - 2026-08-29
+
+### Fixed
+
+- Long-running Auto Mode now performs a safe full controller-page recycle after every three bounded worker recycle cycles. This releases native iframe, DOM and browsing-context memory that `performance.memory` cannot see, while preserving run continuity and automatically resuming the verified next mission.
+- Retired preload slots now sever their iframe reference immediately after runtime cleanup, `about:blank` neutralisation and removal, preventing transient slot objects from retaining detached mission documents.
+- Added permanent regression coverage for the native-memory full-realm recycle and detached iframe reference release.
+- Increased the unified userscript version from `3.0.23` to `3.0.24`.
+
 ## [3.0.23] - 2026-08-29
 
 ### Added
