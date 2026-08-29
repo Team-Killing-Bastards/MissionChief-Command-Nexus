@@ -19,7 +19,25 @@ jobs:
           fetch-depth: 0
 
       - name: Build mission-A and transport-B candidate
-        run: python3 scripts/_temporary-build-v3035-worker-b.py
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/_temporary-build-v3035-worker-b.py')
+          text = path.read_text(encoding='utf-8')
+          replacements = {
+              'Released mission Worker A before starting transport Worker B.': 'Released A before starting transport B.',
+              'Created on-demand transport Worker B with mission Worker A absent.': 'Created transport B with A absent.',
+              'Released transport Worker B before starting a fresh mission Worker A.': 'Released B before starting fresh A.',
+              'Transport Worker B reached mission ${missionIdFromUrl(href) || state.transportServiceMissionId} and cannot run Auto Mode.': 'Transport B reached a mission route; Auto Mode remains blocked.',
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'Compaction marker not found: {old}')
+              text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+          python3 scripts/_temporary-build-v3035-worker-b.py
 
       - name: Validate exact candidate
         shell: bash
