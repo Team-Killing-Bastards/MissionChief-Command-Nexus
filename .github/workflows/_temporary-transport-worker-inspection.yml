@@ -18,57 +18,72 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Capture final transport runtime contexts
+      - name: Extract exact transport watcher functions
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          source_path = Path('src/missionchief-command-nexus.user.js')
-          lines = source_path.read_text(encoding='utf-8').splitlines()
-          terms = [
-              'function syncBackgroundAutomationWatchers',
-              'function startGlobalTransport',
-              'function stopGlobalTransport',
-              'mfGlobalTransportWatcherTimer',
-              'function shouldKeepMissionFinderObserverForCurrentFrame',
-              'function reconcileMissionFinderFrameRuntime',
-              'autoModeRunning =',
-              'if (isMissionPage()) initialize()',
-              'PIPELINE_PRELOAD_COUNT',
-          ]
-          ranges = []
-          for number, line in enumerate(lines, 1):
-              if any(term.lower() in line.lower() for term in terms):
-                  ranges.append((max(1, number-25), min(len(lines), number+100)))
-          merged = []
-          for start, end in ranges:
-              if merged and start <= merged[-1][1]+4:
-                  merged[-1] = (merged[-1][0], max(merged[-1][1], end))
-              else:
-                  merged.append((start, end))
-          out = []
-          for index, (start, end) in enumerate(merged, 1):
-              out.append(f'\n===== context-{index} [{start}-{end}] =====')
-              out.extend(f'{i:06d}: {lines[i-1]}' for i in range(start, end+1))
-          Path('.tmp-final-transport-runtime-contexts.txt').write_text('\n'.join(out)+'\n', encoding='utf-8')
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
 
-          scripts = []
-          for path in sorted(Path('scripts').glob('check-*.mjs')):
-              text = path.read_text(encoding='utf-8')
-              if any(term in text for term in ['PIPELINE_PRELOAD_COUNT', 'transport-only Worker A', 'Balanced queue', 'pipelinePreloadLimit', 'Worker B', 'pipeline-preload']):
-                  scripts.append(f'===== {path} =====\n{text}')
-          Path('.tmp-relevant-regressions.txt').write_text('\n\n'.join(scripts)+'\n', encoding='utf-8')
+          def extract_function(name):
+              start = source.find(f'function {name}(')
+              if start < 0:
+                  return f'NOT FOUND: {name}\n'
+              brace = source.find('{', start)
+              depth = 0
+              quote = ''
+              escaped = False
+              line_comment = False
+              block_comment = False
+              for index in range(brace, len(source)):
+                  c = source[index]
+                  n = source[index+1] if index+1 < len(source) else ''
+                  if line_comment:
+                      if c == '\n': line_comment = False
+                      continue
+                  if block_comment:
+                      if c == '*' and n == '/':
+                          block_comment = False
+                      continue
+                  if quote:
+                      if escaped: escaped = False
+                      elif c == '\\': escaped = True
+                      elif c == quote: quote = ''
+                      continue
+                  if c == '/' and n == '/': line_comment = True; continue
+                  if c == '/' and n == '*': block_comment = True; continue
+                  if c in ('\'', '"', '`'): quote = c; continue
+                  if c == '{': depth += 1
+                  elif c == '}':
+                      depth -= 1
+                      if depth == 0:
+                          return source[start:index+1] + '\n'
+              return f'UNTERMINATED: {name}\n'
+
+          names = [
+              'syncBackgroundAutomationWatchers',
+              'startGlobalTransportWatcher',
+              'stopGlobalTransportWatcher',
+              'startBruteApproachWatcher',
+              'stopBruteApproachWatcher',
+              'shouldKeepMissionFinderObserverForCurrentFrame',
+              'reconcileMissionFinderFrameRuntime',
+          ]
+          output = []
+          for name in names:
+              output.append(f'===== {name} =====\n{extract_function(name)}')
+          Path('.tmp-exact-transport-watcher-functions.txt').write_text('\n'.join(output), encoding='utf-8')
           PY
 
-      - name: Commit final contexts
+      - name: Commit extracted functions
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .tmp-final-transport-runtime-contexts.txt .tmp-relevant-regressions.txt
+          git add .tmp-exact-transport-watcher-functions.txt
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "Add final transport runtime contexts [skip transport inspection]"
+          git commit -m "Add exact transport watcher functions [skip transport inspection]"
           git push origin HEAD:feature/v3035-worker-b-transport
