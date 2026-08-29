@@ -18,7 +18,10 @@ jobs:
           fetch-depth: 0
 
       - name: Build corrected Worker B runtime
-        run: python3 scripts/_temporary-v3035-transport-runtime-patch.py
+        shell: bash
+        run: |
+          sed -i "s/count != 2/count != 3/; s/Expected two transport sequence markers/Expected three transport sequence markers/" scripts/_temporary-v3035-transport-runtime-patch.py
+          python3 scripts/_temporary-v3035-transport-runtime-patch.py
 
       - name: Validate exact corrected candidate
         shell: bash
