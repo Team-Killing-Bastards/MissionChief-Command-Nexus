@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.25
+// @version      3.0.26
 // @description  MissionChief safe background automation.
 // @author       MartyBlyth
 // @license      MIT
@@ -145,8 +145,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.25';
-const MASTER_VERSION = '3.0.25';
+const VERSION = '3.0.26';
+const MASTER_VERSION = '3.0.26';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -21046,7 +21046,7 @@ bootMark('heavy-runtime-start');
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.25',
+                commandNexus: '3.0.26',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },
@@ -50674,12 +50674,8 @@ async function handleAutoPrisonerReleaseAfterActions() {
             'pending',
             0
         );
-        const result = selectVehicleUnits(
-            'Ambulance',
-            'Ambulance x 01',
-            1,
-            'AUTO-MINIMUM-AMBULANCE'
-        );
+        const ambulance=getAllMatchingVehicleCheckboxes('Any vehicle','Ambulance',false)[0];
+        const result={assigned:ambulance&&clickVehicleElement(ambulance)?1:0};
         await wait(120);
         const selectedAfter = countSelectedNormalAmbulances();
         vehicleLoadState.ambulances = Math.max(

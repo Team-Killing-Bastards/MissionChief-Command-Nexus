@@ -6,6 +6,14 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.26] - 2026-08-29
+
+### Fixed
+
+- The mandatory Auto Mode ambulance gate now selects and verifies through the same exact type-`5` route. It no longer asks through the normal patient-demand route that mixes road Ambulances with type-`9` HEMS by ETA, eliminating false `no usable ambulance` stops while free road Ambulances exist.
+- Exact type-`5` minimum-ambulance selection is fallback-protected so a different medical vehicle cannot satisfy or confuse the gate.
+- Increased the unified userscript version from `3.0.25` to `3.0.26`.
+
 ## [3.0.25] - 2026-08-29
 
 ### Fixed
