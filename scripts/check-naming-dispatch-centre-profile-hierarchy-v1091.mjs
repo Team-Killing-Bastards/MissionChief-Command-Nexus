@@ -6,6 +6,7 @@ import vm from 'node:vm';
 // native-row acquisition and frame-scoped station-membership regression.
 await import('./check-naming-dispatch-centre-profile-render-v1092.mjs');
 await import('./check-naming-dispatch-centre-membership-frame-v1094.mjs');
+await import('./check-naming-dispatch-centre-recursive-frame-v3037.mjs');
 await import('./check-naming-dispatch-centre-auto-station-refresh-v1095.mjs');
 
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');

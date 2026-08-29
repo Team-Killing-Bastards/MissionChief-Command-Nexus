@@ -6,6 +6,16 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.37] - 2026-08-30
+
+### Fixed
+
+- Restored the Unit Naming and Station Naming cascade when Resource Administration station rows are hosted more than one same-origin frame below the naming workspace.
+- Centre discovery, station membership and station inventory now share one bounded recursive current/top/iframe document graph, preserving exact row-level `leitstelle_building_id` authority.
+- Dispatch Centre selection now crosses one render boundary, rescans current membership and only then rebuilds Service, Station Type and Start From.
+- Added a permanent nested-frame regression reproducing the rollback-era “Dispatch Centre selectable, downstream selectors empty” failure.
+- Increased the unified userscript version from `3.0.36` to `3.0.37`; Mission Finder remains `V10.6.177`.
+
 ## [3.0.36] - 2026-08-29
 
 ### Fixed
