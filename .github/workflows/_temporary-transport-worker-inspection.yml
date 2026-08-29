@@ -18,65 +18,57 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Build exact transport-worker source ranges
+      - name: Capture final transport runtime contexts
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
 
           source_path = Path('src/missionchief-command-nexus.user.js')
           lines = source_path.read_text(encoding='utf-8').splitlines()
-
-          def write_range(name, start, end):
-              start = max(1, start); end = min(len(lines), end)
-              Path(name).write_text('\n'.join(f'{i:06d}: {lines[i-1]}' for i in range(start, end + 1)) + '\n', encoding='utf-8')
-
-          ranges = [
-              ('.tmp-src-controller-state-a.txt', 150, 900),
-              ('.tmp-src-controller-state-b.txt', 900, 1800),
-              ('.tmp-src-pipeline-a.txt', 3000, 3850),
-              ('.tmp-src-pipeline-b.txt', 3850, 4700),
-              ('.tmp-src-transport-a.txt', 4700, 5200),
-              ('.tmp-src-transport-b.txt', 5200, 5660),
-              ('.tmp-src-worker-a.txt', 5660, 6400),
-              ('.tmp-src-worker-b.txt', 6400, 7105),
-              ('.tmp-src-watcher-a.txt', 7100, 7600),
-              ('.tmp-src-export-a.txt', 7600, 8500),
-              ('.tmp-src-ui-a.txt', 8500, 9100),
-              ('.tmp-src-embedded-bootstrap-a.txt', 18300, 19350),
-              ('.tmp-src-embedded-transport-a.txt', 19350, 20350),
-              ('.tmp-src-embedded-transport-b.txt', 20350, 21350),
-              ('.tmp-src-embedded-auto-a.txt', 44500, 45700),
-              ('.tmp-src-embedded-auto-b.txt', 45700, 46900),
-              ('.tmp-src-embedded-auto-c.txt', 46900, 48100),
-              ('.tmp-src-embedded-auto-d.txt', 48100, 49300),
-              ('.tmp-src-tail.txt', max(1, len(lines)-700), len(lines)),
+          terms = [
+              'function syncBackgroundAutomationWatchers',
+              'function startGlobalTransport',
+              'function stopGlobalTransport',
+              'mfGlobalTransportWatcherTimer',
+              'function shouldKeepMissionFinderObserverForCurrentFrame',
+              'function reconcileMissionFinderFrameRuntime',
+              'autoModeRunning =',
+              'if (isMissionPage()) initialize()',
+              'PIPELINE_PRELOAD_COUNT',
           ]
-          for args in ranges:
-              write_range(*args)
-
-          declaration = re.compile(r'^\s*(?:async\s+)?function\s+([A-Za-z0-9_$]+)|^\s*(?:const|let|var)\s+([A-Za-z0-9_$]+)\s*=')
-          keywords = ('transport', 'radio', 'worker', 'pipeline', 'patient', 'prisoner', 'mission', 'dispatch', 'watch', 'recycle', 'memory', 'ownership')
-          report = []
+          ranges = []
           for number, line in enumerate(lines, 1):
-              match = declaration.search(line)
-              if not match:
-                  continue
-              name = next((group for group in match.groups() if group), '')
-              if name and any(keyword in name.lower() for keyword in keywords):
-                  report.append(f'{number:06d}: {line}')
-          Path('.tmp-transport-declarations.txt').write_text('\n'.join(report) + '\n', encoding='utf-8')
+              if any(term.lower() in line.lower() for term in terms):
+                  ranges.append((max(1, number-25), min(len(lines), number+100)))
+          merged = []
+          for start, end in ranges:
+              if merged and start <= merged[-1][1]+4:
+                  merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+              else:
+                  merged.append((start, end))
+          out = []
+          for index, (start, end) in enumerate(merged, 1):
+              out.append(f'\n===== context-{index} [{start}-{end}] =====')
+              out.extend(f'{i:06d}: {lines[i-1]}' for i in range(start, end+1))
+          Path('.tmp-final-transport-runtime-contexts.txt').write_text('\n'.join(out)+'\n', encoding='utf-8')
+
+          scripts = []
+          for path in sorted(Path('scripts').glob('check-*.mjs')):
+              text = path.read_text(encoding='utf-8')
+              if any(term in text for term in ['PIPELINE_PRELOAD_COUNT', 'transport-only Worker A', 'Balanced queue', 'pipelinePreloadLimit', 'Worker B', 'pipeline-preload']):
+                  scripts.append(f'===== {path} =====\n{text}')
+          Path('.tmp-relevant-regressions.txt').write_text('\n\n'.join(scripts)+'\n', encoding='utf-8')
           PY
 
-      - name: Commit exact ranges
+      - name: Commit final contexts
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .tmp-*.txt
+          git add .tmp-final-transport-runtime-contexts.txt .tmp-relevant-regressions.txt
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "Add exact transport-worker ranges [skip transport inspection]"
+          git commit -m "Add final transport runtime contexts [skip transport inspection]"
           git push origin HEAD:feature/v3035-worker-b-transport
