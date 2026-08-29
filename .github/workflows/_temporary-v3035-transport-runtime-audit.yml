@@ -35,7 +35,7 @@ jobs:
           source = source.replace(old, new, 1)
 
           old = "window.__MCN_V3_LIFECYCLE_MARK__ = (stage, detail = {}) => log(\n`Worker lifecycle: ${normaliseText(stage)}`,\n{ workerGeneration: state.workerGeneration, documentSerial: state.workerDocumentSerial, missionId: state.currentMissionId, workerName: state.worker?.name || '', path: pathFromUrl(getWorkerHref()), detail }\n);"
-          new = "window.__MCN_V3_LIFECYCLE_MARK__=(stage,detail={})=>log(\n`Lifecycle: ${normaliseText(stage)}`,\n{workerGeneration:state.workerGeneration,documentSerial:state.workerDocumentSerial,missionId:state.currentMissionId,detail}\n);"
+          new = "window.__MCN_V3_LIFECYCLE_MARK__=(stage,detail={})=>log(\n`Worker lifecycle: ${normaliseText(stage)}`,\n{workerGeneration:state.workerGeneration,documentSerial:state.workerDocumentSerial,missionId:state.currentMissionId,detail}\n);"
           if old not in source:
               raise SystemExit('Lifecycle trace compaction marker not found.')
           source = source.replace(old, new, 1)
