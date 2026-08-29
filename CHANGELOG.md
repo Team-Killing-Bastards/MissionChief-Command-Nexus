@@ -6,6 +6,17 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.36] - 2026-08-29
+
+### Fixed
+
+- Denied every patient/prisoner transport watcher inside mission Worker A, even when shared Auto Mode or post-transport flags are still present.
+- Retired the legacy same-worker prisoner return, release-success redirect and transport hard-recovery paths that could navigate Worker A away from mission work.
+- Restricted parent patient/prisoner assistance, Radio-clearance handling and transport timeout recovery to explicit transport Worker B.
+- Made the managed active-frame name authoritative during Mission Finder observer bootstrap, preventing a transient ownership-bridge value from classifying a fresh Worker A as active and then inactive.
+- Added a permanent executable regression for the v3.0.35 mission `259490733` failure sequence.
+- Increased the unified userscript version from `3.0.35` to `3.0.36`; Mission Finder remains `V10.6.177`.
+
 ## [3.0.35] - 2026-08-29
 
 ### Changed

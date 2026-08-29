@@ -108,21 +108,21 @@ expect(!namingModuleStart.includes('if (!TOOL_IS_TOP_WINDOW) return;'), 'Blanket
 
 const frameOwner = extractFunction('shouldKeepMissionFinderObserverForCurrentFrame');
 expect(frameOwner.includes('if (MF_IS_TOP_WINDOW) return true'), 'Top MissionChief document must retain its observer');
-expect(frameOwner.includes('if (isMfV3ManagedActiveWorker()) return true'), 'Verified managed Worker A must outrank stale or competing mission documents');
+expect(frameOwner.includes('if (isMfV3ManagedActiveFrame()) return true'), 'Named managed active frame must outrank stale or competing mission documents');
 expect(frameOwner.includes('getPrimaryMissionRequirementDocument() === document'), 'Child observer ownership must follow the visible primary mission document');
-expect(frameOwner.indexOf('isMfV3ManagedActiveWorker()') < frameOwner.indexOf('getPrimaryMissionRequirementDocument()'), 'Managed Worker A authority must be checked before generic cross-frame visibility ranking');
+expect(frameOwner.indexOf('isMfV3ManagedActiveFrame()') < frameOwner.indexOf('getPrimaryMissionRequirementDocument()'), 'Managed Worker A authority must be checked before generic cross-frame visibility ranking');
 const ownerDocument = { body: {} };
 const ownerContext = vm.createContext({
   MF_IS_TOP_WINDOW: false,
   document: ownerDocument,
   isMissionPage: () => true,
-  isMfV3ManagedActiveWorker: () => true,
+  isMfV3ManagedActiveFrame: () => true,
   getPrimaryMissionRequirementDocument: () => ({ stale: true }),
   result: null,
 });
 vm.runInContext(`${frameOwner}\nresult = shouldKeepMissionFinderObserverForCurrentFrame();`, ownerContext);
-expect(ownerContext.result === true, 'Verified managed Worker A must remain active when a stale visible mission document wins generic ranking');
-ownerContext.isMfV3ManagedActiveWorker = () => false;
+expect(ownerContext.result === true, 'Named managed active frame must remain active when a stale visible mission document wins generic ranking');
+ownerContext.isMfV3ManagedActiveFrame = () => false;
 vm.runInContext('result = shouldKeepMissionFinderObserverForCurrentFrame();', ownerContext);
 expect(ownerContext.result === false, 'An unowned child frame must still yield to the primary visible mission document');
 

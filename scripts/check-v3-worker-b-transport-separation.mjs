@@ -70,10 +70,19 @@ assert.match(source, /!isMfV3ManagedTransportWorker\(\) &&\s*\(/,
 const transportAllowed = extractFunction('isTransportAutomationAllowed', missionModule);
 assert.match(transportAllowed, /isMfV3ManagedTransportWorker\(\)/,
   'B must receive local transport authority without shared Auto Mode state');
+assert.match(transportAllowed, /if \(isMfV3ManagedActiveFrame\(\)\) return false;/,
+  'mission Worker A must be denied every Mission Finder transport watcher');
 const transportHandler = extractFunction('handleTransportRequestsAfterDispatch', missionModule);
 assert.match(transportHandler, /autoModeRunning \|\| isMfV3ManagedTransportWorker\(\)/,
   'the existing destination engine must continue while the current frame is B');
+const ownerGate = extractFunction('shouldKeepMissionFinderObserverForCurrentFrame', missionModule);
+assert.match(ownerGate, /isMfV3ManagedActiveFrame\(\)/,
+  'the immutable managed frame name must outrank a transient bridge value');
+assert.doesNotMatch(ownerGate, /isMfV3ManagedActiveWorker\(\)/,
+  'observer admission must not depend on the mutable ownership bridge');
 const observer = extractFunction('startMissionFinderObserver', missionModule);
+assert.match(observer, /isMfV3ManagedActiveFrame\(\)/,
+  'observer startup diagnostics must use the same immutable frame authority');
 assert.match(observer, /clearAllTransportAutomationFlags\('transport-worker-b'\)/,
   'B must clear stale shared Mission Finder rehook state before acting');
 assert.match(observer, /handleTransportRequestsAfterDispatch\('worker-b'\)/,

@@ -32,16 +32,21 @@ function extractFunction(name) {
   assert.fail(`function ${name} is unterminated`);
 }
 
-assert.ok(source.includes('const PRISONER_HANDOFF_REDIRECT_RECOVERY_MS = 12000;'));
 const recovery = extractFunction('maybeRecoverStrandedPrisonerHandoff');
-for (const token of [
-  '/prisoner cell handoff|assigning prisoner/i',
-  'sleepRecoveryMissionUrl(href)',
-  "'reload-exact-mission-after-prisoner-handoff-redirect'",
-  'createWorker(recoveryUrl)',
-]) assert.ok(recovery.includes(token), `prisoner redirect recovery lost ${token}`);
-assert.doesNotMatch(recovery, /\.click\s*\(|clickDispatch/i, 'prisoner recovery must never click Dispatch');
-assert.doesNotMatch(recovery, /skip(?:Current)?Mission\s*\(/i, 'prisoner recovery must never skip');
+assert.match(recovery, /\{\s*return false;\s*\}$/,
+  'legacy mission-A prisoner redirect recovery must remain disabled');
+assert.doesNotMatch(recovery, /location\.(?:replace|assign)|createWorker\s*\(|\.click\s*\(|clickDispatch/i,
+  'mission Worker A must never navigate, rebuild or click during prisoner transport');
+
+const timeout = extractFunction('maybeHandleTransportServiceTimeout');
+assert.match(timeout, /state\.workerRole !== 'TRANSPORT_B'/,
+  'bounded prisoner transport recovery must be owned only by Worker B');
+assert.doesNotMatch(timeout, /clickDispatch/i,
+  'transport Worker B timeout must never click Dispatch');
+
+const finish = extractFunction('returnToTopMissionAfterTransport');
+assert.ok(finish.indexOf('removeWorker(false)') < finish.indexOf('createWorker(mission.url)'),
+  'transport B must be removed before the next mission A is created');
 
 const storage = new Map();
 const sessionStorage = {
@@ -69,4 +74,4 @@ assert.equal(latchContext.claim('258879636'), true, 'a failed click may release 
 assert.ok(source.includes('claimAutoMissionDispatch(autoCycleMissionId)'));
 assert.ok(source.includes('releaseAutoMissionDispatch(autoCycleMissionId)'));
 
-console.log('PASS: prisoner handoff redirect recovery is no-dispatch/fail-closed and repeat mission Dispatch claims are blocked atomically.');
+console.log('PASS: prisoner handoff is transport-B-only and repeat mission Dispatch claims are blocked atomically.');
