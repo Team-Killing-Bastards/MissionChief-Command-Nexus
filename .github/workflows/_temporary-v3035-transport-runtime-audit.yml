@@ -20,8 +20,43 @@ jobs:
       - name: Build corrected Worker B runtime
         shell: bash
         run: |
-          sed -i "s/count != 2/count != 3/; s/Expected two transport sequence markers/Expected three transport sequence markers/" scripts/_temporary-v3035-transport-runtime-patch.py
+          sed -i "s/count != 2/count != 3/; s/Expected two transport sequence markers/Expected three transport sequence markers/; s/if size > 2 \* 1024 \* 1024:/if size > 3 * 1024 * 1024:/" scripts/_temporary-v3035-transport-runtime-patch.py
           python3 scripts/_temporary-v3035-transport-runtime-patch.py
+
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('src/missionchief-command-nexus.user.js')
+          source = path.read_text(encoding='utf-8')
+
+          old = "const ownershipTrace = targetWindow.__MCN_V3_OWNERSHIP_TRACE__ ||= [];\nlet lastOwnershipBlock = '';\nconst traceOwnership = (event, detail = '') => {\nownershipTrace.push({ at: Date.now(), event, detail, active: activeOwner, name: String(targetWindow.name || ''), path: String(targetWindow.location?.pathname || '') });\nif (ownershipTrace.length > 40) ownershipTrace.shift();\n};\nconst traceOwnershipBlock = (operation, key) => {\nconst marker = `${operation}:${String(key || '')}`;\nif (marker === lastOwnershipBlock) return;\nlastOwnershipBlock = marker;\ntraceOwnership(`blocked-${operation}`, String(key || ''));\n};"
+          new = "const ownershipTrace=targetWindow.__MCN_V3_OWNERSHIP_TRACE__||=[];\nconst traceOwnership=(event,detail='')=>{\nownershipTrace.push({at:Date.now(),event,detail,active:activeOwner});\nif(ownershipTrace.length>40)ownershipTrace.shift();\n};\nconst traceOwnershipBlock=(operation,key)=>traceOwnership(`blocked-${operation}`,String(key||''));"
+          if old not in source:
+              raise SystemExit('Ownership trace compaction marker not found.')
+          source = source.replace(old, new, 1)
+
+          old = "window.__MCN_V3_LIFECYCLE_MARK__ = (stage, detail = {}) => log(\n`Worker lifecycle: ${normaliseText(stage)}`,\n{ workerGeneration: state.workerGeneration, documentSerial: state.workerDocumentSerial, missionId: state.currentMissionId, workerName: state.worker?.name || '', path: pathFromUrl(getWorkerHref()), detail }\n);"
+          new = "window.__MCN_V3_LIFECYCLE_MARK__=(stage,detail={})=>log(\n`Lifecycle: ${normaliseText(stage)}`,\n{workerGeneration:state.workerGeneration,documentSerial:state.workerDocumentSerial,missionId:state.currentMissionId,detail}\n);"
+          if old not in source:
+              raise SystemExit('Lifecycle trace compaction marker not found.')
+          source = source.replace(old, new, 1)
+
+          old = "        if (isMfV3ManagedTransportWorker()) {\n            clearAllTransportAutomationFlags('transport-worker-b');\n            void (async () => {\n                for (let pass = 0; pass < 2 && isMfV3ManagedTransportWorker(); pass += 1) {\n                    await handleTransportRequestsAfterDispatch('worker-b');\n                    await wait(400);\n                }\n            })();\n        }"
+          new = "        if (isMfV3ManagedTransportWorker()) {\n            clearAllTransportAutomationFlags('transport-worker-b');\n            void handleTransportRequestsAfterDispatch('worker-b');\n        }"
+          if old not in source:
+              raise SystemExit('Transport B bootstrap compaction marker not found.')
+          source = source.replace(old, new, 1)
+
+          old = "Contains mission IDs, vehicle names, lifecycle/frame evidence, training-code evidence and browser memory/DOM counts. It does not include cookies, passwords or personnel names."
+          new = "Contains mission, vehicle, lifecycle, training and memory evidence; excludes cookies, passwords and personnel names."
+          if old in source:
+              source = source.replace(old, new, 1)
+
+          path.write_text(source, encoding='utf-8')
+          size = path.stat().st_size
+          print(f'Compacted candidate userscript size: {size} bytes')
+          if size > 2 * 1024 * 1024:
+              raise SystemExit(f'Candidate still exceeds 2 MiB: {size}')
+          PY
 
       - name: Validate exact corrected candidate
         shell: bash
