@@ -30,10 +30,12 @@ jobs:
               'Created on-demand transport Worker B with mission Worker A absent.': 'Created transport B with A absent.',
               'Released transport Worker B before starting a fresh mission Worker A.': 'Released B before starting fresh A.',
               'Transport Worker B reached mission ${missionIdFromUrl(href) || state.transportServiceMissionId} and cannot run Auto Mode.': 'Transport B reached a mission route; Auto Mode remains blocked.',
+              'if (isMfV3ManagedTransportWorker()) return;': "if (String(window.name || '').startsWith('mcn-v3-active-worker-transport-b-')) return;",
+              "assert.match(initialise, /if \\(isMfV3ManagedTransportWorker\\(\\)\\) return;/,": "assert.match(initialise, /mcn-v3-active-worker-transport-b-/,",
           }
           for old, new in replacements.items():
               if old not in text:
-                  raise SystemExit(f'Compaction marker not found: {old}')
+                  raise SystemExit(f'Build patch marker not found: {old}')
               text = text.replace(old, new, 1)
           path.write_text(text, encoding='utf-8')
           PY
