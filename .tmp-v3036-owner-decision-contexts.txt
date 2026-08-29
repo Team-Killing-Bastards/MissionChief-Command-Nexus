@@ -1,0 +1,1497 @@
+===== context-1 [3730-3883] =====
+003730: try {
+003731: return frame?.contentWindow?.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__ ||
+003732: frame?.contentWindow?.__MCN_V3_PIPELINE_PRELOAD_BRIDGE__ ||
+003733: null;
+003734: } catch {
+003735: return null;
+003736: }
+003737: }
+003738: function readDormantInteractionGuardStatus(frameOrSlot) {
+003739: const frame = frameOrSlot?.frame || frameOrSlot;
+003740: try {
+003741: const guard = frame?.contentWindow?.__MCN_V3_DORMANT_INTERACTION_GUARD__ || null;
+003742: if (!guard) return null;
+003743: const status = guard.status?.() || {};
+003744: return {
+003745: blocking: guard.isBlocking?.() === true || status.blocking === true,
+003746: blockedCount: Math.max(0, Number(guard.blockedCount?.() ?? status.blockedCount ?? 0)),
+003747: lastBlockedAt: Math.max(0, Number(status.lastBlockedAt || 0)),
+003748: lastBlockedType: normaliseText(status.lastBlockedType || ''),
+003749: };
+003750: } catch {
+003751: return null;
+003752: }
+003753: }
+003754: function frameOwnsOperationalState(frame) {
+003755: const bridge = frameOwnershipBridge(frame);
+003756: if (!bridge) return false;
+003757: try {
+003758: if (typeof bridge.isActive === 'function') return bridge.isActive() === true;
+003759: if (typeof bridge.isPromoted === 'function') return bridge.isPromoted() === true;
+003760: } catch {}
+003761: return false;
+003762: }
+003763: function ensureActiveWorkerOwnership(frame, source = 'active-worker') {
+003764: if (!frame?.isConnected) return false;
+003765: if (frameOwnsOperationalState(frame)) return true;
+003766: const bridgeBefore = frameOwnershipBridge(frame);
+003767: let installedBridge = null;
+003768: try {
+003769: installedBridge = installOwnershipBridgeInWindow(
+003770: frame.contentWindow,
+003771: true,
+003772: `parent-${source}`
+003773: );
+003774: } catch {}
+003775: const active = Boolean(installedBridge && frameOwnsOperationalState(frame));
+003776: const event = {
+003777: at: nowIso(),
+003778: source,
+003779: missionId: missionIdFromUrl(frameHref(frame)) || state.currentMissionId,
+003780: frameName: String(frame.name || ''),
+003781: bridgePresentBefore: Boolean(bridgeBefore),
+003782: bridgeSource: (() => {
+003783: try { return normaliseText(installedBridge?.source?.() || ''); } catch { return ''; }
+003784: })(),
+003785: active,
+003786: };
+003787: state.activeOwnershipBootstrapHistory.push(event);
+003788: if (state.activeOwnershipBootstrapHistory.length > OWNERSHIP_BOOTSTRAP_HISTORY_LIMIT) {
+003789: state.activeOwnershipBootstrapHistory.splice(
+003790: 0,
+003791: state.activeOwnershipBootstrapHistory.length - OWNERSHIP_BOOTSTRAP_HISTORY_LIMIT
+003792: );
+003793: }
+003794: if (active) {
+003795: state.activeOwnershipBootstrapInstalls += 1;
+003796: pipelineRecord('active-owner-synchronous-bootstrap', event);
+003797: if (
+003798: state.activeOwnershipBootstrapInstalls <= 4 ||
+003799: state.activeOwnershipBootstrapInstalls % 10 === 0
+003800: ) {
+003801: log('Synchronously established Worker A storage ownership before Auto Mode start.', event);
+003802: }
+003803: return true;
+003804: }
+003805: state.activeOwnershipBootstrapFailures += 1;
+003806: pipelineRecord('active-owner-synchronous-bootstrap-failed', event);
+003807: return false;
+003808: }
+003809: function setFrameOwnership(frame, active, reason = 'ownership-change') {
+003810: const bridge = frameOwnershipBridge(frame);
+003811: if (!bridge) return false;
+003812: let wasActive = false;
+003813: try { wasActive = frameOwnsOperationalState(frame); } catch {}
+003814: let changed = false;
+003815: try {
+003816: changed = active
+003817: ? (bridge.activate?.() === true || bridge.promote?.() === true)
+003818: : (bridge.deactivate?.() === true || bridge.demote?.() === true);
+003819: } catch {
+003820: changed = false;
+003821: }
+003822: if (changed && !active && wasActive) {
+003823: pipelineRecord('frame-storage-owner-demoted', {
+003824: missionId: missionIdFromUrl(frameHref(frame)),
+003825: reason,
+003826: });
+003827: }
+003828: return changed;
+003829: }
+003830: function pipelineBridge(slot) {
+003831: return frameOwnershipBridge(slot?.frame);
+003832: }
+003833: function v2DormantPreloadBridge(frameOrSlot) {
+003834: const frame = frameOrSlot?.frame || frameOrSlot;
+003835: try {
+003836: return frame?.contentWindow?.[V2_DORMANT_PRELOAD_BRIDGE_KEY] || null;
+003837: } catch {
+003838: return null;
+003839: }
+003840: }
+003841: function readV2DormantPreloadStatus(frameOrSlot) {
+003842: const bridge = v2DormantPreloadBridge(frameOrSlot);
+003843: if (!bridge) return null;
+003844: try {
+003845: const protocolVersion = Number(bridge.protocolVersion?.() || 0);
+003846: const missionFinderVersion = normaliseText(bridge.missionFinderVersion?.() || '');
+003847: const missionId = normaliseText(bridge.missionId?.() || '');
+003848: const detailedStatus = bridge.status?.() || null;
+003849: return {
+003850: bridge,
+003851: protocolVersion,
+003852: missionFinderVersion,
+003853: missionId,
+003854: dormant: bridge.isDormant?.() === true,
+003855: promoted: bridge.isPromoted?.() === true,
+003856: frameName: normaliseText(detailedStatus?.frameName || ''),
+003857: ownsOperationalState: detailedStatus?.ownsOperationalState === true,
+003858: observerStarted: detailedStatus?.observerStarted === true,
+003859: lightweight: detailedStatus?.lightweight === true,
+003860: };
+003861: } catch {
+003862: return null;
+003863: }
+003864: }
+003865: function onPipelinePreloadLoad(frame) {
+003866: const slot = pipelineSlotForFrame(frame);
+003867: if (!slot || !state.wanted || state.stopping) return;
+003868: const href = frameHref(frame);
+003869: const transportVehicleId = vehicleIdFromUrl(href);
+003870: if (transportVehicleId) {
+003871: failPipelineIsolation(slot, 'dormant-preload-transport-navigation', {
+003872: vehicleId: transportVehicleId,
+003873: href,
+003874: });
+003875: enterActiveOnlyMode('dormant-preload-transport-navigation', {
+003876: missionId: slot.missionId,
+003877: vehicleId: transportVehicleId,
+003878: });
+003879: return;
+003880: }
+003881: const missionId = missionIdFromUrl(href);
+003882: if (!missionId || missionId !== slot.missionId) {
+003883: slot.status = 'ERROR';
+
+===== context-2 [4281-4375] =====
+004281: });
+004282: enterActiveOnlyMode('v2-native-dormant-promotion-gate-failed', {
+004283: missionId: id,
+004284: });
+004285: return false;
+004286: }
+004287: const snapshot = pipelineVehicleSnapshot(slot);
+004288: slot.nexusMounted = Boolean(snapshot.doc?.querySelector?.('#mission-finder-wrapper, #control-panel'));
+004289: slot.autoControlPresent = Boolean(snapshot.autoControl);
+004290: slot.autoControlText = snapshot.autoControl ? elementLabel(snapshot.autoControl) : '';
+004291: if (
+004292: slot.nexusMounted ||
+004293: snapshot.autoControl ||
+004294: (snapshot.control && slot.loadClicks < PIPELINE_MAX_LOAD_CLICKS)
+004295: ) {
+004296: failPipelineIsolation(slot, 'promotion-preload-not-stable-and-dormant', {
+004297: nexusMounted: slot.nexusMounted,
+004298: autoControl: elementLabel(snapshot.autoControl),
+004299: vehicleLoadControl: pipelineLoadControlToken(snapshot.control),
+004300: });
+004301: return false;
+004302: }
+004303: const oldFrame = state.worker;
+004304: const oldBridge = frameOwnershipBridge(oldFrame);
+004305: if (oldFrame?.isConnected && (!oldBridge || !frameOwnsOperationalState(oldFrame))) {
+004306: state.pipelinePromotionFallbacks += 1;
+004307: enterActiveOnlyMode('active-owner-bridge-missing', {
+004308: missionId: state.currentMissionId,
+004309: promotionTargetMissionId: id,
+004310: });
+004311: return false;
+004312: }
+004313: const oldFrameStyle = oldFrame?.style?.cssText || '';
+004314: const oldFrameName = String(oldFrame?.name || '');
+004315: const oldBrowsingContextName = (() => {
+004316: try { return String(oldFrame?.contentWindow?.name || ''); } catch { return ''; }
+004317: })();
+004318: if (oldFrame?.isConnected && oldBridge) {
+004319: try { installDormantInteractionGuard(oldFrame.contentWindow, oldBridge); } catch {}
+004320: }
+004321: const oldDemoted = !oldFrame?.isConnected || setFrameOwnership(oldFrame, false, `handoff-to-${id}`);
+004322: if (!oldDemoted) {
+004323: state.pipelinePromotionFallbacks += 1;
+004324: enterActiveOnlyMode('outgoing-owner-demotion-failed', {
+004325: missionId: state.currentMissionId,
+004326: promotionTargetMissionId: id,
+004327: });
+004328: return false;
+004329: }
+004330: if (oldFrame?.isConnected) state.pipelineOwnershipDemotions += 1;
+004331: if (oldFrame?.isConnected) {
+004332: try {
+004333: oldFrame.style.visibility = 'hidden';
+004334: oldFrame.style.left = '-10000px';
+004335: oldFrame.style.pointerEvents = 'none';
+004336: } catch {}
+004337: }
+004338: const bridgePromoted = setFrameOwnership(slot.frame, true, `promotion-${reason}`);
+004339: if (!bridgePromoted) {
+004340: if (oldFrame?.isConnected) {
+004341: setFrameOwnership(oldFrame, true, 'promotion-rollback');
+004342: try {
+004343: synchroniseManagedFrameName(oldFrame, oldBrowsingContextName || oldFrameName);
+004344: oldFrame.style.cssText = oldFrameStyle;
+004345: } catch {}
+004346: }
+004347: state.pipelinePromotionFallbacks += 1;
+004348: pipelineRecord('preload-promotion-fallback', {
+004349: missionId: id,
+004350: missionName: slot.missionName,
+004351: reason,
+004352: ready: Boolean(slot.ready),
+004353: bridgeReady: Boolean(slot.bridgeReady),
+004354: fallbackReason: 'preload-bridge-rejected-promotion',
+004355: fallback: 'active-worker-navigation',
+004356: });
+004357: log('Pipeline preload bridge rejected promotion; keeping the existing ACTIVE worker.', {
+004358: missionId: id,
+004359: missionName: slot.missionName,
+004360: ready: Boolean(slot.ready),
+004361: reason,
+004362: });
+004363: removePipelineSlot(slot, 'promotion-bridge-rejected', true);
+004364: return false;
+004365: }
+004366: const nextGeneration = state.workerGeneration + 1;
+004367: const activationToken = `v3-${nextGeneration}-${id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+004368: const activeFrameName = `${ACTIVE_WORKER_NAME_PREFIX}${nextGeneration}-${id}`;
+004369: const frameNameHandoff = synchroniseManagedFrameName(slot.frame, activeFrameName);
+004370: try {
+004371: applyActiveWorkerFrameStyle(slot.frame);
+004372: } catch {}
+004373: const activationStatus = readV2DormantPreloadStatus(slot);
+004374: if (
+004375: !frameNameHandoff.matched ||
+
+===== context-3 [8290-8384] =====
+008290: priorityPendingKey: state.priorityPendingKey,
+008291: currentTransportVehicleId: vehicleIdFromUrl(href || workerSnapshot.href || ''),
+008292: transportRequestMissionId: radioRequestForVehicle(
+008293: vehicleIdFromUrl(href || workerSnapshot.href || ''),
+008294: state.radioTransportRequests
+008295: )?.missionId || '',
+008296: transportAffinityCorrections: 0,
+008297: patientAssistAttempts: state.patientAssistAttempts,
+008298: prisonerAssistAttempts: state.prisonerAssistAttempts,
+008299: transportServiceEligible: state.transportServiceEligible,
+008300: transportServiceActive: state.transportServiceActive,
+008301: transportServiceKey: state.transportServiceKey,
+008302: transportServiceVehicleId: state.transportServiceVehicleId,
+008303: transportServiceMissionId: state.transportServiceMissionId,
+008304: transportServiceAttempts: state.transportServiceAttempts,
+008305: transportServiceCleared: state.transportServiceCleared,
+008306: nativeMissionAdvances: state.nativeMissionAdvances,
+008307: topSyntheticMissionRehooksBlocked: state.topSyntheticMissionRehooksBlocked,
+008308: radioTransportRequests: state.radioTransportRequests.map(request => ({ ...request })),
+008309: radioRequestWarningKey: state.radioRequestWarningKey,
+008310: },
+008311: worker: {
+008312: role: state.workerRole || '',
+008313: present: Boolean(state.worker?.isConnected),
+008314: storageOwnershipActive: frameOwnsOperationalState(state.worker),
+008315: storageOwnershipSource: (() => {
+008316: try { return normaliseText(frameOwnershipBridge(state.worker)?.source?.() || ''); } catch { return ''; }
+008317: })(),
+008318: frameName: String(state.worker?.name || ''),
+008319: sameOriginReadable: Boolean(doc) || Boolean(workerSnapshot.sameOriginReadable),
+008320: readyState: doc?.readyState || workerSnapshot.readyState || '',
+008321: title: normaliseText(doc?.title || workerSnapshot.title || ''),
+008322: lastCapturedAt: workerSnapshot.capturedAt || '',
+008323: lastPath: workerSnapshot.path || '',
+008324: lastMissionId: workerSnapshot.missionId || '',
+008325: lastMissionName: workerSnapshot.missionName || '',
+008326: nexusWrapperPresent: Boolean(doc?.querySelector('#mission-finder-wrapper')) || Boolean(workerSnapshot.nexusWrapperPresent),
+008327: controlPanelPresent: Boolean(doc?.querySelector('#control-panel')) || Boolean(workerSnapshot.controlPanelPresent),
+008328: patientTransportAnchorPresent: Boolean(workerSnapshot.transport?.patientAnchorCount),
+008329: prisonerControlPresent: Boolean(
+008330: workerSnapshot.transport?.structuredPrisonerRequests ||
+008331: workerSnapshot.transport?.greenPrisonDestinations ||
+008332: workerSnapshot.transport?.releaseLinks
+008333: ),
+008334: transportEvidence: workerSnapshot.transport?.evidence || [],
+008335: visibleMissionFrameOutsideWorker: Boolean(findVisibleForeignMissionFrame()) || Boolean(workerSnapshot.visibleMissionFrameOutsideWorker),
+008336: },
+008337: userAgent: navigator.userAgent,
+008338: log: state.log.slice(-120),
+008339: };
+008340: }
+008341: window.__MCN_V3_DIAGNOSTICS_SNAPSHOT__ = diagnosticsSnapshot;
+008342: function exportDiagnostics() {
+008343: const snapshot = diagnosticsSnapshot();
+008344: const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+008345: const url = URL.createObjectURL(blob);
+008346: const anchor = document.createElement('a');
+008347: anchor.href = url;
+008348: anchor.download = `missionchief-command-nexus-v3-${Date.now()}.json`;
+008349: document.body.appendChild(anchor);
+008350: anchor.click();
+008351: anchor.remove();
+008352: window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+008353: log('Exported Command Nexus V3 diagnostics.');
+008354: }
+008355: function injectStyles() {
+008356: if (document.getElementById(STYLE_ID)) return;
+008357: const style = document.createElement('style');
+008358: style.id = STYLE_ID;
+008359: style.textContent = `
+008360: #${ROOT_ID} {
+008361: --mcn-bg: rgba(8, 16, 30, 0.97);
+008362: --mcn-bg2: rgba(13, 29, 50, 0.98);
+008363: --mcn-border: rgba(104, 168, 255, 0.30);
+008364: --mcn-text: #edf6ff;
+008365: --mcn-muted: #9cb1c8;
+008366: --mcn-accent: #66b7ff;
+008367: --mcn-ok: #74dfaa;
+008368: --mcn-warn: #ffd479;
+008369: --mcn-bad: #ff8989;
+008370: position: relative;
+008371: float: left;
+008372: height: 50px;
+008373: display: flex;
+008374: align-items: center;
+008375: margin-left: 5px;
+008376: z-index: 2147483000;
+008377: font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+008378: color: var(--mcn-text);
+008379: user-select: none;
+008380: }
+008381: #${ROOT_ID} * { box-sizing: border-box; }
+008382: #${ROOT_ID} .mcn-launcher {
+008383: width: 36px;
+008384: height: 36px;
+
+===== context-4 [18796-18890] =====
+018796:     let mfV3DormantPreloadPromotedAt = 0;
+018797:     let mfV3DormantPreloadPromotionSource = '';
+018798:     function isMfV3ManagedActiveFrame() {
+018799:         try {
+018800:             return (
+018801:                 window.top !== window.self &&
+018802:                 String(window.name || '').startsWith(
+018803:                     MF_V3_ACTIVE_NAME_PREFIX
+018804:                 )
+018805:             );
+018806:         } catch (_error) {
+018807:             return false;
+018808:         }
+018809:     }
+018810:     function isMfV3ManagedTransportWorker() {
+018811:         try {
+018812:             return window.top !== window.self &&
+018813:                 String(window.name || '').startsWith(
+018814:                     MF_V3_ACTIVE_NAME_PREFIX + 'transport-b-'
+018815:                 );
+018816:         } catch (_error) {
+018817:             return false;
+018818:         }
+018819:     }
+018820:     function isMfV3ManagedActiveWorker() {
+018821:         try {
+018822:             if (!isMfV3ManagedActiveFrame()) return false;
+018823:             const ownershipBridge =
+018824:                 window.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__ ||
+018825:                 window.__MCN_V3_PIPELINE_PRELOAD_BRIDGE__ ||
+018826:                 null;
+018827:             return ownershipBridge?.isActive?.() === true;
+018828:         } catch (_error) {
+018829:             return false;
+018830:         }
+018831:     }
+018832:     const MF_EVENT_COLLECTIBLE_SELECTOR =
+018833:         'a#easter-egg-link[href^="/missions/"][href*="/claim_found_object_sync"]';
+018834:     const MF_EVENT_COLLECTIBLE_SCAN_INTERVAL_MS =
+018835:         15 * 1000;
+018836:     const MF_EVENT_COLLECTIBLE_REQUEST_COOLDOWN_MS = 10000;
+018837:     const MF_EVENT_COLLECTIBLE_MAX_TRACKED = 250;
+018838:     const mfEventCollectibleClaimTimes = new Map();
+018839:     let mfEventCollectibleScanTimer = null;
+018840:     let mfEventCollectibleScanRunning = false;
+018841:     const MF_EVENT_SCANNER_ENABLED_KEY =
+018842:         'mf_event_scanner_enabled_v1';
+018843:     let mfEventScannerEnabled =
+018844:         localStorage.getItem(
+018845:             MF_EVENT_SCANNER_ENABLED_KEY
+018846:         ) !== 'false';
+018847:     function getMissionEventCollectibleDocuments() {
+018848:         try {
+018849:             return getMissionAccessibleDocuments(false)
+018850:                 .slice(0, 24);
+018851:         } catch (_error) {
+018852:             return [document];
+018853:         }
+018854:     }
+018855:     function readMissionEventCollectibleClaim(link) {
+018856:         if (
+018857:             !link ||
+018858:             link.id !== 'easter-egg-link'
+018859:         ) {
+018860:             return null;
+018861:         }
+018862:         const href =
+018863:             String(
+018864:                 link.getAttribute('href') || ''
+018865:             ).trim();
+018866:         const match =
+018867:             href.match(
+018868:                 /^\/missions\/(\d+)\/claim_found_object_sync(?:[?#].*)?$/
+018869:             );
+018870:         if (!match) return null;
+018871:         return {
+018872:             href,
+018873:             missionId: match[1]
+018874:         };
+018875:     }
+018876:     function pruneMissionEventCollectibleClaimTimes(now = Date.now()) {
+018877:         for (
+018878:             const [href, claimedAt] of
+018879:             mfEventCollectibleClaimTimes
+018880:         ) {
+018881:             if (
+018882:                 now - claimedAt >
+018883:                 MF_EVENT_COLLECTIBLE_REQUEST_COOLDOWN_MS
+018884:             ) {
+018885:                 mfEventCollectibleClaimTimes.delete(href);
+018886:             }
+018887:         }
+018888:         while (
+018889:             mfEventCollectibleClaimTimes.size >
+018890:             MF_EVENT_COLLECTIBLE_MAX_TRACKED
+
+===== context-5 [20166-20260] =====
+020166:     };
+020167:     let mfTransportScopeCache = {
+020168:         expiresAt: 0,
+020169:         scopes: []
+020170:     };
+020171:     let mfPatientCountCache = {
+020172:         expiresAt: 0,
+020173:         missionKey: '',
+020174:         value: 0
+020175:     };
+020176:     let mfDispatchReadinessExpensiveCache = {
+020177:         expiresAt: 0,
+020178:         updateRowsSignature: '',
+020179:         staffingText: ''
+020180:     };
+020181:     let mfMissionUpdateRowsCache = {
+020182:         expiresAt: 0,
+020183:         missionKey: '',
+020184:         rows: [],
+020185:         ambulanceOfficerSatisfied: false
+020186:     };
+020187:     let mfCurrentMissionInstanceKey = '';
+020188:     const MF_INSTANCE_TOKEN =
+020189:         `mf-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+020190:     const MF_SHARED_ACTIVE_INSTANCE_KEY =
+020191:         '__missionFinderActiveMissionInstanceV10_6_57';
+020192:     const MF_PATIENT_SELECTION_LEDGER_KEY =
+020193:         'mf_patient_selection_ledger_v10_6_50';
+020194:     let mfPatientSelectionLedgerCache = null;
+020195:     let mfMainMutationFlags = {
+020196:         relevant: false,
+020197:         vehicleListChanged: false,
+020198:         missionContextChanged: false,
+020199:         patientChanged: false,
+020200:         panelChanged: false,
+020201:         transportChanged: false
+020202:     };
+020203:     const MF_RECORDER_KEY = 'mf_issue_recorder_v1';
+020204:     const MF_RECORDER_ENABLED_KEY = 'mf_issue_recorder_enabled_v1';
+020205:     const MF_RECORDER_MAX_ENTRIES = 40;
+020206:     const MF_RECORDER_MAX_BYTES = 1500000;
+020207:     let mfIssueRecorderEnabled = false;
+020208: 
+020209:     if (!mfV3DormantPreload) {
+020210:         localStorage.setItem(MF_RECORDER_ENABLED_KEY, 'false');
+020211:     }
+020212:     let mfIssueRecorderLastDangerFingerprint = '';
+020213:     let mfIssueRecorderLastDangerAt = 0;
+020214:     let mfIssueRecorderLastClickAt = 0;
+020215:     const SESSION_STATS_KEY = 'mf_session_stats_v1';
+020216:     const SESSION_REFRESH_FLAG = 'mf_session_manual_refresh_checked';
+020217:     const DEFAULT_MISSION_READY_DELAY = 1000;
+020218:     const MF_READY_DELAY_10_6_58_MIGRATION_KEY =
+020219:         'mf_ready_delay_10_6_58_migrated';
+020220:     if (
+020221:         !mfV3DormantPreload &&
+020222:         localStorage.getItem(
+020223:             MF_READY_DELAY_10_6_58_MIGRATION_KEY
+020224:         ) !== 'true'
+020225:     ) {
+020226:         const previousSavedDelay = parseInt(
+020227:             localStorage.getItem(
+020228:                 'mf_mission_ready_delay_ms'
+020229:             ) || '2000',
+020230:             10
+020231:         );
+020232:         if (
+020233:             !Number.isFinite(previousSavedDelay) ||
+020234:             previousSavedDelay === 3000 ||
+020235:             previousSavedDelay === 2000
+020236:         ) {
+020237:             localStorage.setItem(
+020238:                 'mf_mission_ready_delay_ms',
+020239:                 String(DEFAULT_MISSION_READY_DELAY)
+020240:             );
+020241:         }
+020242:         localStorage.setItem(
+020243:             MF_READY_DELAY_10_6_58_MIGRATION_KEY,
+020244:             'true'
+020245:         );
+020246:     }
+020247:     let missionReadyDelayMs = parseInt(
+020248:         localStorage.getItem(
+020249:             'mf_mission_ready_delay_ms'
+020250:         ) || String(DEFAULT_MISSION_READY_DELAY),
+020251:         10
+020252:     );
+020253:     if (
+020254:         !Number.isFinite(missionReadyDelayMs) ||
+020255:         missionReadyDelayMs < 500
+020256:     ) {
+020257:         missionReadyDelayMs =
+020258:             DEFAULT_MISSION_READY_DELAY;
+020259:     }
+020260:     if (!mfV3DormantPreload) {
+
+===== context-6 [23359-23453] =====
+023359:                     isCachedMissionDocumentUsable(
+023360:                         cachedDocument
+023361:                     ) &&
+023362:                     isMissionDocumentVisible(
+023363:                         cachedDocument
+023364:                     );
+023365:             } catch (_error) {
+023366:                 cachedDocumentUsable =
+023367:                     cachedDocument === document;
+023368:             }
+023369:         }
+023370:         if (
+023371:             !forceRefresh &&
+023372:             cachedDocumentUsable &&
+023373:             missionKey ===
+023374:                 mfVehicleSelectionDocumentCache.missionKey &&
+023375:             now <
+023376:                 mfVehicleSelectionDocumentCache.expiresAt
+023377:         ) {
+023378:             return cachedDocument;
+023379:         }
+023380:         let candidateDocument = document;
+023381:         try {
+023382:             const primaryDocument =
+023383:                 getPrimaryMissionRequirementDocument();
+023384:             if (
+023385:                 primaryDocument?.querySelectorAll &&
+023386:                 isCachedMissionDocumentUsable(
+023387:                     primaryDocument
+023388:                 ) &&
+023389:                 isMissionDocumentVisible(
+023390:                     primaryDocument
+023391:                 )
+023392:             ) {
+023393:                 candidateDocument =
+023394:                     primaryDocument;
+023395:             }
+023396:         } catch (_error) {}
+023397:         mfVehicleSelectionDocumentCache = {
+023398:             expiresAt: now + 250,
+023399:             missionKey,
+023400:             document: candidateDocument
+023401:         };
+023402:         return candidateDocument;
+023403:     }
+023404:     function queryVehicleSelectionElements(
+023405:         selector,
+023406:         forceRefresh = false
+023407:     ) {
+023408:         const selectionDocument =
+023409:             getVehicleSelectionDocument(
+023410:                 forceRefresh
+023411:             );
+023412:         try {
+023413:             return Array.from(
+023414:                 selectionDocument.querySelectorAll(
+023415:                     selector
+023416:                 )
+023417:             );
+023418:         } catch (_error) {
+023419:             return [];
+023420:         }
+023421:     }
+023422:     function isVehicleSelectionElementVisible(
+023423:         element
+023424:     ) {
+023425:         if (
+023426:             !element ||
+023427:             element.isConnected === false
+023428:         ) {
+023429:             return false;
+023430:         }
+023431:         try {
+023432:             const ownerWindow =
+023433:                 element.ownerDocument
+023434:                     ?.defaultView ||
+023435:                 window;
+023436:             const style =
+023437:                 ownerWindow.getComputedStyle(
+023438:                     element
+023439:                 );
+023440:             if (
+023441:                 style.display === 'none' ||
+023442:                 style.visibility === 'hidden'
+023443:             ) {
+023444:                 return false;
+023445:             }
+023446:             return element.getClientRects().length > 0;
+023447:         } catch (_error) {
+023448:             return true;
+023449:         }
+023450:     }
+023451:     function invalidateVehicleListStructureCache() {
+023452:         mfVehicleCheckboxCache = {
+023453:             expiresAt: 0,
+
+===== context-7 [31302-31396] =====
+031302:             return `mission:${localHelpSource.missionId}`;
+031303:         }
+031304:         const helpHref = String(
+031305:             localHelpSource?.url ||
+031306:             localHelpLinks[
+031307:                 localHelpLinks.length - 1
+031308:             ]?.getAttribute?.('href') ||
+031309:             ''
+031310:         ).trim();
+031311:         const missionTitle = String(
+031312:             visibleMissionInfo?.getAttribute?.('data-mission-title') ||
+031313:             document.querySelector('#missionH1')?.textContent ||
+031314:             ''
+031315:         )
+031316:             .replace(/\s+/g, ' ')
+031317:             .trim();
+031318:         return [
+031319:             'document',
+031320:             window.location.pathname,
+031321:             window.location.search,
+031322:             helpHref,
+031323:             missionTitle
+031324:         ].join('|');
+031325:     }
+031326:     function getPrimaryMissionRequirementDocument() {
+031327:         const candidates = [];
+031328:         getMissionAccessibleDocuments(true)
+031329:             .forEach((candidateDocument, documentIndex) => {
+031330:                 if (
+031331:                     !candidateDocument ||
+031332:                     !isMissionDocumentVisible(candidateDocument)
+031333:                 ) {
+031334:                     return;
+031335:                 }
+031336:                 let score = 0;
+031337:                 let visibleMarkerCount = 0;
+031338:                 const markerDefinitions = [
+031339:                     ['#mission_general_info', 500, true],
+031340:                     ['#mission_alarm_btn, #alarm_button', 350, true],
+031341:                     ['input.vehicle_checkbox', 250, true],
+031342:                     ['#mission_help', 180, false]
+031343:                 ];
+031344:                 markerDefinitions.forEach(([selector, weight, requireVisible]) => {
+031345:                     let visibleCount = 0;
+031346:                     try {
+031347:                         visibleCount = Array.from(
+031348:                             candidateDocument.querySelectorAll(selector)
+031349:                         ).filter(element => {
+031350:                             if (element.isConnected === false) return false;
+031351:                             return requireVisible
+031352:                                 ? isMissionElementVisible(element)
+031353:                                 : true;
+031354:                         }).length;
+031355:                     } catch (_error) {}
+031356:                     if (visibleCount > 0) {
+031357:                         score += weight;
+031358:                         visibleMarkerCount += visibleCount;
+031359:                     }
+031360:                 });
+031361:                 if (visibleMarkerCount === 0) return;
+031362:                 try {
+031363:                     const frame =
+031364:                         candidateDocument.defaultView?.frameElement;
+031365:                     if (frame && isMissionElementVisible(frame)) {
+031366:                         score += 1000;
+031367:                         const ownerDocument = frame.ownerDocument;
+031368:                         const ownerWindow =
+031369:                             ownerDocument?.defaultView ||
+031370:                             window;
+031371:                         const ownerModal = frame.closest(
+031372:                             '.vm--modal, .modal, .lightbox, #lightbox_box'
+031373:                         );
+031374:                         if (ownerModal) {
+031375:                             const modalStyle =
+031376:                                 ownerWindow.getComputedStyle(ownerModal);
+031377:                             const modalZIndex = parseInt(
+031378:                                 modalStyle.zIndex,
+031379:                                 10
+031380:                             );
+031381:                             if (Number.isFinite(modalZIndex)) {
+031382:                                 score += Math.max(0, modalZIndex) * 10;
+031383:                             }
+031384:                             if (
+031385:                                 ownerModal.getAttribute('aria-modal') === 'true' ||
+031386:                                 ownerModal.getAttribute('aria-expanded') === 'true'
+031387:                             ) {
+031388:                                 score += 2000;
+031389:                             }
+031390:                             const allModals = Array.from(
+031391:                                 ownerDocument.querySelectorAll(
+031392:                                     '.vm--modal, .modal, .lightbox, #lightbox_box'
+031393:                                 )
+031394:                             );
+031395:                             score += Math.max(
+031396:                                 0,
+
+===== context-8 [31442-31562] =====
+031442:                 } catch (_error) {}
+031443:                 candidates.push({
+031444:                     document: candidateDocument,
+031445:                     score,
+031446:                     documentIndex
+031447:                 });
+031448:             });
+031449:         candidates.sort((left, right) => {
+031450:             return (
+031451:                 right.score - left.score ||
+031452:                 right.documentIndex - left.documentIndex
+031453:             );
+031454:         });
+031455:         return candidates[0]?.document || document;
+031456:     }
+031457:     function getSharedTopWindow() {
+031458:         try {
+031459:             return window.top || window;
+031460:         } catch (_error) {
+031461:             return window;
+031462:         }
+031463:     }
+031464:     function claimCurrentMissionExecutionOwnership(reason = '') {
+031465:         const primaryDocument =
+031466:             getPrimaryMissionRequirementDocument();
+031467:         if (primaryDocument !== document) {
+031468:             return false;
+031469:         }
+031470:         const sharedTopWindow =
+031471:             getSharedTopWindow();
+031472:         try {
+031473:             sharedTopWindow[MF_SHARED_ACTIVE_INSTANCE_KEY] = {
+031474:                 token: MF_INSTANCE_TOKEN,
+031475:                 missionKey: getLocalMissionInstanceKey(),
+031476:                 claimedAt: Date.now(),
+031477:                 reason: String(reason || '')
+031478:             };
+031479:         } catch (_error) {}
+031480:         return true;
+031481:     }
+031482:     function isCurrentMissionExecutionOwner(reason = '') {
+031483:         const primaryDocument =
+031484:             getPrimaryMissionRequirementDocument();
+031485:         if (primaryDocument !== document) {
+031486:             return false;
+031487:         }
+031488:         const sharedTopWindow =
+031489:             getSharedTopWindow();
+031490:         try {
+031491:             const owner =
+031492:                 sharedTopWindow[MF_SHARED_ACTIVE_INSTANCE_KEY];
+031493:             if (
+031494:                 !owner ||
+031495:                 owner.token === MF_INSTANCE_TOKEN ||
+031496:                 owner.missionKey !== getLocalMissionInstanceKey() ||
+031497:                 Date.now() - Number(owner.claimedAt || 0) > 5000
+031498:             ) {
+031499:                 return claimCurrentMissionExecutionOwnership(reason);
+031500:             }
+031501:             return owner.token === MF_INSTANCE_TOKEN;
+031502:         } catch (_error) {
+031503:             return true;
+031504:         }
+031505:     }
+031506:     function getCurrentFrameOwnerMissionRoot(primaryDocument) {
+031507:         try {
+031508:             const frame =
+031509:                 primaryDocument?.defaultView?.frameElement;
+031510:             if (!frame || !isMissionElementVisible(frame)) {
+031511:                 return null;
+031512:             }
+031513:             const ownerRoot = frame.closest(
+031514:                 '.vm--modal, .modal, .lightbox, #lightbox_box'
+031515:             );
+031516:             return ownerRoot && isMissionElementVisible(ownerRoot)
+031517:                 ? ownerRoot
+031518:                 : null;
+031519:         } catch (_error) {
+031520:             return null;
+031521:         }
+031522:     }
+031523:     function synchroniseMissionInstanceState(reason = '') {
+031524:         const nextMissionKey =
+031525:             getLocalMissionInstanceKey();
+031526:         if (!mfCurrentMissionInstanceKey) {
+031527:             mfCurrentMissionInstanceKey = nextMissionKey;
+031528:             return false;
+031529:         }
+031530:         if (
+031531:             !nextMissionKey ||
+031532:             nextMissionKey === mfCurrentMissionInstanceKey
+031533:         ) {
+031534:             return false;
+031535:         }
+031536:         const currentKeyIsStrong =
+031537:             /^mission:\d+$/.test(
+031538:                 mfCurrentMissionInstanceKey
+031539:             );
+031540:         const nextKeyIsStrong =
+031541:             /^mission:\d+$/.test(
+031542:                 nextMissionKey
+031543:             );
+031544:         if (!currentKeyIsStrong && nextKeyIsStrong) {
+031545:             mfCurrentMissionInstanceKey = nextMissionKey;
+031546:             invalidateMissionContextCaches();
+031547:             invalidatePatientCountCache();
+031548:             return false;
+031549:         }
+031550:         if (currentKeyIsStrong && !nextKeyIsStrong) {
+031551:             return false;
+031552:         }
+031553:         mfCurrentMissionInstanceKey = nextMissionKey;
+031554:         invalidateMissionContextCaches();
+031555:         invalidatePatientCountCache();
+031556:         invalidateVehicleCheckboxCache();
+031557:         clearSelectionGuards();
+031558:         clearAutoSelectionMissionGuard(
+031559:             `mission changed: ${reason || 'shared reader'}`
+031560:         );
+031561:         mfPatientSelectionLedgerCache = null;
+031562:         try {
+
+===== context-9 [32429-32523] =====
+032429:                             .reasons
+032430:                             .push(
+032431:                                 reason
+032432:                             );
+032433:                     }
+032434:                     return;
+032435:                 }
+032436:                 contexts.set(
+032437:                     root,
+032438:                     {
+032439:                         root,
+032440:                         document:
+032441:                             ownerDocument,
+032442:                         score,
+032443:                         reasons:
+032444:                             reason
+032445:                                 ? [
+032446:                                     reason
+032447:                                 ]
+032448:                                 : []
+032449:                     }
+032450:                 );
+032451:             };
+032452:         const primaryMissionDocument =
+032453:             getPrimaryMissionRequirementDocument();
+032454:         const accessibleDocuments =
+032455:             primaryMissionDocument
+032456:                 ? [primaryMissionDocument]
+032457:                 : [document];
+032458:         accessibleDocuments
+032459:             .forEach(
+032460:                 candidateDocument => {
+032461:                     if (
+032462:                         !isMissionDocumentVisible(
+032463:                             candidateDocument
+032464:                         )
+032465:                     ) {
+032466:                         return;
+032467:                     }
+032468:                     const contextCountBeforeDocument = contexts.size;
+032469:                     const markerDefinitions = [
+032470:                         {
+032471:                             selector:
+032472:                                 '#mission_general_info',
+032473:                             score:
+032474:                                 120,
+032475:                             reason:
+032476:                                 'mission-general-info'
+032477:                         },
+032478:                         {
+032479:                             selector:
+032480:                                 '#mission_alarm_btn, #alarm_button',
+032481:                             score:
+032482:                                 100,
+032483:                             reason:
+032484:                                 'dispatch-button'
+032485:                         },
+032486:                         {
+032487:                             selector:
+032488:                                 'input.vehicle_checkbox, input[type="checkbox"][vehicle_id]',
+032489:                             score:
+032490:                                 80,
+032491:                             reason:
+032492:                                 'vehicle-list'
+032493:                         },
+032494:                         {
+032495:                             selector:
+032496:                                 '#mission_help',
+032497:                             score:
+032498:                                 50,
+032499:                             reason:
+032500:                                 'mission-help'
+032501:                         },
+032502:                         {
+032503:                             selector:
+032504:                                 '#mc-map-command-toolkit-mission-requirements[data-mcms-requirements-panel="1"], ' +
+032505:                                 'section[data-mcms-requirements-panel="1"] table[aria-label="Live mission requirements"]',
+032506:                             score:
+032507:                                 115,
+032508:                             reason:
+032509:                                 'live-requirements-panel'
+032510:                         },
+032511:                         {
+032512:                             selector:
+032513:                                 '.alert.alert-danger, .alert-danger, [role="alert"], [id*="missing_"], [class*="missing"]',
+032514:                             score:
+032515:                                 90,
+032516:                             reason:
+032517:                                 'mission-alert'
+032518:                         }
+032519:                     ];
+032520:                     markerDefinitions
+032521:                         .forEach(
+032522:                             definition => {
+032523:                                 let elements = [];
+
+===== context-10 [32849-32943] =====
+032849:                         sourceDescriptor.missionTypeId ||
+032850:                         ''
+032851:                     ) &&
+032852:                 finalMissionId ===
+032853:                     String(
+032854:                         sourceDescriptor.missionId ||
+032855:                         ''
+032856:                     )
+032857:             );
+032858:         } catch (_error) {
+032859:             return false;
+032860:         }
+032861:     }
+032862:     function getStrongActiveMissionId() {
+032863:         const missionKey = String(
+032864:             getLocalMissionInstanceKey() || ''
+032865:         );
+032866:         const keyMatch =
+032867:             missionKey.match(
+032868:                 /^mission:(\d+)$/
+032869:             );
+032870:         if (keyMatch) return keyMatch[1];
+032871:         try {
+032872:             const primaryDocument =
+032873:                 getPrimaryMissionRequirementDocument();
+032874:             const scopedMissionId =
+032875:                 getMissionIdFromLocalScope(
+032876:                     primaryDocument
+032877:                 );
+032878:             if (scopedMissionId) {
+032879:                 return scopedMissionId;
+032880:             }
+032881:             const documentMissionId =
+032882:                 parseMissionIdFromHrefForQueueRestart(
+032883:                     primaryDocument?.URL ||
+032884:                     primaryDocument?.location?.href ||
+032885:                     ''
+032886:                 );
+032887:             if (documentMissionId) {
+032888:                 return documentMissionId;
+032889:             }
+032890:         } catch (_error) {}
+032891:         try {
+032892:             return parseMissionIdFromHrefForQueueRestart(
+032893:                 window.frameElement?.src ||
+032894:                 window.location.href
+032895:             );
+032896:         } catch (_error) {
+032897:             return '';
+032898:         }
+032899:     }
+032900:     function getMissionTypeIdFromScope(scope) {
+032901:         if (!scope) return '';
+032902:         const attributeNames = [
+032903:             'data-mission-type-id',
+032904:             'data-mission-type',
+032905:             'mission_type_id',
+032906:             'data-einsatz-id',
+032907:             'data-einsatz'
+032908:         ];
+032909:         const elements = [];
+032910:         if (scope.nodeType === 1) {
+032911:             elements.push(scope);
+032912:         }
+032913:         try {
+032914:             elements.push(
+032915:                 ...scope.querySelectorAll(
+032916:                     '#mission_general_info, ' +
+032917:                     '[data-mission-type-id], ' +
+032918:                     '[data-mission-type], ' +
+032919:                     '[mission_type_id], ' +
+032920:                     '[data-einsatz-id], ' +
+032921:                     '[data-einsatz]'
+032922:                 )
+032923:             );
+032924:         } catch (_error) {}
+032925:         for (const element of elements) {
+032926:             for (const attributeName of attributeNames) {
+032927:                 const value = String(
+032928:                     element?.getAttribute?.(
+032929:                         attributeName
+032930:                     ) || ''
+032931:                 ).trim();
+032932:                 if (/^\d+$/.test(value)) {
+032933:                     return value;
+032934:                 }
+032935:             }
+032936:         }
+032937:         const routeElements = [];
+032938:         try {
+032939:             routeElements.push(
+032940:                 ...scope.querySelectorAll(
+032941:                     'a[href*="/einsaetze/"], ' +
+032942:                     'form[action*="/einsaetze/"]'
+032943:                 )
+
+===== context-11 [32963-33057] =====
+032963:                 if (match) return match[1];
+032964:             } catch (_error) {}
+032965:         }
+032966:         return '';
+032967:     }
+032968:     function getMissionRequirementSource(
+032969:         forceRefresh = false
+032970:     ) {
+032971:         const now = Date.now();
+032972:         const missionKey = String(
+032973:             getLocalMissionInstanceKey() || ''
+032974:         );
+032975:         if (
+032976:             !forceRefresh &&
+032977:             now <
+032978:                 mfMissionRequirementSourceCache.expiresAt &&
+032979:             missionKey ===
+032980:                 mfMissionRequirementSourceCache.missionKey
+032981:         ) {
+032982:             return mfMissionRequirementSourceCache.descriptor;
+032983:         }
+032984:         const expectedMissionId =
+032985:             getStrongActiveMissionId();
+032986:         const primaryDocument =
+032987:             getPrimaryMissionRequirementDocument();
+032988:         const contexts =
+032989:             getActiveMissionRequirementContexts(
+032990:                 forceRefresh
+032991:             );
+032992:         const documents =
+032993:             getMissionAccessibleDocuments(
+032994:                 forceRefresh
+032995:             );
+032996:         const candidates = [];
+032997:         const seenElements = new Set();
+032998:         const addElement = (
+032999:             element,
+033000:             baseScore,
+033001:             reason
+033002:         ) => {
+033003:             if (
+033004:                 !element ||
+033005:                 seenElements.has(element) ||
+033006:                 element.isConnected === false
+033007:             ) {
+033008:                 return;
+033009:             }
+033010:             seenElements.add(element);
+033011:             const sourceDescriptor =
+033012:                 normaliseMissionRequirementSourceUrl(
+033013:                     element.getAttribute?.('href') ||
+033014:                         element.href ||
+033015:                         '',
+033016:                     expectedMissionId,
+033017:                     element.ownerDocument?.baseURI ||
+033018:                         window.location.href
+033019:                 );
+033020:             if (!sourceDescriptor) return;
+033021:             let score = baseScore;
+033022:             if (element.id === 'mission_help') {
+033023:                 score += 1000;
+033024:             }
+033025:             if (
+033026:                 element.ownerDocument ===
+033027:                 primaryDocument
+033028:             ) {
+033029:                 score += 800;
+033030:             }
+033031:             if (
+033032:                 sourceDescriptor.linkedMissionId &&
+033033:                 sourceDescriptor.linkedMissionId ===
+033034:                     expectedMissionId
+033035:             ) {
+033036:                 score += 2000;
+033037:             }
+033038:             if (
+033039:                 isMissionElementVisible(
+033040:                     element
+033041:                 )
+033042:             ) {
+033043:                 score += 20;
+033044:             }
+033045:             candidates.push({
+033046:                 ...sourceDescriptor,
+033047:                 element,
+033048:                 score,
+033049:                 reason
+033050:             });
+033051:         };
+033052:         contexts.forEach(context => {
+033053:             let elements = [];
+033054:             try {
+033055:                 elements = Array.from(
+033056:                     context.root.querySelectorAll(
+033057:                         '#mission_help, ' +
+
+===== context-12 [52309-52479] =====
+052309:             missionPage &&
+052310:             wrapper &&
+052311:             shouldRefreshTrainedPersonnelPanel
+052312:         ) {
+052313:             invalidateLiveTrainedPersonnelDisplayCache();
+052314:             scheduleTrainedPersonnelPanelRefresh();
+052315:         }
+052316:         if (autoModeRunning && missionPage && flags.relevant) {
+052317:             scheduleAutoModeLoopResume(
+052318:                 'filtered/coalesced DOM mutation'
+052319:             );
+052320:         }
+052321:     }
+052322:     function scheduleMissionFinderMutationWork(records = []) {
+052323:         const flags = classifyMissionFinderMutations(records);
+052324:         if (!flags.relevant) return;
+052325:         mfRuntimeMemoryLastMutationAt = Date.now();
+052326:         mergeMainMutationFlags(flags);
+052327:         if (mfMainMutationFlushTimer) return;
+052328:         mfMainMutationFlushTimer = setTimeout(
+052329:             flushMissionFinderMutationWork,
+052330:             200
+052331:         );
+052332:     }
+052333:     function shouldKeepMissionFinderObserverForCurrentFrame() {
+052334:         if (MF_IS_TOP_WINDOW) return true;
+052335:         if (!document.body || !isMissionPage()) return false;
+052336:         if (isMfV3ManagedActiveWorker()) return true;
+052337:         try {
+052338:             return getPrimaryMissionRequirementDocument() === document;
+052339:         } catch (_error) {
+052340:             return true;
+052341:         }
+052342:     }
+052343:     function suspendMissionFinderRuntimeForInactiveFrame(
+052344:         reason = ''
+052345:     ) {
+052346:         if (MF_IS_TOP_WINDOW) return false;
+052347:         if (mfMainMutationObserver) {
+052348:             mfMainMutationObserver.disconnect();
+052349:             mfMainMutationObserver = null;
+052350:         }
+052351:         if (mfMainMutationFlushTimer) {
+052352:             clearTimeout(mfMainMutationFlushTimer);
+052353:             mfMainMutationFlushTimer = null;
+052354:         }
+052355:         if (mfAutoLoopResumeTimer) {
+052356:             clearTimeout(mfAutoLoopResumeTimer);
+052357:             mfAutoLoopResumeTimer = null;
+052358:         }
+052359:         if (mfDebugRenderFrame !== null) {
+052360:             try {
+052361:                 cancelAnimationFrame(mfDebugRenderFrame);
+052362:             } catch (_error) {}
+052363:             clearTimeout(mfDebugRenderFrame);
+052364:             mfDebugRenderFrame = null;
+052365:         }
+052366:         if (mfVehicleLoadRenderFrame !== null) {
+052367:             try {
+052368:                 cancelAnimationFrame(mfVehicleLoadRenderFrame);
+052369:             } catch (_error) {}
+052370:             clearTimeout(mfVehicleLoadRenderFrame);
+052371:             mfVehicleLoadRenderFrame = null;
+052372:         }
+052373:         if (mfIphoneNativePickerSyncTimer) {
+052374:             clearTimeout(mfIphoneNativePickerSyncTimer);
+052375:             mfIphoneNativePickerSyncTimer = null;
+052376:         }
+052377:         mfMissingUnitRetryIntervals.forEach(intervalId => {
+052378:             clearInterval(intervalId);
+052379:         });
+052380:         mfMissingUnitRetryIntervals.clear();
+052381:         stopSessionRuntimeTicker();
+052382:         stopMissionFinderRuntimeMemoryMaintenance();
+052383:         cancelTrainedPersonnelPanelRefresh();
+052384:         removeMissionFinderRuntimeMemoryActivityTracking();
+052385:         cleanupMissionFinderIphoneNativePickerSurfaces();
+052386:         releaseMissionFinderLargeEphemeralState(reason);
+052387:         document.getElementById(
+052388:             'mission-finder-wrapper'
+052389:         )?.remove();
+052390:         invalidateVehicleCheckboxCache();
+052391:         invalidateMissionContextCaches();
+052392:         invalidatePatientCountCache();
+052393:         invalidateTransportCaches();
+052394:         mfVehicleMatchCandidateCache.clear();
+052395:         pruneLiveTrainingVerifyCache();
+052396:         resetMainMutationFlags();
+052397:         if (!mfRuntimeSuspendedForInactiveFrame) {
+052398:             mfRuntimeMemoryInactiveSuspendCount += 1;
+052399:         }
+052400:         mfRuntimeSuspendedForInactiveFrame = true;
+052401:         mfRuntimeMemoryLastReason =
+052402:             String(reason || 'inactive mission frame');
+052403:         return true;
+052404:     }
+052405:     function reconcileMissionFinderFrameRuntime(
+052406:         reason = 'top-window ownership check'
+052407:     ) {
+052408:         if (MF_IS_TOP_WINDOW) return;
+052409:         if (!shouldKeepMissionFinderObserverForCurrentFrame()) {
+052410:             suspendMissionFinderRuntimeForInactiveFrame(reason);
+052411:             return;
+052412:         }
+052413:         const wasSuspended =
+052414:             mfRuntimeSuspendedForInactiveFrame;
+052415:         mfRuntimeSuspendedForInactiveFrame = false;
+052416:         if (!mfMainMutationObserver) {
+052417:             startMissionFinderObserver();
+052418:         }
+052419:         if (
+052420:             wasSuspended &&
+052421:             isMissionPage() &&
+052422:             !document.getElementById(
+052423:                 'mission-finder-wrapper'
+052424:             )
+052425:         ) {
+052426:             initialize();
+052427:         }
+052428:         startMissionFinderRuntimeMemoryMaintenance();
+052429:     }
+052430:     function dispatchMissionFinderFrameRuntimeEvent(
+052431:         candidateDocument,
+052432:         detail = {}
+052433:     ) {
+052434:         try {
+052435:             if (!candidateDocument?.documentElement) return;
+052436:             const ownerWindow =
+052437:                 candidateDocument.defaultView || window;
+052438:             const EventConstructor =
+052439:                 ownerWindow.CustomEvent || CustomEvent;
+052440:             candidateDocument.dispatchEvent(
+052441:                 new EventConstructor(
+052442:                     MF_FRAME_RUNTIME_RECONCILE_EVENT,
+052443:                     { detail }
+052444:                 )
+052445:             );
+052446:         } catch (_error) {}
+052447:     }
+052448:     function reconcileMissionFinderFrameRuntimesFromTop() {
+052449:         if (!MF_IS_TOP_WINDOW) return;
+052450:         try {
+052451:             getMissionAccessibleDocuments(false)
+052452:                 .forEach(candidateDocument => {
+052453:                     if (candidateDocument === document) return;
+052454:                     dispatchMissionFinderFrameRuntimeEvent(
+052455:                         candidateDocument,
+052456:                         {
+052457:                             reason:
+052458:                                 'top-window ownership supervisor'
+052459:                         }
+052460:                     );
+052461:                 });
+052462:         } catch (_error) {}
+052463:     }
+052464:     function releaseRemovedMissionFinderFrameRuntimes(
+052465:         records = []
+052466:     ) {
+052467:         if (!MF_IS_TOP_WINDOW) return;
+052468:         const frames = new Set();
+052469:         const addFrames = node => {
+052470:             if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+052471:                 return;
+052472:             }
+052473:             if (node.matches?.('iframe')) {
+052474:                 frames.add(node);
+052475:             }
+052476:             try {
+052477:                 node.querySelectorAll?.('iframe')
+052478:                     .forEach(frame => frames.add(frame));
+052479:             } catch (_error) {}
+
+===== context-13 [52694-52864] =====
+052694:         invalidateTransportCaches();
+052695:         mfVehicleMatchCandidateCache.clear();
+052696:         resetMainMutationFlags();
+052697:         mfRuntimeCleanupInstalled = false;
+052698:     }
+052699:     function shouldPreserveMissionFinderRuntimeOnPageHide(
+052700:         persisted
+052701:     ) {
+052702:         return Boolean(persisted);
+052703:     }
+052704:     function reconcileMissionFinderAfterPageShow() {
+052705:         mfRuntimeSuspendedForPageHide = false;
+052706:         startMissionEventCollectibleCollector();
+052707:         invalidateVehicleCheckboxCache();
+052708:         invalidateMissionContextCaches();
+052709:         invalidatePatientCountCache();
+052710:         invalidateTransportCaches();
+052711:         resetMainMutationFlags();
+052712:         if (
+052713:             document.body &&
+052714:             !mfMainMutationObserver
+052715:         ) {
+052716:             startMissionFinderObserver();
+052717:         }
+052718:         if (!shouldKeepMissionFinderObserverForCurrentFrame()) {
+052719:             suspendMissionFinderRuntimeForInactiveFrame(
+052720:                 'bfcache frame is not the active mission owner'
+052721:             );
+052722:             return;
+052723:         }
+052724:         const missionPage = isMissionPage();
+052725:         const wrapper = document.getElementById(
+052726:             'mission-finder-wrapper'
+052727:         );
+052728:         if (missionPage && !wrapper) {
+052729:             initialize();
+052730:         } else if (!missionPage && wrapper) {
+052731:             removeMissionFinderPanelForClosedMission(
+052732:                 'Safari bfcache restoration'
+052733:             );
+052734:         }
+052735:         scheduleMissionFinderIphoneNativePickerSync(
+052736:             'Safari bfcache restoration',
+052737:             0,
+052738:             0
+052739:         );
+052740:         syncBackgroundAutomationWatchers();
+052741:         if (
+052742:             document.getElementById(
+052743:                 'session-panel-content'
+052744:             )
+052745:         ) {
+052746:             startSessionRuntimeTicker();
+052747:         }
+052748:         if (isMissionPage()) {
+052749:             startMissionFinderRuntimeMemoryMaintenance();
+052750:         }
+052751:     }
+052752:     function installMissionFinderRuntimeCleanup() {
+052753:         if (mfRuntimeCleanupInstalled) return;
+052754:         mfRuntimeCleanupInstalled = true;
+052755:         mfRuntimePageHideHandler = event => {
+052756:             if (
+052757:                 shouldPreserveMissionFinderRuntimeOnPageHide(
+052758:                     event?.persisted
+052759:                 )
+052760:             ) {
+052761:                 suspendMissionFinderRuntimeForPageHide(
+052762:                     'browser back-forward cache pagehide'
+052763:                 );
+052764:                 return;
+052765:             }
+052766:             cleanupMissionFinderRuntime();
+052767:         };
+052768:         mfRuntimePageShowHandler = event => {
+052769:             if (!event?.persisted) return;
+052770:             reconcileMissionFinderAfterPageShow();
+052771:         };
+052772:         window.addEventListener(
+052773:             'pagehide',
+052774:             mfRuntimePageHideHandler
+052775:         );
+052776:         window.addEventListener(
+052777:             'pageshow',
+052778:             mfRuntimePageShowHandler,
+052779:             { passive: true }
+052780:         );
+052781:     }
+052782:     function startMissionFinderObserver() {
+052783:         if (mfV3DormantPreload) return;
+052784:         globalThis.__MCN_BOOT_MARK__?.('mission-observer-entered', document.readyState);
+052785:         if (isMfV3ManagedActiveWorker()) {
+052786:             globalThis.__MCN_BOOT_MARK__?.('mission-observer-managed-active-owner');
+052787:         }
+052788:         if (mfMainMutationObserver) return;
+052789:         installMissionFinderRuntimeCleanup();
+052790:         installMissionFinderFrameRuntimeReconciliation();
+052791:         if (!shouldKeepMissionFinderObserverForCurrentFrame()) {
+052792:             globalThis.__MCN_BOOT_MARK__?.('mission-observer-inactive-owner');
+052793:             suspendMissionFinderRuntimeForInactiveFrame(
+052794:                 'startup frame is not the active mission owner'
+052795:             );
+052796:             return;
+052797:         }
+052798:         mfRuntimeSuspendedForInactiveFrame = false;
+052799:         installIssueRecorderWatchers();
+052800:         installPersonnelRegistryUpdateHandler();
+052801:         installMissionFinderRuntimeMemoryActivityTracking();
+052802:         if (MF_IS_TOP_WINDOW) {
+052803:             installManualMissionClickFlagClearer();
+052804:             installBackgroundWatcherSupervisor();
+052805:             compactMissionFinderPersistentStorage();
+052806:             if (
+052807:                 localStorage.getItem(
+052808:                     'mf_post_transport_rehook_pending_v1'
+052809:                 ) === 'true' ||
+052810:                 isRecentTransportRehookWindowActive()
+052811:             ) {
+052812:                 forceAutoModeBackOnForTransportRehook();
+052813:                 setTimeout(() => {
+052814:                     openFirstMissionAfterTransportAutoClose(
+052815:                         'startup-pending-rehook'
+052816:                     );
+052817:                 }, 2500);
+052818:             }
+052819:         }
+052820:         if (isMissionPage()) initialize();
+052821:         globalThis.__MCN_BOOT_MARK__?.('mission-observer-active');
+052822:         mfMainMutationObserver = new MutationObserver(records => {
+052823:             releaseRemovedMissionFinderFrameRuntimes(records);
+052824:             scheduleMissionFinderMutationWork(records);
+052825:         });
+052826:         mfMainMutationObserver.observe(document.body, {
+052827:             childList: true,
+052828:             subtree: true
+052829:         });
+052830:         if (isMissionPage()) {
+052831:             startMissionFinderRuntimeMemoryMaintenance();
+052832:         }
+052833:         scheduleAutoMemoryRecycleResume();
+052834:         if (isMfV3ManagedTransportWorker()) {
+052835:             clearAllTransportAutomationFlags('transport-worker-b');
+052836:             void handleTransportRequestsAfterDispatch('worker-b');
+052837:         }
+052838:     }
+052839:     function getMfV3DormantPreloadMissionId() {
+052840:         try {
+052841:             const match = String(
+052842:                 window.location.pathname || ''
+052843:             ).match(/^\/missions\/(\d+)(?:\/|$)/i);
+052844:             return match ? match[1] : '';
+052845:         } catch (_error) {
+052846:             return '';
+052847:         }
+052848:     }
+052849:     function getMfV3OperationalOwnershipBridge() {
+052850:         try {
+052851:             return (
+052852:                 window.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__ ||
+052853:                 window.__MCN_V3_PIPELINE_PRELOAD_BRIDGE__ ||
+052854:                 null
+052855:             );
+052856:         } catch (_error) {
+052857:             return null;
+052858:         }
+052859:     }
+052860:     function installMfV3DormantPreloadBridge() {
+052861:         if (!mfV3DormantPreload) return null;
+052862:         try {
+052863:             const existing =
+052864:                 window[MF_V3_DORMANT_PRELOAD_BRIDGE_KEY];
