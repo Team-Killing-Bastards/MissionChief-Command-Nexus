@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.35
+// @version      3.0.36
 // @description  MissionChief safe background automation.
 // @author       MartyBlyth
 // @license      MIT
@@ -152,8 +152,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.35';
-const MASTER_VERSION = '3.0.35';
+const VERSION = '3.0.36';
+const MASTER_VERSION = '3.0.36';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -2687,63 +2687,7 @@ state.prisonerReleaseSuccessKey = '';
 state.prisonerReleaseSuccessSince = 0;
 }
 function maybeHandleConfirmedPrisonerReleaseSuccess(rootDoc, href, context) {
-if (!state.wanted || state.stopping) return false;
-const key = prisonerReleaseSuccessKey(href, context);
-if (!key) {
-resetPrisonerReleaseSuccessTracking();
 return false;
-}
-if (state.prisonerReleaseHandledKeys.has(key)) return false;
-if (state.prisonerReleaseSuccessKey !== key) {
-state.prisonerReleaseSuccessKey = key;
-state.prisonerReleaseSuccessSince = Date.now();
-return false;
-}
-if (Date.now() - state.prisonerReleaseSuccessSince < PRISONER_RELEASE_SUCCESS_REHOOK_DELAY_MS) return false;
-const fresh = transportContextDetails(rootDoc, href);
-if (!fresh.releaseSuccessAlerts) return false;
-const releasedMissionId = missionIdFromUrl(href) || state.currentMissionId;
-const releasedMissionName = state.currentMissionName || missionNameForId(releasedMissionId);
-const mission = chooseTopMission({ actionableOnly: true });
-if (!mission?.missionId || !mission.url) {
-setPhase(
-'WAITING_MISSION',
-'Prisoners released; waiting for mission',
-`${missionDisplay(releasedMissionId, releasedMissionName)} release is confirmed, but no actionable personal mission is currently available.`
-);
-return false;
-}
-state.lastPriorityRedirectAt = 0;
-const redirected = redirectWorkerToPriority(
-{ source: 'PRISONER_RELEASE_SUCCESS', missionId: mission.missionId, url: mission.url, mission },
-releasedMissionId
-);
-if (!redirected) return false;
-state.prisonerReleaseHandledKeys.add(key);
-trimOldestSetEntries(state.prisonerReleaseHandledKeys, CONTROLLER_EVENT_KEY_CACHE_LIMIT);
-state.prisonerReleaseSuccessRehooks += 1;
-const event = {
-at: nowIso(),
-releasedMissionId,
-releasedMissionName,
-releasePath: pathFromUrl(href),
-toMissionId: mission.missionId,
-toMissionName: cleanMissionCaption(mission.caption),
-evidence: fresh.evidence.slice(0, 8),
-};
-state.prisonerReleaseSuccessHistory.push(event);
-if (state.prisonerReleaseSuccessHistory.length > PRISONER_RELEASE_HISTORY_LIMIT) {
-state.prisonerReleaseSuccessHistory.splice(0, state.prisonerReleaseSuccessHistory.length - PRISONER_RELEASE_HISTORY_LIMIT);
-}
-if (state.activeTransportEvent) endTransportEvent('release-success-confirmed', fresh, href);
-state.transportKind = '';
-state.transportIdentity = '';
-state.transportSince = 0;
-state.transportWarned = false;
-clearTransportServiceState();
-resetPrisonerReleaseSuccessTracking();
-log('Confirmed prisoner release success; re-hooked the hidden worker to the current top personal mission.', event);
-return true;
 }
 function redirectAfterRecoverableSkip(target, record) {
 if (!target?.missionId || !target.url || !state.worker?.isConnected) return false;
@@ -4968,6 +4912,7 @@ href: url.href,
 return null;
 }
 function maybeAssistPrisonerTransport(doc, href, context, requests) {
+if (state.workerRole !== 'TRANSPORT_B') return false;
 if (!state.wanted || state.stopping || context?.kind !== 'PRISONER') {
 resetPrisonerAssistTracking();
 return false;
@@ -5069,6 +5014,7 @@ href: url.href,
 return null;
 }
 function maybeAssistPatientTransport(doc, href, context, requests) {
+if (state.workerRole !== 'TRANSPORT_B') return false;
 if (!state.wanted || state.stopping || context?.kind !== 'PATIENT') {
 resetPatientAssistTracking();
 return false;
@@ -5272,6 +5218,7 @@ createWorker(mission.url);
 return true;
 }
 function maybeHandleTransportServiceTimeout(requests) {
+if (state.workerRole !== 'TRANSPORT_B') return false;
 if (!state.transportServiceActive || !state.transportServiceStartedAt) return false;
 const elapsed = Date.now() - state.transportServiceStartedAt;
 if (elapsed < TRANSPORT_SERVICE_MAX_MS) return false;
@@ -5309,202 +5256,10 @@ state.transportRecoveryHistory.length - TRANSPORT_RECOVERY_HISTORY_LIMIT
 }
 }
 function maybeReturnFromCompletedPrisonerDestination(context, href, requests) {
-if (
-!state.wanted ||
-state.stopping ||
-state.transportServiceActive ||
-!state.worker?.isConnected ||
-!state.transportSince ||
-!isCompletedPrisonerDestinationContext(context, href)
-) return false;
-const vehicleId = vehicleIdFromUrl(href);
-if (!vehicleId || radioRequestForVehicle(vehicleId, requests)) return false;
-const elapsedMs = Math.max(0, Date.now() - state.transportSince);
-if (elapsedMs < COMPLETED_PRISONER_DESTINATION_RETURN_MS) return false;
-const recoveryUrl = sleepRecoveryMissionUrl(href);
-const missionId = missionIdFromUrl(recoveryUrl);
-if (
-!recoveryUrl ||
-!missionId ||
-(state.currentMissionId && missionId !== state.currentMissionId)
-) {
-setError(
-'Completed prisoner destination return target was unavailable',
-`Vehicle ${vehicleId} cleared, but the same mission URL could not be verified. No page action was clicked.`
-);
-return true;
-}
-const identity = transportContextIdentity(context, href);
-const event = {
-kind: 'PRISONER',
-identity,
-vehicleId,
-subjectId: identity.split(':')[2] || '',
-missionId,
-missionName: missionNameForId(missionId) || state.currentMissionName,
-elapsedMs,
-evidence: (context.evidence || []).slice(0, 12),
-observedPath: pathFromUrl(href),
-recoveryPath: pathFromUrl(recoveryUrl),
-action: 'return-existing-worker-after-completed-prisoner-destination',
-};
-recordTransportRecovery(event);
-state.nonMissionRedirectRecoveries += 1;
-state.nonMissionRedirectRecoveryHistory.push({ at: nowIso(), ...event });
-if (state.nonMissionRedirectRecoveryHistory.length > NON_MISSION_REDIRECT_RECOVERY_HISTORY_LIMIT) {
-state.nonMissionRedirectRecoveryHistory.splice(
-0,
-state.nonMissionRedirectRecoveryHistory.length - NON_MISSION_REDIRECT_RECOVERY_HISTORY_LIMIT
-);
-}
-if (state.activeTransportEvent) {
-endTransportEvent('completed-prisoner-destination-return', context, href);
-}
-clearPostDispatchWatchdog('completed-prisoner-destination-return');
-clearAutoRecoveryWatchdog('completed-prisoner-destination-return');
-clearSharedV2QueueGuard('completed-prisoner-destination-return', missionId);
-clearSharedV2AutoRunning('completed-prisoner-destination-return');
-resetAutoStartTracking();
-clearPromotedWorkTracking();
-state.running = false;
-state.transportKind = '';
-state.transportIdentity = '';
-state.transportSince = 0;
-state.transportWarned = false;
-state.redirectFromMissionId = missionId;
-state.redirectTargetMissionId = missionId;
-state.lastPriorityRedirectAt = Date.now();
-state.currentMissionUrl = recoveryUrl;
-persistResumeMission(recoveryUrl);
-setPhase(
-'TRANSPORT_RETURN',
-'Prisoner placed; returning to mission',
-`${missionDisplay(missionId, event.missionName)} will resume in the existing Worker A.`
-);
-log('Returned the existing Worker A from a completed prisoner destination route.', event);
-try {
-state.worker.contentWindow.location.replace(recoveryUrl);
-return true;
-} catch {
-try {
-state.worker.src = recoveryUrl;
-return true;
-} catch (error) {
-setError(
-'Completed prisoner destination return failed',
-`Worker A could not return to ${missionDisplay(missionId, event.missionName)}. ${String(error?.message || error)}`
-);
-return true;
-}
-}
+return false;
 }
 function maybeRecoverStalledTransportContext(context, href, requests) {
-if (
-!state.wanted ||
-state.stopping ||
-state.transportServiceActive ||
-!context?.kind ||
-!state.transportSince
-) return false;
-if (isPrisonerReleaseFallbackContext(context)) return false;
-if (
-isCompletedPrisonerDestinationContext(context, href) &&
-!radioRequestForVehicle(vehicleIdFromUrl(href), requests)
-) return false;
-const elapsedMs = Math.max(0, Date.now() - state.transportSince);
-if (elapsedMs < TRANSPORT_HARD_RECOVERY_MS) return false;
-const identity = transportContextIdentity(context, href);
-if (!identity || identity !== state.transportIdentity) return false;
-const now = Date.now();
-const previous = state.transportRecoveryAttempts.get(identity) || null;
-const previousAttempts = previous &&
-now - Number(previous.lastAt || 0) <= TRANSPORT_RECOVERY_WINDOW_MS
-? Math.max(0, Number(previous.attempts || 0))
-: 0;
-const attempt = previousAttempts + 1;
-state.transportRecoveryAttempts.delete(identity);
-state.transportRecoveryAttempts.set(identity, { attempts: attempt, lastAt: now });
-trimOldestMapEntries(state.transportRecoveryAttempts, TRANSPORT_RECOVERY_HISTORY_LIMIT);
-const vehicleId = identity.split(':')[1] || vehicleIdFromUrl(href);
-const exactRequest = radioRequestForVehicle(vehicleId, requests) || null;
-const recoveryUrl = sleepRecoveryMissionUrl(href);
-const baseEvent = {
-kind: context.kind,
-identity,
-vehicleId,
-subjectId: identity.split(':')[2] || '',
-missionId: exactRequest?.missionId || state.currentMissionId || missionIdFromUrl(recoveryUrl),
-missionName: missionNameForId(exactRequest?.missionId || state.currentMissionId),
-elapsedMs,
-attempt,
-evidence: (context.evidence || []).slice(0, 12),
-observedPath: pathFromUrl(href),
-};
-if (attempt > TRANSPORT_RECOVERY_LIMIT) {
-state.transportRecoveryCircuitBreakers += 1;
-recordTransportRecovery({
-...baseEvent,
-action: 'fail-closed-after-bounded-recovery',
-});
-setError(
-'Transport recovery failed twice',
-`${context.kind === 'PATIENT' ? 'Patient' : 'Prisoner'} transport ${identity} stalled again after the single bounded Worker-A rebuild. All workers were released; Dispatch was not clicked and the mission was not skipped.`
-);
-return true;
-}
-if (!exactRequest && !recoveryUrl) {
-state.transportRecoveryCircuitBreakers += 1;
-recordTransportRecovery({
-...baseEvent,
-action: 'fail-closed-no-exact-recovery-target',
-});
-setError(
-'Transport recovery target was unavailable',
-`No exact personal transport request or mission URL could be verified for ${identity}. All workers were released without clicking Dispatch.`
-);
-return true;
-}
-state.transportHardRecoveries += 1;
-recordTransportRecovery({
-...baseEvent,
-action: exactRequest
-? 'reopen-exact-personal-transport'
-: 'rebuild-worker-a-at-exact-mission',
-recoveryPath: exactRequest
-? `/vehicles/${exactRequest.vehicleId}`
-: pathFromUrl(recoveryUrl),
-});
-if (state.activeTransportEvent) {
-endTransportEvent('bounded-hard-recovery', context, href);
-}
-clearTimer('watcherTimer', window.clearInterval);
-clearTimer('nexusDiscoveryTimer');
-pausePipelineController('transport-context-hard-recovery', true);
-clearPostDispatchWatchdog('transport-context-hard-recovery');
-clearAutoRecoveryWatchdog('transport-context-hard-recovery');
-clearSharedV2QueueGuard('transport-context-hard-recovery', baseEvent.missionId);
-clearSharedV2AutoRunning('transport-context-hard-recovery');
-resetAutoStartTracking();
-clearPromotedWorkTracking();
-state.running = false;
-state.transportKind = '';
-state.transportIdentity = '';
-state.transportSince = 0;
-state.transportWarned = false;
-removeWorker(false);
-saveRunContinuity();
-setPhase(
-'TRANSPORT_RECOVERY',
-'Recovering stalled personal transport',
-`${identity} exceeded ${Math.round(TRANSPORT_HARD_RECOVERY_MS / 1000)} seconds. Rebuilding the single active worker without dispatching or skipping the mission.`
-);
-log('Bounded transport recovery rebuilt Worker A after the transport identity stopped progressing.', baseEvent);
-window.setTimeout(() => {
-if (!state.wanted || state.stopping || state.worker?.isConnected) return;
-if (exactRequest && startTransportOnlyWorker(exactRequest, 'transport-stall-recovery')) return;
-createWorker(recoveryUrl);
-}, 120);
-return true;
+return false;
 }
 function recordTransportAffinity(event) {
 state.transportAffinityHistory.push({ at: nowIso(), ...event });
@@ -5533,11 +5288,13 @@ return request;
 }
 function schedulePostTransportRehook(clearedKey) {
 const [vehicleId, missionId] = String(clearedKey || '').split(':');
-if (!vehicleId || !missionId) return;
-const wasBalancedService =
-state.transportServiceActive &&
-state.transportServiceKey === clearedKey;
-if (wasBalancedService) {
+if (
+!vehicleId ||
+!missionId ||
+state.workerRole !== 'TRANSPORT_B' ||
+!state.transportServiceActive ||
+state.transportServiceKey !== clearedKey
+) return;
 state.transportServiceCleared += 1;
 recordTransportService({
 event: 'service-cleared',
@@ -5548,42 +5305,20 @@ elapsedMs: state.transportServiceStartedAt
 ? Date.now() - state.transportServiceStartedAt
 : 0,
 });
-}
 window.setTimeout(() => {
-if (!state.wanted || state.stopping || !state.worker?.isConnected) return;
+if (
+!state.wanted ||
+state.stopping ||
+state.workerRole !== 'TRANSPORT_B' ||
+!state.worker?.isConnected
+) return;
 const requests = refreshRadioTransportRequests();
 if (radioRequestForVehicle(vehicleId, requests)) return;
-if (wasBalancedService) {
 returnToTopMissionAfterTransport('radio-cleared', {
 key: clearedKey,
 vehicleId,
 missionId,
 });
-return;
-}
-const href = getWorkerHref();
-if (!href || vehicleIdFromUrl(href) !== vehicleId) return;
-const mission = chooseTopMission({ actionableOnly: true });
-if (!mission?.missionId || !mission.url) return;
-state.postTransportRehooks += 1;
-recordTransportAffinity({
-event: 'post-transport-rehook',
-clearedVehicleId: vehicleId,
-clearedMissionId: missionId,
-toMissionId: mission.missionId,
-source: 'TOP_MISSION',
-});
-log('Companion re-hooking hidden worker to the current top personal mission after transport cleared.', {
-clearedVehicleId: vehicleId,
-clearedMissionId: missionId,
-toMissionId: mission.missionId,
-toMissionName: cleanMissionCaption(mission.caption),
-});
-state.lastPriorityRedirectAt = 0;
-redirectWorkerToPriority(
-{ source: 'TOP_MISSION', missionId: mission.missionId, url: mission.url, mission },
-state.currentMissionId || missionId
-);
 }, POST_TRANSPORT_REHOOK_DELAY_MS);
 }
 function choosePriorityTarget() {
@@ -6903,71 +6638,7 @@ createWorker(recoveryUrl);
 return true;
 }
 function maybeRecoverStrandedPrisonerHandoff(doc, href, context, statusText = '') {
-if (
-!state.wanted ||
-state.stopping ||
-state.transportServiceActive ||
-state.nonMissionRedirectRecoveryInFlight ||
-isMissionUrl(href) ||
-vehicleIdFromUrl(href) ||
-context?.kind ||
-doc?.readyState !== 'complete'
-) return false;
-const status = normaliseText(statusText || state.lastStatusText);
-if (!/prisoner cell handoff|assigning prisoner/i.test(status)) return false;
-const stalledSince = Number(state.lastStatusChangedAt || state.lastWorkerNavigationAt || 0);
-const elapsedMs = stalledSince ? Math.max(0, Date.now() - stalledSince) : 0;
-if (elapsedMs < PRISONER_HANDOFF_REDIRECT_RECOVERY_MS) return false;
-const recoveryUrl = sleepRecoveryMissionUrl(href);
-const missionId = missionIdFromUrl(recoveryUrl) || state.currentMissionId;
-if (!recoveryUrl || !missionId) {
-setError(
-'Prisoner handoff recovery target was unavailable',
-'Worker A left the mission during a prisoner cell handoff, but the exact mission URL could not be verified. No Dispatch click was issued.'
-);
-return true;
-}
-const event = {
-at: nowIso(),
-targetMissionId: missionId,
-targetMissionName: missionNameForId(missionId) || state.currentMissionName,
-observedPath: pathFromUrl(href) || '/',
-elapsedMs,
-status,
-action: 'reload-exact-mission-after-prisoner-handoff-redirect',
-};
-state.nonMissionRedirectRecoveries += 1;
-state.nonMissionRedirectRecoveryHistory.push(event);
-if (state.nonMissionRedirectRecoveryHistory.length > NON_MISSION_REDIRECT_RECOVERY_HISTORY_LIMIT) {
-state.nonMissionRedirectRecoveryHistory.splice(
-0,
-state.nonMissionRedirectRecoveryHistory.length - NON_MISSION_REDIRECT_RECOVERY_HISTORY_LIMIT
-);
-}
-state.nonMissionRedirectRecoveryInFlight = true;
-state.running = false;
-resetAutoStartTracking();
-clearPromotedWorkTracking();
-clearAutoRecoveryWatchdog('prisoner-handoff-redirect-recovery');
-clearSharedV2AutoRunning('prisoner-handoff-redirect-recovery');
-clearSharedV2QueueGuard('prisoner-handoff-redirect-recovery', missionId);
-clearTransportServiceState();
-resetPriorityPending();
-pausePipelineController('prisoner-handoff-redirect-recovery', true);
-persistResumeMission(recoveryUrl);
-setPhase(
-'TRANSPORT_RECOVERY',
-'Prisoner handoff stalled; restarting safely',
-`${missionDisplay(missionId, event.targetMissionName)} left the mission during the cell handoff. Rebuilding Worker A without dispatching or skipping.`
-);
-log('Recovered a prisoner cell handoff that redirected Worker A away from its mission.', event);
-const recoveryGeneration = state.workerGeneration;
-window.setTimeout(() => {
-if (!state.wanted || state.stopping || state.workerGeneration !== recoveryGeneration) return;
-state.nonMissionRedirectRecoveryInFlight = false;
-createWorker(recoveryUrl);
-}, 120);
-return true;
+return false;
 }
 function recoverFromSuspendedTimerGap(elapsedMs, source = 'watcher') {
 if (
@@ -21036,7 +20707,7 @@ bootMark('heavy-runtime-start');
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.35',
+                commandNexus: '3.0.36',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },
@@ -48917,8 +48588,9 @@ async function handleAutoPrisonerReleaseAfterActions() {
     }
     function isTransportAutomationAllowed() {
         if (isManualAutoStopActive()) return false;
-        return isMfV3ManagedTransportWorker() ||
-            isAutoModeActiveFlagSet() || isPostTransportRehookPending();
+        if (isMfV3ManagedTransportWorker()) return true;
+        if (isMfV3ManagedActiveFrame()) return false;
+        return isAutoModeActiveFlagSet() || isPostTransportRehookPending();
     }
     function clearAllTransportAutomationFlags(reason) {
         mfTransportSequenceActive = false;
@@ -52333,7 +52005,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
     function shouldKeepMissionFinderObserverForCurrentFrame() {
         if (MF_IS_TOP_WINDOW) return true;
         if (!document.body || !isMissionPage()) return false;
-        if (isMfV3ManagedActiveWorker()) return true;
+        if (isMfV3ManagedActiveFrame()) return true;
         try {
             return getPrimaryMissionRequirementDocument() === document;
         } catch (_error) {
@@ -52782,7 +52454,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
     function startMissionFinderObserver() {
         if (mfV3DormantPreload) return;
         globalThis.__MCN_BOOT_MARK__?.('mission-observer-entered', document.readyState);
-        if (isMfV3ManagedActiveWorker()) {
+        if (isMfV3ManagedActiveFrame()) {
             globalThis.__MCN_BOOT_MARK__?.('mission-observer-managed-active-owner');
         }
         if (mfMainMutationObserver) return;

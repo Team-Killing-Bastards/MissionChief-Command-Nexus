@@ -5,7 +5,7 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 **Developer and technical owner:** MartyBlyth  
 **Repository and documentation support:** Conroy1988
 
-## Current production baseline — v3.0.35
+## Current production baseline — v3.0.36
 
 - [x] Publish one canonical userscript on trusted `main`.
 - [x] Publish Command Nexus `3.0.34` with Mission Finder `V10.6.177`, the proven `3.0.29` runtime and diagnostic-only Worker A lifecycle evidence, while retaining mission-level fulfilment/failure exports, optional High Risk Missing Person Ambulance coverage, standalone pop-out naming filters, exact PRV/SRV and Coastguard helicopter selection, transport/prisoner recovery, bounded endurance telemetry and station-aware staffing evidence.
