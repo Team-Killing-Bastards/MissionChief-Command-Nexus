@@ -220,8 +220,8 @@ assert.ok(
 const pausedTransport = extractFunction('startTransportOnlyWorker');
 assert.ok(
   pausedTransport.includes('`/vehicles/${request.vehicleId}`') &&
-    pausedTransport.includes('createWorker(url.href)'),
-  'paused transport must create only the exact vehicle worker'
+    pausedTransport.includes("createWorker(url.href, 'TRANSPORT_B')"),
+  'paused transport must create only the exact vehicle route as explicit Worker B'
 );
 assert.doesNotMatch(
   pausedTransport,
@@ -230,10 +230,12 @@ assert.doesNotMatch(
 );
 const transportReturn = extractFunction('returnToTopMissionAfterTransport');
 assert.ok(
-  transportReturn.includes("event: 'return-to-low-queue-pause'") &&
+  transportReturn.includes("state.workerRole !== 'TRANSPORT_B'") &&
+    transportReturn.includes("event: 'transport-worker-b-complete'") &&
     transportReturn.includes('removeWorker(false)') &&
+    transportReturn.includes('if (paused)') &&
     transportReturn.includes('beginMissionRescan()'),
-  'a pause transport worker must release itself and return to the mission wait'
+  'transport Worker B must release itself before returning to the mission wait'
 );
 
 let clock = 1000;
