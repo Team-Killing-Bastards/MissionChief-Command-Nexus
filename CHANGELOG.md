@@ -6,6 +6,16 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.29] - 2026-08-29
+
+### Fixed
+
+- Removed the global every-mission Ambulance gate introduced in `3.0.23`. It incorrectly applied the High Risk Missing Person Ambulance preference to unrelated missions such as Evacuation from Cruise Liner and could stop the complete Auto Mode run.
+- Preserved the existing saved checkbox behaviour: when enabled, one Ambulance requirement is added only to High Risk Missing Person missions that do not already require one.
+- Normal Ambulance requirements retain MissionChief-compatible road Ambulance/HEMS ETA selection, while ordinary Ambulances remain free from trained-personnel register gating.
+- Added regression coverage preventing global Ambulance enforcement from returning.
+- Increased the unified userscript version from `3.0.28` to `3.0.29`.
+
 ## [3.0.28] - 2026-08-29
 
 ### Fixed

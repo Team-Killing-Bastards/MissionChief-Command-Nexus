@@ -11,9 +11,6 @@ const required = [
   'unresolvedMissions,',
   'currentBlocker:',
   'failureDiagnostics,',
-  'function ensureAutoMinimumAmbulanceSelected(',
-  "'minimum-ambulance-selection-block'",
-  'mandatory minimum ambulance could not be selected',
   'function hydrateNamingInventoriesFromCurrentOverview()',
   'hydrateNamingInventoriesFromCurrentOverview();',
   'const MF_UNIT_FINDER_DIAGNOSTICS_LIMIT = 120;',
@@ -26,21 +23,8 @@ if (missing.length) {
   process.exit(1);
 }
 
-const minimumAmbulanceCalls = source.match(/await ensureAutoMinimumAmbulanceSelected\(/g) || [];
-if (minimumAmbulanceCalls.length < 2) {
-  console.error('Minimum ambulance guard must run after selection and immediately before dispatch.');
-  process.exit(1);
-}
-
-const minimumAmbulanceStart = source.indexOf('function ensureAutoMinimumAmbulanceSelected(');
-const minimumAmbulanceEnd = source.indexOf('function getAutoMemoryHeapSnapshot(', minimumAmbulanceStart);
-const minimumAmbulance = source.slice(minimumAmbulanceStart, minimumAmbulanceEnd);
-if (!minimumAmbulance.includes('getVehicleCheckboxSnapshot(true).find(input=>!input.disabled&&!input.checked&&isNormalAmbulanceVehicleCheckbox(input))')) {
-  console.error('Minimum ambulance gate must select through the exact type-5 Any vehicle route.');
-  process.exit(1);
-}
-if (minimumAmbulance.includes('filterKnownUnstaffedAmbulanceCandidates') || minimumAmbulance.includes("selectVehicleUnits('Ambulance','Ambulance x 01'")) {
-  console.error('Minimum ambulance gate must not re-enter the mixed type-5/type-9 patient route.');
+if (source.includes('ensureAutoMinimumAmbulanceSelected') || source.includes('mandatory minimum ambulance')) {
+  console.error('Global every-mission Ambulance enforcement must remain removed.');
   process.exit(1);
 }
 const ordinaryAmbulanceFilterCalls = source.match(/filterKnownUnstaffedAmbulanceCandidates\(/g) || [];
@@ -49,4 +33,4 @@ if (ordinaryAmbulanceFilterCalls.length !== 1 || source.includes("'ordinary-ambu
   process.exit(1);
 }
 
-console.log('V3.0.23 export failure diagnostics, pop-out cascades and minimum ambulance checks passed.');
+console.log('Export failure diagnostics, pop-out cascades and scoped Ambulance checks passed.');

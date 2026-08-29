@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.28
+// @version      3.0.29
 // @description  MissionChief safe background automation.
 // @author       MartyBlyth
 // @license      MIT
@@ -145,8 +145,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.28';
-const MASTER_VERSION = '3.0.28';
+const VERSION = '3.0.29';
+const MASTER_VERSION = '3.0.29';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -21046,7 +21046,7 @@ bootMark('heavy-runtime-start');
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.28',
+                commandNexus: '3.0.29',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },
@@ -50635,80 +50635,6 @@ async function handleAutoPrisonerReleaseAfterActions() {
         );
         return false;
     }
-    function countSelectedNormalAmbulances() {
-        return getVehicleCheckboxSnapshot(true).filter(input =>
-            input?.checked === true &&
-            isNormalAmbulanceVehicleCheckbox(input)
-        ).length;
-    }
-    async function ensureAutoMinimumAmbulanceSelected(
-        source = 'Auto Mode minimum ambulance rule'
-    ) {
-        if (
-            !autoModeRunning ||
-            isManualAutoStopActive() ||
-            !isMissionPage() ||
-            isTransportScreenBlockingQueueRestart() ||
-            mfIsApproachTransportVisible()
-        ) {
-            return true;
-        }
-        const selectedBefore = countSelectedNormalAmbulances();
-        if (selectedBefore >= 1) {
-            vehicleLoadState.ambulances = Math.max(
-                Number(vehicleLoadState.ambulances || 0),
-                selectedBefore
-            );
-            return true;
-        }
-        addOrUpdateVehicleRow(
-            'Minimum ambulance',
-            'Ambulance x 01',
-            1,
-            'pending',
-            0
-        );
-        const ambulance=getVehicleCheckboxSnapshot(true).find(input=>!input.disabled&&!input.checked&&isNormalAmbulanceVehicleCheckbox(input));
-        const assigned=ambulance&&clickVehicleElement(ambulance)?1:0;
-        await wait(120);
-        const selectedAfter = countSelectedNormalAmbulances();
-        vehicleLoadState.ambulances = Math.max(
-            Number(vehicleLoadState.ambulances || 0),
-            selectedAfter
-        );
-        addOrUpdateVehicleRow(
-            'Minimum ambulance',
-            'Ambulance x 01',
-            1,
-            selectedAfter >= 1 ? 'assigned' : 'missing',
-            Math.min(selectedAfter, 1)
-        );
-        renderVehicleLoadList();
-        if (selectedAfter >= 1) {
-            if (mfDebugEnabled) {
-                debugLog(
-                    'AUTO MINIMUM AMBULANCE',
-                    `${source}: selected one normal road ambulance. assigned=${assigned}`
-                );
-            }
-            return true;
-        }
-        vehicleLoadState.ready = false;
-        changeDispatchBoxColor(false);
-        const snapshot = mfPersistUnitFinderDiagnostic(
-            'minimum-ambulance-selection-block'
-        );
-        mfRecordStaffingFailure(
-            source,
-            'Auto Mode requires at least one normal road ambulance, but none could be selected.',
-            snapshot,
-            'minimum-ambulance-block'
-        );
-        updateStatusBox(
-            'Auto Mode: no usable ambulance could be selected. Dispatch blocked.'
-        );
-        return false;
-    }
     function getAutoMemoryHeapSnapshot() {
         try {
             const memory = performance.memory;
@@ -51181,16 +51107,6 @@ async function handleAutoPrisonerReleaseAfterActions() {
                 await retryAutoSelectionWhenZero();
             }
             if (!autoModeRunning) break;
-            if (
-                !await ensureAutoMinimumAmbulanceSelected(
-                    'after Unit Finder selection'
-                )
-            ) {
-                stopAutoMode(
-                    'Auto stopped: the mandatory minimum ambulance could not be selected. Dispatch was not clicked.'
-                );
-                break;
-            }
             const prisonerReleaseResult =
                 await handleAutoPrisonerReleaseAfterActions();
             if (prisonerReleaseResult !== 'none') {
@@ -51387,16 +51303,6 @@ async function handleAutoPrisonerReleaseAfterActions() {
             ) {
                 stopAutoMode(
                     `Auto stopped: ${mfPrvSrvSelectionBlockText || 'Confirmed PRV/SRV units are still missing.'} Dispatch was not clicked.`
-                );
-                break;
-            }
-            if (
-                !await ensureAutoMinimumAmbulanceSelected(
-                    'immediate pre-dispatch recheck'
-                )
-            ) {
-                stopAutoMode(
-                    'Auto stopped: the mandatory minimum ambulance was not selected at the final dispatch check. Dispatch was not clicked.'
                 );
                 break;
             }
