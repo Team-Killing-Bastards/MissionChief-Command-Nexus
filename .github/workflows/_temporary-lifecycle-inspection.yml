@@ -25,11 +25,32 @@ jobs:
           from pathlib import Path
           path = Path('scripts/_temporary-build-lifecycle-v3034.py')
           text = path.read_text(encoding='utf-8')
+
           old = "text = replace_once(text, '## [Unreleased]\\n\\n', '## [Unreleased]\\n\\n' + entry, 'changelog insertion')"
           new = "text = text.replace('## [Unreleased]\\n\\n', '## [Unreleased]\\n\\n' + entry, 1)"
           if old not in text:
               raise SystemExit('Temporary changelog patch marker was not found.')
-          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          text = text.replace(old, new, 1)
+
+          for pinned in (
+              '  "// @version      3.0.34",\n',
+              '  "const VERSION = \'3.0.34\';",\n',
+              '  "const MASTER_VERSION = \'3.0.34\';",\n',
+          ):
+              if pinned not in text:
+                  raise SystemExit(f'Temporary pinned regression marker was not found: {pinned!r}')
+              text = text.replace(pinned, '', 1)
+
+          pinned_block = '''if (!source.includes("const MISSION_FINDER_VERSION = '10.6.177';")) {
+            throw new Error('Diagnostic-only release changed the Mission Finder engine version.');
+          }
+          console.log('Worker lifecycle diagnostics v3.0.34 regression passed.');'''
+          generic_block = "console.log('Worker lifecycle diagnostics regression passed.');"
+          if pinned_block not in text:
+              raise SystemExit('Temporary component-version regression block was not found.')
+          text = text.replace(pinned_block, generic_block, 1)
+
+          path.write_text(text, encoding='utf-8')
           PY
           python3 scripts/_temporary-build-lifecycle-v3034.py
 
