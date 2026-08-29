@@ -30,7 +30,8 @@ jobs:
               'Created on-demand transport Worker B with mission Worker A absent.': 'Created transport B with A absent.',
               'Released transport Worker B before starting a fresh mission Worker A.': 'Released B before starting fresh A.',
               'Transport Worker B reached mission ${missionIdFromUrl(href) || state.transportServiceMissionId} and cannot run Auto Mode.': 'Transport B reached a mission route; Auto Mode remains blocked.',
-              'if (isMfV3ManagedTransportWorker()) return;': "if (String(window.name || '').startsWith('mcn-v3-active-worker-transport-b-')) return;",
+              'Worker B will clear ${request.vehicleLabel || `vehicle ${request.vehicleId}`} before a fresh mission Worker A starts.': 'Worker B will clear ${request.vehicleLabel || `vehicle ${request.vehicleId}`} before A restarts.',
+              'if (isMfV3ManagedTransportWorker()) return;': "if (typeof window !== 'undefined' && String(window.name || '').startsWith('mcn-v3-active-worker-transport-b-')) return;",
               "assert.match(initialise, /if \\(isMfV3ManagedTransportWorker\\(\\)\\) return;/,": "assert.match(initialise, /mcn-v3-active-worker-transport-b-/,",
           }
           for old, new in replacements.items():
