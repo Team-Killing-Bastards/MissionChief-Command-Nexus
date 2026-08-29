@@ -28,7 +28,7 @@
          const numeric = Number(normalized);
          if (Number.isFinite(numeric) && numeric <= 0) return '';
          return normalized;
-@@ -54,16 +50,13 @@
+@@ -54,44 +50,49 @@
                  });
              } catch (_) {}
          };
@@ -45,7 +45,60 @@
          return documents;
      }
  
-@@ -71,6 +64,9 @@
+ ===== extractNamingDispatchCentresFromStationControls =====
+-NOT FOUND
++function extractNamingDispatchCentresFromStationControls(root = document) {
++        const centres = new Map();
++        if (!root?.querySelectorAll) return centres;
++        root.querySelectorAll('.leitstelle_selection[leitstelle]').forEach(control => {
++            const id = String(control.getAttribute?.('leitstelle') || '').trim();
++            if (!/^\d+$/.test(id) || Number(id) <= 0) return;
++            const label =
++                cleanText(control.getAttribute?.('search_attribute') || '') ||
++                cleanText(control.textContent || '');
++            if (!label) return;
++            centres.set(id, label);
++        });
++        return centres;
++    }
+ 
+ ===== extractNamingDispatchCentresFromStationRows =====
+ function extractNamingDispatchCentresFromStationRows(root = document) {
+         const centres = new Map();
+         if (!root?.querySelectorAll) return centres;
+-
+         root.querySelectorAll(
+             '.building_list_li[building_type_id="7"], .building_list[building_type_id="7"]'
+         ).forEach(row => {
+             if (String(row.getAttribute?.('building_type_id') || '').trim() !== '7') return;
+-
+             const rowId = String(row.id || '').match(/^building_list_(\d+)$/)?.[1] || '';
+             const detailsLink = row.querySelector?.('a[href^="/buildings/"]');
+             const hrefId = String(getNamingDispatchCentreIdFromHref(
+                 detailsLink?.getAttribute?.('href') || '',
+                 false
+             ) || '');
+-
+-            // A native row ID and its exact Details link must agree when both exist.
+             if (rowId && hrefId && rowId !== hrefId) return;
+             const id = rowId || hrefId;
+             if (!id) return;
+-
+             const label =
+                 cleanText(row.getAttribute?.('search_attribute') || '') ||
+                 cleanText(
+@@ -99,10 +100,8 @@
+                 ) ||
+                 cleanText(row.querySelector?.('.map_position_mover')?.textContent || '');
+             if (!label) return;
+-
+             centres.set(String(id), label);
+         });
+-
+         return centres;
+     }
+ 
+@@ -110,6 +109,9 @@
  function collectNamingDispatchCentresFromStationRows() {
          const centres = new Map();
          getNamingDispatchCentreStationRowDocuments().forEach(candidateDocument => {
@@ -55,7 +108,7 @@
              extractNamingDispatchCentresFromStationRows(candidateDocument).forEach((label, id) => {
                  centres.set(String(id), label);
              });
-@@ -82,22 +78,15 @@
+@@ -121,22 +123,15 @@
  function refreshNamingDispatchCentreAssignmentsFromStationRows() {
          NAMING_DISPATCH_CENTRE_STATE.byBuildingId.clear();
          const seenRows = new Set();
@@ -78,7 +131,7 @@
                  const buildingId = getNamingStationRowBuildingId(row);
                  if (!buildingId) return;
                  const dispatchCentreId = getNamingStationRowDispatchCentreId(row);
-@@ -105,7 +94,6 @@
+@@ -144,7 +139,6 @@
                  NAMING_DISPATCH_CENTRE_STATE.byBuildingId.set(buildingId, dispatchCentreId);
              });
          });
@@ -86,7 +139,7 @@
          NAMING_DISPATCH_CENTRE_STATE.loaded = true;
          return true;
      }
-@@ -120,14 +108,12 @@
+@@ -159,14 +153,12 @@
          }
          if (NAMING_DISPATCH_CENTRE_STATE.listLoaded) return true;
          if (NAMING_DISPATCH_CENTRE_STATE.listPromise) return NAMING_DISPATCH_CENTRE_STATE.listPromise;
@@ -101,7 +154,7 @@
                  NAMING_DISPATCH_CENTRE_STATE.labelsById.clear();
                  centres.forEach((label, id) =>
                      NAMING_DISPATCH_CENTRE_STATE.labelsById.set(String(id), label)
-@@ -145,7 +131,6 @@
+@@ -184,7 +176,6 @@
                  return false;
              }
          })();
@@ -109,7 +162,86 @@
          const loaded = await NAMING_DISPATCH_CENTRE_STATE.listPromise;
          if (!loaded) NAMING_DISPATCH_CENTRE_STATE.listPromise = null;
          return loaded;
-@@ -157,7 +142,6 @@
+@@ -202,7 +193,6 @@
+         if (NAMING_DISPATCH_CENTRE_STATE.loadPromise) {
+             return NAMING_DISPATCH_CENTRE_STATE.loadPromise;
+         }
+-
+         NAMING_DISPATCH_CENTRE_STATE.loadPromise = Promise.resolve()
+             .then(() => {
+                 const loaded = refreshNamingDispatchCentreAssignmentsFromStationRows();
+@@ -218,17 +208,67 @@
+                 console.warn('[Command Nexus] Dispatch Centre station assignments unavailable:', error);
+                 return false;
+             });
+-
+         const loaded = await NAMING_DISPATCH_CENTRE_STATE.loadPromise;
+         if (!loaded) NAMING_DISPATCH_CENTRE_STATE.loadPromise = null;
+         return loaded;
+     }
+ 
+ ===== syncNamingStationDispatchCentreAssignments =====
+-NOT FOUND
++function syncNamingStationDispatchCentreAssignments(stations) {
++        (stations || []).forEach(station => {
++            if (!station) return;
++            station.dispatchCentreId = getNamingDispatchCentreId(
++                station.buildingId
++            );
++        });
++        return stations || [];
++    }
+ 
+ ===== hydrateNamingInventoriesFromCurrentOverview =====
+-NOT FOUND
++function hydrateNamingInventoriesFromCurrentOverview() {
++        const entries = getStationOverviewEntries();
++        if (!entries.length) return 0;
++        const unitStations = [];
++        const stationNamingStations = [];
++        entries.forEach((entry, index) => {
++            if (!entry?.href || !entry?.buildingId) return;
++            const typeInfo = getStationNamingTypeInfo(
++                entry.buildingTypeId,
++                entry.displayName
++            );
++            const stationType = typeInfo.stationType ||
++                STATION_BUILDING_TYPE_INFO[entry.buildingTypeId]?.stationType ||
++                detectStationType(entry.displayName);
++            const common = {
++                index,
++                href: entry.href,
++                buildingId: entry.buildingId,
++                displayName: entry.displayName,
++                buildingTypeId: entry.buildingTypeId,
++                dispatchCentreId: getNamingDispatchCentreId(entry.buildingId),
++                stationType,
++                service: getNamingServiceForStation({
++                    buildingTypeId: entry.buildingTypeId,
++                    stationType
++                })
++            };
++            unitStations.push({
++                ...common,
++                callsignBase: createCallsignBase(entry.displayName)
++            });
++            stationNamingStations.push({
++                ...common,
++                suffix: typeInfo.suffix,
++                namingMode: typeInfo.namingMode || '',
++                typeLabel: typeInfo.label
++            });
++        });
++        if (unitStations.length) STATE.stations = unitStations;
++        if (stationNamingStations.length) {
++            STATION_STATE.stations = stationNamingStations;
++        }
++        return Math.max(unitStations.length, stationNamingStations.length);
++    }
+ 
+ ===== refreshNamingDispatchCentres =====
+ async function refreshNamingDispatchCentres(force = true) {
+@@ -236,7 +276,6 @@
              document.getElementById('mc-namer-refresh-dispatch-centres'),
              document.getElementById('mc-station-refresh-dispatch-centres')
          ].filter(Boolean);
@@ -117,7 +249,7 @@
          buttons.forEach(button => {
              button.disabled = true;
              button.textContent = 'Refreshing…';
-@@ -165,22 +149,21 @@
+@@ -244,22 +283,21 @@
              button.dataset.dispatchCentreRefreshState = 'loading';
              button.setAttribute('aria-busy', 'true');
          });
@@ -145,7 +277,7 @@
              populateNamingDispatchCentreFilter('mc-namer-dispatch-centre');
              populateNamingDispatchCentreFilter('mc-station-dispatch-centre');
              populateNamingServiceFilter(
-@@ -207,7 +190,6 @@
+@@ -286,7 +324,6 @@
              );
              populateStartDropdown();
              populateStationNamingStartDropdown();
@@ -153,7 +285,7 @@
              centreCount = NAMING_DISPATCH_CENTRE_STATE.labelsById.size;
              ready = Boolean(listLoaded && centreCount > 0);
              return ready;
-@@ -220,7 +202,6 @@
+@@ -299,7 +336,6 @@
          } finally {
              const failureReason = getNamingDispatchCentreRefreshFailureReason();
              if (!ready) reportNamingDispatchCentreRefreshFailure(failureReason);
@@ -161,7 +293,7 @@
              buttons.forEach(button => {
                  button.disabled = false;
                  button.removeAttribute('aria-busy');
-@@ -256,7 +237,6 @@
+@@ -335,7 +371,6 @@
          const buildingTypeId = String(station?.buildingTypeId ?? '');
          const direct = NAMING_SERVICE_BY_BUILDING_TYPE_ID[buildingTypeId];
          if (direct) return direct;
@@ -169,7 +301,7 @@
          switch (String(station?.stationType || '')) {
              case 'FIRE':
              case 'AIRFIELD':
-@@ -292,7 +272,6 @@
+@@ -377,7 +412,6 @@
          const centres = [...NAMING_DISPATCH_CENTRE_STATE.labelsById.entries()]
              .map(([id, label]) => ({ id: String(id), label: cleanText(label) || `Dispatch Centre ${id}` }))
              .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
@@ -177,7 +309,7 @@
          select.replaceChildren();
          const add = (value, label) => {
              const option = document.createElement('option');
-@@ -300,11 +279,9 @@
+@@ -385,11 +419,9 @@
              option.textContent = label;
              select.appendChild(option);
          };
@@ -189,7 +321,7 @@
          if (!available) {
              add(NAMING_DISPATCH_CENTRE_ALL, 'Dispatch Centres unavailable — refresh');
              select.value = NAMING_DISPATCH_CENTRE_ALL;
-@@ -312,11 +289,9 @@
+@@ -397,11 +429,9 @@
              select.title = `Dispatch Centre data unavailable: ${getNamingDispatchCentreRefreshFailureReason()}`;
              return;
          }
@@ -201,7 +333,7 @@
          const values = new Set([...select.options].map(option => option.value));
          select.value = values.has(previous) ? previous : NAMING_DISPATCH_CENTRE_ALL;
          select.disabled = false;
-@@ -330,7 +305,6 @@
+@@ -415,7 +445,6 @@
          const previous = select.value || 'ALL';
          const scoped = getStationsForNamingDispatchCentre(stations, dispatchSelectId);
          const services = new Set(scoped.map(getNamingServiceForStation).filter(Boolean));
@@ -209,7 +341,7 @@
          select.replaceChildren();
          const add = (value, label) => {
              const option = document.createElement('option');
-@@ -338,7 +312,6 @@
+@@ -423,7 +452,6 @@
              option.textContent = label;
              select.appendChild(option);
          };
@@ -217,7 +349,7 @@
          if (!(stations || []).length) {
              add('ALL', 'Refresh stations first');
              select.value = 'ALL';
-@@ -351,7 +324,6 @@
+@@ -436,7 +464,6 @@
              select.disabled = true;
              return;
          }
@@ -225,7 +357,7 @@
          add('ALL', 'All services');
          Object.entries(NAMING_SERVICES).forEach(([key, label]) => {
              if (key === 'ALL' || !services.has(key)) return;
-@@ -391,13 +363,11 @@
+@@ -476,13 +503,11 @@
  function populateStartDropdown() {
          const select = document.querySelector('#mc-namer-startfrom');
          if (!select) return;
@@ -239,7 +371,7 @@
          STATE.filteredStations = STATE.stations.filter(station => {
              const stationTypeMatches =
                  selectedType === 'ALL' || station.stationType === selectedType;
-@@ -405,27 +375,22 @@
+@@ -490,27 +515,22 @@
                  stationMatchesNamingService(station, selectedService) &&
                  stationMatchesNamingDispatchCentre(station, selectedDispatchCentre);
          });
@@ -267,7 +399,7 @@
          setProgress(0, STATE.filteredStations.length);
      }
  
-@@ -433,13 +398,11 @@
+@@ -518,13 +538,11 @@
  function populateStationNamingStartDropdown() {
          const select = document.querySelector('#mc-station-startfrom');
          if (!select) return;
@@ -281,7 +413,7 @@
          STATION_STATE.filteredStations = STATION_STATE.stations.filter(station => {
              const stationTypeMatches =
                  selectedType === 'ALL' || station.stationType === selectedType;
-@@ -447,9 +410,7 @@
+@@ -532,9 +550,7 @@
                  stationMatchesNamingService(station, selectedService) &&
                  stationMatchesNamingDispatchCentre(station, selectedDispatchCentre);
          });
@@ -291,7 +423,7 @@
          if (!STATION_STATE.filteredStations.length) {
              select.innerHTML = '<option value="">No matching stations found</option>';
              STATION_STATE.selectedHref = '';
-@@ -457,19 +418,16 @@
+@@ -542,19 +558,16 @@
              setStationUiValue('progress', '0 / 0');
              return;
          }
@@ -311,7 +443,28 @@
          STATION_STATE.selectedHref = select.value;
          setStationUiValue('progress', `0 / ${STATION_STATE.filteredStations.length}`);
          updateStationNamingSelectionPreview();
-@@ -481,21 +439,20 @@
+@@ -566,20 +579,16 @@
+ ===== getStationOverviewEntries =====
+ function getStationOverviewEntries(root = document) {
+         const groups = new Map();
+-
+         root.querySelectorAll(STATION_OVERVIEW_LINK_SELECTOR).forEach(link => {
+             if (link.closest?.('#mc-namer-panel')) return;
+             const href = normaliseStationOverviewHref(link.getAttribute?.('href'));
+             if (!href) return;
+-
+             const container = getStationOverviewContainer(link);
+             if (!container && !link.matches?.('.lightbox-open.list-group-item.active')) return;
+-
+             const candidates = groups.get(href) || [];
+             candidates.push({ link, container });
+             groups.set(href, candidates);
+         });
+-
+         return [...groups.entries()].map(([href, candidates], index) => {
+             candidates.sort((a, b) =>
+                 scoreStationOverviewLink(b.link, href) -
+@@ -605,21 +614,20 @@
              log('Personnel Assignment is currently running. Stop it before refreshing Unit Naming.', 'error');
              return;
          }
@@ -337,7 +490,7 @@
          STATE.stations = stationEntries.map((entry, index) => {
              const stationType =
                  STATION_BUILDING_TYPE_INFO[entry.buildingTypeId]?.stationType ||
-@@ -515,18 +472,14 @@
+@@ -639,18 +647,14 @@
                  })
              };
          });
@@ -356,7 +509,7 @@
          if (STATE.filteredStations.length) {
              log(`First match: ${STATE.filteredStations[0].displayName}`, 'info');
              log(`Last match : ${STATE.filteredStations[STATE.filteredStations.length - 1].displayName}`, 'info');
-@@ -540,31 +493,28 @@
+@@ -664,31 +668,28 @@
              setStationUiValue('status', 'Blocked by Personnel Assignment');
              return;
          }
@@ -392,7 +545,7 @@
                  return {
                      index,
                      href: entry.href,
-@@ -578,20 +528,18 @@
+@@ -702,20 +703,18 @@
                          stationType: typeInfo.stationType
                      }),
                      suffix: typeInfo.suffix,
@@ -414,7 +567,7 @@
          if (STATION_STATE.filteredStations.length) {
              stationLog(`First match: ${STATION_STATE.filteredStations[0].displayName}`, 'info');
              stationLog(`Last match : ${STATION_STATE.filteredStations[STATION_STATE.filteredStations.length - 1].displayName}`, 'info');
-@@ -600,9 +548,6 @@
+@@ -724,9 +723,6 @@
  
  ===== handleUnitDispatchCentreChange =====
  async function handleUnitDispatchCentreChange() {
@@ -424,7 +577,7 @@
          await refreshStations();
      }
  
-@@ -625,9 +570,6 @@
+@@ -749,9 +745,6 @@
  
  ===== handleStationDispatchCentreChange =====
  async function handleStationDispatchCentreChange() {
@@ -432,5 +585,22 @@
 -        // populateNamingDispatchCentreFilter restores the selected centre after
 -        // refresh, then the normal cascade rebuilds Service -> Type -> Start From.
          await refreshStationNamingStations();
+     }
+ 
+@@ -772,16 +765,13 @@
+         const keeper = preferredPanel?.isConnected
+             ? preferredPanel
+             : panels[0] || null;
+-
+         panels.forEach(panel => {
+             if (panel !== keeper) panel.remove();
+         });
+-
+         const styles = [...document.querySelectorAll('style[data-mc-namer-style="true"]')];
+         styles.forEach((style, index) => {
+             if (index > 0) style.remove();
+         });
+-
+         return keeper;
      }
  

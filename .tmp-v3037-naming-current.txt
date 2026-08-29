@@ -60,6 +60,51 @@ function getNamingDispatchCentreStationRowDocuments() {
         return documents;
     }
 
+===== extractNamingDispatchCentresFromStationControls =====
+function extractNamingDispatchCentresFromStationControls(root = document) {
+        const centres = new Map();
+        if (!root?.querySelectorAll) return centres;
+        root.querySelectorAll('.leitstelle_selection[leitstelle]').forEach(control => {
+            const id = String(control.getAttribute?.('leitstelle') || '').trim();
+            if (!/^\d+$/.test(id) || Number(id) <= 0) return;
+            const label =
+                cleanText(control.getAttribute?.('search_attribute') || '') ||
+                cleanText(control.textContent || '');
+            if (!label) return;
+            centres.set(id, label);
+        });
+        return centres;
+    }
+
+===== extractNamingDispatchCentresFromStationRows =====
+function extractNamingDispatchCentresFromStationRows(root = document) {
+        const centres = new Map();
+        if (!root?.querySelectorAll) return centres;
+        root.querySelectorAll(
+            '.building_list_li[building_type_id="7"], .building_list[building_type_id="7"]'
+        ).forEach(row => {
+            if (String(row.getAttribute?.('building_type_id') || '').trim() !== '7') return;
+            const rowId = String(row.id || '').match(/^building_list_(\d+)$/)?.[1] || '';
+            const detailsLink = row.querySelector?.('a[href^="/buildings/"]');
+            const hrefId = String(getNamingDispatchCentreIdFromHref(
+                detailsLink?.getAttribute?.('href') || '',
+                false
+            ) || '');
+            if (rowId && hrefId && rowId !== hrefId) return;
+            const id = rowId || hrefId;
+            if (!id) return;
+            const label =
+                cleanText(row.getAttribute?.('search_attribute') || '') ||
+                cleanText(
+                    row.querySelector?.('.building_list_caption .map_position_mover')?.textContent || ''
+                ) ||
+                cleanText(row.querySelector?.('.map_position_mover')?.textContent || '');
+            if (!label) return;
+            centres.set(String(id), label);
+        });
+        return centres;
+    }
+
 ===== collectNamingDispatchCentresFromStationRows =====
 function collectNamingDispatchCentresFromStationRows() {
         const centres = new Map();
@@ -134,6 +179,95 @@ async function loadNamingDispatchCentreList(force = false) {
         const loaded = await NAMING_DISPATCH_CENTRE_STATE.listPromise;
         if (!loaded) NAMING_DISPATCH_CENTRE_STATE.listPromise = null;
         return loaded;
+    }
+
+===== loadNamingDispatchCentreData =====
+async function loadNamingDispatchCentreData(force = false) {
+        if (force) {
+            NAMING_DISPATCH_CENTRE_STATE.loaded = false;
+            NAMING_DISPATCH_CENTRE_STATE.loadPromise = null;
+            NAMING_DISPATCH_CENTRE_STATE.byBuildingId.clear();
+            NAMING_DISPATCH_CENTRE_STATE.lastAssignmentError = '';
+        }
+        if (NAMING_DISPATCH_CENTRE_STATE.loaded) return true;
+        if (NAMING_DISPATCH_CENTRE_STATE.loadPromise) {
+            return NAMING_DISPATCH_CENTRE_STATE.loadPromise;
+        }
+        NAMING_DISPATCH_CENTRE_STATE.loadPromise = Promise.resolve()
+            .then(() => {
+                const loaded = refreshNamingDispatchCentreAssignmentsFromStationRows();
+                NAMING_DISPATCH_CENTRE_STATE.lastAssignmentError = '';
+                return loaded;
+            })
+            .catch(error => {
+                NAMING_DISPATCH_CENTRE_STATE.byBuildingId.clear();
+                NAMING_DISPATCH_CENTRE_STATE.loaded = false;
+                NAMING_DISPATCH_CENTRE_STATE.lastAssignmentError = cleanText(
+                    error?.message || String(error)
+                );
+                console.warn('[Command Nexus] Dispatch Centre station assignments unavailable:', error);
+                return false;
+            });
+        const loaded = await NAMING_DISPATCH_CENTRE_STATE.loadPromise;
+        if (!loaded) NAMING_DISPATCH_CENTRE_STATE.loadPromise = null;
+        return loaded;
+    }
+
+===== syncNamingStationDispatchCentreAssignments =====
+function syncNamingStationDispatchCentreAssignments(stations) {
+        (stations || []).forEach(station => {
+            if (!station) return;
+            station.dispatchCentreId = getNamingDispatchCentreId(
+                station.buildingId
+            );
+        });
+        return stations || [];
+    }
+
+===== hydrateNamingInventoriesFromCurrentOverview =====
+function hydrateNamingInventoriesFromCurrentOverview() {
+        const entries = getStationOverviewEntries();
+        if (!entries.length) return 0;
+        const unitStations = [];
+        const stationNamingStations = [];
+        entries.forEach((entry, index) => {
+            if (!entry?.href || !entry?.buildingId) return;
+            const typeInfo = getStationNamingTypeInfo(
+                entry.buildingTypeId,
+                entry.displayName
+            );
+            const stationType = typeInfo.stationType ||
+                STATION_BUILDING_TYPE_INFO[entry.buildingTypeId]?.stationType ||
+                detectStationType(entry.displayName);
+            const common = {
+                index,
+                href: entry.href,
+                buildingId: entry.buildingId,
+                displayName: entry.displayName,
+                buildingTypeId: entry.buildingTypeId,
+                dispatchCentreId: getNamingDispatchCentreId(entry.buildingId),
+                stationType,
+                service: getNamingServiceForStation({
+                    buildingTypeId: entry.buildingTypeId,
+                    stationType
+                })
+            };
+            unitStations.push({
+                ...common,
+                callsignBase: createCallsignBase(entry.displayName)
+            });
+            stationNamingStations.push({
+                ...common,
+                suffix: typeInfo.suffix,
+                namingMode: typeInfo.namingMode || '',
+                typeLabel: typeInfo.label
+            });
+        });
+        if (unitStations.length) STATE.stations = unitStations;
+        if (stationNamingStations.length) {
+            STATION_STATE.stations = stationNamingStations;
+        }
+        return Math.max(unitStations.length, stationNamingStations.length);
     }
 
 ===== refreshNamingDispatchCentres =====
@@ -255,6 +389,12 @@ function getNamingServiceForStation(station) {
             default:
                 return 'OTHER';
         }
+    }
+
+===== getStationsForNamingDispatchCentre =====
+function getStationsForNamingDispatchCentre(stations, dispatchSelectId) {
+        const centre = document.getElementById(dispatchSelectId)?.value || NAMING_DISPATCH_CENTRE_ALL;
+        return (stations || []).filter(station => stationMatchesNamingDispatchCentre(station, centre));
     }
 
 ===== getStationsForNamingService =====
@@ -433,6 +573,41 @@ function populateStationNamingStartDropdown() {
         updateStationNamingSelectionPreview();
     }
 
+===== getStationOverviewDocuments =====
+NOT FOUND
+
+===== getStationOverviewEntries =====
+function getStationOverviewEntries(root = document) {
+        const groups = new Map();
+        root.querySelectorAll(STATION_OVERVIEW_LINK_SELECTOR).forEach(link => {
+            if (link.closest?.('#mc-namer-panel')) return;
+            const href = normaliseStationOverviewHref(link.getAttribute?.('href'));
+            if (!href) return;
+            const container = getStationOverviewContainer(link);
+            if (!container && !link.matches?.('.lightbox-open.list-group-item.active')) return;
+            const candidates = groups.get(href) || [];
+            candidates.push({ link, container });
+            groups.set(href, candidates);
+        });
+        return [...groups.entries()].map(([href, candidates], index) => {
+            candidates.sort((a, b) =>
+                scoreStationOverviewLink(b.link, href) -
+                scoreStationOverviewLink(a.link, href)
+            );
+            const selected = candidates[0];
+            const container = selected.container || getStationOverviewContainer(selected.link);
+            return {
+                index,
+                href,
+                buildingId: getBuildingIdFromHref(href),
+                displayName: readStationOverviewName(selected.link, container, href),
+                buildingTypeId: readStationBuildingTypeId(selected.link, container),
+                link: selected.link,
+                container
+            };
+        });
+    }
+
 ===== refreshStations =====
 async function refreshStations() {
         if (PERSONNEL_STATE.running) {
@@ -584,8 +759,24 @@ function handleStationNamingServiceChange() {
         populateStationNamingStartDropdown();
     }
 
-===== readStationsFromDocument =====
+===== ensureSingleNamingToolsPanel =====
+function ensureSingleNamingToolsPanel(preferredPanel = null) {
+        const panels = [...document.querySelectorAll('#mc-namer-panel')];
+        const keeper = preferredPanel?.isConnected
+            ? preferredPanel
+            : panels[0] || null;
+        panels.forEach(panel => {
+            if (panel !== keeper) panel.remove();
+        });
+        const styles = [...document.querySelectorAll('style[data-mc-namer-style="true"]')];
+        styles.forEach((style, index) => {
+            if (index > 0) style.remove();
+        });
+        return keeper;
+    }
+
+===== mountNamingTools =====
 NOT FOUND
 
-===== getStationRows =====
+===== initializeTools =====
 NOT FOUND

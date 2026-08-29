@@ -1,4 +1,4 @@
-===== context-1 [9221-9382] =====
+===== context-1 [9221-9498] =====
 009221:             const selected = candidates[0];
 009222:             const container = selected.container || getStationOverviewContainer(selected.link);
 009223:             return {
@@ -161,8 +161,20 @@
 009380:             '.building_list_li[building_type_id="7"], .building_list[building_type_id="7"]'
 009381:         ).forEach(row => {
 009382:             if (String(row.getAttribute?.('building_type_id') || '').trim() !== '7') return;
-
-===== context-2 [9397-9498] =====
+009383:             const rowId = String(row.id || '').match(/^building_list_(\d+)$/)?.[1] || '';
+009384:             const detailsLink = row.querySelector?.('a[href^="/buildings/"]');
+009385:             const hrefId = String(getNamingDispatchCentreIdFromHref(
+009386:                 detailsLink?.getAttribute?.('href') || '',
+009387:                 false
+009388:             ) || '');
+009389:             if (rowId && hrefId && rowId !== hrefId) return;
+009390:             const id = rowId || hrefId;
+009391:             if (!id) return;
+009392:             const label =
+009393:                 cleanText(row.getAttribute?.('search_attribute') || '') ||
+009394:                 cleanText(
+009395:                     row.querySelector?.('.building_list_caption .map_position_mover')?.textContent || ''
+009396:                 ) ||
 009397:                 cleanText(row.querySelector?.('.map_position_mover')?.textContent || '');
 009398:             if (!label) return;
 009399:             centres.set(String(id), label);
@@ -266,7 +278,11 @@
 009497:             case 'AMBULANCE':
 009498:                 return 'AMBULANCE';
 
-===== context-3 [9662-9806] =====
+===== context-2 [9658-9812] =====
+009658:             document.getElementById('mc-station-refresh-dispatch-centres')
+009659:         ].filter(Boolean);
+009660:         buttons.forEach(button => {
+009661:             button.disabled = true;
 009662:             button.textContent = 'Refreshing…';
 009663:             button.title = 'Loading Dispatch Centres from MissionChief.';
 009664:             button.dataset.dispatchCentreRefreshState = 'loading';
@@ -412,8 +428,14 @@
 009804:         return getStationOverviewEntries().find(entry => entry.href === expected) || null;
 009805:     }
 009806:     function ensureSingleNamingToolsPanel(preferredPanel = null) {
+009807:         const panels = [...document.querySelectorAll('#mc-namer-panel')];
+009808:         const keeper = preferredPanel?.isConnected
+009809:             ? preferredPanel
+009810:             : panels[0] || null;
+009811:         panels.forEach(panel => {
+009812:             if (panel !== keeper) panel.remove();
 
-===== context-4 [10204-10451] =====
+===== context-3 [10204-10451] =====
 010204:             TOOL_IS_STANDALONE_STATION_OVERVIEW ||
 010205:             TOOL_IS_STATION_OVERVIEW_FRAME
 010206:         ) {
@@ -663,7 +685,7 @@
 010450:                     <pre id="mc-personnel-after-action">Run a station preview or assignment to create the station report.</pre>
 010451:                 </div>
 
-===== context-5 [10730-10812] =====
+===== context-4 [10730-10812] =====
 010730:                 background: #273449;
 010731:                 color: #ffffff;
 010732:             }
@@ -748,7 +770,7 @@
 010811:                 border: 1px solid #5eead4;
 010812:                 font-weight: bold;
 
-===== context-6 [11969-12057] =====
+===== context-5 [11969-12057] =====
 011969:             }
 011970:         `;
 011971:         document.head.appendChild(style);
@@ -839,7 +861,7 @@
 012056:         } catch (e) {}
 012057:         switchToolTab(savedTab === 'station' ? 'station' : savedTab === 'personnel' ? 'personnel' : 'unit', true);
 
-===== context-7 [12576-12758] =====
+===== context-6 [12576-12758] =====
 012576:                     entry.displayName
 012577:                 );
 012578:                 return {
@@ -1024,7 +1046,7 @@
 012757:             return;
 012758:         }
 
-===== context-8 [14591-14666] =====
+===== context-7 [14591-14666] =====
 014591:         // personnel-register-exact-all-vehicle-scan-v2
 014592:     }
 014593:     function startPersonnelRun() {
@@ -1102,7 +1124,7 @@
 014665:             PERSONNEL_STATE.unitsRequired =
 014666:                 configuredTarget;
 
-===== context-9 [18060-18195] =====
+===== context-8 [18060-18195] =====
 018060:         ]);
 018061:         STATE.stations = stationEntries.map((entry, index) => {
 018062:             const stationType =
