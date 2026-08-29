@@ -1,0 +1,123 @@
+name: Temporary v3.0.35 transport runtime audit
+
+on:
+  push:
+    branches:
+      - feature/v3035-worker-b-transport
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    if: ${{ !contains(github.event.head_commit.message, '[skip transport runtime audit]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract exact transport runtime
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+
+          def function_span(name, start_at=0):
+              start = source.find(f'function {name}(', start_at)
+              if start < 0:
+                  return None
+              brace = source.find('{', start)
+              depth = 0
+              quote = ''
+              escaped = False
+              line_comment = False
+              block_comment = False
+              index = brace
+              while index < len(source):
+                  char = source[index]
+                  nxt = source[index + 1] if index + 1 < len(source) else ''
+                  if line_comment:
+                      if char == '\n': line_comment = False
+                      index += 1; continue
+                  if block_comment:
+                      if char == '*' and nxt == '/': block_comment = False; index += 2; continue
+                      index += 1; continue
+                  if quote:
+                      if escaped: escaped = False
+                      elif char == '\\': escaped = True
+                      elif char == quote: quote = ''
+                      index += 1; continue
+                  if char == '/' and nxt == '/': line_comment = True; index += 2; continue
+                  if char == '/' and nxt == '*': block_comment = True; index += 2; continue
+                  if char in ("'", '"', '`'): quote = char; index += 1; continue
+                  if char == '{': depth += 1
+                  elif char == '}':
+                      depth -= 1
+                      if depth == 0: return start, index + 1
+                  index += 1
+              return None
+
+          mission_module = source.find('MODULE 2: MISSION FINDER')
+          names = [
+              'isAutoModeActiveFlagSet',
+              'isTransportAutomationAllowed',
+              'handleTransportRequestsAfterDispatch',
+              'startBruteApproachTransportWatcher',
+              'syncBackgroundAutomationWatchers',
+              'startMissionFinderObserver',
+              'initialize',
+              'runAutoModeLoop',
+              'resumeAutoAdvanceAfterDispatch',
+          ]
+          report = []
+          for name in names:
+              span = function_span(name, mission_module)
+              report.append(f'===== {name} =====')
+              report.append(source[span[0]:span[1]] if span else 'NOT FOUND')
+              report.append('')
+          Path('.tmp-v3035-transport-runtime-functions.txt').write_text('\n'.join(report), encoding='utf-8')
+
+          terms = [
+              'handleTransportRequestsAfterDispatch(',
+              'startMissionFinderObserver(',
+              'syncBackgroundAutomationWatchers(',
+              'runAutoModeLoop(',
+              'isMfV3ManagedTransportWorker()',
+              'isTransportAutomationAllowed()',
+          ]
+          lines = source.splitlines()
+          contexts = []
+          for number, line in enumerate(lines, 1):
+              if any(term in line for term in terms):
+                  start = max(1, number - 12)
+                  end = min(len(lines), number + 24)
+                  contexts.append((start, end))
+          merged = []
+          for start, end in contexts:
+              if merged and start <= merged[-1][1] + 2:
+                  merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+              else:
+                  merged.append((start, end))
+          out = []
+          for index, (start, end) in enumerate(merged, 1):
+              out.append(f'===== context-{index} [{start}-{end}] =====')
+              out.extend(f'{i:06d}: {lines[i-1]}' for i in range(start, end + 1))
+              out.append('')
+          Path('.tmp-v3035-transport-runtime-calls.txt').write_text('\n'.join(out), encoding='utf-8')
+
+          tail_start = max(mission_module, len(source) - 45000)
+          tail = source[tail_start:]
+          Path('.tmp-v3035-mission-module-tail.txt').write_text(tail, encoding='utf-8')
+          PY
+
+      - name: Commit audit maps
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .tmp-v3035-*.txt
+          git commit -m "Add exact v3.0.35 transport runtime audit [skip transport runtime audit]"
+          git push origin HEAD:feature/v3035-worker-b-transport
