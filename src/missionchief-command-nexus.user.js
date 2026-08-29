@@ -36,18 +36,12 @@ const StorageCtor = targetWindow.Storage ||
 (targetWindow === window && typeof Storage !== 'undefined' ? Storage : null);
 if (!StorageCtor?.prototype) return null;
 let activeOwner = Boolean(initialActive);
-const ownershipTrace = targetWindow.__MCN_V3_OWNERSHIP_TRACE__ ||= [];
-let lastOwnershipBlock = '';
-const traceOwnership = (event, detail = '') => {
-ownershipTrace.push({ at: Date.now(), event, detail, active: activeOwner, name: String(targetWindow.name || ''), path: String(targetWindow.location?.pathname || '') });
-if (ownershipTrace.length > 40) ownershipTrace.shift();
+const ownershipTrace=targetWindow.__MCN_V3_OWNERSHIP_TRACE__||=[];
+const traceOwnership=(event,detail='')=>{
+ownershipTrace.push({at:Date.now(),event,detail,active:activeOwner});
+if(ownershipTrace.length>40)ownershipTrace.shift();
 };
-const traceOwnershipBlock = (operation, key) => {
-const marker = `${operation}:${String(key || '')}`;
-if (marker === lastOwnershipBlock) return;
-lastOwnershipBlock = marker;
-traceOwnership(`blocked-${operation}`, String(key || ''));
-};
+const traceOwnershipBlock=(operation,key)=>traceOwnership(`blocked-${operation}`,String(key||''));
 traceOwnership('install', source);
 const originalGetItem = StorageCtor.prototype.getItem;
 const originalSetItem = StorageCtor.prototype.setItem;
@@ -1885,9 +1879,9 @@ state.log.push(entry);
 if (state.log.length > LOG_LIMIT) state.log.splice(0, state.log.length - LOG_LIMIT);
 render();
 }
-window.__MCN_V3_LIFECYCLE_MARK__ = (stage, detail = {}) => log(
+window.__MCN_V3_LIFECYCLE_MARK__=(stage,detail={})=>log(
 `Worker lifecycle: ${normaliseText(stage)}`,
-{ workerGeneration: state.workerGeneration, documentSerial: state.workerDocumentSerial, missionId: state.currentMissionId, workerName: state.worker?.name || '', path: pathFromUrl(getWorkerHref()), detail }
+{workerGeneration:state.workerGeneration,documentSerial:state.workerDocumentSerial,missionId:state.currentMissionId,detail}
 );
 function setPhase(phase, status, detail = '') {
 state.phase = phase;
@@ -5171,8 +5165,8 @@ pausePipelineController('transport-worker-b-handoff', true);
 clearSharedV2AutoRunning('transport-worker-b-handoff');
 resetAutoStartTracking();
 state.running = false;
-setPhase('TRANSPORT_HANDOFF', 'Pausing mission Worker A',
-`Worker B will clear ${request.vehicleLabel || `vehicle ${request.vehicleId}`} before A restarts.`);
+setPhase('TRANSPORT_HANDOFF', 'Pausing A for B',
+`B clears ${request.vehicleLabel || `vehicle ${request.vehicleId}`}; then A restarts.`);
 log('Released A before starting transport B.', event);
 removeWorker(false);
 const workerFreeGeneration = state.workerGeneration;
@@ -5220,9 +5214,9 @@ resetAutoStartTracking();
 state.running = false;
 createWorker(url.href, 'TRANSPORT_B');
 setPhase('TRANSPORT_SERVICE',
-state.lowQueuePaused ? 'Worker B clearing transport during mission pause' : 'Worker B clearing personal transport',
-`${missionDisplay(request.missionId, state.currentMissionName)} | ${request.vehicleLabel || `vehicle ${request.vehicleId}`}. Worker A is not loaded.`);
-log('Created transport B with A absent.', {
+state.lowQueuePaused ? 'B transport during mission pause' : 'B clearing personal transport',
+`${missionDisplay(request.missionId, state.currentMissionName)} | ${request.vehicleLabel || `vehicle ${request.vehicleId}`}.`);
+log('Created transport B.', {
 source, key: request.key, vehicleId: request.vehicleId, missionId: request.missionId });
 return true;
 }
@@ -5244,7 +5238,7 @@ recordTransportService({ event: 'transport-worker-b-complete', reason, ...servic
 if (paused) {
 state.transportServiceEligible = true;
 setPhase('LOW_QUEUE_PAUSED', 'Transport cleared - waiting for 2 missions',
-`Worker B was released. ${state.lowQueueObservedCount} actionable personal mission${state.lowQueueObservedCount === 1 ? '' : 's'} remain.`);
+`B released; ${state.lowQueueObservedCount} mission${state.lowQueueObservedCount === 1 ? '' : 's'} remain.`);
 beginMissionRescan();
 return true;
 }
@@ -5255,8 +5249,8 @@ return true;
 }
 const mission = supply.candidates[0] || chooseTopMission({ actionableOnly: true });
 if (!mission?.missionId || !mission.url) {
-setPhase('WAITING_MISSION', 'Transport cleared; waiting for mission',
-'Worker B was released and no actionable personal mission is currently available.');
+setPhase('WAITING_MISSION', 'B cleared; waiting for mission',
+'B released; no mission available.');
 beginMissionRescan();
 return true;
 }
@@ -5265,9 +5259,9 @@ state.currentMissionId = mission.missionId;
 state.currentMissionName = cleanMissionCaption(mission.caption) || missionNameForId(mission.missionId);
 state.currentMissionUrl = mission.url;
 persistResumeMission(mission.url);
-setPhase('TRANSPORT_RETURN', 'Worker B cleared; rebuilding mission Worker A',
-`${missionDisplay(mission.missionId, state.currentMissionName)} is the next mission target.`);
-log('Released B before starting fresh A.', {
+setPhase('TRANSPORT_RETURN', 'B cleared; starting mission A',
+`${missionDisplay(mission.missionId, state.currentMissionName)}`);
+log('Released B; starting A.', {
 reason, ...service, toMissionId: mission.missionId, toMissionName: state.currentMissionName });
 const workerFreeGeneration = state.workerGeneration;
 window.setTimeout(() => {
@@ -5802,7 +5796,7 @@ setError(`${transportWorker ? 'Transport Worker B' : 'Mission Worker A'} did not
 setPhase(transportWorker ? 'TRANSPORT_LOADING' : 'LOADING',
 transportWorker ? 'Opening transport Worker B' : 'Opening mission Worker A',
 transportWorker ? `Vehicle ${state.transportServiceVehicleId} is loading off-screen.` : `${missionDisplay(state.currentMissionId, state.currentMissionName)} is loading off-screen.`);
-log(`Created off-screen ${transportWorker ? 'transport Worker B' : 'mission Worker A'}.`, {
+log(`Created ${transportWorker ? 'transport B' : 'mission A'}.`, {
 role: state.workerRole, missionId: state.currentMissionId,
 missionName: state.currentMissionName, pathname: new URL(url).pathname });
 }
@@ -7409,7 +7403,7 @@ try { frame.name = `mcn-v3-retired-worker-${state.workerGeneration}`; } catch {}
 disposeManagedFrameRuntime(frame, logRemoval ? 'active-worker-remove' : 'active-worker-replace');
 try { frame.src = 'about:blank'; } catch {}
 try { frame.remove(); } catch {}
-if (logRemoval) log(`Removed ${role === 'TRANSPORT_B' ? 'transport Worker B' : 'mission Worker A'}.`);
+if (logRemoval) log(`Removed ${role === 'TRANSPORT_B' ? 'transport B' : 'mission A'}.`);
 }
 }
 function gracefulStop() {
@@ -21486,7 +21480,7 @@ bootMark('heavy-runtime-start');
             exportVersion: 2,
             exportedAt: new Date().toISOString(),
             privacyNote:
-                'Contains mission IDs, vehicle names, lifecycle/frame evidence, training-code evidence and browser memory/DOM counts. It does not include cookies, passwords or personnel names.',
+                'Contains mission, vehicle, lifecycle, training and memory evidence; excludes cookies, passwords and personnel names.',
             memoryDiagnostics:
                 mfCollectMemoryDiagnostics(),
             lifecycleDiagnostics: {
@@ -48923,7 +48917,8 @@ async function handleAutoPrisonerReleaseAfterActions() {
     }
     function isTransportAutomationAllowed() {
         if (isManualAutoStopActive()) return false;
-        return isAutoModeActiveFlagSet() || isPostTransportRehookPending();
+        return isMfV3ManagedTransportWorker() ||
+            isAutoModeActiveFlagSet() || isPostTransportRehookPending();
     }
     function clearAllTransportAutomationFlags(reason) {
         mfTransportSequenceActive = false;
@@ -48941,9 +48936,9 @@ async function handleAutoPrisonerReleaseAfterActions() {
         sessionStorage.removeItem(MF_TRANSPORT_LAST_CLICK_AT_KEY);
         sessionStorage.removeItem(MF_TRANSPORT_LAST_CLICK_REASON_KEY);
         mfClearTransportOwner(reason || 'transport flags cleared');
-        const clearRecentRehook =
-            String(reason || '').toLowerCase().includes('manual') ||
-            String(reason || '').toLowerCase().includes('stopped');
+        const clearReason = String(reason || '').toLowerCase();
+        const clearRecentRehook = clearReason.includes('manual') ||
+            clearReason.includes('stopped') || clearReason.includes('transport-worker-b');
         if (clearRecentRehook) {
             sessionStorage.removeItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY);
             localStorage.removeItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY);
@@ -49265,7 +49260,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
         mfLastTransportFingerprint = fingerprint || '';
         mfLastTransportClickAt = now;
         mfTransportLastClickAt = now;
-        markTransportSequenceActive();
+        if (!isMfV3ManagedTransportWorker()) markTransportSequenceActive();
         try {
             const row = button.closest('tr');
             const rowText = row ? (row.innerText || '').replace(/\s+/g, ' ').trim() : '';
@@ -49276,7 +49271,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
             try {
                 updateStatusBox(`Transport handoff: clicking ${text}...`);
             } catch (error) {}
-            sessionStorage.setItem('mf_transport_sent_in_vehicle_modal_v1', 'true');
+            if (!isMfV3ManagedTransportWorker()) sessionStorage.setItem('mf_transport_sent_in_vehicle_modal_v1', 'true');
             realClickForQueueRestart(button);
             await wait(4000);
             return true;
@@ -49452,7 +49447,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
         mfBruteLastFingerprint = mfBruteTransportFingerprint(button) || '';
         mfBruteLastClickAt = now;
         mfTransportLastClickAt = now;
-        markTransportSequenceActive();
+        if (!isMfV3ManagedTransportWorker()) markTransportSequenceActive();
         try {
             const row = button.closest('tr');
             const rowText = row ? mfBruteNormaliseText(row.innerText) : '';
@@ -49471,7 +49466,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
                     `chosenCapacity=${capacityInfo.hasCapacityColumn ? capacityInfo.capacity : 'n/a'} | row="${capacityInfo.rowText || rowText}"`
                 );
             }
-            sessionStorage.setItem('mf_brute_transport_sent_v1', 'true');
+            if (!isMfV3ManagedTransportWorker()) sessionStorage.setItem('mf_brute_transport_sent_v1', 'true');
             const clicked = mfBruteClickElement(button);
             await wait(4000);
             return clicked;
@@ -49533,7 +49528,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
         }
         let sentCount = 0;
         const started = Date.now();
-        while (autoModeRunning && Date.now() - started < 90000 && sentCount < 25) {
+        while ((autoModeRunning || isMfV3ManagedTransportWorker()) && Date.now() - started < 90000 && sentCount < 25) {
             if (!isTransportScreenBlockingQueueRestart()) {
                 break;
             }
@@ -50497,7 +50492,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
             );
         if (mfIsApproachTransportVisible() || isTransportScreenBlockingQueueRestart()) {
             updateStatusBox('Final mission transport detected. Sending Approach sequence...');
-            markTransportSequenceActive();
+            if (!isMfV3ManagedTransportWorker()) markTransportSequenceActive();
             const started = Date.now();
             while (autoModeRunning && Date.now() - started < 90000) {
                 if (mfIsApproachTransportVisible()) {
@@ -52836,6 +52831,10 @@ async function handleAutoPrisonerReleaseAfterActions() {
             startMissionFinderRuntimeMemoryMaintenance();
         }
         scheduleAutoMemoryRecycleResume();
+        if (isMfV3ManagedTransportWorker()) {
+            clearAllTransportAutomationFlags('transport-worker-b');
+            void handleTransportRequestsAfterDispatch('worker-b');
+        }
     }
     function getMfV3DormantPreloadMissionId() {
         try {
