@@ -6,6 +6,15 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.30] - 2026-08-29
+
+### Fixed
+
+- A managed Worker A returning from a completed prisoner destination now repairs a dropped document-start storage-ownership latch before Mission Finder's observer gate runs. This prevents the `mission-observer-managed-active-owner > mission-observer-inactive-owner` bootstrap contradiction and the subsequent `Auto Mode was not found` fatal stop.
+- Unrelated child frames remain unable to acquire operational ownership, and the existing no-dispatch clean retry remains intact.
+- Added regression coverage for prisoner-return Worker A ownership repair.
+- Increased the unified userscript version from `3.0.29` to `3.0.30`.
+
 ## [3.0.29] - 2026-08-29
 
 ### Fixed

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.29
+// @version      3.0.30
 // @description  MissionChief safe background automation.
 // @author       MartyBlyth
 // @license      MIT
@@ -145,8 +145,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.29';
-const MASTER_VERSION = '3.0.29';
+const VERSION = '3.0.30';
+const MASTER_VERSION = '3.0.30';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -21046,7 +21046,7 @@ bootMark('heavy-runtime-start');
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.29',
+                commandNexus: '3.0.30',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },
@@ -52334,6 +52334,11 @@ async function handleAutoPrisonerReleaseAfterActions() {
         if (MF_IS_TOP_WINDOW) return true;
         if (!document.body || !isMissionPage()) return false;
         if (isMfV3ManagedActiveWorker()) return true;
+        if (isMfV3ManagedActiveFrame()) {
+            const bridge = getMfV3OperationalOwnershipBridge();
+            bridge?.activate?.();
+            if (bridge?.isActive?.() === true) return true;
+        }
         try {
             return getPrimaryMissionRequirementDocument() === document;
         } catch (_error) {
