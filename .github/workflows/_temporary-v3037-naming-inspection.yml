@@ -91,19 +91,27 @@ jobs:
               'getNamingStationRowBuildingId',
               'getNamingStationRowDispatchCentreId',
               'getNamingDispatchCentreStationRowDocuments',
+              'extractNamingDispatchCentresFromStationControls',
+              'extractNamingDispatchCentresFromStationRows',
               'collectNamingDispatchCentresFromStationRows',
               'refreshNamingDispatchCentreAssignmentsFromStationRows',
               'loadNamingDispatchCentreList',
+              'loadNamingDispatchCentreData',
+              'syncNamingStationDispatchCentreAssignments',
+              'hydrateNamingInventoriesFromCurrentOverview',
               'refreshNamingDispatchCentres',
               'getNamingDispatchCentreId',
               'stationMatchesNamingDispatchCentre',
               'getNamingServiceForStation',
+              'getStationsForNamingDispatchCentre',
               'getStationsForNamingService',
               'populateNamingDispatchCentreFilter',
               'populateNamingServiceFilter',
               'populateNamingStationTypeFilter',
               'populateStartDropdown',
               'populateStationNamingStartDropdown',
+              'getStationOverviewDocuments',
+              'getStationOverviewEntries',
               'refreshStations',
               'refreshStationNamingStations',
               'handleUnitDispatchCentreChange',
@@ -111,8 +119,9 @@ jobs:
               'handleUnitStationTypeChange',
               'handleStationDispatchCentreChange',
               'handleStationNamingServiceChange',
-              'readStationsFromDocument',
-              'getStationRows',
+              'ensureSingleNamingToolsPanel',
+              'mountNamingTools',
+              'initializeTools',
           ]
 
           def build_map(text, label):
@@ -144,6 +153,8 @@ jobs:
               'Refresh Stations',
               'refreshNamingDispatchCentreAssignmentsFromStationRows',
               'getNamingDispatchCentreStationRowDocuments',
+              'hydrateNamingInventoriesFromCurrentOverview',
+              'syncNamingStationDispatchCentreAssignments',
           ]
           ranges = []
           for number, line in enumerate(lines, 1):
@@ -169,5 +180,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .tmp-v3037-naming-*.txt
-          git commit -m "Add naming rollback inspection maps [skip v3037 inspection]"
+          if git diff --cached --quiet; then
+            echo "Inspection maps unchanged."
+            exit 0
+          fi
+          git commit -m "Expand naming rollback inspection maps [skip v3037 inspection]"
           git push origin HEAD:fix/v3037-naming-cascade-rollback
