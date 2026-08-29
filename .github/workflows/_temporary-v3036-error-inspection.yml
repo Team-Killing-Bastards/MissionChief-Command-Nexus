@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Extract exact ownership decision functions
+      - name: Extract legacy transport and ownership helpers
         shell: bash
         run: |
           python3 - <<'PY'
@@ -60,82 +60,62 @@ jobs:
                   i += 1
               return None
 
+          names = [
+              'maybeAssistPatientTransport',
+              'maybeAssistPrisonerTransport',
+              'maybeHandleConfirmedPrisonerReleaseSuccess',
+              'maybeReturnFromCompletedPrisonerDestination',
+              'maybeRecoverStalledTransportContext',
+              'maybeRecoverStrandedPrisonerHandoff',
+              'maybeRecoverStalledNonMissionRedirect',
+              'maybeFastReleaseStalePostTransportQueueGuard',
+              'schedulePostTransportRehook',
+              'watchWorker',
+          ]
+          parts = []
+          for name in names:
+              found = span(name)
+              parts.append(f'===== {name} =====\n' + (source[found[0]:found[1]] if found else 'NOT FOUND'))
+          Path('.tmp-v3036-legacy-transport-functions.txt').write_text('\n\n'.join(parts) + '\n', encoding='utf-8')
+
           module = source.find('MODULE 2: MISSION FINDER')
           names = [
-              'shouldKeepMissionFinderObserverForCurrentFrame',
-              'reconcileMissionFinderFrameRuntime',
-              'installMissionFinderFrameRuntimeReconciliation',
-              'suspendMissionFinderRuntimeForInactiveFrame',
-              'resumeMissionFinderRuntimeForActiveFrame',
-              'disposeMissionFinderRuntime',
-              'getPrimaryMissionRequirementDocument',
-              'getMissionAccessibleDocuments',
-              'isMissionDocumentVisible',
-              'getActiveMissionRequirementContexts',
-              'startMissionFinderObserver',
-              'claimCurrentMissionExecutionOwnership',
-              'isCurrentMissionExecutionOwner',
               'isMfV3ManagedActiveFrame',
               'isMfV3ManagedActiveWorker',
               'isMfV3ManagedTransportWorker',
+              'shouldKeepMissionFinderObserverForCurrentFrame',
+              'startMissionFinderObserver',
               'isTransportAutomationAllowed',
+              'handleTransportRequestsAfterDispatch',
               'syncBackgroundAutomationWatchers',
-              'startBruteApproachTransportWatcher',
           ]
           parts = []
           for name in names:
               found = span(name, module)
               parts.append(f'===== {name} =====\n' + (source[found[0]:found[1]] if found else 'NOT FOUND'))
-          Path('.tmp-v3036-owner-decision-functions.txt').write_text('\n\n'.join(parts) + '\n', encoding='utf-8')
+          Path('.tmp-v3036-runtime-gates.txt').write_text('\n\n'.join(parts) + '\n', encoding='utf-8')
 
-          parent_names = [
-              'frameOwnsOperationalState', 'installOwnershipBridgeInWindow',
-              'frameOwnershipBridge', 'ensureActiveWorkerOwnership',
-              'setFrameOwnership', 'disposeManagedFrameRuntime',
-              'bindManagedFrameLoad', 'adoptWorkerDocument',
-              'clearSharedV2AutoRunning', 'startNexusDiscovery',
-              'maybeHandleTransportServiceTimeout', 'transportServiceRequest',
-              'maybeEnforcePriority', 'watchWorker', 'onWorkerLoad',
-          ]
-          parts = []
-          for name in parent_names:
-              found = span(name, 0)
-              parts.append(f'===== {name} =====\n' + (source[found[0]:found[1]] if found else 'NOT FOUND'))
-          Path('.tmp-v3036-parent-race-functions.txt').write_text('\n\n'.join(parts) + '\n', encoding='utf-8')
-
-          lines = source.splitlines()
-          terms = [
-              'MF_SHARED_ACTIVE_INSTANCE_KEY',
-              'shouldKeepMissionFinderObserverForCurrentFrame',
-              'startup frame is not the active mission owner',
-              'mission-observer-inactive-owner',
-              'isMfV3ManagedActiveWorker()',
-              'getPrimaryMissionRequirementDocument()',
-              'frameOwnsOperationalState(',
-          ]
-          ranges = []
-          for number, line in enumerate(lines, 1):
-              if any(term in line for term in terms):
-                  ranges.append((max(1, number - 24), min(len(lines), number + 70)))
-          merged = []
-          for start, end in ranges:
-              if merged and start <= merged[-1][1] + 4:
-                  merged[-1] = (merged[-1][0], max(merged[-1][1], end))
-              else:
-                  merged.append((start, end))
-          report = []
-          for index, (start, end) in enumerate(merged, 1):
-              report.append(f'===== context-{index} [{start}-{end}] =====')
-              report.extend(f'{i:06d}: {lines[i-1]}' for i in range(start, end + 1))
-              report.append('')
-          Path('.tmp-v3036-owner-decision-contexts.txt').write_text('\n'.join(report), encoding='utf-8')
+          checks = []
+          for path in sorted(Path('scripts').glob('check-*.mjs')):
+              text = path.read_text(encoding='utf-8')
+              if any(term in text for term in [
+                  'maybeReturnFromCompletedPrisonerDestination',
+                  'maybeRecoverStalledTransportContext',
+                  'maybeAssistPatientTransport',
+                  'maybeAssistPrisonerTransport',
+                  'shouldKeepMissionFinderObserverForCurrentFrame',
+                  'isTransportAutomationAllowed',
+                  'return-existing-worker-after-completed-prisoner-destination',
+              ]):
+                  checks.append(f'===== {path} =====\n{text}')
+          Path('.tmp-v3036-related-checks.txt').write_text('\n\n'.join(checks) + '\n', encoding='utf-8')
           PY
 
-      - name: Commit expanded inspection maps
+      - name: Commit final inspection maps
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .tmp-v3036-*.txt
-          git commit -m "Add expanded ownership-race maps [skip v3036 inspection]"
+          git commit -m "Add final v3.0.36 transport maps [skip v3036 inspection]"
           git push origin HEAD:hotfix/v3036-transport-owner-race
