@@ -1,0 +1,44 @@
+name: Temporary v3.0.37 naming cascade build
+
+on:
+  push:
+    branches:
+      - fix/v3037-naming-cascade-rollback
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build clean v3.0.37 candidate
+        shell: bash
+        run: python3 scripts/_temporary-build-v3037-naming-cascade.py
+
+      - name: Validate exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          for check in scripts/check-*.mjs; do
+            echo "Running ${check}"
+            node "${check}"
+          done
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Commit clean hotfix candidate
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Restore naming cascade across nested station frames"
+          git push origin HEAD:fix/v3037-naming-cascade-rollback
