@@ -2,6 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
 
 const source = await readFile(
   'src/missionchief-command-nexus.user.js',
@@ -40,14 +41,22 @@ const managedWorkerCheck = extractFunction('isMfV3ManagedActiveWorker');
 const observerGate = extractFunction(
   'shouldKeepMissionFinderObserverForCurrentFrame'
 );
+const verifierStart = source.indexOf(
+  'window.__MCN_V3_VERIFY_ACTIVE_WORKER__ = '
+);
+const verifierEnd = source.indexOf('\n};', verifierStart) + 3;
+assert.ok(
+  verifierStart >= 0 && verifierEnd > verifierStart,
+  'the top Worker A verifier must be extractable'
+);
+const verifierSource = source.slice(verifierStart, verifierEnd);
 
 assert.match(
   source,
-  /window\.__MCN_V3_VERIFY_ACTIVE_WORKER__ = \(candidateWindow, generationToken = ''\) =>/,
-  'the top controller must expose an exact Worker A verifier'
+  /window\.__MCN_V3_VERIFY_ACTIVE_WORKER__ = \(generationToken = ''\) =>/,
+  'the top controller must expose a generation-scoped Worker A verifier'
 );
 for (const proof of [
-  'frame.contentWindow !== candidateWindow',
   "frame.getAttribute(ACTIVE_WORKER_GENERATION_ATTRIBUTE) === expectedGeneration",
   "frame.getAttribute('data-mcn-v3-worker') === 'true'",
   'state.wanted',
@@ -55,6 +64,66 @@ for (const proof of [
 ]) {
   assert.ok(source.includes(proof), `active-worker proof lost: ${proof}`);
 }
+assert.ok(
+  !source.includes('frame.contentWindow !== candidateWindow'),
+  'Worker A admission must not depend on cross-realm WindowProxy identity'
+);
+assert.ok(
+  source.includes('verifier(generationToken) === true'),
+  'the child must prove the exact generation without passing a cross-realm window wrapper'
+);
+
+const attributes = new Map([
+  ['data-mcn-v3-worker-generation', '7'],
+  ['data-mcn-v3-worker', 'true'],
+]);
+const activeFrame = {
+  isConnected: true,
+  name: 'mcn-v3-active-worker-7-259458804',
+  getAttribute: name => attributes.get(name) || '',
+};
+const verifierContext = vm.createContext({
+  window: {},
+  state: {
+    wanted: true,
+    stopping: false,
+    worker: activeFrame,
+    workerGeneration: 7,
+  },
+  ACTIVE_WORKER_NAME_PREFIX: 'mcn-v3-active-worker-',
+  ACTIVE_WORKER_GENERATION_ATTRIBUTE: 'data-mcn-v3-worker-generation',
+});
+vm.runInContext(verifierSource, verifierContext);
+assert.equal(
+  verifierContext.window.__MCN_V3_VERIFY_ACTIVE_WORKER__('7'),
+  true,
+  'the exact current generation must admit the genuine Worker A after transport return'
+);
+assert.equal(
+  verifierContext.window.__MCN_V3_VERIFY_ACTIVE_WORKER__('6'),
+  false,
+  'a stale generation must fail closed'
+);
+verifierContext.state.stopping = true;
+assert.equal(
+  verifierContext.window.__MCN_V3_VERIFY_ACTIVE_WORKER__('7'),
+  false,
+  'a stopping controller must reject Worker A'
+);
+verifierContext.state.stopping = false;
+activeFrame.isConnected = false;
+assert.equal(
+  verifierContext.window.__MCN_V3_VERIFY_ACTIVE_WORKER__('7'),
+  false,
+  'a detached Worker A must fail closed'
+);
+activeFrame.isConnected = true;
+attributes.set('data-mcn-v3-worker', 'false');
+assert.equal(
+  verifierContext.window.__MCN_V3_VERIFY_ACTIVE_WORKER__('7'),
+  false,
+  'a frame without exact active-worker metadata must fail closed'
+);
 
 assert.ok(
   createWorker.indexOf('state.worker = frame;') <
