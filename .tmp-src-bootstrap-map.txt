@@ -1,0 +1,624 @@
+
+===== 261 [249-285] =====
+000249: const V2_QUEUE_OPENING_MISSION_FLAG = 'mf_queue_opening_mission_v10';
+000250: const V2_MAIN_MISSION_OPEN_LOCK_KEY = 'mf_main_mission_open_lock_until_v10_3_9v';
+000251: const V2_MAIN_MISSION_OPEN_REASON_KEY = 'mf_main_mission_open_reason_v10_3_9v';
+000252: const V2_MAIN_MISSION_PENDING_UNTIL_KEY = 'mf_main_mission_pending_until_v10_3_9zc';
+000253: const V2_MAIN_MISSION_PENDING_TARGET_KEY = 'mf_main_mission_pending_target_v10_3_9zc';
+000254: const V2_MAIN_MISSION_PENDING_REASON_KEY = 'mf_main_mission_pending_reason_v10_3_9zc';
+000255: const V2_AUTO_MODE_RUNNING_KEY = 'mf_auto_mode_running';
+000256: const V2_AUTO_STOP_RECORD_KEY = 'mf_auto_stop_record_v10_6_153';
+000257: const V2_SESSION_STATS_KEY = 'mf_session_stats_v1';
+000258: const V2_STAFFING_FAILURE_HISTORY_KEY = 'mf_staffing_failure_history_v1';
+000259: const V2_STAFFING_QUARANTINE_KEY = 'mf_staffing_vehicle_quarantine_v1';
+000260: const V2_UNIT_FINDER_DIAGNOSTICS_KEY = 'mf_unit_finder_diagnostics_v1';
+000261: const V2_FRAME_RUNTIME_RECONCILE_EVENT = 'missionchief-nexus-frame-runtime-reconcile-v1074';
+000262: const V2_DORMANT_PRELOAD_BRIDGE_KEY = '__MCN_V2_DORMANT_PRELOAD_BRIDGE__';
+000263: const MISSION_SKIP_HISTORY_LIMIT = 80;
+000264: const AIRFIELD_SUPERVISOR_REQUIRED_TEXT = 'Airfield Operations Supervisors';
+000265: const AIRFIELD_SUPERVISOR_VEHICLE_TEXT = 'Airfield Operations Supervisor';
+000266: const AIRFIELD_ALIAS_HISTORY_LIMIT = 30;
+000267: const AIRFIELD_SUPERVISOR_TYPE_ID = '80';
+000268: const AIRFIELD_SUPERVISOR_ASSIST_DELAY_MS = 900;
+000269: const SEARCH_DOG_UNIT_TYPE_ID = '102';
+000270: const RESCUE_DOG_ASSIST_DELAY_MS = 900;
+000271: const RESCUE_DOG_ASSIST_HISTORY_LIMIT = 40;
+000272: const MASS_CASUALTY_EQUIPMENT_TYPE_ID = '33';
+000273: const NORMAL_AMBULANCE_TYPE_ID = '5';
+000274: const MASS_CASUALTY_AMBULANCE_THRESHOLD = 20;
+000275: const VEHICLE_RULE_HISTORY_LIMIT = 40;
+000276: const PRISONER_RELEASE_SUCCESS_REHOOK_DELAY_MS = 650;
+000277: const PRISONER_RELEASE_HISTORY_LIMIT = 30;
+000278: const ZERO_SELECTION_HISTORY_LIMIT = 40;
+000279: const MISSION_TIMING_HISTORY_LIMIT = 160;
+000280: const MISSION_TIMING_SAMPLE_LIMIT = 5000;
+000281: const RUN_MISSION_ID_HISTORY_LIMIT = 5000;
+000282: const MINIMUM_ACTIONABLE_MISSIONS = 2;
+000283: const LOW_QUEUE_RESUME_STABLE_MS = 1500;
+000284: const LOW_QUEUE_REQUEST_MAX_AGE_MS = 10 * 60 * 1000;
+000285: const CONTROLLER_RUNTIME_RECYCLE_ADVANCES = 12;
+
+===== 1843 [1831-1867] =====
+001831: autoControlFound: Boolean(control),
+001832: autoControlText: control ? elementLabel(control) : state.autoControlText,
+001833: autoLooksRunning: Boolean(control && autoControlLooksRunning(control)),
+001834: workerDocumentSerial: state.workerDocumentSerial,
+001835: autoStartDocumentSerial: state.autoStartDocumentSerial,
+001836: autoRunningConfirmedDocumentSerial: state.autoRunningConfirmedDocumentSerial,
+001837: v2AutoStopRecord: readV2AutoStopRecord(),
+001838: usefulStatus: findUsefulNexusStatus(doc),
+001839: transport: context,
+001840: visibleMissionFrameOutsideWorker: Boolean(findVisibleForeignMissionFrame()),
+001841: };
+001842: try {
+001843: snapshot.bootstrapTrace = JSON.parse(JSON.stringify(doc?.defaultView?.__MCN_BOOT_TRACE__ || null));
+001844: } catch {
+001845: snapshot.bootstrapTrace = null;
+001846: }
+001847: state.lastWorkerSnapshot = snapshot;
+001848: return snapshot;
+001849: }
+001850: function log(message, data) {
+001851: const entry = {
+001852: at: nowIso(),
+001853: phase: state.phase,
+001854: message: normaliseText(message),
+001855: };
+001856: if (data !== undefined) {
+001857: try {
+001858: entry.data = JSON.parse(JSON.stringify(data));
+001859: } catch {
+001860: entry.data = String(data);
+001861: }
+001862: }
+001863: state.log.push(entry);
+001864: if (state.log.length > LOG_LIMIT) state.log.splice(0, state.log.length - LOG_LIMIT);
+001865: render();
+001866: }
+001867: function setPhase(phase, status, detail = '') {
+
+===== 1845 [1833-1869] =====
+001833: autoLooksRunning: Boolean(control && autoControlLooksRunning(control)),
+001834: workerDocumentSerial: state.workerDocumentSerial,
+001835: autoStartDocumentSerial: state.autoStartDocumentSerial,
+001836: autoRunningConfirmedDocumentSerial: state.autoRunningConfirmedDocumentSerial,
+001837: v2AutoStopRecord: readV2AutoStopRecord(),
+001838: usefulStatus: findUsefulNexusStatus(doc),
+001839: transport: context,
+001840: visibleMissionFrameOutsideWorker: Boolean(findVisibleForeignMissionFrame()),
+001841: };
+001842: try {
+001843: snapshot.bootstrapTrace = JSON.parse(JSON.stringify(doc?.defaultView?.__MCN_BOOT_TRACE__ || null));
+001844: } catch {
+001845: snapshot.bootstrapTrace = null;
+001846: }
+001847: state.lastWorkerSnapshot = snapshot;
+001848: return snapshot;
+001849: }
+001850: function log(message, data) {
+001851: const entry = {
+001852: at: nowIso(),
+001853: phase: state.phase,
+001854: message: normaliseText(message),
+001855: };
+001856: if (data !== undefined) {
+001857: try {
+001858: entry.data = JSON.parse(JSON.stringify(data));
+001859: } catch {
+001860: entry.data = String(data);
+001861: }
+001862: }
+001863: state.log.push(entry);
+001864: if (state.log.length > LOG_LIMIT) state.log.splice(0, state.log.length - LOG_LIMIT);
+001865: render();
+001866: }
+001867: function setPhase(phase, status, detail = '') {
+001868: state.phase = phase;
+001869: state.status = status;
+
+===== 3479 [3467-3503] =====
+003467: };
+003468: }
+003469: function disposeManagedFrameRuntime(frame, reason = 'managed-frame-release') {
+003470: if (!frame) return false;
+003471: try {
+003472: const loadHandler = frame.__mcnV3LoadHandler;
+003473: if (loadHandler) frame.removeEventListener('load', loadHandler);
+003474: frame.__mcnV3LoadHandler = null;
+003475: try { frame.contentWindow?.stop?.(); } catch {}
+003476: const doc = frame.contentDocument || frame.contentWindow?.document || null;
+003477: if (!doc) return false;
+003478: const RuntimeEvent = doc.defaultView?.CustomEvent || CustomEvent;
+003479: doc.dispatchEvent(new RuntimeEvent(V2_FRAME_RUNTIME_RECONCILE_EVENT, {
+003480: detail: {
+003481: removed: true,
+003482: reason: String(reason || 'managed-frame-release'),
+003483: },
+003484: }));
+003485: state.managedRuntimeDisposals += 1;
+003486: return true;
+003487: } catch {
+003488: return false;
+003489: }
+003490: }
+003491: function bindManagedFrameLoad(frame, handler) {
+003492: if (frame.__mcnV3LoadHandler) frame.removeEventListener('load', frame.__mcnV3LoadHandler);
+003493: frame.__mcnV3LoadHandler = handler;
+003494: frame.addEventListener('load', handler);
+003495: }
+003496: function removePipelineSlot(slot, reason = 'removed', removeFrame = true) {
+003497: if (!slot) return;
+003498: state.pipelineSlots = state.pipelineSlots.filter(item => item !== slot);
+003499: const frame = slot.frame || null;
+003500: if (removeFrame && frame) {
+003501: setFrameOwnership(frame, false, `preload-remove:${reason}`);
+003502: disposeManagedFrameRuntime(frame, `preload-remove:${reason}`);
+003503: try { frame.removeAttribute('srcdoc'); } catch {}
+
+===== 6162 [6150-6186] =====
+006150: function requestV2FrameRuntimeReconcile(frame, generation, reason = 'pipeline-promotion') {
+006151: pipelineRecord('v2-frame-runtime-reconcile-scheduled', {
+006152: missionId: missionIdFromUrl(frameHref(frame)),
+006153: reason,
+006154: });
+006155: for (const delay of [0, 75, 200, 500, 900]) {
+006156: window.setTimeout(() => {
+006157: if (!state.wanted || generation !== state.workerGeneration || state.worker !== frame || !frame?.isConnected) return;
+006158: try {
+006159: const doc = frame.contentDocument || frame.contentWindow?.document || null;
+006160: if (!doc) return;
+006161: const RuntimeEvent = doc.defaultView?.Event || Event;
+006162: doc.dispatchEvent(new RuntimeEvent(V2_FRAME_RUNTIME_RECONCILE_EVENT));
+006163: } catch {}
+006164: }, delay);
+006165: }
+006166: }
+006167: function isInteractive(element) {
+006168: if (!element || !element.isConnected) return false;
+006169: if (element.disabled) return false;
+006170: const style = element.ownerDocument?.defaultView?.getComputedStyle?.(element);
+006171: if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+006172: return true;
+006173: }
+006174: function elementLabel(element) {
+006175: if (!element) return '';
+006176: if (element.matches('input')) return normaliseText(element.value || element.getAttribute('aria-label'));
+006177: return normaliseText(
+006178: element.getAttribute('aria-label') ||
+006179: element.getAttribute('title') ||
+006180: element.textContent
+006181: );
+006182: }
+006183: function findAutoModeControl(doc) {
+006184: if (!doc) return null;
+006185: const scopes = [
+006186: doc.querySelector('#mission-finder-wrapper'),
+
+===== 6581 [6569-6605] =====
+006569: );
+006570: startWatcher();
+006571: return;
+006572: }
+006573: setPhase('WAITING_NEXUS', 'Waiting for embedded Mission Finder', 'Looking for the merged Auto Mode control inside the off-screen mission worker.');
+006574: waitForNexusAndStart(frame, generation);
+006575: }
+006576: function waitForNexusAndStart(frame, generation) {
+006577: clearTimer('nexusDiscoveryTimer');
+006578: const startedAt = Date.now();
+006579: const captureBootstrap = (reason, elapsedMs) => {
+006580: let trace = null;
+006581: try { trace = JSON.parse(JSON.stringify(frame?.contentWindow?.__MCN_BOOT_TRACE__ || null)); } catch {}
+006582: const event = {
+006583: at: nowIso(), reason, elapsedMs, missionId: missionIdFromUrl(getWorkerHref(frame)),
+006584: documentSerial: state.workerDocumentSerial, readyState: getWorkerDocument(frame)?.readyState || '', trace,
+006585: };
+006586: state.activeBootstrapHistory.push(event);
+006587: if (state.activeBootstrapHistory.length > PROMOTION_RECOVERY_HISTORY_LIMIT) state.activeBootstrapHistory.shift();
+006588: return event;
+006589: };
+006590: const attempt = () => {
+006591: if (!state.wanted || generation !== state.workerGeneration || state.worker !== frame) return;
+006592: const href = getWorkerHref(frame);
+006593: const missionId = missionIdFromUrl(href);
+006594: if (!missionId) {
+006595: state.activeBootstrapRescueMissionId = '';
+006596: state.activeBootstrapRescueAttempts = 0;
+006597: clearTimer('nexusDiscoveryTimer');
+006598: startWatcher();
+006599: return;
+006600: }
+006601: if (
+006602: state.activeBootstrapRescueMissionId &&
+006603: state.activeBootstrapRescueMissionId !== missionId
+006604: ) {
+006605: state.activeBootstrapRescueMissionId = '';
+
+===== 8941 [8929-8965] =====
+008929: }
+008930: if (startupResumeAllowed) {
+008931: sessionSet(SESSION_RESUME_HANDOFF_AT, '');
+008932: state.wanted = true;
+008933: state.runStartedAt = sessionGet(SESSION_RUN_STARTED_AT) || nowIso();
+008934: }
+008935: mountWhenMapReady();
+008936: resumePersistedBackground();
+008937: })();
+008938: /* Complete embedded Command Nexus starts at the former document-end boundary. */
+008939: (() => {
+008940:   'use strict';
+008941:   const bootTrace = window.__MCN_BOOT_TRACE__ = {
+008942:     startedAt: Date.now(), path: String(location.pathname || ''), frameName: String(window.name || ''), events: [], errors: []
+008943:   };
+008944:   const bootMark = (stage, detail = '') => {
+008945:     bootTrace.events.push({ at: Date.now(), stage: String(stage), detail: String(detail || '').slice(0, 300) });
+008946:     if (bootTrace.events.length > 30) bootTrace.events.shift();
+008947:   };
+008948:   window.__MCN_BOOT_MARK__ = bootMark;
+008949:   const bootError = (type, value) => {
+008950:     const error = value?.error || value?.reason || value;
+008951:     bootTrace.errors.push({ at: Date.now(), type, message: String(error?.message || error || '').slice(0, 500), stack: String(error?.stack || '').slice(0, 1200) });
+008952:     if (bootTrace.errors.length > 10) bootTrace.errors.shift();
+008953:   };
+008954:   window.addEventListener('error', event => bootError('error', event));
+008955:   window.addEventListener('unhandledrejection', event => bootError('unhandledrejection', event));
+008956:   bootMark('embedded-wrapper-entered', document.readyState);
+008957:   let started = false;
+008958:   const shouldStartHeavyCommandNexusRuntime = () => {
+008959:     try {
+008960:       const name = String(window.name || '');
+008961:       const path = String(location.pathname || '');
+008962:       return name.startsWith('mcn-v3-active-worker-') ||
+008963:         /^\/missions\/\d+(?:\/|$)/i.test(path) ||
+008964:         /^\/vehicles\/\d+\/(?:patient|gefangener)\/\d+(?:\/|$)/i.test(path) ||
+008965:         /^\/leitstellenansicht\/?$/i.test(path) ||
+
+===== 18831 [18819-18855] =====
+018819:     function isMfV3ManagedActiveFrame() {
+018820:         try {
+018821:             return (
+018822:                 window.top !== window.self &&
+018823:                 String(window.name || '').startsWith(
+018824:                     MF_V3_ACTIVE_NAME_PREFIX
+018825:                 )
+018826:             );
+018827:         } catch (_error) {
+018828:             return false;
+018829:         }
+018830:     }
+018831:     function isMfV3ManagedActiveWorker() {
+018832:         try {
+018833:             if (!isMfV3ManagedActiveFrame()) return false;
+018834:             const ownershipBridge =
+018835:                 window.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__ ||
+018836:                 window.__MCN_V3_PIPELINE_PRELOAD_BRIDGE__ ||
+018837:                 null;
+018838:             return ownershipBridge?.isActive?.() === true;
+018839:         } catch (_error) {
+018840:             return false;
+018841:         }
+018842:     }
+018843:     const MF_EVENT_COLLECTIBLE_SELECTOR =
+018844:         'a#easter-egg-link[href^="/missions/"][href*="/claim_found_object_sync"]';
+018845:     const MF_EVENT_COLLECTIBLE_SCAN_INTERVAL_MS =
+018846:         15 * 1000;
+018847:     const MF_EVENT_COLLECTIBLE_REQUEST_COOLDOWN_MS = 10000;
+018848:     const MF_EVENT_COLLECTIBLE_MAX_TRACKED = 250;
+018849:     const mfEventCollectibleClaimTimes = new Map();
+018850:     let mfEventCollectibleScanTimer = null;
+018851:     let mfEventCollectibleScanRunning = false;
+018852:     const MF_EVENT_SCANNER_ENABLED_KEY =
+018853:         'mf_event_scanner_enabled_v1';
+018854:     let mfEventScannerEnabled =
+018855:         localStorage.getItem(
+
+===== 19721 [19709-19745] =====
+019709:     const MF_AUTO_MEMORY_RECYCLE_MAX_STATE_AGE_MS =
+019710:         20 * 60 * 1000;
+019711:     const MF_RUNTIME_MEMORY_SOFT_FLUSH_THRESHOLD_BYTES =
+019712:         480 * 1024 * 1024;
+019713:     const MF_RUNTIME_MEMORY_MAINTENANCE_INTERVAL_MS =
+019714:         15 * 1000;
+019715:     const MF_RUNTIME_MEMORY_SOFT_FLUSH_COOLDOWN_MS =
+019716:         60 * 1000;
+019717:     const MF_RUNTIME_MEMORY_IDLE_MS =
+019718:         30 * 1000;
+019719:     const MF_RUNTIME_MEMORY_STABLE_MS =
+019720:         15 * 1000;
+019721:     const MF_FRAME_RUNTIME_RECONCILE_EVENT =
+019722:         'missionchief-nexus-frame-runtime-reconcile-v1074';
+019723:     const mfMissingUnitRetryIntervals = new Set();
+019724:     let mfRuntimeSuspendedForInactiveFrame = false;
+019725:     let mfFrameRuntimeReconcileHandler = null;
+019726:     let mfRuntimeMemoryMaintenanceTimer = null;
+019727:     let mfRuntimeMemoryActivityHandler = null;
+019728:     let mfRuntimeMemoryOperationDepth = 0;
+019729:     let mfRuntimeMemoryLastActivityAt = Date.now();
+019730:     let mfRuntimeMemoryLastMutationAt = Date.now();
+019731:     let mfRuntimeMemoryLastSoftFlushAt = 0;
+019732:     let mfRuntimeMemorySoftFlushCount = 0;
+019733:     let mfRuntimeMemoryInactiveSuspendCount = 0;
+019734:     let mfRuntimeMemoryLastReason = '';
+019735:     let mfRuntimeStorageMaintenanceState = {
+019736:         ranAt: 0,
+019737:         legacyRecorderRemoved: false,
+019738:         diagnosticCharsBefore: 0,
+019739:         diagnosticCharsAfter: 0
+019740:     };
+019741:     function noteMissionFinderRuntimeMemoryActivity(
+019742:         reason = ''
+019743:     ) {
+019744:         mfRuntimeMemoryLastActivityAt = Date.now();
+019745:         if (reason) {
+
+===== 52336 [52324-52360] =====
+052324:         if (!flags.relevant) return;
+052325:         mfRuntimeMemoryLastMutationAt = Date.now();
+052326:         mergeMainMutationFlags(flags);
+052327:         if (mfMainMutationFlushTimer) return;
+052328:         mfMainMutationFlushTimer = setTimeout(
+052329:             flushMissionFinderMutationWork,
+052330:             200
+052331:         );
+052332:     }
+052333:     function shouldKeepMissionFinderObserverForCurrentFrame() {
+052334:         if (MF_IS_TOP_WINDOW) return true;
+052335:         if (!document.body || !isMissionPage()) return false;
+052336:         if (isMfV3ManagedActiveWorker()) return true;
+052337:         try {
+052338:             return getPrimaryMissionRequirementDocument() === document;
+052339:         } catch (_error) {
+052340:             return true;
+052341:         }
+052342:     }
+052343:     function suspendMissionFinderRuntimeForInactiveFrame(
+052344:         reason = ''
+052345:     ) {
+052346:         if (MF_IS_TOP_WINDOW) return false;
+052347:         if (mfMainMutationObserver) {
+052348:             mfMainMutationObserver.disconnect();
+052349:             mfMainMutationObserver = null;
+052350:         }
+052351:         if (mfMainMutationFlushTimer) {
+052352:             clearTimeout(mfMainMutationFlushTimer);
+052353:             mfMainMutationFlushTimer = null;
+052354:         }
+052355:         if (mfAutoLoopResumeTimer) {
+052356:             clearTimeout(mfAutoLoopResumeTimer);
+052357:             mfAutoLoopResumeTimer = null;
+052358:         }
+052359:         if (mfDebugRenderFrame !== null) {
+052360:             try {
+
+===== 52442 [52430-52466] =====
+052430:     function dispatchMissionFinderFrameRuntimeEvent(
+052431:         candidateDocument,
+052432:         detail = {}
+052433:     ) {
+052434:         try {
+052435:             if (!candidateDocument?.documentElement) return;
+052436:             const ownerWindow =
+052437:                 candidateDocument.defaultView || window;
+052438:             const EventConstructor =
+052439:                 ownerWindow.CustomEvent || CustomEvent;
+052440:             candidateDocument.dispatchEvent(
+052441:                 new EventConstructor(
+052442:                     MF_FRAME_RUNTIME_RECONCILE_EVENT,
+052443:                     { detail }
+052444:                 )
+052445:             );
+052446:         } catch (_error) {}
+052447:     }
+052448:     function reconcileMissionFinderFrameRuntimesFromTop() {
+052449:         if (!MF_IS_TOP_WINDOW) return;
+052450:         try {
+052451:             getMissionAccessibleDocuments(false)
+052452:                 .forEach(candidateDocument => {
+052453:                     if (candidateDocument === document) return;
+052454:                     dispatchMissionFinderFrameRuntimeEvent(
+052455:                         candidateDocument,
+052456:                         {
+052457:                             reason:
+052458:                                 'top-window ownership supervisor'
+052459:                         }
+052460:                     );
+052461:                 });
+052462:         } catch (_error) {}
+052463:     }
+052464:     function releaseRemovedMissionFinderFrameRuntimes(
+052465:         records = []
+052466:     ) {
+
+===== 52513 [52501-52537] =====
+052501:         if (mfFrameRuntimeReconcileHandler) return;
+052502:         mfFrameRuntimeReconcileHandler = event => {
+052503:             if (event?.detail?.removed === true) {
+052504:                 cleanupMissionFinderRuntime();
+052505:                 return;
+052506:             }
+052507:             reconcileMissionFinderFrameRuntime(
+052508:                 event?.detail?.reason ||
+052509:                     'top-window ownership check'
+052510:             );
+052511:         };
+052512:         document.addEventListener(
+052513:             MF_FRAME_RUNTIME_RECONCILE_EVENT,
+052514:             mfFrameRuntimeReconcileHandler
+052515:         );
+052516:     }
+052517:     function suspendMissionFinderRuntimeForPageHide(
+052518:         reason = ''
+052519:     ) {
+052520:         if (mfMainMutationObserver) {
+052521:             mfMainMutationObserver.disconnect();
+052522:             mfMainMutationObserver = null;
+052523:         }
+052524:         if (mfIssueRecorderObserver) {
+052525:             mfIssueRecorderObserver.disconnect();
+052526:             mfIssueRecorderObserver = null;
+052527:         }
+052528:         if (mfMainMutationFlushTimer) {
+052529:             clearTimeout(mfMainMutationFlushTimer);
+052530:             mfMainMutationFlushTimer = null;
+052531:         }
+052532:         if (mfAutoLoopResumeTimer) {
+052533:             clearTimeout(mfAutoLoopResumeTimer);
+052534:             mfAutoLoopResumeTimer = null;
+052535:         }
+052536:         if (mfIssueRecorderMutationTimer) {
+052537:             clearTimeout(mfIssueRecorderMutationTimer);
+
+===== 52686 [52674-52710] =====
+052674:             );
+052675:             mfRuntimePageHideHandler = null;
+052676:         }
+052677:         if (mfRuntimePageShowHandler) {
+052678:             window.removeEventListener(
+052679:                 'pageshow',
+052680:                 mfRuntimePageShowHandler
+052681:             );
+052682:             mfRuntimePageShowHandler = null;
+052683:         }
+052684:         if (mfFrameRuntimeReconcileHandler) {
+052685:             document.removeEventListener(
+052686:                 MF_FRAME_RUNTIME_RECONCILE_EVENT,
+052687:                 mfFrameRuntimeReconcileHandler
+052688:             );
+052689:             mfFrameRuntimeReconcileHandler = null;
+052690:         }
+052691:         invalidateVehicleCheckboxCache();
+052692:         invalidateMissionContextCaches();
+052693:         invalidatePatientCountCache();
+052694:         invalidateTransportCaches();
+052695:         mfVehicleMatchCandidateCache.clear();
+052696:         resetMainMutationFlags();
+052697:         mfRuntimeCleanupInstalled = false;
+052698:     }
+052699:     function shouldPreserveMissionFinderRuntimeOnPageHide(
+052700:         persisted
+052701:     ) {
+052702:         return Boolean(persisted);
+052703:     }
+052704:     function reconcileMissionFinderAfterPageShow() {
+052705:         mfRuntimeSuspendedForPageHide = false;
+052706:         startMissionEventCollectibleCollector();
+052707:         invalidateVehicleCheckboxCache();
+052708:         invalidateMissionContextCaches();
+052709:         invalidatePatientCountCache();
+052710:         invalidateTransportCaches();
+
+===== 52785 [52773-52809] =====
+052773:             'pagehide',
+052774:             mfRuntimePageHideHandler
+052775:         );
+052776:         window.addEventListener(
+052777:             'pageshow',
+052778:             mfRuntimePageShowHandler,
+052779:             { passive: true }
+052780:         );
+052781:     }
+052782:     function startMissionFinderObserver() {
+052783:         if (mfV3DormantPreload) return;
+052784:         globalThis.__MCN_BOOT_MARK__?.('mission-observer-entered', document.readyState);
+052785:         if (isMfV3ManagedActiveWorker()) {
+052786:             globalThis.__MCN_BOOT_MARK__?.('mission-observer-managed-active-owner');
+052787:         }
+052788:         if (mfMainMutationObserver) return;
+052789:         installMissionFinderRuntimeCleanup();
+052790:         installMissionFinderFrameRuntimeReconciliation();
+052791:         if (!shouldKeepMissionFinderObserverForCurrentFrame()) {
+052792:             globalThis.__MCN_BOOT_MARK__?.('mission-observer-inactive-owner');
+052793:             suspendMissionFinderRuntimeForInactiveFrame(
+052794:                 'startup frame is not the active mission owner'
+052795:             );
+052796:             return;
+052797:         }
+052798:         mfRuntimeSuspendedForInactiveFrame = false;
+052799:         installIssueRecorderWatchers();
+052800:         installPersonnelRegistryUpdateHandler();
+052801:         installMissionFinderRuntimeMemoryActivityTracking();
+052802:         if (MF_IS_TOP_WINDOW) {
+052803:             installManualMissionClickFlagClearer();
+052804:             installBackgroundWatcherSupervisor();
+052805:             compactMissionFinderPersistentStorage();
+052806:             if (
+052807:                 localStorage.getItem(
+052808:                     'mf_post_transport_rehook_pending_v1'
+052809:                 ) === 'true' ||
+
+===== 52786 [52774-52810] =====
+052774:             mfRuntimePageHideHandler
+052775:         );
+052776:         window.addEventListener(
+052777:             'pageshow',
+052778:             mfRuntimePageShowHandler,
+052779:             { passive: true }
+052780:         );
+052781:     }
+052782:     function startMissionFinderObserver() {
+052783:         if (mfV3DormantPreload) return;
+052784:         globalThis.__MCN_BOOT_MARK__?.('mission-observer-entered', document.readyState);
+052785:         if (isMfV3ManagedActiveWorker()) {
+052786:             globalThis.__MCN_BOOT_MARK__?.('mission-observer-managed-active-owner');
+052787:         }
+052788:         if (mfMainMutationObserver) return;
+052789:         installMissionFinderRuntimeCleanup();
+052790:         installMissionFinderFrameRuntimeReconciliation();
+052791:         if (!shouldKeepMissionFinderObserverForCurrentFrame()) {
+052792:             globalThis.__MCN_BOOT_MARK__?.('mission-observer-inactive-owner');
+052793:             suspendMissionFinderRuntimeForInactiveFrame(
+052794:                 'startup frame is not the active mission owner'
+052795:             );
+052796:             return;
+052797:         }
+052798:         mfRuntimeSuspendedForInactiveFrame = false;
+052799:         installIssueRecorderWatchers();
+052800:         installPersonnelRegistryUpdateHandler();
+052801:         installMissionFinderRuntimeMemoryActivityTracking();
+052802:         if (MF_IS_TOP_WINDOW) {
+052803:             installManualMissionClickFlagClearer();
+052804:             installBackgroundWatcherSupervisor();
+052805:             compactMissionFinderPersistentStorage();
+052806:             if (
+052807:                 localStorage.getItem(
+052808:                     'mf_post_transport_rehook_pending_v1'
+052809:                 ) === 'true' ||
+052810:                 isRecentTransportRehookWindowActive()
+
+===== 52792 [52780-52816] =====
+052780:         );
+052781:     }
+052782:     function startMissionFinderObserver() {
+052783:         if (mfV3DormantPreload) return;
+052784:         globalThis.__MCN_BOOT_MARK__?.('mission-observer-entered', document.readyState);
+052785:         if (isMfV3ManagedActiveWorker()) {
+052786:             globalThis.__MCN_BOOT_MARK__?.('mission-observer-managed-active-owner');
+052787:         }
+052788:         if (mfMainMutationObserver) return;
+052789:         installMissionFinderRuntimeCleanup();
+052790:         installMissionFinderFrameRuntimeReconciliation();
+052791:         if (!shouldKeepMissionFinderObserverForCurrentFrame()) {
+052792:             globalThis.__MCN_BOOT_MARK__?.('mission-observer-inactive-owner');
+052793:             suspendMissionFinderRuntimeForInactiveFrame(
+052794:                 'startup frame is not the active mission owner'
+052795:             );
+052796:             return;
+052797:         }
+052798:         mfRuntimeSuspendedForInactiveFrame = false;
+052799:         installIssueRecorderWatchers();
+052800:         installPersonnelRegistryUpdateHandler();
+052801:         installMissionFinderRuntimeMemoryActivityTracking();
+052802:         if (MF_IS_TOP_WINDOW) {
+052803:             installManualMissionClickFlagClearer();
+052804:             installBackgroundWatcherSupervisor();
+052805:             compactMissionFinderPersistentStorage();
+052806:             if (
+052807:                 localStorage.getItem(
+052808:                     'mf_post_transport_rehook_pending_v1'
+052809:                 ) === 'true' ||
+052810:                 isRecentTransportRehookWindowActive()
+052811:             ) {
+052812:                 forceAutoModeBackOnForTransportRehook();
+052813:                 setTimeout(() => {
+052814:                     openFirstMissionAfterTransportAutoClose(
+052815:                         'startup-pending-rehook'
+052816:                     );

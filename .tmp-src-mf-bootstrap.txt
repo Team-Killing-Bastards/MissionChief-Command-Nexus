@@ -1,0 +1,1051 @@
+018200:             .replace(/\s+Police Station$/i, '')
+018201:             .replace(/\s+Station$/i, '')
+018202:             .trim();
+018203:     }
+018204:     function detectStationType(name) {
+018205:         const n = cleanText(name).toUpperCase();
+018206:         if (n.includes('AIRMED') || n.includes('AIR AMB')) return 'AIR';
+018207:         if (n.includes('AIRPORT')) return 'AIRFIELD';
+018208:         if (n.includes('BOMB') || n.includes('EOD')) return 'EOD';
+018209:         if (n.includes('RECOVERY')) return 'RECOVERY';
+018210:         if (n.includes('SAR')) return 'SAR';
+018211:         if (n.includes('RNLI') || n.includes('-LB') || n.includes('LIFEBOAT')) return 'RNLI';
+018212:         if (n.includes('-CG') || n.includes('COASTGUARD')) return 'COASTGUARD';
+018213:         if (n.includes('-PS') || n.includes('POLICE')) return 'POLICE';
+018214:         if (n.includes('-AS') || n.includes('AO STATION') || n.includes('AMBULANCE')) return 'AMBULANCE';
+018215:         if (n.includes('-FS') || n.includes('FIRE')) return 'FIRE';
+018216:         return 'OTHER';
+018217:     }
+018218:     function getVehicleIdFromHref(href) {
+018219:         const match = String(href || '').match(/\/vehicles\/(\d+)/);
+018220:         return match ? match[1] : '';
+018221:     }
+018222:     function makeVehicleName(station, vehicleType, count) {
+018223:         const info = VEHICLE_INFO[vehicleType];
+018224:         if (!info) return null;
+018225:         return `${info.icon ? info.icon + ' ' : ''}${station.callsignBase}-${info.code}-${count}`;
+018226:     }
+018227:     async function unitFetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+018228:         const requestUrl = getSameOriginResourceUrl(url, 'Unit Naming request');
+018229:         const controller = new AbortController();
+018230:         STATE.activeControllers.add(controller);
+018231:         const timer = setTimeout(() => controller.abort(), timeoutMs);
+018232:         try {
+018233:             return await fetch(`${requestUrl.pathname}${requestUrl.search}`, {
+018234:                 credentials: 'same-origin',
+018235:                 cache: 'no-store',
+018236:                 redirect: 'follow',
+018237:                 ...options,
+018238:                 signal: controller.signal
+018239:             });
+018240:         } finally {
+018241:             clearTimeout(timer);
+018242:             STATE.activeControllers.delete(controller);
+018243:         }
+018244:     }
+018245:     async function unitFetchDocument(url, timeoutMs = 12000) {
+018246:         const requestUrl = getSameOriginResourceUrl(url, 'Unit Naming document');
+018247:         const response = await unitFetchWithTimeout(requestUrl.href, {
+018248:             headers: {
+018249:                 'Accept': 'text/html,application/xhtml+xml'
+018250:             }
+018251:         }, timeoutMs);
+018252:         if (!response.ok) {
+018253:             throw new Error(`Unit Naming request returned HTTP ${response.status}: ${requestUrl.pathname}`);
+018254:         }
+018255:         const html = await response.text();
+018256:         const doc = new DOMParser().parseFromString(html, 'text/html');
+018257:         const responseUrl = getSameOriginResourceUrl(
+018258:             response.url || requestUrl.href,
+018259:             'Unit Naming response'
+018260:         );
+018261:         return {
+018262:             response,
+018263:             doc,
+018264:             href: `${responseUrl.pathname}${responseUrl.search}`
+018265:         };
+018266:     }
+018267:     async function verifyUnitNameSaved(editHref, vehicleId, expectedName) {
+018268:         for (let attempt = 1; attempt <= 12; attempt++) {
+018269:             if (STATE.stopped) return false;
+018270:             await sleep(attempt === 1 ? 450 : 300);
+018271:             try {
+018272:                 const editPage = await unitFetchDocument(editHref, 10000);
+018273:                 if (getVehicleIdFromHref(editPage.href) !== String(vehicleId)) {
+018274:                     debug(`Vehicle verification returned the wrong ID on attempt ${attempt}.`);
+018275:                     continue;
+018276:                 }
+018277:                 const savedName = String(
+018278:                     editPage.doc.querySelector('#vehicle_caption')?.value || ''
+018279:                 ).trim();
+018280:                 debug(`Vehicle save verification attempt ${attempt}: "${savedName}"`);
+018281:                 if (savedName === expectedName) return true;
+018282:             } catch (error) {
+018283:                 debug(`Vehicle save verification attempt ${attempt} failed: ${error?.message || error}`);
+018284:             }
+018285:         }
+018286:         return false;
+018287:     }
+018288: 
+018289:     function getUnitClassOptionsForStationType(stationType) {
+018290:         const selectedStationType = String(stationType || 'ALL');
+018291:         const configuredTypeIds =
+018292:             UNIT_CLASS_TYPE_IDS_BY_STATION_TYPE[selectedStationType];
+018293:         const typeIds =
+018294:             Array.isArray(configuredTypeIds)
+018295:                 ? configuredTypeIds
+018296:                 : Object.keys(TYPE_ID_TO_VEHICLE_TYPE);
+018297:         const byVehicleType = new Map();
+018298:         typeIds.forEach(vehicleTypeId => {
+018299:             const vehicleType =
+018300:                 TYPE_ID_TO_VEHICLE_TYPE[String(vehicleTypeId)] || '';
+018301:             const info = VEHICLE_INFO[vehicleType];
+018302:             if (!vehicleType || !info || byVehicleType.has(vehicleType)) {
+018303:                 return;
+018304:             }
+018305:             byVehicleType.set(vehicleType, {
+018306:                 vehicleType,
+018307:                 vehicleTypeId: String(vehicleTypeId),
+018308:                 label:
+018309:                     `${info.icon ? `${info.icon} ` : ''}${vehicleType} (${info.code})`
+018310:             });
+018311:         });
+018312:         return Array.from(byVehicleType.values()).sort((left, right) => {
+018313:             return left.vehicleType.localeCompare(
+018314:                 right.vehicleType,
+018315:                 'en-GB',
+018316:                 {
+018317:                     numeric: true,
+018318:                     sensitivity: 'base'
+018319:                 }
+018320:             );
+018321:         });
+018322:     }
+018323: 
+018324:     function getSelectedUnitClass() {
+018325:         return document.querySelector('#mc-namer-unit-class')?.value ||
+018326:             STATE.selectedUnitClass ||
+018327:             UNIT_CLASS_ALL;
+018328:     }
+018329:     function getUnitClassDisplayLabel(value = getSelectedUnitClass()) {
+018330:         const selected = String(value || UNIT_CLASS_ALL);
+018331:         if (selected === UNIT_CLASS_ALL) return 'All classes';
+018332:         const info = VEHICLE_INFO[selected];
+018333:         return info
+018334:             ? `${selected} (${info.code})`
+018335:             : selected;
+018336:     }
+018337:     function populateUnitClassDropdown() {
+018338:         const select = document.querySelector('#mc-namer-unit-class');
+018339:         if (!select) return;
+018340:         const selectedStationType =
+018341:             document.querySelector('#mc-namer-station-type')?.value ||
+018342:             'ALL';
+018343:         const previous =
+018344:             select.value ||
+018345:             STATE.selectedUnitClass ||
+018346:             UNIT_CLASS_ALL;
+018347:         const options =
+018348:             getUnitClassOptionsForStationType(selectedStationType);
+018349:         select.innerHTML = '';
+018350:         const allOption = document.createElement('option');
+018351:         allOption.value = UNIT_CLASS_ALL;
+018352:         allOption.textContent = 'All classes';
+018353:         select.appendChild(allOption);
+018354:         options.forEach(item => {
+018355:             const option = document.createElement('option');
+018356:             option.value = item.vehicleType;
+018357:             option.textContent = item.label;
+018358:             option.dataset.vehicleTypeId = item.vehicleTypeId;
+018359:             select.appendChild(option);
+018360:         });
+018361:         const available = new Set([
+018362:             UNIT_CLASS_ALL,
+018363:             ...options.map(item => item.vehicleType)
+018364:         ]);
+018365:         select.value = available.has(previous)
+018366:             ? previous
+018367:             : UNIT_CLASS_ALL;
+018368:         STATE.selectedUnitClass = select.value;
+018369:         select.title =
+018370:             `${options.length} naming classes available for ` +
+018371:             `${STATION_TYPES[selectedStationType] || selectedStationType}`;
+018372:     }
+018373:     function handleUnitStationTypeChange() {
+018374:         populateUnitClassDropdown();
+018375:         populateStartDropdown();
+018376:     }
+018377:     function handleUnitClassChange() {
+018378:         STATE.selectedUnitClass = getSelectedUnitClass();
+018379:         populateStartDropdown();
+018380:         setStatus('Class filter updated');
+018381:         log(`Unit class: ${getUnitClassDisplayLabel()}`, 'info');
+018382:     }
+018383:     function vehicleMatchesSelectedUnitClass(vehicle) {
+018384:         const selected =
+018385:             STATE.selectedUnitClass ||
+018386:             getSelectedUnitClass();
+018387:         return (
+018388:             selected === UNIT_CLASS_ALL ||
+018389:             vehicle?.vehicleType === selected
+018390:         );
+018391:     }
+018392:     async function refreshStations() {
+018393:         if (PERSONNEL_STATE.running) {
+018394:             log('Personnel Assignment is currently running. Stop it before refreshing Unit Naming.', 'error');
+018395:             return;
+018396:         }
+018397:         if (STATE.running) {
+018398:             log('Cannot refresh while running. Stop first.', 'error');
+018399:             return;
+018400:         }
+018401:         populateUnitClassDropdown();
+018402:         STATE.selectedUnitClass = getSelectedUnitClass();
+018403:         setStatus('Refreshing stations...');
+018404:         log('Refreshing station list...', 'info');
+018405:         log(`Unit class filter: ${getUnitClassDisplayLabel()}`, 'info');
+018406:         const stationEntries = getStationOverviewEntries();
+018407:         await Promise.all([
+018408:             loadNamingDispatchCentreList(false),
+018409:             loadNamingDispatchCentreData(true)
+018410:         ]);
+018411:         STATE.stations = stationEntries.map((entry, index) => {
+018412:             const stationType =
+018413:                 STATION_BUILDING_TYPE_INFO[entry.buildingTypeId]?.stationType ||
+018414:                 detectStationType(entry.displayName);
+018415:             return {
+018416:                 index,
+018417:                 href: entry.href,
+018418:                 buildingId: entry.buildingId,
+018419:                 displayName: entry.displayName,
+018420:                 buildingTypeId: entry.buildingTypeId,
+018421:                 dispatchCentreId: getNamingDispatchCentreId(entry.buildingId),
+018422:                 callsignBase: createCallsignBase(entry.displayName),
+018423:                 stationType,
+018424:                 service: getNamingServiceForStation({
+018425:                     buildingTypeId: entry.buildingTypeId,
+018426:                     stationType
+018427:                 })
+018428:             };
+018429:         });
+018430:         populateNamingDispatchCentreFilter('mc-namer-dispatch-centre');
+018431:         populateNamingServiceFilter('mc-namer-service', 'mc-namer-dispatch-centre', STATE.stations);
+018432:         populateNamingStationTypeFilter('mc-namer-station-type', 'mc-namer-dispatch-centre', 'mc-namer-service', STATE.stations);
+018433:         populateStartDropdown();
+018434:         setStatus('Ready');
+018435:         setProgress(0, STATE.filteredStations.length);
+018436:         log(`Stations found: ${STATE.stations.length}`, 'info');
+018437:         log(`Matching filter: ${STATE.filteredStations.length}`, 'info');
+018438:         if (STATE.filteredStations.length) {
+018439:             log(`First match: ${STATE.filteredStations[0].displayName}`, 'info');
+018440:             log(`Last match : ${STATE.filteredStations[STATE.filteredStations.length - 1].displayName}`, 'info');
+018441:         }
+018442:     }
+018443:     function populateStartDropdown() {
+018444:         const select = document.querySelector('#mc-namer-startfrom');
+018445:         if (!select) return;
+018446:         const selectedService = document.querySelector('#mc-namer-service')?.value || 'ALL';
+018447:         const selectedType = document.querySelector('#mc-namer-station-type')?.value || 'ALL';
+018448:         const selectedDispatchCentre =
+018449:             document.querySelector('#mc-namer-dispatch-centre')?.value ||
+018450:             NAMING_DISPATCH_CENTRE_ALL;
+018451:         STATE.filteredStations = STATE.stations.filter(station => {
+018452:             const stationTypeMatches =
+018453:                 selectedType === 'ALL' || station.stationType === selectedType;
+018454:             return stationTypeMatches &&
+018455:                 stationMatchesNamingService(station, selectedService) &&
+018456:                 stationMatchesNamingDispatchCentre(station, selectedDispatchCentre);
+018457:         });
+018458:         select.innerHTML = '';
+018459:         if (!STATE.filteredStations.length) {
+018460:             select.innerHTML = `<option value="">No matching stations found</option>`;
+018461:             setProgress(0, 0);
+018462:             return;
+018463:         }
+018464:         const firstOption = document.createElement('option');
+018465:         firstOption.value = STATE.filteredStations[0].href;
+018466:         firstOption.textContent = 'Start from first matching station';
+018467:         select.appendChild(firstOption);
+018468:         STATE.filteredStations.forEach(station => {
+018469:             const option = document.createElement('option');
+018470:             option.value = station.href;
+018471:             option.textContent = `${station.displayName} [${STATION_TYPES[station.stationType] || station.stationType}]`;
+018472:             select.appendChild(option);
+018473:         });
+018474:         setProgress(0, STATE.filteredStations.length);
+018475:     }
+018476:     function startRun() {
+018477:         if (PERSONNEL_STATE.running) {
+018478:             log('Personnel Assignment is currently running. Stop it before starting Unit Naming.', 'error');
+018479:             return;
+018480:         }
+018481:         if (STATION_STATE.running) {
+018482:             log('Station Naming is currently running. Stop it before starting Unit Naming.', 'error');
+018483:             return;
+018484:         }
+018485:         if (STATE.running) {
+018486:             log('Already running.', 'debug');
+018487:             return;
+018488:         }
+018489:         if (!STATE.filteredStations.length) {
+018490:             log('No matching stations loaded. Press Refresh Stations first.', 'error');
+018491:             return;
+018492:         }
+018493:         const selectedHref = document.querySelector('#mc-namer-startfrom').value;
+018494:         const startIndex = STATE.filteredStations.findIndex(station => station.href === selectedHref);
+018495:         if (startIndex < 0) {
+018496:             log(`Selected start station not found: ${selectedHref}`, 'error');
+018497:             return;
+018498:         }
+018499:         STATE.mode = document.querySelector('#mc-namer-mode')?.value || 'all';
+018500:         STATE.selectedUnitClass = getSelectedUnitClass();
+018501:         STATE.running = true;
+018502:         STATE.paused = false;
+018503:         STATE.stopped = false;
+018504:         STATE.stationIndex = startIndex;
+018505:         STATE.renamedCount = 0;
+018506:         STATE.skippedCount = 0;
+018507:         const runId = ++STATE.runId;
+018508:         updateCounters();
+018509:         document.querySelector('#mc-namer-pause').textContent = 'Pause';
+018510:         log(`Mode: ${STATE.mode === 'single' ? 'Selected station only' : 'All matching stations'}`, 'info');
+018511:         log(`Station type: ${STATION_TYPES[document.querySelector('#mc-namer-station-type').value]}`, 'info');
+018512:         log(`Unit class: ${getUnitClassDisplayLabel(STATE.selectedUnitClass)}`, 'info');
+018513:         log(`Starting from: ${STATE.filteredStations[startIndex].displayName}`, 'info');
+018514:         processStations(runId).catch(error => {
+018515:             if (runId !== STATE.runId) return;
+018516:             log(`Unit Naming stopped after an unexpected error: ${error?.message || error}`, 'error');
+018517:             debug(error?.stack || String(error));
+018518:             STATE.stopped = true;
+018519:             setStatus('Error');
+018520:         });
+018521:     }
+018522:     function togglePause() {
+018523:         if (!STATE.running) return;
+018524:         STATE.paused = !STATE.paused;
+018525:         document.querySelector('#mc-namer-pause').textContent = STATE.paused ? 'Resume' : 'Pause';
+018526:         setStatus(STATE.paused ? 'Paused' : 'Running');
+018527:         log(STATE.paused ? 'Paused.' : 'Resumed.', 'debug');
+018528:     }
+018529:     function stopRun() {
+018530:         if (!STATE.running) return;
+018531:         STATE.stopped = true;
+018532:         STATE.paused = false;
+018533:         for (const controller of STATE.activeControllers) {
+018534:             try {
+018535:                 controller.abort();
+018536:             } catch (_error) {}
+018537:         }
+018538:         STATE.activeControllers.clear();
+018539:         document.querySelector('#mc-namer-pause').textContent = 'Pause';
+018540:         setStatus('Stopping...');
+018541:         log('Stop requested. Active Unit Naming requests were cancelled.', 'error');
+018542:     }
+018543:     function toggleDebug() {
+018544:         STATE.debug = !STATE.debug;
+018545:         document.querySelector('#mc-namer-debug').textContent = STATE.debug ? 'Debug: ON' : 'Debug: OFF';
+018546:         log(`Debug ${STATE.debug ? 'enabled' : 'disabled'}.`, 'debug');
+018547:     }
+018548:     function clearLog() {
+018549:         clearBoundedToolLog(getToolElementById('mc-namer-log'));
+018550:     }
+018551:     async function processStations(runId) {
+018552:         try {
+018553:             while (STATE.stationIndex < STATE.filteredStations.length) {
+018554:                 if (STATE.stopped || runId !== STATE.runId) break;
+018555:                 await waitIfPaused(runId);
+018556:                 if (STATE.stopped || runId !== STATE.runId) break;
+018557:                 const station = STATE.filteredStations[STATE.stationIndex];
+018558:                 setStatus('Reading station in background');
+018559:                 setStation(station.displayName);
+018560:                 setVehicle('None');
+018561:                 setProgress(STATE.stationIndex, STATE.filteredStations.length);
+018562:                 log(`Station: ${station.displayName}`, 'station');
+018563:                 try {
+018564:                     const stationPage = await unitFetchDocument(station.href, 12000);
+018565:                     const expectedBuildingId = String(
+018566:                         station.buildingId || getBuildingIdFromHref(station.href)
+018567:                     );
+018568:                     const returnedBuildingId = getBuildingIdFromHref(stationPage.href);
+018569:                     if (!expectedBuildingId || returnedBuildingId !== expectedBuildingId) {
+018570:                         throw new Error(
+018571:                             `Station read returned building ${returnedBuildingId || 'none'}; expected ${expectedBuildingId || 'unknown'}.`
+018572:                         );
+018573:                     }
+018574:                     if (!stationPage.doc.querySelector('#vehicle_table')) {
+018575:                         throw new Error('The station vehicle table was not returned.');
+018576:                     }
+018577:                     await processStationVehicleQueue(stationPage.doc, station);
+018578:                 } catch (error) {
+018579:                     if (STATE.stopped && error?.name === 'AbortError') break;
+018580:                     log(`Station skipped: ${station.displayName} — ${error?.message || error}`, 'error');
+018581:                     debug(error?.stack || String(error));
+018582:                     STATE.skippedCount++;
+018583:                     updateCounters();
+018584:                 }
+018585:                 if (STATE.mode === 'single') {
+018586:                     log('Single station mode complete.', 'done');
+018587:                     break;
+018588:                 }
+018589:                 STATE.stationIndex++;
+018590:             }
+018591:         } finally {
+018592:             if (runId !== STATE.runId) return;
+018593:             STATE.running = false;
+018594:             STATE.paused = false;
+018595:             document.querySelector('#mc-namer-pause').textContent = 'Pause';
+018596:             if (STATE.stopped) {
+018597:                 setStatus('Stopped');
+018598:                 log(`Stopped. Renamed ${STATE.renamedCount}. Skipped ${STATE.skippedCount}.`, 'error');
+018599:             } else {
+018600:                 setStatus('Finished');
+018601:                 setStation('None');
+018602:                 setVehicle('None');
+018603:                 setProgress(
+018604:                     STATE.mode === 'single' ? 1 : STATE.filteredStations.length,
+018605:                     STATE.mode === 'single' ? 1 : STATE.filteredStations.length
+018606:                 );
+018607:                 log(`Finished. Renamed ${STATE.renamedCount}. Skipped ${STATE.skippedCount}.`, 'done');
+018608:             }
+018609:         }
+018610:     }
+018611:     function getVehicleQueueFromTable(doc) {
+018612:         return [...doc.querySelectorAll('#vehicle_table tbody tr')]
+018613:             .map((row, index) => {
+018614:                 const img = row.querySelector('img[vehicle_type_id]');
+018615:                 const vehicleTypeId = img?.getAttribute('vehicle_type_id') || '';
+018616:                 const vehicleType = TYPE_ID_TO_VEHICLE_TYPE[vehicleTypeId] || '';
+018617:                 const allLinks = [...row.querySelectorAll('a[href^="/vehicles/"]')];
+018618:                 const editLink = allLinks.find(a => {
+018619:                     const href = a.getAttribute('href') || '';
+018620:                     return href.endsWith('/edit');
+018621:                 });
+018622:                 const vehicleLink = allLinks.find(a => {
+018623:                     const href = a.getAttribute('href') || '';
+018624:                     return !href.endsWith('/edit') && !href.includes('/zuweisung');
+018625:                 });
+018626:                 const vehicleHref = vehicleLink?.getAttribute('href') || '';
+018627:                 const editHref = editLink?.getAttribute('href') || '';
+018628:                 const vehicleId = getVehicleIdFromHref(editHref || vehicleHref);
+018629:                 const currentName = cleanText(vehicleLink?.textContent || '');
+018630:                 return {
+018631:                     tableIndex: index,
+018632:                     vehicleId,
+018633:                     vehicleTypeId,
+018634:                     vehicleType,
+018635:                     currentName,
+018636:                     vehicleHref,
+018637:                     editHref
+018638:                 };
+018639:             })
+018640:             .filter(v => v.editHref && v.vehicleId)
+018641:             .filter(vehicleMatchesSelectedUnitClass);
+018642:     }
+018643:     async function processStationVehicleQueue(stationDoc, station) {
+018644:         setStatus('Building vehicle queue');
+018645:         const queue = getVehicleQueueFromTable(stationDoc);
+018646:         debug(`Vehicle queue built for ${station.displayName}: ${queue.length}`);
+018647:         if (!queue.length) {
+018648:             log(`No ${getUnitClassDisplayLabel(STATE.selectedUnitClass)} vehicles found in ${station.displayName}.`, 'debug');
+018649:             return;
+018650:         }
+018651:         const counts = {};
+018652:         for (const item of queue) {
+018653:             if (STATE.stopped) return;
+018654:             await waitIfPaused();
+018655:             if (STATE.stopped) return;
+018656:             if (!item.vehicleType) {
+018657:                 log(`Unknown vehicle_type_id skipped: ${item.vehicleTypeId} | ${item.editHref}`, 'error');
+018658:                 STATE.skippedCount++;
+018659:                 updateCounters();
+018660:                 continue;
+018661:             }
+018662:             const info = VEHICLE_INFO[item.vehicleType];
+018663:             if (!info) {
+018664:                 log(`No naming rule skipped: "${item.vehicleType}"`, 'error');
+018665:                 STATE.skippedCount++;
+018666:                 updateCounters();
+018667:                 continue;
+018668:             }
+018669:             counts[item.vehicleType] = (counts[item.vehicleType] || 0) + 1;
+018670:             const newName = makeVehicleName(
+018671:                 station,
+018672:                 item.vehicleType,
+018673:                 counts[item.vehicleType]
+018674:             );
+018675:             setStatus('Reading vehicle edit form');
+018676:             setVehicle(item.editHref);
+018677:             try {
+018678:                 const editPage = await unitFetchDocument(item.editHref, 12000);
+018679:                 if (getVehicleIdFromHref(editPage.href) !== String(item.vehicleId)) {
+018680:                     throw new Error('Vehicle edit request returned a different vehicle ID.');
+018681:                 }
+018682:                 const expectedAction = item.editHref.replace(/\/edit(?:\?.*)?$/, '');
+018683:                 const prepared = prepareBackgroundNativeForm(editPage.doc, {
+018684:                     expectedAction,
+018685:                     inputSelector: '#vehicle_caption',
+018686:                     requiredMethodOverride: 'patch',
+018687:                     submitSelector: 'input[type="submit"][value="Save"], button[type="submit"]',
+018688:                     value: newName,
+018689:                     resourceLabel: `vehicle ${item.vehicleId}`
+018690:                 });
+018691:                 const before = String(prepared.input.value || '').trim();
+018692:                 if (before === newName) {
+018693:                     log(`Already correct: ${newName}`, 'info');
+018694:                     STATE.skippedCount++;
+018695:                     updateCounters();
+018696:                     continue;
+018697:                 }
+018698:                 setStatus('Saving vehicle in background');
+018699:                 setVehicle(newName);
+018700:                 log(`BEFORE: ${before}`, 'before');
+018701:                 log(`AFTER : ${newName}`, 'after');
+018702:                 await submitBackgroundNativeForm(
+018703:                     unitFetchWithTimeout,
+018704:                     prepared,
+018705:                     12000
+018706:                 );
+018707:                 const saved = await verifyUnitNameSaved(
+018708:                     item.editHref,
+018709:                     item.vehicleId,
+018710:                     newName
+018711:                 );
+018712:                 if (!saved) {
+018713:                     throw new Error('Save could not be verified; this vehicle was not counted as renamed.');
+018714:                 }
+018715:                 STATE.renamedCount++;
+018716:                 updateCounters();
+018717:                 log(`Saved and verified: ${newName}`, 'done');
+018718:             } catch (error) {
+018719:                 if (STATE.stopped && error?.name === 'AbortError') return;
+018720:                 log(`Vehicle skipped ${item.editHref}: ${error?.message || error}`, 'error');
+018721:                 debug(error?.stack || String(error));
+018722:                 STATE.skippedCount++;
+018723:                 updateCounters();
+018724:             }
+018725:             if (!STATE.stopped) await sleep(250);
+018726:         }
+018727:     }
+018728:     async function waitIfPaused(runId = STATE.runId) {
+018729:         while (STATE.paused && !STATE.stopped && runId === STATE.runId) {
+018730:             await sleep(300);
+018731:         }
+018732:     }
+018733:     function setStatus(text) {
+018734:         const el = getToolElementById('mc-namer-status');
+018735:         if (el) el.textContent = text;
+018736:     }
+018737:     function setStation(text) {
+018738:         const el = getToolElementById('mc-namer-station');
+018739:         if (el) el.textContent = text;
+018740:     }
+018741:     function setVehicle(text) {
+018742:         const el = getToolElementById('mc-namer-vehicle');
+018743:         if (el) el.textContent = text;
+018744:     }
+018745:     function setProgress(done, total) {
+018746:         const el = getToolElementById('mc-namer-progress');
+018747:         if (el) el.textContent = `${done} / ${total}`;
+018748:     }
+018749:     function updateCounters() {
+018750:         const renamed = getToolElementById('mc-namer-renamed');
+018751:         const skipped = getToolElementById('mc-namer-skipped');
+018752:         if (renamed) renamed.textContent = String(STATE.renamedCount);
+018753:         if (skipped) skipped.textContent = String(STATE.skippedCount);
+018754:     }
+018755:     function log(message, type = 'info') {
+018756:         const logBox = getToolElementById('mc-namer-log');
+018757:         if (!logBox) return;
+018758:         const line = document.createElement('div');
+018759:         line.className = `mc-log-${type}`;
+018760:         line.textContent = message;
+018761:         appendBoundedToolLog(logBox, line);
+018762:     }
+018763:     function debug(message) {
+018764:         if (!STATE.debug) return;
+018765:         log(`[DEBUG] ${message}`, 'debug');
+018766:     }
+018767:     const handlePersonnelRegistryStorage = event => {
+018768:         if (event?.key !== PERSONNEL_TRAINING_REGISTRY_STORAGE_KEY) return;
+018769:         if (PERSONNEL_TRAINING_REGISTRY_DIRTY) return;
+018770:         PERSONNEL_TRAINING_REGISTRY_CACHE = null;
+018771:     };
+018772:     const handleToolPageHide = event => {
+018773:         flushPersonnelTrainingRegistry(true);
+018774:         if (event?.persisted) return;
+018775:         runToolLifecycleCleanup();
+018776:     };
+018777:     window.addEventListener('storage', handlePersonnelRegistryStorage);
+018778:     window.addEventListener('pagehide', handleToolPageHide);
+018779:     registerToolLifecycleCleanup(() => {
+018780:         window.removeEventListener('storage', handlePersonnelRegistryStorage);
+018781:         window.removeEventListener('pagehide', handleToolPageHide);
+018782:     });
+018783:     initWhenReady();
+018784: })();
+018785:     } catch (error) {
+018786:         console.error('[MissionChief Complete Tools] Naming/Personnel module startup failed:', error);
+018787:     }
+018788:     try {
+018789:         /* ==================================================================
+018790:          * MODULE 2: MISSION FINDER V10.6.177
+018791:          * Original source retained below, excluding only its metadata block.
+018792:          * ================================================================== */
+018793: (function() {
+018794:     'use strict';
+018795:     const MF_V3_PRELOAD_NAME_PREFIX =
+018796:         'mcn-v3-pipeline-preload-';
+018797:     const MF_V3_ACTIVE_NAME_PREFIX =
+018798:         'mcn-v3-active-worker-';
+018799:     const MF_V3_DORMANT_PRELOAD_BRIDGE_KEY =
+018800:         '__MCN_V2_DORMANT_PRELOAD_BRIDGE__';
+018801:     const MF_V3_LOW_QUEUE_PAUSE_REQUEST_KEY =
+018802:         'mcn_v3_low_queue_pause_request_v1';
+018803:     const MF_V3_MINIMUM_ACTIONABLE_MISSIONS = 2;
+018804:     let mfV3DormantPreload = (() => {
+018805:         try {
+018806:             return (
+018807:                 window.top !== window.self &&
+018808:                 String(window.name || '').startsWith(
+018809:                     MF_V3_PRELOAD_NAME_PREFIX
+018810:                 )
+018811:             );
+018812:         } catch (_error) {
+018813:             return false;
+018814:         }
+018815:     })();
+018816:     let mfV3DormantPreloadPromoted = false;
+018817:     let mfV3DormantPreloadPromotedAt = 0;
+018818:     let mfV3DormantPreloadPromotionSource = '';
+018819:     function isMfV3ManagedActiveFrame() {
+018820:         try {
+018821:             return (
+018822:                 window.top !== window.self &&
+018823:                 String(window.name || '').startsWith(
+018824:                     MF_V3_ACTIVE_NAME_PREFIX
+018825:                 )
+018826:             );
+018827:         } catch (_error) {
+018828:             return false;
+018829:         }
+018830:     }
+018831:     function isMfV3ManagedActiveWorker() {
+018832:         try {
+018833:             if (!isMfV3ManagedActiveFrame()) return false;
+018834:             const ownershipBridge =
+018835:                 window.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__ ||
+018836:                 window.__MCN_V3_PIPELINE_PRELOAD_BRIDGE__ ||
+018837:                 null;
+018838:             return ownershipBridge?.isActive?.() === true;
+018839:         } catch (_error) {
+018840:             return false;
+018841:         }
+018842:     }
+018843:     const MF_EVENT_COLLECTIBLE_SELECTOR =
+018844:         'a#easter-egg-link[href^="/missions/"][href*="/claim_found_object_sync"]';
+018845:     const MF_EVENT_COLLECTIBLE_SCAN_INTERVAL_MS =
+018846:         15 * 1000;
+018847:     const MF_EVENT_COLLECTIBLE_REQUEST_COOLDOWN_MS = 10000;
+018848:     const MF_EVENT_COLLECTIBLE_MAX_TRACKED = 250;
+018849:     const mfEventCollectibleClaimTimes = new Map();
+018850:     let mfEventCollectibleScanTimer = null;
+018851:     let mfEventCollectibleScanRunning = false;
+018852:     const MF_EVENT_SCANNER_ENABLED_KEY =
+018853:         'mf_event_scanner_enabled_v1';
+018854:     let mfEventScannerEnabled =
+018855:         localStorage.getItem(
+018856:             MF_EVENT_SCANNER_ENABLED_KEY
+018857:         ) !== 'false';
+018858:     function getMissionEventCollectibleDocuments() {
+018859:         try {
+018860:             return getMissionAccessibleDocuments(false)
+018861:                 .slice(0, 24);
+018862:         } catch (_error) {
+018863:             return [document];
+018864:         }
+018865:     }
+018866:     function readMissionEventCollectibleClaim(link) {
+018867:         if (
+018868:             !link ||
+018869:             link.id !== 'easter-egg-link'
+018870:         ) {
+018871:             return null;
+018872:         }
+018873:         const href =
+018874:             String(
+018875:                 link.getAttribute('href') || ''
+018876:             ).trim();
+018877:         const match =
+018878:             href.match(
+018879:                 /^\/missions\/(\d+)\/claim_found_object_sync(?:[?#].*)?$/
+018880:             );
+018881:         if (!match) return null;
+018882:         return {
+018883:             href,
+018884:             missionId: match[1]
+018885:         };
+018886:     }
+018887:     function pruneMissionEventCollectibleClaimTimes(now = Date.now()) {
+018888:         for (
+018889:             const [href, claimedAt] of
+018890:             mfEventCollectibleClaimTimes
+018891:         ) {
+018892:             if (
+018893:                 now - claimedAt >
+018894:                 MF_EVENT_COLLECTIBLE_REQUEST_COOLDOWN_MS
+018895:             ) {
+018896:                 mfEventCollectibleClaimTimes.delete(href);
+018897:             }
+018898:         }
+018899:         while (
+018900:             mfEventCollectibleClaimTimes.size >
+018901:             MF_EVENT_COLLECTIBLE_MAX_TRACKED
+018902:         ) {
+018903:             const oldestHref =
+018904:                 mfEventCollectibleClaimTimes
+018905:                     .keys()
+018906:                     .next()
+018907:                     .value;
+018908:             if (!oldestHref) break;
+018909:             mfEventCollectibleClaimTimes.delete(oldestHref);
+018910:         }
+018911:     }
+018912:     async function claimMissionEventCollectible(link, claim) {
+018913:         const now = Date.now();
+018914:         pruneMissionEventCollectibleClaimTimes(now);
+018915:         let absoluteUrl = '';
+018916:         try {
+018917:             absoluteUrl =
+018918:                 new URL(
+018919:                     claim.href,
+018920:                     link.ownerDocument?.location?.href ||
+018921:                     window.location.href
+018922:                 ).href;
+018923:         } catch (_error) {
+018924:             return false;
+018925:         }
+018926:         const lastClaimAt =
+018927:             mfEventCollectibleClaimTimes.get(absoluteUrl) || 0;
+018928:         if (
+018929:             now - lastClaimAt <
+018930:             MF_EVENT_COLLECTIBLE_REQUEST_COOLDOWN_MS
+018931:         ) {
+018932:             return false;
+018933:         }
+018934:         mfEventCollectibleClaimTimes.set(
+018935:             absoluteUrl,
+018936:             now
+018937:         );
+018938:         link.setAttribute(
+018939:             'data-mc-event-claiming',
+018940:             'true'
+018941:         );
+018942:         try {
+018943:             const response =
+018944:                 await fetch(
+018945:                     absoluteUrl,
+018946:                     {
+018947:                         method: 'GET',
+018948:                         credentials: 'same-origin',
+018949:                         cache: 'no-store',
+018950:                         redirect: 'follow'
+018951:                     }
+018952:                 );
+018953:             if (!response.ok) {
+018954:                 throw new Error(
+018955:                     `Collectible claim returned HTTP ${response.status}`
+018956:                 );
+018957:             }
+018958:             if (link.isConnected) {
+018959:                 link.remove();
+018960:             }
+018961:             try {
+018962:                 window.dispatchEvent(
+018963:                     new CustomEvent(
+018964:                         'mc-mission-event-collectible-claimed',
+018965:                         {
+018966:                             detail: {
+018967:                                 missionId: claim.missionId,
+018968:                                 href: claim.href
+018969:                             }
+018970:                         }
+018971:                     )
+018972:                 );
+018973:             } catch (_error) {}
+018974:             return true;
+018975:         } catch (_error) {
+018976:             mfEventCollectibleClaimTimes.delete(
+018977:                 absoluteUrl
+018978:             );
+018979:             if (link.isConnected) {
+018980:                 link.removeAttribute(
+018981:                     'data-mc-event-claiming'
+018982:                 );
+018983:             }
+018984:             return false;
+018985:         }
+018986:     }
+018987:     async function scanMissionEventCollectibles() {
+018988:         if (
+018989:             mfEventCollectibleScanRunning ||
+018990:             document.visibilityState === 'hidden'
+018991:         ) {
+018992:             return;
+018993:         }
+018994:         mfEventCollectibleScanRunning = true;
+018995:         try {
+018996:             const documents =
+018997:                 getMissionEventCollectibleDocuments();
+018998:             for (const candidateDocument of documents) {
+018999:                 let links = [];
+019000:                 try {
+019001:                     const exactLink =
+019002:                         candidateDocument.getElementById(
+019003:                             'easter-egg-link'
+019004:                         );
+019005:                     if (
+019006:                         exactLink &&
+019007:                         exactLink.matches(
+019008:                             MF_EVENT_COLLECTIBLE_SELECTOR
+019009:                         )
+019010:                     ) {
+019011:                         links = [exactLink];
+019012:                     }
+019013:                 } catch (_error) {}
+019014:                 for (const link of links) {
+019015:                     const claim =
+019016:                         readMissionEventCollectibleClaim(
+019017:                             link
+019018:                         );
+019019:                     if (!claim) continue;
+019020:                     await claimMissionEventCollectible(
+019021:                         link,
+019022:                         claim
+019023:                     );
+019024:                 }
+019025:             }
+019026:         } finally {
+019027:             mfEventCollectibleScanRunning = false;
+019028:         }
+019029:     }
+019030:     function startMissionEventCollectibleCollector() {
+019031:         if (
+019032:             !MF_IS_TOP_WINDOW ||
+019033:             !mfEventScannerEnabled ||
+019034:             mfEventCollectibleScanTimer !== null
+019035:         ) {
+019036:             return;
+019037:         }
+019038:         void scanMissionEventCollectibles();
+019039:         mfEventCollectibleScanTimer =
+019040:             window.setInterval(
+019041:                 () => {
+019042:                     void scanMissionEventCollectibles();
+019043:                 },
+019044:                 MF_EVENT_COLLECTIBLE_SCAN_INTERVAL_MS
+019045:             );
+019046:     }
+019047:     function stopMissionEventCollectibleCollector() {
+019048:         if (mfEventCollectibleScanTimer !== null) {
+019049:             window.clearInterval(
+019050:                 mfEventCollectibleScanTimer
+019051:             );
+019052:             mfEventCollectibleScanTimer = null;
+019053:         }
+019054:         mfEventCollectibleScanRunning = false;
+019055:         mfEventCollectibleClaimTimes.clear();
+019056:     }
+019057:     const MF_IS_TOP_WINDOW = (() => {
+019058:         try {
+019059:             return window.top === window.self;
+019060:         } catch (error) {
+019061:             return true;
+019062:         }
+019063:     })();
+019064:     function isMissionPage() {
+019065:         return !!document.querySelector('#mission_general_info');
+019066:     }
+019067:     if (window.missionFinder2026Initialized) return;
+019068:     window.missionFinder2026Initialized = true;
+019069:     window.missionFinderInitialized = true;
+019070:     globalThis.__MCN_BOOT_MARK__?.('mission-finder-module-entered');
+019071:     if (!mfV3DormantPreload) {
+019072:         startMissionEventCollectibleCollector();
+019073:     }
+019074:     let autoModeRunning =
+019075:         !mfV3DormantPreload &&
+019076:         (
+019077:             sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
+019078:             localStorage.getItem('mf_auto_mode_running') === 'true'
+019079:         );
+019080:     let autoModeLoopActive = false;
+019081:     const MF_FINAL_QUEUE_DISPATCH_FLAG = 'mf_final_queue_dispatch_clicked_v10';
+019082:     const MF_QUEUE_WAIT_ACTIVE_FLAG = 'mf_queue_wait_active_v10';
+019083:     const MF_QUEUE_OPENING_MISSION_FLAG = 'mf_queue_opening_mission_v10';
+019084:     let mfQueueRestartEnabled = localStorage.getItem('mf_next_queue_restart_enabled_v10') !== 'false';
+019085:     let mfQueueRestartThreshold = parseInt(localStorage.getItem('mf_next_queue_restart_threshold_v10_1_3') || '20', 10);
+019086:     let mfQueueRestartWaiting = false;
+019087:     let mfSilentQueueWatcherTimer = null;
+019088:     let mfSilentQueueOpening = false;
+019089:     let mfGlobalTransportWatcherTimer = null;
+019090:     let mfGlobalTransportClicking = false;
+019091:     let mfLastTransportFingerprint = '';
+019092:     let mfLastTransportClickAt = 0;
+019093:     let mfBruteApproachWatcherTimer = null;
+019094:     let mfBruteApproachClicking = false;
+019095:     let mfBruteLastFingerprint = '';
+019096:     let mfBruteLastClickAt = 0;
+019097:     let mfTransportApproachClicking = false;
+019098:     let mfTransportLastClickAt = 0;
+019099:     let mfTransportSequenceActive = false;
+019100:     let mfTransportContinuationRunning = false;
+019101:     let mfPostTransportRehookTimer = null;
+019102:     let mfPostTransportOpening = false;
+019103:     let mfTransportOwnerModal = null;
+019104:     let mfTransportOwnerApproachGoneAt = 0;
+019105:     let mfTransportOwnerCloseAttemptedAt = 0;
+019106:     let mfTransportMainStableAt = 0;
+019107:     let mfMissionUpdateFirstPassRequired = true;
+019108:     let mfMissionUpdateFirstPassMissionKey = '';
+019109:     let mfMissionUpdateFirstPassCompletedAt = 0;
+019110:     let mfLastQueueThresholdStatusAt = 0;
+019111:     let mfLastQueueThresholdStatusKey = '';
+019112:     const MF_MANUAL_AUTO_STOP_FLAG = 'mf_manual_auto_stop_v10_3_9u';
+019113:     const MF_AUTO_STOP_RECORD_KEY =
+019114:         'mf_auto_stop_record_v10_6_153';
+019115:     const MF_MAIN_MISSION_OPEN_LOCK_KEY = 'mf_main_mission_open_lock_until_v10_3_9v';
+019116:     const MF_MAIN_MISSION_OPEN_REASON_KEY = 'mf_main_mission_open_reason_v10_3_9v';
+019117:     const MF_TRANSPORT_REHOOK_LOCK_KEY = 'mf_transport_rehook_lock_until_v10_3_9x';
+019118:     const MF_TRANSPORT_REHOOK_REASON_KEY = 'mf_transport_rehook_reason_v10_3_9x';
+019119:     const MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY = 'mf_transport_rehook_recent_until_v10_3_9y';
+019120:     const MF_MAIN_MISSION_PENDING_UNTIL_KEY = 'mf_main_mission_pending_until_v10_3_9zc';
+019121:     const MF_MAIN_MISSION_PENDING_TARGET_KEY = 'mf_main_mission_pending_target_v10_3_9zc';
+019122:     const MF_MAIN_MISSION_PENDING_REASON_KEY = 'mf_main_mission_pending_reason_v10_3_9zc';
+019123:     const MF_TRANSPORT_CLICK_LOCK_UNTIL_KEY = 'mf_transport_click_lock_until_v10_3_9zd';
+019124:     const MF_TRANSPORT_LAST_CLICK_AT_KEY = 'mf_transport_last_click_at_v10_3_9zd';
+019125:     const MF_TRANSPORT_LAST_CLICK_REASON_KEY = 'mf_transport_last_click_reason_v10_3_9zd';
+019126:     const MF_TRANSPORT_SHELL_WAIT_MS = 7000;
+019127:     const MF_TRANSPORT_MAIN_STABLE_MS = 3000;
+019128:     const MF_UPDATE_FIRST_MIN_WAIT_MS = 500;
+019129:     const MF_UPDATE_FIRST_MAX_WAIT_MS = 2200;
+019130:     const MF_UPDATE_FIRST_STABLE_MS = 250;
+019131:     const MF_AUTO_UPGRADE_PENDING_KEY =
+019132:         'mf_auto_upgrade_pending_v10_6_13';
+019133:     const MF_AUTO_ADVANCE_AFTER_DISPATCH_KEY =
+019134:         'mf_advance_after_dispatch_v10_6_24_share_only';
+019135:     const MF_AUTO_ADVANCE_MAX_AGE_MS =
+019136:         60000;
+019137:     let mfAutoAdvanceResumeActive = false;
+019138:     let mfAutoSelectionMissionId = '';
+019139:     let mfAutoSelectionCompletedAt = 0;
+019140:     function clearAutoSelectionMissionGuard(
+019141:         reason = ''
+019142:     ) {
+019143:         mfAutoSelectionMissionId = '';
+019144:         mfAutoSelectionCompletedAt = 0;
+019145:         if (
+019146:             reason &&
+019147:             mfDebugEnabled
+019148:         ) {
+019149:             debugLog(
+019150:                 'AUTO SELECTION GUARD',
+019151:                 `Cleared | ${reason}`
+019152:             );
+019153:         }
+019154:     }
+019155:     function markAutoSelectionCompletedForCurrentMission(
+019156:         reason = ''
+019157:     ) {
+019158:         const missionId =
+019159:             getCurrentMissionIdForQueueRestart();
+019160:         mfAutoSelectionMissionId =
+019161:             missionId ||
+019162:             '';
+019163:         mfAutoSelectionCompletedAt =
+019164:             Date.now();
+019165:         if (mfDebugEnabled) {
+019166:             debugLog(
+019167:                 'AUTO SELECTION GUARD',
+019168:                 `Completed | mission=${missionId || 'unknown'} | reason=${reason || 'unknown'}`
+019169:             );
+019170:         }
+019171:         return !!missionId;
+019172:     }
+019173:     function isAutoSelectionValidForCurrentMission() {
+019174:         const missionId =
+019175:             getCurrentMissionIdForQueueRestart();
+019176:         return !!(
+019177:             missionId &&
+019178:             mfAutoSelectionMissionId &&
+019179:             missionId ===
+019180:                 mfAutoSelectionMissionId &&
+019181:             mfAutoSelectionCompletedAt > 0
+019182:         );
+019183:     }
+019184:     const MF_AUTO_UPGRADE_PENDING_MAX_AGE_MS =
+019185:         90000;
+019186:     const MF_AUTO_UPGRADE_WAIT_MS =
+019187:         4000;
+019188:     const MF_AUTO_UPGRADE_MAX_PASSES =
+019189:         4;
+019190:     const MF_AUTO_UPGRADE_ENABLED_KEY =
+019191:         'mf_auto_upgrade_enabled_v10_6_33';
+019192:     let mfAutoUpgradeCheckEnabled = false;
+019193:     let mfAutoUpgradeResumeActive = false;
+019194:     if (!mfV3DormantPreload) {
+019195:         try {
+019196:             localStorage.removeItem(
+019197:                 MF_AUTO_UPGRADE_ENABLED_KEY
+019198:             );
+019199:             sessionStorage.removeItem(
+019200:                 MF_AUTO_UPGRADE_PENDING_KEY
+019201:             );
+019202:             localStorage.removeItem(
+019203:                 MF_AUTO_UPGRADE_PENDING_KEY
+019204:             );
+019205:         } catch (error) {}
+019206:     }
+019207:     if (!mfV3DormantPreload) {
+019208:         try {
+019209:             [
+019210:                 'mf_auto_upgrade_pending_v10_6_0',
+019211:                 'mf_advance_after_dispatch_v10_6_22'
+019212:             ].forEach(key => {
+019213:                 sessionStorage.removeItem(key);
+019214:                 localStorage.removeItem(key);
+019215:             });
+019216:         } catch (error) {}
+019217:     }
+019218:     if (!Number.isFinite(mfQueueRestartThreshold) || mfQueueRestartThreshold < 1) {
+019219:         mfQueueRestartThreshold = 20;
+019220:     }
+019221:     if (!mfV3DormantPreload && !autoModeRunning) {
+019222:         sessionStorage.removeItem(MF_QUEUE_WAIT_ACTIVE_FLAG);
+019223:         sessionStorage.removeItem(MF_FINAL_QUEUE_DISPATCH_FLAG);
+019224:         sessionStorage.removeItem(MF_QUEUE_OPENING_MISSION_FLAG);
+019225:         sessionStorage.removeItem(
+019226:             MF_AUTO_UPGRADE_PENDING_KEY
+019227:         );
+019228:         localStorage.removeItem(
+019229:             MF_AUTO_UPGRADE_PENDING_KEY
+019230:         );
+019231:     }
+019232:     let mfDebugEnabled = false;
+019233:     let mfHighDebugEnabled = false;
+019234:     if (!mfV3DormantPreload) {
+019235:         try {
+019236:             localStorage.removeItem('mf_debug_enabled_v9');
+019237:             localStorage.removeItem('mf_high_debug_enabled_v9');
+019238:             localStorage.removeItem('mf_debug_collapsed_v9');
+019239:             localStorage.removeItem('mf_issue_recorder_v1');
+019240:             localStorage.removeItem('mf_issue_recorder_enabled_v1');
+019241:         } catch (_error) {}
+019242:     }
+019243:     function isMissionFinderIosSafariWebsite() {
+019244:         const userAgent = String(navigator.userAgent || '');
+019245:         const platform = String(navigator.platform || '');
+019246:         const isIosDevice = /iP(?:ad|hone|od)/i.test(userAgent)
+019247:             || (
+019248:                 platform === 'MacIntel'
+019249:                 && Number(navigator.maxTouchPoints || 0) > 1
+019250:             );

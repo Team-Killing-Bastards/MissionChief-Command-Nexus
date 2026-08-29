@@ -1,0 +1,1391 @@
+002920: : activeWatchdogWaitMs;
+002921: state.autoRecoverySkips += 1;
+002922: const event = {
+002923: event: 'failure-logged-and-skipped',
+002924: missionId: record.missionId,
+002925: missionName: record.missionName,
+002926: category,
+002927: reason,
+002928: waitedMs,
+002929: skipAdvances,
+002930: retryAfterAdvance: record.retryAfterAdvance,
+002931: evidence: record.evidence,
+002932: };
+002933: recordAutoRecoveryEvent(event);
+002934: log('Recoverable Auto Mode failure persisted through watchdog; logged failure and continuing the queue.', event);
+002935: clearAutoRecoveryWatchdog();
+002936: }
+002937: const target = choosePriorityTarget();
+002938: if (!target?.missionId || target.missionId === record.missionId) {
+002939: setPhase(
+002940: 'MISSION_SKIPPED',
+002941: 'Mission temporarily rotated',
+002942: `${missionDisplay(record.missionId, record.missionName)} is paused for ${skipAdvances} mission advances, but no other actionable personal mission is currently available.`
+002943: );
+002944: return true;
+002945: }
+002946: return redirectAfterRecoverableSkip(target, record);
+002947: }
+002948: function chooseTopMission({ actionableOnly = false } = {}) {
+002949: pruneRecentlyNativeAdvanced();
+002950: const candidates = collectMissionCandidates();
+002951: for (const candidate of candidates) {
+002952: if (candidate.allianceLike || !candidate.rendered) continue;
+002953: recordMissionRuleSignature(candidate);
+002954: }
+002955: const actionableBeforeSkips = candidates.filter(candidate =>
+002956: !candidate.allianceLike &&
+002957: candidate.rendered &&
+002958: candidate.actionKind !== 'OTHER' &&
+002959: !(
+002960: candidate.actionKind === 'NEW' &&
+002961: state.recentlyNativeAdvanced.has(candidate.missionId)
+002962: )
+002963: );
+002964: state.visualTopMission = compactMissionCandidate(actionableBeforeSkips[0] || null);
+002965: const actionable = actionableBeforeSkips.filter(candidate =>
+002966: !isMissionTemporarilySkipped(candidate.missionId)
+002967: );
+002968: const top = actionable[0] ||
+002969: (actionableOnly
+002970: ? null
+002971: : candidates.find(candidate =>
+002972: !candidate.allianceLike &&
+002973: candidate.rendered &&
+002974: !isMissionTemporarilySkipped(candidate.missionId)
+002975: ) || null);
+002976: state.topMission = compactMissionCandidate(top);
+002977: return top;
+002978: }
+002979: function pipelineRecord(event, data = {}) {
+002980: const record = { at: nowIso(), event, ...data };
+002981: state.pipelineHistory.push(record);
+002982: if (state.pipelineHistory.length > PIPELINE_HISTORY_LIMIT) {
+002983: state.pipelineHistory.splice(0, state.pipelineHistory.length - PIPELINE_HISTORY_LIMIT);
+002984: }
+002985: return record;
+002986: }
+002987: function persistedPipelineTargets() {
+002988: const raw = sessionGet(SESSION_PIPELINE_TARGETS);
+002989: if (!raw) return [];
+002990: try {
+002991: const values = JSON.parse(raw);
+002992: if (!Array.isArray(values)) return [];
+002993: return values.map(value => {
+002994: const url = sameOriginUrl(value?.url || value);
+002995: const missionId = String(value?.missionId || missionIdFromUrl(url?.href || ''));
+002996: if (!url || !missionId || !isMissionUrl(url.href)) return null;
+002997: return {
+002998: missionId,
+002999: url: url.href,
+003000: caption: cleanMissionCaption(value?.caption || missionNameForId(missionId)),
+003001: actionKind: value?.actionKind || 'NEW',
+003002: };
+003003: }).filter(Boolean).slice(0, PIPELINE_PRELOAD_COUNT);
+003004: } catch {
+003005: return [];
+003006: }
+003007: }
+003008: function persistPipelineTargets(targets = state.pipelineSlots) {
+003009: const values = [];
+003010: for (const item of targets || []) {
+003011: const missionId = String(item?.missionId || '');
+003012: const url = sameOriginUrl(item?.url || '');
+003013: if (!missionId || !url || !isMissionUrl(url.href)) continue;
+003014: values.push({
+003015: missionId,
+003016: url: url.href,
+003017: caption: cleanMissionCaption(item?.caption || item?.missionName || missionNameForId(missionId)),
+003018: actionKind: item?.actionKind || 'NEW',
+003019: });
+003020: if (values.length >= PIPELINE_PRELOAD_COUNT) break;
+003021: }
+003022: sessionSet(SESSION_PIPELINE_TARGETS, values.length ? JSON.stringify(values) : '');
+003023: }
+003024: function pipelineActionableCandidates() {
+003025: pruneRecentlyNativeAdvanced();
+003026: const candidates = collectMissionCandidates();
+003027: for (const candidate of candidates) {
+003028: if (!candidate.allianceLike && candidate.rendered) recordMissionRuleSignature(candidate);
+003029: }
+003030: return candidates.filter(candidate =>
+003031: !candidate.allianceLike &&
+003032: candidate.rendered &&
+003033: candidate.actionKind !== 'OTHER' &&
+003034: !isMissionTemporarilySkipped(candidate.missionId) &&
+003035: !(candidate.actionKind === 'NEW' && state.recentlyNativeAdvanced.has(candidate.missionId))
+003036: );
+003037: }
+003038: function actionableMissionSupply({ excludeMissionId = '' } = {}) {
+003039: const excluded = String(excludeMissionId || '');
+003040: const candidates = pipelineActionableCandidates().filter(candidate =>
+003041: !excluded || String(candidate?.missionId || '') !== excluded
+003042: );
+003043: return {
+003044: count: candidates.length,
+003045: candidates,
+003046: missionIds: candidates.map(candidate => String(candidate.missionId || '')).filter(Boolean),
+003047: };
+003048: }
+003049: function clearLowQueuePauseRequest() {
+003050: sessionSet(SESSION_LOW_QUEUE_PAUSE_REQUEST, '');
+003051: }
+003052: function readLowQueuePauseRequest() {
+003053: const raw = sessionGet(SESSION_LOW_QUEUE_PAUSE_REQUEST);
+003054: if (!raw) return null;
+003055: try {
+003056: const value = JSON.parse(raw);
+003057: const requestedAt = Number(value?.requestedAt || 0);
+003058: const ageMs = Date.now() - requestedAt;
+003059: const remainingCount = Number(value?.remainingCount);
+003060: if (
+003061: !requestedAt ||
+003062: !Number.isFinite(ageMs) ||
+003063: ageMs < 0 ||
+003064: ageMs > LOW_QUEUE_REQUEST_MAX_AGE_MS ||
+003065: !Number.isFinite(remainingCount) ||
+003066: remainingCount < 0 ||
+003067: remainingCount >= MINIMUM_ACTIONABLE_MISSIONS ||
+003068: Number(value?.minimumMissions || 0) !== MINIMUM_ACTIONABLE_MISSIONS
+003069: ) {
+003070: clearLowQueuePauseRequest();
+003071: return null;
+003072: }
+003073: return {
+003074: requestedAt,
+003075: missionId: String(value?.missionId || ''),
+003076: missionName: cleanMissionCaption(value?.missionName || ''),
+003077: remainingCount,
+003078: minimumMissions: MINIMUM_ACTIONABLE_MISSIONS,
+003079: reason: normaliseText(value?.reason || 'actionable mission supply fell below two'),
+003080: };
+003081: } catch {
+003082: clearLowQueuePauseRequest();
+003083: return null;
+003084: }
+003085: }
+003086: function recordLowQueueLifecycle(event, data = {}) {
+003087: const record = { at: nowIso(), event, ...data };
+003088: state.lowQueueHistory.push(record);
+003089: if (state.lowQueueHistory.length > STATUS_HISTORY_LIMIT) {
+003090: state.lowQueueHistory.splice(0, state.lowQueueHistory.length - STATUS_HISTORY_LIMIT);
+003091: }
+003092: return record;
+003093: }
+003094: function completeLowQueuePauseAggregate(durationMs) {
+003095: const safeDurationMs = Math.max(0, Math.round(Number(durationMs || 0)));
+003096: if (!safeDurationMs) return 0;
+003097: state.lowQueueCompletedPauses += 1;
+003098: state.lowQueueTotalPausedMs += safeDurationMs;
+003099: state.lowQueueLongestPauseMs = Math.max(state.lowQueueLongestPauseMs, safeDurationMs);
+003100: return safeDurationMs;
+003101: }
+003102: function compactControllerEphemeralMemory() {
+003103: trimOldestMapEntries(state.missionNames, CONTROLLER_IDENTITY_CACHE_LIMIT);
+003104: trimOldestMapEntries(state.missionRowSignatures, CONTROLLER_IDENTITY_CACHE_LIMIT);
+003105: trimOldestMapEntries(state.missionSkipRecords, MISSION_SKIP_HISTORY_LIMIT);
+003106: trimOldestMapEntries(state.transportRecoveryAttempts, TRANSPORT_RECOVERY_HISTORY_LIMIT);
+003107: trimOldestSetEntries(state.allianceRadioIgnoredKeys, ALLIANCE_RADIO_IGNORED_KEY_CACHE_LIMIT);
+003108: trimOldestSetEntries(state.prisonerReleaseHandledKeys, CONTROLLER_EVENT_KEY_CACHE_LIMIT);
+003109: pruneRecentlyNativeAdvanced();
+003110: }
+003111: function controllerUsedHeapBytes() {
+003112: try {
+003113: const used = Number(performance.memory?.usedJSHeapSize || 0);
+003114: return Number.isFinite(used) ? used : 0;
+003115: } catch { return 0; }
+003116: }
+003117: function controllerMemoryPressureReleaseLimit() {
+003118: const adaptiveLimit = state.pipelineMemoryBaselineBytes > 0
+003119: ? state.pipelineMemoryBaselineBytes + CONTROLLER_MEMORY_RELEASE_GROWTH_BYTES
+003120: : CONTROLLER_MEMORY_RELEASE_CEILING_BYTES;
+003121: return Math.min(CONTROLLER_MEMORY_RELEASE_CEILING_BYTES, adaptiveLimit);
+003122: }
+003123: function activateControllerMemoryPressure() {
+003124: const now = Date.now();
+003125: if (
+003126: state.pipelineMemoryLastSampleAt &&
+003127: now - state.pipelineMemoryLastSampleAt < CONTROLLER_MEMORY_SAMPLE_MS
+003128: ) return false;
+003129: const used = controllerUsedHeapBytes();
+003130: if (!used) return false;
+003131: state.pipelineMemoryLastSampleAt = now;
+003132: state.pipelineMemoryLastBytes = used;
+003133: state.pipelineMemoryPeakBytes = Math.max(state.pipelineMemoryPeakBytes, used);
+003134: if (state.pipelineMemoryPressureActive) {
+003135: const releaseLimit = controllerMemoryPressureReleaseLimit();
+003136: if (used > releaseLimit) {
+003137: state.pipelineMemoryPressureBelowSince = 0;
+003138: return false;
+003139: }
+003140: if (!state.pipelineMemoryPressureBelowSince) {
+003141: state.pipelineMemoryPressureBelowSince = now;
+003142: return false;
+003143: }
+003144: if (
+003145: now - state.pipelineMemoryPressureBelowSince <
+003146: CONTROLLER_MEMORY_RELEASE_SUSTAIN_MS
+003147: ) return false;
+003148: const pressureStartedAt = state.pipelineMemoryPressureSince;
+003149: const pressureReason = state.pipelineMemoryPressureReason;
+003150: state.pipelineMemoryPressureActive = false;
+003151: state.pipelineMemoryPressureSince = 0;
+003152: state.pipelineMemoryPressureHeapBytes = 0;
+003153: state.pipelineMemoryCandidateSince = 0;
+003154: state.pipelineMemoryPressureReason = '';
+003155: state.pipelineMemoryPressureBelowSince = 0;
+003156: state.pipelineMemoryPressureReleases += 1;
+003157: compactControllerEphemeralMemory();
+003158: pipelineRecord('memory-pressure-released', {
+003159: usedJSHeapSize: used,
+003160: releaseLimitBytes: releaseLimit,
+003161: pressureDurationMs: pressureStartedAt
+003162: ? Math.max(0, now - pressureStartedAt)
+003163: : 0,
+003164: reason: pressureReason,
+003165: });
+003166: log('Memory pressure cleared after a sustained safe heap sample; dormant preload B may return after Worker A is healthy.', {
+003167: usedMiB: Math.round(used / 1048576),
+003168: releaseLimitMiB: Math.round(releaseLimit / 1048576),
+003169: pressureDurationSeconds: pressureStartedAt
+003170: ? Math.round((now - pressureStartedAt) / 1000)
+003171: : 0,
+003172: reason: pressureReason,
+003173: });
+003174: if (
+003175: state.wanted &&
+003176: state.running &&
+003177: !state.stopping &&
+003178: !state.lowQueuePaused &&
+003179: !state.transportKind &&
+003180: !state.transportServiceActive &&
+003181: !state.pipelineMemoryRecyclePending
+003182: ) {
+003183: window.setTimeout(() => startPipelineController(), 80);
+003184: }
+003185: return false;
+003186: }
+003187: const startedAt = Date.parse(state.runStartedAt || '');
+003188: const warming = !Number.isFinite(startedAt) || now - startedAt < CONTROLLER_MEMORY_WARMUP_MS;
+003189: if (!state.pipelineMemoryBaselineBytes || warming) {
+003190: state.pipelineMemoryBaselineBytes = Math.max(state.pipelineMemoryBaselineBytes, used);
+003191: }
+003192: const growthLimit = state.pipelineMemoryBaselineBytes + CONTROLLER_MEMORY_GROWTH_BYTES;
+003193: const reason = used >= CONTROLLER_MEMORY_PRESSURE_BYTES
+003194: ? 'hard-ceiling'
+003195: : !warming && used >= growthLimit
+003196: ? 'sustained-growth'
+003197: : '';
+003198: if (!reason) {
+003199: state.pipelineMemoryCandidateSince = 0;
+003200: return false;
+003201: }
+003202: if (!state.pipelineMemoryCandidateSince) {
+003203: state.pipelineMemoryCandidateSince = now;
+003204: return false;
+003205: }
+003206: if (now - state.pipelineMemoryCandidateSince < CONTROLLER_MEMORY_SUSTAIN_MS) return false;
+003207: state.pipelineMemoryPressureActive = true;
+003208: state.pipelineMemoryPressureSince = now;
+003209: state.pipelineMemoryPressureHeapBytes = used;
+003210: state.pipelineMemoryPressureActivations += 1;
+003211: state.pipelineMemoryRecyclePending = true;
+003212: state.pipelineMemoryPressureReason = reason;
+003213: state.pipelineMemoryPressureBelowSince = 0;
+003214: pausePipelineController('memory-pressure-a-only', true);
+003215: pipelineRecord('memory-pressure-a-only', {
+003216: usedJSHeapSize: used,
+003217: baselineJSHeapSize: state.pipelineMemoryBaselineBytes,
+003218: reason,
+003219: });
+003220: log('Memory pressure released preload B; Worker A will restart at the next verified mission boundary.', {
+003221: usedMiB: Math.round(used / 1048576),
+003222: baselineMiB: Math.round(state.pipelineMemoryBaselineBytes / 1048576),
+003223: reason,
+003224: });
+003225: return true;
+003226: }
+003227: function enterLowQueuePause(reason = 'low-actionable-mission-supply', request = null) {
+003228: if (!state.wanted || state.stopping) return false;
+003229: const supply = actionableMissionSupply();
+003230: const memoryRecycleSatisfied = state.pipelineMemoryRecyclePending === true;
+003231: const observedCount = request
+003232: ? Math.min(supply.count, Math.max(0, Number(request.remainingCount || 0)))
+003233: : supply.count;
+003234: const firstPause = !state.lowQueuePaused;
+003235: state.lowQueuePaused = true;
+003236: state.lowQueuePauseSince = state.lowQueuePauseSince || Date.now();
+003237: state.lowQueueObservedCount = observedCount;
+003238: state.lowQueueResumeCandidateSince = 0;
+003239: state.lowQueueTriggerMissionId = String(
+003240: request?.missionId || state.lowQueueTriggerMissionId || state.currentMissionId || ''
+003241: );
+003242: if (firstPause) {
+003243: state.lowQueuePauses += 1;
+003244: recordLowQueueLifecycle('paused', {
+003245: reason,
+003246: observedCount,
+003247: minimumMissions: MINIMUM_ACTIONABLE_MISSIONS,
+003248: missionId: request?.missionId || state.currentMissionId || '',
+003249: missionName: request?.missionName || state.currentMissionName || '',
+003250: memoryRecycleSatisfied,
+003251: });
+003252: }
+003253: clearLowQueuePauseRequest();
+003254: clearTimer('missionRescanTimer', window.clearInterval);
+003255: clearTimer('watcherTimer', window.clearInterval);
+003256: clearTimer('nexusDiscoveryTimer');
+003257: pausePipelineController('low-queue-pause', true);
+003258: clearSharedV2QueueGuard('low-queue-pause', request?.missionId || state.currentMissionId);
+003259: clearSharedV2AutoRunning('low-queue-pause');
+003260: resetAutoStartTracking();
+003261: clearPromotedWorkTracking();
+003262: state.running = false;
+003263: state.transportServiceActive = false;
+003264: state.transportServiceEligible = true;
+003265: state.transportKind = '';
+003266: state.transportIdentity = '';
+003267: state.transportSince = 0;
+003268: finaliseActiveMissionTiming('low-queue-pause');
+003269: removeWorker(false);
+003270: if (memoryRecycleSatisfied) state.pipelineMemoryRecyclePending = false;
+003271: compactControllerEphemeralMemory();
+003272: saveRunContinuity();
+003273: setPhase(
+003274: 'LOW_QUEUE_PAUSED',
+003275: 'Paused - waiting for 2 missions',
+003276: `Only ${observedCount} actionable personal mission${observedCount === 1 ? '' : 's'} remain. Workers A/B were fully released; Auto Mode will restart from a fresh Worker A after two missions remain stable for ${Math.round(LOW_QUEUE_RESUME_STABLE_MS / 1000)} seconds.`
+003277: );
+003278: log('Low mission supply released all background worker frames without clearing durable registers.', {
+003279: reason,
+003280: observedCount,
+003281: minimumMissions: MINIMUM_ACTIONABLE_MISSIONS,
+003282: memoryRecycleSatisfied,
+003283: });
+003284: beginMissionRescan();
+003285: return true;
+003286: }
+003287: function maybeEnterRequestedLowQueuePause(context, radioRequests = []) {
+003288: const request = readLowQueuePauseRequest();
+003289: if (!request || state.lowQueuePaused || !state.worker?.isConnected) return false;
+003290: if (
+003291: context?.kind ||
+003292: state.transportKind ||
+003293: state.transportServiceActive ||
+003294: state.nonMissionRedirectRecoveryInFlight ||
+003295: state.wakeRecoveryActive ||
+003296: (radioRequests || []).length > 0
+003297: ) return false;
+003298: if (
+003299: request.missionId &&
+003300: state.currentMissionId &&
+003301: request.missionId !== state.currentMissionId
+003302: ) {
+003303: clearLowQueuePauseRequest();
+003304: return false;
+003305: }
+003306: return enterLowQueuePause(request.reason, request);
+003307: }
+003308: function shouldRecycleControllerRuntimeAtBoundary() {
+003309: if (
+003310: !state.wanted ||
+003311: state.stopping ||
+003312: state.lowQueuePaused ||
+003313: state.transportServiceActive ||
+003314: state.transportKind ||
+003315: state.nonMissionRedirectRecoveryInFlight ||
+003316: state.wakeRecoveryActive
+003317: ) return null;
+003318: activateControllerMemoryPressure();
+003319: const now = Date.now();
+003320: const parsedRunStart = Date.parse(state.runStartedAt || '');
+003321: const lastAt = Number(state.runtimeRecycleLastAt) ||
+003322: (Number.isFinite(parsedRunStart) ? parsedRunStart : now);
+003323: const advancesSince = Math.max(0, state.nativeMissionAdvances - state.runtimeRecycleAdvanceBaseline);
+003324: const ageMs = Math.max(0, now - lastAt);
+003325: const advanceLimit = state.pipelineMemoryPressureActive
+003326: ? CONTROLLER_PRESSURE_RECYCLE_ADVANCES
+003327: : CONTROLLER_RUNTIME_RECYCLE_ADVANCES;
+003328: const ageLimit = state.pipelineMemoryPressureActive
+003329: ? CONTROLLER_PRESSURE_RECYCLE_MAX_AGE_MS
+003330: : CONTROLLER_RUNTIME_RECYCLE_MAX_AGE_MS;
+003331: if (
+003332: !state.pipelineMemoryRecyclePending &&
+003333: advancesSince < advanceLimit &&
+003334: ageMs < ageLimit
+003335: ) return null;
+003336: return {
+003337: advancesSince,
+003338: ageMs,
+003339: memoryPressure: state.pipelineMemoryRecyclePending,
+003340: reason: state.pipelineMemoryRecyclePending
+003341: ? `${Math.round(state.pipelineMemoryPressureHeapBytes / 1048576)} MiB memory pressure`
+003342: : advancesSince >= advanceLimit
+003343: ? `${advancesSince} mission advances completed`
+003344: : `${Math.round(ageMs / 60000)} minutes elapsed`,
+003345: };
+003346: }
+003347: function recycleControllerRuntimeAtMissionBoundary(nextMissionId, nextHref) {
+003348: const due = shouldRecycleControllerRuntimeAtBoundary();
+003349: const url = sameOriginUrl(nextHref);
+003350: if (!due || !nextMissionId || !url || !isMissionUrl(url.href)) return false;
+003351: const event = {
+003352: at: nowIso(),
+003353: missionId: String(nextMissionId),
+003354: missionName: missionNameForId(nextMissionId),
+003355: advancesSince: due.advancesSince,
+003356: ageMs: due.ageMs,
+003357: reason: due.reason,
+003358: };
+003359: state.runtimeRecycles += 1;
+003360: const fullPageRecycle =
+003361: state.runtimeRecycles % CONTROLLER_FULL_PAGE_RECYCLE_EVERY_RUNTIME_CYCLES === 0;
+003362: state.pipelineMemoryRecyclePending = false;
+003363: state.runtimeRecycleLastAt = Date.now();
+003364: state.runtimeRecycleAdvanceBaseline = state.nativeMissionAdvances;
+003365: state.runtimeRecycleHistory.push(event);
+003366: if (state.runtimeRecycleHistory.length > CONTROLLER_RUNTIME_RECYCLE_HISTORY_LIMIT) {
+003367: state.runtimeRecycleHistory.splice(
+003368: 0,
+003369: state.runtimeRecycleHistory.length - CONTROLLER_RUNTIME_RECYCLE_HISTORY_LIMIT
+003370: );
+003371: }
+003372: persistResumeMission(url.href);
+003373: pausePipelineController('scheduled-runtime-recycle', true);
+003374: clearSharedV2QueueGuard('scheduled-runtime-recycle', nextMissionId);
+003375: clearSharedV2AutoRunning('scheduled-runtime-recycle');
+003376: resetAutoStartTracking();
+003377: clearPromotedWorkTracking();
+003378: state.running = false;
+003379: finaliseActiveMissionTiming('scheduled-runtime-recycle');
+003380: removeWorker(false);
+003381: compactControllerEphemeralMemory();
+003382: saveRunContinuity();
+003383: setPhase(
+003384: 'MEMORY_RECYCLE',
+003385: fullPageRecycle ? 'Refreshing controller memory' : 'Refreshing background workers',
+003386: fullPageRecycle
+003387: ? `${missionDisplay(nextMissionId, event.missionName)} is saved as the verified next mission. The controller page will refresh once to release native iframe/DOM memory, then Auto Mode will resume automatically.`
+003388: : `${missionDisplay(nextMissionId, event.missionName)} is the verified next mission. A/B were ended at this safe boundary and a fresh Worker A will resume it; station, unit and personnel registers were not touched.`
+003389: );
+003390: log(fullPageRecycle
+003391: ? 'Scheduled full controller recycle released A/B and will refresh the top realm.'
+003392: : 'Scheduled boundary recycle released A/B before starting a fresh Worker A.', {
+003393: ...event,
+003394: fullPageRecycle,
+003395: });
+003396: if (fullPageRecycle) {
+003397: window.setTimeout(() => {
+003398: if (!state.wanted || state.stopping) return;
+003399: window.location.reload();
+003400: }, 250);
+003401: return true;
+003402: }
+003403: window.setTimeout(() => {
+003404: if (!state.wanted || state.stopping || state.lowQueuePaused || state.worker?.isConnected) return;
+003405: createWorker(url.href);
+003406: }, CONTROLLER_RECYCLE_RESTART_DELAY_MS);
+003407: return true;
+003408: }
+003409: function desiredPipelineTargets() {
+003410: const activeMissionId = missionIdFromUrl(getWorkerHref()) || state.currentMissionId;
+003411: const candidates = pipelineActionableCandidates();
+003412: let source = candidates;
+003413: if (!source.length) source = persistedPipelineTargets();
+003414: const seen = new Set([String(activeMissionId || ''), String(state.transportServiceMissionId || '')]);
+003415: const result = [];
+003416: for (const candidate of source) {
+003417: const missionId = String(candidate?.missionId || '');
+003418: if (!missionId || seen.has(missionId) || isMissionTemporarilySkipped(missionId)) continue;
+003419: seen.add(missionId);
+003420: result.push({
+003421: missionId,
+003422: url: candidate.url,
+003423: caption: cleanMissionCaption(candidate.caption || missionNameForId(missionId)),
+003424: actionKind: candidate.actionKind || 'NEW',
+003425: });
+003426: if (result.length >= PIPELINE_PRELOAD_COUNT) break;
+003427: }
+003428: return result;
+003429: }
+003430: function pipelineSlotForFrame(frame) {
+003431: return state.pipelineSlots.find(slot => slot?.frame === frame) || null;
+003432: }
+003433: function pipelineSlotForMission(missionId) {
+003434: const id = String(missionId || '');
+003435: return state.pipelineSlots.find(slot => slot?.missionId === id && slot.frame?.isConnected) || null;
+003436: }
+003437: function compactPipelineSlot(slot) {
+003438: if (!slot) return null;
+003439: return {
+003440: index: slot.index,
+003441: missionId: slot.missionId,
+003442: missionName: slot.missionName,
+003443: url: slot.url,
+003444: status: slot.status,
+003445: loaded: Boolean(slot.loaded),
+003446: ready: Boolean(slot.ready),
+003447: vehicleCount: slot.vehicleCount || 0,
+003448: vehicleRows: slot.vehicleRows || 0,
+003449: loadClicks: slot.loadClicks || 0,
+003450: bridgeReady: Boolean(slot.bridgeReady),
+003451: v2DormantBridgeReady: Boolean(slot.v2DormantBridgeReady),
+003452: v2DormantBridgeVersion: slot.v2DormantBridgeVersion || '',
+003453: v2DormantLightweight: Boolean(slot.v2DormantLightweight),
+003454: dormantGuardReady: Boolean(slot.dormantGuardReady),
+003455: dormantInteractionsBlocked: slot.dormantInteractionsBlocked || 0,
+003456: dormantLastBlockedType: slot.dormantLastBlockedType || '',
+003457: nexusMounted: Boolean(slot.nexusMounted),
+003458: autoControlPresent: Boolean(slot.autoControlPresent),
+003459: autoControlText: slot.autoControlText || '',
+003460: undesiredSince: slot.undesiredSince ? new Date(slot.undesiredSince).toISOString() : '',
+003461: lastClickedControlToken: slot.lastClickedControlToken || '',
+003462: signatureAtLastClick: slot.signatureAtLastClick || '',
+003463: createdAt: slot.createdAt ? new Date(slot.createdAt).toISOString() : '',
+003464: loadedAt: slot.loadedAt ? new Date(slot.loadedAt).toISOString() : '',
+003465: readyAt: slot.readyAt ? new Date(slot.readyAt).toISOString() : '',
+003466: lastAuditAt: slot.lastAuditAt ? new Date(slot.lastAuditAt).toISOString() : '',
+003467: };
+003468: }
+003469: function disposeManagedFrameRuntime(frame, reason = 'managed-frame-release') {
+003470: if (!frame) return false;
+003471: try {
+003472: const loadHandler = frame.__mcnV3LoadHandler;
+003473: if (loadHandler) frame.removeEventListener('load', loadHandler);
+003474: frame.__mcnV3LoadHandler = null;
+003475: try { frame.contentWindow?.stop?.(); } catch {}
+003476: const doc = frame.contentDocument || frame.contentWindow?.document || null;
+003477: if (!doc) return false;
+003478: const RuntimeEvent = doc.defaultView?.CustomEvent || CustomEvent;
+003479: doc.dispatchEvent(new RuntimeEvent(V2_FRAME_RUNTIME_RECONCILE_EVENT, {
+003480: detail: {
+003481: removed: true,
+003482: reason: String(reason || 'managed-frame-release'),
+003483: },
+003484: }));
+003485: state.managedRuntimeDisposals += 1;
+003486: return true;
+003487: } catch {
+003488: return false;
+003489: }
+003490: }
+003491: function bindManagedFrameLoad(frame, handler) {
+003492: if (frame.__mcnV3LoadHandler) frame.removeEventListener('load', frame.__mcnV3LoadHandler);
+003493: frame.__mcnV3LoadHandler = handler;
+003494: frame.addEventListener('load', handler);
+003495: }
+003496: function removePipelineSlot(slot, reason = 'removed', removeFrame = true) {
+003497: if (!slot) return;
+003498: state.pipelineSlots = state.pipelineSlots.filter(item => item !== slot);
+003499: const frame = slot.frame || null;
+003500: if (removeFrame && frame) {
+003501: setFrameOwnership(frame, false, `preload-remove:${reason}`);
+003502: disposeManagedFrameRuntime(frame, `preload-remove:${reason}`);
+003503: try { frame.removeAttribute('srcdoc'); } catch {}
+003504: try { frame.src = 'about:blank'; } catch {}
+003505: try { frame.remove(); } catch {}
+003506: }
+003507: pipelineRecord('preload-removed', {
+003508: missionId: slot.missionId,
+003509: missionName: slot.missionName,
+003510: status: slot.status,
+003511: reason,
+003512: });
+003513: slot.frame = null;
+003514: }
+003515: function removeAllPipelinePreloads(reason = 'pipeline-stop') {
+003516: for (const slot of state.pipelineSlots.slice()) removePipelineSlot(slot, reason, true);
+003517: state.pipelineSlots = [];
+003518: }
+003519: function pausePipelineController(reason = 'pipeline-paused', removePreloads = true) {
+003520: clearTimer('pipelineSyncTimer', window.clearInterval);
+003521: clearTimer('pipelinePumpTimer', window.clearInterval);
+003522: state.pipelineLastSyncAt = 0;
+003523: if (removePreloads) removeAllPipelinePreloads(reason);
+003524: }
+003525: function enterActiveOnlyMode(reason = 'pipeline-circuit-breaker', data = {}) {
+003526: const firstEntry = !state.pipelineActiveOnly;
+003527: state.pipelineActiveOnly = true;
+003528: state.pipelineActiveOnlyReason = normaliseText(reason || 'pipeline-circuit-breaker');
+003529: if (!state.pipelineActiveOnlySince) state.pipelineActiveOnlySince = Date.now();
+003530: pausePipelineController(state.pipelineActiveOnlyReason, true);
+003531: if (firstEntry) {
+003532: pipelineRecord('pipeline-active-only-circuit-breaker', {
+003533: reason: state.pipelineActiveOnlyReason,
+003534: ...data,
+003535: });
+003536: log('Three-worker pipeline circuit breaker opened; continuing with reliable Worker A only.', {
+003537: reason: state.pipelineActiveOnlyReason,
+003538: ...data,
+003539: });
+003540: }
+003541: return firstEntry;
+003542: }
+003543: function createPipelinePreload(target, index) {
+003544: if (state.pipelineActiveOnly || !state.wanted || state.stopping || !document.body || !target?.missionId || !target?.url) return null;
+003545: if (pipelineSlotForMission(target.missionId)) return pipelineSlotForMission(target.missionId);
+003546: if (state.pipelineSlots.filter(slot => slot.frame?.isConnected).length >= PIPELINE_PRELOAD_COUNT) return null;
+003547: const frame = document.createElement('iframe');
+003548: const token = `${index + 1}-${target.missionId}-${Date.now()}`;
+003549: frame.id = `mcn-v3-pipeline-preload-${token}`;
+003550: frame.name = `${PIPELINE_PRELOAD_NAME_PREFIX}${token}`;
+003551: frame.src = target.url;
+003552: frame.setAttribute('aria-hidden', 'true');
+003553: frame.setAttribute('tabindex', '-1');
+003554: frame.setAttribute('data-mcn-v3-pipeline-preload', 'true');
+003555: frame.style.cssText = [
+003556: 'position:fixed', 'left:-10000px', 'top:-10000px', `width:${WORKER_WIDTH}px`, `height:${WORKER_HEIGHT}px`,
+003557: 'display:block', 'visibility:hidden', 'opacity:0', 'pointer-events:none', 'border:0',
+003558: 'margin:0', 'padding:0', 'z-index:-2147483646', 'background:#0b1220'
+003559: ].join(';');
+003560: const now = Date.now();
+003561: const slot = {
+003562: index,
+003563: missionId: String(target.missionId),
+003564: missionName: cleanMissionCaption(target.caption || missionNameForId(target.missionId)),
+003565: caption: cleanMissionCaption(target.caption || ''),
+003566: actionKind: target.actionKind || 'NEW',
+003567: url: target.url,
+003568: frame,
+003569: createdAt: now,
+003570: loadedAt: 0,
+003571: readyAt: 0,
+003572: loaded: false,
+003573: ready: false,
+003574: bridgeReady: false,
+003575: v2DormantBridgeReady: false,
+003576: v2DormantBridgeVersion: '',
+003577: v2DormantLightweight: false,
+003578: dormantGuardReady: false,
+003579: dormantGuardObservedCount: 0,
+003580: dormantInteractionsBlocked: 0,
+003581: dormantLastBlockedType: '',
+003582: nexusMounted: false,
+003583: autoControlPresent: false,
+003584: autoControlText: '',
+003585: status: 'OPENING',
+003586: vehicleCount: 0,
+003587: vehicleRows: 0,
+003588: signature: '',
+003589: stableSince: now,
+003590: loadClicks: 0,
+003591: loadClickPending: false,
+003592: lastLoadClickAt: 0,
+003593: lastProgressAt: now,
+003594: lastAuditAt: 0,
+003595: lastClickedControlToken: '',
+003596: signatureAtLastClick: '',
+003597: countAtLastClick: 0,
+003598: rowsAtLastClick: 0,
+003599: lastDuplicateSuppressionKey: '',
+003600: undesiredSince: 0,
+003601: handoffRetentionLogged: false,
+003602: };
+003603: state.pipelineSlots.push(slot);
+003604: state.pipelinePreloadCreates += 1;
+003605: bindManagedFrameLoad(frame, () => onPipelinePreloadLoad(frame));
+003606: document.body.appendChild(frame);
+003607: pipelineRecord('preload-created', {
+003608: index,
+003609: missionId: slot.missionId,
+003610: missionName: slot.missionName,
+003611: });
+003612: return slot;
+003613: }
+003614: function frameHref(frame) {
+003615: if (!frame?.isConnected) return '';
+003616: try { return frame.contentWindow.location.href || ''; } catch { return ''; }
+003617: }
+003618: function synchroniseManagedFrameName(frame, requestedName) {
+003619: const name = normaliseText(requestedName);
+003620: const result = {
+003621: requestedName: name,
+003622: elementName: '',
+003623: browsingContextName: '',
+003624: elementUpdated: false,
+003625: browsingContextUpdated: false,
+003626: matched: false,
+003627: };
+003628: if (!frame || !name) return result;
+003629: try {
+003630: frame.name = name;
+003631: frame.setAttribute?.('name', name);
+003632: result.elementName = normaliseText(frame.name || frame.getAttribute?.('name') || '');
+003633: result.elementUpdated = result.elementName === name;
+003634: } catch {}
+003635: try {
+003636: if (frame.contentWindow?.location?.origin === location.origin) {
+003637: frame.contentWindow.name = name;
+003638: }
+003639: result.browsingContextName = normaliseText(frame.contentWindow?.name || '');
+003640: result.browsingContextUpdated = result.browsingContextName === name;
+003641: } catch {}
+003642: result.matched = result.elementUpdated && result.browsingContextUpdated;
+003643: return result;
+003644: }
+003645: function pipelineAccessibleDocuments(frame) {
+003646: if (!frame?.isConnected) return [];
+003647: let root = null;
+003648: try { root = frame.contentDocument || frame.contentWindow?.document || null; } catch {}
+003649: if (!root) return [];
+003650: const docs = [];
+003651: const queue = [root];
+003652: const seen = new Set();
+003653: while (queue.length && docs.length < 10) {
+003654: const doc = queue.shift();
+003655: if (!doc || seen.has(doc)) continue;
+003656: seen.add(doc);
+003657: docs.push(doc);
+003658: let frames = [];
+003659: try { frames = Array.from(doc.querySelectorAll('iframe')); } catch {}
+003660: for (const childFrame of frames) {
+003661: try {
+003662: if (childFrame.contentWindow?.location?.origin !== location.origin) continue;
+003663: const childDoc = childFrame.contentDocument || childFrame.contentWindow?.document || null;
+003664: if (childDoc) queue.push(childDoc);
+003665: } catch {}
+003666: }
+003667: }
+003668: return docs;
+003669: }
+003670: function pipelineVehicleSnapshot(slot) {
+003671: const docs = pipelineAccessibleDocuments(slot?.frame);
+003672: let best = { count: 0, rows: 0, signature: '0|0|', control: null, autoControl: null, doc: null };
+003673: for (const doc of docs) {
+003674: let boxes = [];
+003675: let rows = 0;
+003676: try { boxes = Array.from(doc.querySelectorAll('input.vehicle_checkbox')); } catch {}
+003677: try { rows = doc.querySelectorAll('tr.vehicle_select_table_tr, #vehicle_table tr[vehicle_id], #vehicle_table tr[data-vehicle-id]').length; } catch {}
+003678: const signatureBoxes = boxes.length <= PIPELINE_SIGNATURE_EDGE_IDS * 2
+003679: ? boxes
+003680: : boxes.slice(0, PIPELINE_SIGNATURE_EDGE_IDS).concat(boxes.slice(-PIPELINE_SIGNATURE_EDGE_IDS));
+003681: const ids = signatureBoxes
+003682: .map(box => String(box.getAttribute('vehicle_id') || box.dataset?.vehicleId || box.value || ''))
+003683: .filter(Boolean);
+003684: const signature = `${boxes.length}|${rows}|${ids.join(',')}`;
+003685: let control = null;
+003686: try {
+003687: control = Array.from(doc.querySelectorAll('a.btn-warning.missing_vehicles_load, a.missing_vehicles_load')).find(link => {
+003688: if (!link.isConnected || link.classList.contains('disabled') || link.getAttribute('aria-disabled') === 'true') return false;
+003689: const style = doc.defaultView?.getComputedStyle?.(link);
+003690: return !style || (style.display !== 'none' && style.visibility !== 'hidden');
+003691: }) || null;
+003692: } catch {}
+003693: const autoControl = findAutoModeControl(doc);
+003694: if (boxes.length > best.count || rows > best.rows || (!best.doc && (control || autoControl))) {
+003695: best = { count: boxes.length, rows, signature, control, autoControl, doc };
+003696: }
+003697: }
+003698: return best;
+003699: }
+003700: function pipelineLoadControlToken(control) {
+003701: if (!control) return '';
+003702: return [
+003703: control.getAttribute?.('href') || '',
+003704: control.getAttribute?.('data-url') || '',
+003705: control.getAttribute?.('data-page') || '',
+003706: control.id || '',
+003707: elementLabel(control),
+003708: ].map(normaliseText).join('|');
+003709: }
+003710: function frameOwnershipBridge(frame) {
+003711: try {
+003712: return frame?.contentWindow?.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__ ||
+003713: frame?.contentWindow?.__MCN_V3_PIPELINE_PRELOAD_BRIDGE__ ||
+003714: null;
+003715: } catch {
+003716: return null;
+003717: }
+003718: }
+003719: function readDormantInteractionGuardStatus(frameOrSlot) {
+003720: const frame = frameOrSlot?.frame || frameOrSlot;
+003721: try {
+003722: const guard = frame?.contentWindow?.__MCN_V3_DORMANT_INTERACTION_GUARD__ || null;
+003723: if (!guard) return null;
+003724: const status = guard.status?.() || {};
+003725: return {
+003726: blocking: guard.isBlocking?.() === true || status.blocking === true,
+003727: blockedCount: Math.max(0, Number(guard.blockedCount?.() ?? status.blockedCount ?? 0)),
+003728: lastBlockedAt: Math.max(0, Number(status.lastBlockedAt || 0)),
+003729: lastBlockedType: normaliseText(status.lastBlockedType || ''),
+003730: };
+003731: } catch {
+003732: return null;
+003733: }
+003734: }
+003735: function frameOwnsOperationalState(frame) {
+003736: const bridge = frameOwnershipBridge(frame);
+003737: if (!bridge) return false;
+003738: try {
+003739: if (typeof bridge.isActive === 'function') return bridge.isActive() === true;
+003740: if (typeof bridge.isPromoted === 'function') return bridge.isPromoted() === true;
+003741: } catch {}
+003742: return false;
+003743: }
+003744: function ensureActiveWorkerOwnership(frame, source = 'active-worker') {
+003745: if (!frame?.isConnected) return false;
+003746: if (frameOwnsOperationalState(frame)) return true;
+003747: const bridgeBefore = frameOwnershipBridge(frame);
+003748: let installedBridge = null;
+003749: try {
+003750: installedBridge = installOwnershipBridgeInWindow(
+003751: frame.contentWindow,
+003752: true,
+003753: `parent-${source}`
+003754: );
+003755: } catch {}
+003756: const active = Boolean(installedBridge && frameOwnsOperationalState(frame));
+003757: const event = {
+003758: at: nowIso(),
+003759: source,
+003760: missionId: missionIdFromUrl(frameHref(frame)) || state.currentMissionId,
+003761: frameName: String(frame.name || ''),
+003762: bridgePresentBefore: Boolean(bridgeBefore),
+003763: bridgeSource: (() => {
+003764: try { return normaliseText(installedBridge?.source?.() || ''); } catch { return ''; }
+003765: })(),
+003766: active,
+003767: };
+003768: state.activeOwnershipBootstrapHistory.push(event);
+003769: if (state.activeOwnershipBootstrapHistory.length > OWNERSHIP_BOOTSTRAP_HISTORY_LIMIT) {
+003770: state.activeOwnershipBootstrapHistory.splice(
+003771: 0,
+003772: state.activeOwnershipBootstrapHistory.length - OWNERSHIP_BOOTSTRAP_HISTORY_LIMIT
+003773: );
+003774: }
+003775: if (active) {
+003776: state.activeOwnershipBootstrapInstalls += 1;
+003777: pipelineRecord('active-owner-synchronous-bootstrap', event);
+003778: if (
+003779: state.activeOwnershipBootstrapInstalls <= 4 ||
+003780: state.activeOwnershipBootstrapInstalls % 10 === 0
+003781: ) {
+003782: log('Synchronously established Worker A storage ownership before Auto Mode start.', event);
+003783: }
+003784: return true;
+003785: }
+003786: state.activeOwnershipBootstrapFailures += 1;
+003787: pipelineRecord('active-owner-synchronous-bootstrap-failed', event);
+003788: return false;
+003789: }
+003790: function setFrameOwnership(frame, active, reason = 'ownership-change') {
+003791: const bridge = frameOwnershipBridge(frame);
+003792: if (!bridge) return false;
+003793: let wasActive = false;
+003794: try { wasActive = frameOwnsOperationalState(frame); } catch {}
+003795: let changed = false;
+003796: try {
+003797: changed = active
+003798: ? (bridge.activate?.() === true || bridge.promote?.() === true)
+003799: : (bridge.deactivate?.() === true || bridge.demote?.() === true);
+003800: } catch {
+003801: changed = false;
+003802: }
+003803: if (changed && !active && wasActive) {
+003804: pipelineRecord('frame-storage-owner-demoted', {
+003805: missionId: missionIdFromUrl(frameHref(frame)),
+003806: reason,
+003807: });
+003808: }
+003809: return changed;
+003810: }
+003811: function pipelineBridge(slot) {
+003812: return frameOwnershipBridge(slot?.frame);
+003813: }
+003814: function v2DormantPreloadBridge(frameOrSlot) {
+003815: const frame = frameOrSlot?.frame || frameOrSlot;
+003816: try {
+003817: return frame?.contentWindow?.[V2_DORMANT_PRELOAD_BRIDGE_KEY] || null;
+003818: } catch {
+003819: return null;
+003820: }
+003821: }
+003822: function readV2DormantPreloadStatus(frameOrSlot) {
+003823: const bridge = v2DormantPreloadBridge(frameOrSlot);
+003824: if (!bridge) return null;
+003825: try {
+003826: const protocolVersion = Number(bridge.protocolVersion?.() || 0);
+003827: const missionFinderVersion = normaliseText(bridge.missionFinderVersion?.() || '');
+003828: const missionId = normaliseText(bridge.missionId?.() || '');
+003829: const detailedStatus = bridge.status?.() || null;
+003830: return {
+003831: bridge,
+003832: protocolVersion,
+003833: missionFinderVersion,
+003834: missionId,
+003835: dormant: bridge.isDormant?.() === true,
+003836: promoted: bridge.isPromoted?.() === true,
+003837: frameName: normaliseText(detailedStatus?.frameName || ''),
+003838: ownsOperationalState: detailedStatus?.ownsOperationalState === true,
+003839: observerStarted: detailedStatus?.observerStarted === true,
+003840: lightweight: detailedStatus?.lightweight === true,
+003841: };
+003842: } catch {
+003843: return null;
+003844: }
+003845: }
+003846: function onPipelinePreloadLoad(frame) {
+003847: const slot = pipelineSlotForFrame(frame);
+003848: if (!slot || !state.wanted || state.stopping) return;
+003849: const href = frameHref(frame);
+003850: const transportVehicleId = vehicleIdFromUrl(href);
+003851: if (transportVehicleId) {
+003852: failPipelineIsolation(slot, 'dormant-preload-transport-navigation', {
+003853: vehicleId: transportVehicleId,
+003854: href,
+003855: });
+003856: enterActiveOnlyMode('dormant-preload-transport-navigation', {
+003857: missionId: slot.missionId,
+003858: vehicleId: transportVehicleId,
+003859: });
+003860: return;
+003861: }
+003862: const missionId = missionIdFromUrl(href);
+003863: if (!missionId || missionId !== slot.missionId) {
+003864: slot.status = 'ERROR';
+003865: pipelineRecord('preload-navigation-mismatch', {
+003866: expectedMissionId: slot.missionId,
+003867: observedMissionId: missionId,
+003868: href,
+003869: });
+003870: removePipelineSlot(slot, 'navigation-mismatch', true);
+003871: return;
+003872: }
+003873: slot.loaded = true;
+003874: slot.loadedAt = Date.now();
+003875: slot.status = 'WARMING';
+003876: slot.lastProgressAt = Date.now();
+003877: try {
+003878: installOwnershipBridgeInWindow(frame.contentWindow, false, 'parent-preload-load');
+003879: const name = missionNameForId(missionId, frame.contentDocument || null);
+003880: if (name) slot.missionName = name;
+003881: } catch {}
+003882: pipelineRecord('preload-page-loaded', {
+003883: index: slot.index,
+003884: missionId: slot.missionId,
+003885: missionName: slot.missionName,
+003886: });
+003887: }
+003888: function failPipelineIsolation(slot, reason, data = {}) {
+003889: if (!slot) return;
+003890: state.pipelineIsolationFailures += 1;
+003891: slot.status = 'ISOLATION_FAIL';
+003892: pipelineRecord('preload-isolation-failed', {
+003893: missionId: slot.missionId,
+003894: missionName: slot.missionName,
+003895: reason,
+003896: ...data,
+003897: });
+003898: log('Pipeline preload isolation failed; preload removed before it could become a second dispatcher.', {
+003899: missionId: slot.missionId,
+003900: missionName: slot.missionName,
+003901: reason,
+003902: });
+003903: removePipelineSlot(slot, `isolation-${reason}`, true);
+003904: }
+003905: function pumpPipelinePreloads() {
+003906: if (state.pipelineActiveOnly || !state.wanted || state.stopping) return;
+003907: const ordered = state.pipelineSlots.slice().sort((a, b) => a.index - b.index);
+003908: const now = Date.now();
+003909: const snapshots = new Map();
+003910: for (const slot of ordered) {
+003911: if (!slot.frame?.isConnected || !slot.loaded) continue;
+003912: const bridge = pipelineBridge(slot);
+003913: if (bridge?.isPreload?.()) slot.bridgeReady = true;
+003914: const guardStatus = readDormantInteractionGuardStatus(slot);
+003915: if (guardStatus) {
+003916: slot.dormantGuardReady = true;
+003917: const observedBefore = Math.max(0, Number(slot.dormantGuardObservedCount || 0));
+003918: const blockedDelta = guardStatus.blockedCount >= observedBefore
+003919: ? guardStatus.blockedCount - observedBefore
+003920: : guardStatus.blockedCount;
+003921: slot.dormantGuardObservedCount = guardStatus.blockedCount;
+003922: slot.dormantLastBlockedType = guardStatus.lastBlockedType;
+003923: if (blockedDelta > 0) {
+003924: slot.dormantInteractionsBlocked += blockedDelta;
+003925: state.pipelineDormantInteractionsBlocked += blockedDelta;
+003926: pipelineRecord('preload-dormant-interaction-blocked', {
+003927: missionId: slot.missionId,
+003928: missionName: slot.missionName,
+003929: blockedDelta,
+003930: blockedTotal: slot.dormantInteractionsBlocked,
+003931: lastBlockedType: slot.dormantLastBlockedType,
+003932: });
+003933: }
+003934: }
+003935: const dormantStatus = readV2DormantPreloadStatus(slot);
+003936: if (
+003937: dormantStatus?.protocolVersion >= 1 &&
+003938: dormantStatus.dormant &&
+003939: !dormantStatus.promoted &&
+003940: dormantStatus.missionId === slot.missionId
+003941: ) {
+003942: if (!slot.v2DormantBridgeReady) {
+003943: state.pipelineV2DormantReady += 1;
+003944: pipelineRecord('preload-v2-native-dormant-ready', {
+003945: missionId: slot.missionId,
+003946: missionName: slot.missionName,
+003947: protocolVersion: dormantStatus.protocolVersion,
+003948: missionFinderVersion: dormantStatus.missionFinderVersion,
+003949: lightweight: dormantStatus.lightweight,
+003950: });
+003951: }
+003952: slot.v2DormantBridgeReady = true;
+003953: slot.v2DormantBridgeVersion = dormantStatus.missionFinderVersion;
+003954: slot.v2DormantLightweight = dormantStatus.lightweight;
+003955: }
+003956: if (
+003957: (!slot.bridgeReady || !slot.dormantGuardReady || !slot.v2DormantBridgeReady) &&
+003958: now - slot.loadedAt > PIPELINE_BRIDGE_TIMEOUT_MS
+003959: ) {
+003960: const missing = !slot.bridgeReady
+003961: ? 'storage-ownership-bridge-missing'
+003962: : !slot.dormantGuardReady
+003963: ? 'dormant-interaction-guard-missing'
+003964: : 'v2-native-dormant-bridge-missing';
+003965: failPipelineIsolation(slot, missing);
+003966: enterActiveOnlyMode(missing, {
+003967: missionId: slot.missionId,
+003968: pairedV2Required: false,
+003969: embeddedMissionFinderRequired: true,
+003970: });
+003971: continue;
+003972: }
+003973: if (slot.dormantGuardReady && bridge?.isPreload?.() && guardStatus?.blocking !== true) {
+003974: failPipelineIsolation(slot, 'dormant-interaction-guard-inactive');
+003975: enterActiveOnlyMode('dormant-interaction-guard-inactive', {
+003976: missionId: slot.missionId,
+003977: });
+003978: continue;
+003979: }
+003980: if (slot.ready && now - Number(slot.lastAuditAt || 0) < PIPELINE_READY_AUDIT_MS) continue;
+003981: const snapshot = pipelineVehicleSnapshot(slot);
+003982: snapshots.set(slot, snapshot);
+003983: slot.lastAuditAt = now;
+003984: slot.nexusMounted = Boolean(snapshot.doc?.querySelector?.('#mission-finder-wrapper, #control-panel'));
+003985: slot.autoControlPresent = Boolean(snapshot.autoControl);
+003986: slot.autoControlText = snapshot.autoControl ? elementLabel(snapshot.autoControl) : '';
+003987: if (slot.nexusMounted || snapshot.autoControl) {
+003988: failPipelineIsolation(slot, 'v2-runtime-mounted-in-dormant-preload', {
+003989: nexusMounted: slot.nexusMounted,
+003990: label: elementLabel(snapshot.autoControl),
+003991: });
+003992: enterActiveOnlyMode('v2-runtime-mounted-in-dormant-preload', {
+003993: missionId: slot.missionId,
+003994: });
+003995: }
+003996: }
+003997: const slot = state.pipelineSlots
+003998: .slice()
+003999: .sort((a, b) => a.index - b.index)
+004000: .find(item => item.loaded && !item.ready && item.frame?.isConnected);
+004001: if (!slot) return;
+004002: const bridge = pipelineBridge(slot);
+004003: const dormantStatus = readV2DormantPreloadStatus(slot);
+004004: if (
+004005: !bridge?.isPreload?.() ||
+004006: !slot.v2DormantBridgeReady ||
+004007: !dormantStatus?.dormant ||
+004008: dormantStatus.promoted
+004009: ) return;
+004010: const snapshot = snapshots.get(slot) || pipelineVehicleSnapshot(slot);
+004011: slot.nexusMounted = Boolean(snapshot.doc?.querySelector?.('#mission-finder-wrapper, #control-panel'));
+004012: slot.autoControlPresent = Boolean(snapshot.autoControl);
+004013: slot.autoControlText = snapshot.autoControl ? elementLabel(snapshot.autoControl) : '';
+004014: const controlToken = pipelineLoadControlToken(snapshot.control);
+004015: const signatureChanged = snapshot.signature !== slot.signature;
+004016: slot.vehicleCount = snapshot.count;
+004017: slot.vehicleRows = snapshot.rows;
+004018: if (signatureChanged) {
+004019: slot.signature = snapshot.signature;
+004020: slot.stableSince = now;
+004021: slot.lastProgressAt = now;
+004022: }
+004023: if (slot.loadClickPending) {
+004024: const clickAge = now - slot.lastLoadClickAt;
+004025: const progressObserved =
+004026: snapshot.count > slot.countAtLastClick ||
+004027: snapshot.rows > slot.rowsAtLastClick ||
+004028: snapshot.signature !== slot.signatureAtLastClick ||
+004029: (controlToken && slot.lastClickedControlToken && controlToken !== slot.lastClickedControlToken) ||
+004030: (!snapshot.control && clickAge >= PIPELINE_PROGRESS_SETTLE_MS);
+004031: if (progressObserved && clickAge >= PIPELINE_PROGRESS_SETTLE_MS) {
+004032: slot.loadClickPending = false;
+004033: slot.lastDuplicateSuppressionKey = '';
+004034: slot.lastProgressAt = now;
+004035: slot.stableSince = now;
+004036: pipelineRecord('preload-load-progress-confirmed', {
+004037: missionId: slot.missionId,
+004038: click: slot.loadClicks,
+004039: vehiclesAfter: snapshot.count,
+004040: rowsAfter: snapshot.rows,
+004041: });
+004042: } else if (clickAge > PIPELINE_LOAD_PROGRESS_TIMEOUT_MS) {
+004043: slot.loadClickPending = false;
+004044: slot.lastClickedControlToken = '';
+004045: slot.signatureAtLastClick = '';
+004046: slot.lastDuplicateSuppressionKey = '';
+004047: pipelineRecord('preload-load-progress-timeout', {
+004048: missionId: slot.missionId,
+004049: loadClicks: slot.loadClicks,
+004050: signature: slot.signature,
+004051: });
+004052: }
+004053: }
+004054: if (slot.nexusMounted || snapshot.autoControl) {
+004055: failPipelineIsolation(slot, 'v2-runtime-mounted-during-dormant-pump', {
+004056: nexusMounted: slot.nexusMounted,
+004057: label: elementLabel(snapshot.autoControl),
+004058: });
+004059: enterActiveOnlyMode('v2-runtime-mounted-during-dormant-pump', {
+004060: missionId: slot.missionId,
+004061: });
+004062: return;
+004063: }
+004064: if (snapshot.control && slot.loadClicks < PIPELINE_MAX_LOAD_CLICKS) {
+004065: slot.status = 'VEHICLES';
+004066: const duplicateSnapshot = Boolean(
+004067: controlToken &&
+004068: controlToken === slot.lastClickedControlToken &&
+004069: snapshot.signature === slot.signatureAtLastClick
+004070: );
+004071: if (!slot.loadClickPending && duplicateSnapshot) {
+004072: const suppressionKey = `${controlToken}|${snapshot.signature}`;
+004073: if (slot.lastDuplicateSuppressionKey !== suppressionKey) {
+004074: slot.lastDuplicateSuppressionKey = suppressionKey;
+004075: state.pipelineDuplicateClicksSuppressed += 1;
+004076: pipelineRecord('preload-duplicate-load-click-suppressed', {
+004077: missionId: slot.missionId,
+004078: loadClicks: slot.loadClicks,
+004079: vehicles: snapshot.count,
+004080: });
+004081: }
+004082: return;
+004083: }
+004084: if (
+004085: !slot.loadClickPending &&
+004086: slot.loadClicks < PIPELINE_MAX_LOAD_CLICKS &&
+004087: now - slot.lastLoadClickAt >= PIPELINE_LOAD_CLICK_COOLDOWN_MS &&
+004088: now - slot.lastProgressAt >= PIPELINE_PROGRESS_SETTLE_MS
+004089: ) {
+004090: try {
+004091: snapshot.control.click();
+004092: slot.loadClicks += 1;
+004093: slot.loadClickPending = true;
+004094: slot.lastLoadClickAt = now;
+004095: slot.lastClickedControlToken = controlToken;
+004096: slot.signatureAtLastClick = snapshot.signature;
+004097: slot.countAtLastClick = snapshot.count;
+004098: slot.rowsAtLastClick = snapshot.rows;
+004099: slot.lastDuplicateSuppressionKey = '';
+004100: state.pipelineVehicleLoadClicks += 1;
+004101: pipelineRecord('preload-vehicle-page-click', {
+004102: index: slot.index,
+004103: missionId: slot.missionId,
+004104: missionName: slot.missionName,
+004105: click: slot.loadClicks,
+004106: vehiclesBefore: slot.vehicleCount,
+004107: });
+004108: } catch (error) {
+004109: slot.status = 'LOAD_ERROR';
+004110: pipelineRecord('preload-vehicle-page-click-failed', {
+004111: missionId: slot.missionId,
+004112: error: String(error?.message || error),
+004113: });
+004114: }
+004115: }
+004116: return;
+004117: }
+004118: const pageReady = (() => {
+004119: try {
+004120: const doc = slot.frame.contentDocument;
+004121: return doc?.readyState === 'complete' && (
+004122: snapshot.count > 0 || snapshot.rows > 0 || now - slot.loadedAt > 4000
+004123: );
+004124: } catch { return false; }
+004125: })();
+004126: if (pageReady && now - slot.stableSince >= PIPELINE_READY_STABLE_MS) {
+004127: slot.ready = true;
+004128: slot.readyAt = now;
+004129: slot.status = 'READY';
+004130: state.pipelinePreloadsReady += 1;
+004131: pipelineRecord('preload-ready', {
+004132: index: slot.index,
+004133: missionId: slot.missionId,
+004134: missionName: slot.missionName,
+004135: vehicleCount: slot.vehicleCount,
+004136: vehicleRows: slot.vehicleRows,
+004137: loadClicks: slot.loadClicks,
+004138: warmMs: Math.max(0, now - slot.createdAt),
+004139: });
+004140: } else {
+004141: slot.status = snapshot.count || snapshot.rows ? 'STABILISING' : 'WARMING';
+004142: }
+004143: }
+004144: function pipelineTargetRotationFrozen() {
+004145: return Boolean(
+004146: state.transportServiceActive ||
+004147: state.transportKind ||
+004148: state.postDispatchWatchdog ||
+004149: state.nonMissionRedirectRecoveryInFlight ||
+004150: state.wakeRecoveryActive ||
+004151: /(?:RECOVERY|TRANSPORT|PROMOTION_VERIFY|PIPELINE_PROMOTE)/.test(String(state.phase || ''))
+004152: );
+004153: }
+004154: function syncPipelinePreloads(force = false) {
+004155: if (state.pipelineActiveOnly || !state.wanted || state.stopping || !document.body) return;
+004156: const now = Date.now();
+004157: if (!force && now - state.pipelineLastSyncAt < PIPELINE_SYNC_MS) return;
+004158: state.pipelineLastSyncAt = now;
+004159: activateControllerMemoryPressure();
+004160: if (state.pipelineMemoryPressureActive) return;
+004161: const desired = desiredPipelineTargets();
+004162: const desiredIds = new Set(desired.map(item => item.missionId));
+004163: const rotationFrozen = pipelineTargetRotationFrozen();
+004164: for (const slot of state.pipelineSlots.slice()) {
+004165: if (desiredIds.has(slot.missionId)) {
+004166: slot.undesiredSince = 0;
+004167: slot.handoffRetentionLogged = false;
+004168: continue;
+004169: }
+004170: if (rotationFrozen) {
+004171: slot.undesiredSince = 0;
+004172: continue;
+004173: }
+004174: if (!slot.undesiredSince) {
+004175: slot.undesiredSince = now;
+004176: state.pipelineHandoffRetentions += 1;
+004177: }
+004178: const graceMs = slot.ready ? PIPELINE_READY_HANDOFF_GRACE_MS : PIPELINE_TARGET_ROTATION_GRACE_MS;
+004179: if (!slot.handoffRetentionLogged) {
+004180: slot.handoffRetentionLogged = true;
+004181: pipelineRecord('preload-retained-for-handoff', {
+004182: missionId: slot.missionId,
+004183: ready: Boolean(slot.ready),
+004184: graceMs,
+004185: });
+004186: }
+004187: if (now - slot.undesiredSince >= graceMs) removePipelineSlot(slot, 'target-rotated-after-grace', true);
+004188: }
+004189: desired.forEach((target, index) => {
+004190: const existing = pipelineSlotForMission(target.missionId);
+004191: if (existing) {
+004192: existing.index = index;
+004193: existing.actionKind = target.actionKind || existing.actionKind;
+004194: existing.undesiredSince = 0;
+004195: existing.handoffRetentionLogged = false;
+004196: return;
+004197: }
+004198: if (state.pipelineSlots.filter(slot => slot.frame?.isConnected).length >= PIPELINE_PRELOAD_COUNT) return;
+004199: createPipelinePreload(target, index);
+004200: });
+004201: state.pipelineSlots.sort((a, b) => a.index - b.index);
+004202: persistPipelineTargets(desired);
+004203: }
+004204: function startPipelineController() {
+004205: if (state.pipelineActiveOnly || state.pipelineMemoryPressureActive || !state.wanted || state.stopping) return;
+004206: if (!state.pipelineSyncTimer) {
+004207: state.pipelineSyncTimer = window.setInterval(() => syncPipelinePreloads(false), PIPELINE_SYNC_MS);
+004208: }
+004209: if (!state.pipelinePumpTimer) {
+004210: state.pipelinePumpTimer = window.setInterval(pumpPipelinePreloads, PIPELINE_PUMP_MS);
+004211: }
+004212: syncPipelinePreloads(true);
+004213: pumpPipelinePreloads();
+004214: }
+004215: function promotePipelineMission(missionId, reason = 'mission-transition', metadata = {}) {
+004216: const id = String(missionId || '');
+004217: if (
+004218: state.pipelineActiveOnly ||
+004219: state.pipelineMemoryPressureActive ||
+004220: !id ||
+004221: isMissionTemporarilySkipped(id) ||
+004222: !state.wanted ||
+004223: state.stopping ||
+004224: state.transportServiceActive
+004225: ) return false;
+004226: const slot = pipelineSlotForMission(id);
+004227: if (!slot?.loaded || !slot.ready || !slot.frame?.isConnected) return false;
+004228: const href = frameHref(slot.frame);
+004229: if (missionIdFromUrl(href) !== id) return false;
+004230: const preloadAgeMs = Date.now() - Number(slot.loadedAt || slot.createdAt || 0);
+004231: if (preloadAgeMs > PIPELINE_PROMOTION_MAX_AGE_MS) {
+004232: state.pipelinePromotionFallbacks += 1;
+004233: pipelineRecord('preload-promotion-fallback', {
+004234: missionId: id,
+004235: missionName: slot.missionName,
+004236: reason,
+004237: preloadAgeMs,
+004238: fallbackReason: 'preload-too-old',
+004239: fallback: 'active-worker-navigation',
+004240: });
+004241: removePipelineSlot(slot, 'promotion-preload-too-old', true);
+004242: return false;
+004243: }
+004244: const bridge = pipelineBridge(slot);
+004245: if (!bridge?.isPreload?.()) return false;
+004246: const dormantStatus = readV2DormantPreloadStatus(slot);
+004247: if (
+004248: !slot.v2DormantBridgeReady ||
+004249: dormantStatus?.protocolVersion < 1 ||
+004250: !dormantStatus?.dormant ||
+004251: dormantStatus.promoted ||
+004252: dormantStatus.missionId !== id
+004253: ) {
+004254: failPipelineIsolation(slot, 'v2-native-dormant-promotion-gate-failed', {
+004255: dormantStatus: dormantStatus ? {
+004256: protocolVersion: dormantStatus.protocolVersion,
+004257: missionFinderVersion: dormantStatus.missionFinderVersion,
+004258: missionId: dormantStatus.missionId,
+004259: dormant: dormantStatus.dormant,
+004260: promoted: dormantStatus.promoted,
+004261: } : null,
+004262: });
+004263: enterActiveOnlyMode('v2-native-dormant-promotion-gate-failed', {
+004264: missionId: id,
+004265: });
+004266: return false;
+004267: }
+004268: const snapshot = pipelineVehicleSnapshot(slot);
+004269: slot.nexusMounted = Boolean(snapshot.doc?.querySelector?.('#mission-finder-wrapper, #control-panel'));
+004270: slot.autoControlPresent = Boolean(snapshot.autoControl);
+004271: slot.autoControlText = snapshot.autoControl ? elementLabel(snapshot.autoControl) : '';
+004272: if (
+004273: slot.nexusMounted ||
+004274: snapshot.autoControl ||
+004275: (snapshot.control && slot.loadClicks < PIPELINE_MAX_LOAD_CLICKS)
+004276: ) {
+004277: failPipelineIsolation(slot, 'promotion-preload-not-stable-and-dormant', {
+004278: nexusMounted: slot.nexusMounted,
+004279: autoControl: elementLabel(snapshot.autoControl),
+004280: vehicleLoadControl: pipelineLoadControlToken(snapshot.control),
+004281: });
+004282: return false;
+004283: }
+004284: const oldFrame = state.worker;
+004285: const oldBridge = frameOwnershipBridge(oldFrame);
+004286: if (oldFrame?.isConnected && (!oldBridge || !frameOwnsOperationalState(oldFrame))) {
+004287: state.pipelinePromotionFallbacks += 1;
+004288: enterActiveOnlyMode('active-owner-bridge-missing', {
+004289: missionId: state.currentMissionId,
+004290: promotionTargetMissionId: id,
+004291: });
+004292: return false;
+004293: }
+004294: const oldFrameStyle = oldFrame?.style?.cssText || '';
+004295: const oldFrameName = String(oldFrame?.name || '');
+004296: const oldBrowsingContextName = (() => {
+004297: try { return String(oldFrame?.contentWindow?.name || ''); } catch { return ''; }
+004298: })();
+004299: if (oldFrame?.isConnected && oldBridge) {
+004300: try { installDormantInteractionGuard(oldFrame.contentWindow, oldBridge); } catch {}
+004301: }
+004302: const oldDemoted = !oldFrame?.isConnected || setFrameOwnership(oldFrame, false, `handoff-to-${id}`);
+004303: if (!oldDemoted) {
+004304: state.pipelinePromotionFallbacks += 1;
+004305: enterActiveOnlyMode('outgoing-owner-demotion-failed', {
+004306: missionId: state.currentMissionId,
+004307: promotionTargetMissionId: id,
+004308: });
+004309: return false;
+004310: }

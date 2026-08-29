@@ -1,0 +1,301 @@
+001600: missionName: state.currentMissionName || missionNameForId(state.currentMissionId),
+001601: source,
+001602: text: value,
+001603: });
+001604: if (state.statusHistory.length > STATUS_HISTORY_LIMIT) {
+001605: state.statusHistory.splice(0, state.statusHistory.length - STATUS_HISTORY_LIMIT);
+001606: }
+001607: }
+001608: function getAccessibleTransportDocuments(rootDoc) {
+001609: if (!rootDoc) return [];
+001610: const documents = [];
+001611: const queue = [rootDoc];
+001612: const seen = new Set();
+001613: while (queue.length && documents.length < 20) {
+001614: const doc = queue.shift();
+001615: if (!doc || seen.has(doc)) continue;
+001616: seen.add(doc);
+001617: documents.push(doc);
+001618: let frames = [];
+001619: try { frames = Array.from(doc.querySelectorAll('iframe')); } catch {}
+001620: for (const frame of frames) {
+001621: try {
+001622: const child = frame.contentDocument || frame.contentWindow?.document || null;
+001623: if (!child) continue;
+001624: const childOrigin = frame.contentWindow?.location?.origin || '';
+001625: if (childOrigin && childOrigin !== location.origin) continue;
+001626: queue.push(child);
+001627: } catch {}
+001628: }
+001629: }
+001630: return documents;
+001631: }
+001632: function exactPatientPath(value) {
+001633: const path = pathFromUrl(value);
+001634: return /^\/vehicles\/\d+\/patient\/\d+\/?(?:[?#].*)?$/i.test(path) ? path : '';
+001635: }
+001636: function exactPrisonerPath(value) {
+001637: const path = pathFromUrl(value);
+001638: return /^\/vehicles\/\d+\/gefangener\/\d+\/?(?:[?#].*)?$/i.test(path) ? path : '';
+001639: }
+001640: function transportContextDetails(doc, href) {
+001641: const documents = getAccessibleTransportDocuments(doc);
+001642: const evidence = [];
+001643: const routeVehicleId = vehicleIdFromUrl(href);
+001644: let patientPath = exactPatientPath(href);
+001645: let prisonerPath = exactPrisonerPath(href);
+001646: let firstPatientPath = '';
+001647: let firstPrisonerPath = '';
+001648: let patientAnchorCount = 0;
+001649: let structuredPrisonerRequests = 0;
+001650: let greenPrisonDestinations = 0;
+001651: let releaseLinks = 0;
+001652: let releaseSuccessAlerts = 0;
+001653: let cellSelectionAlerts = 0;
+001654: for (const scope of documents) {
+001655: let links = [];
+001656: try { links = Array.from(scope.querySelectorAll('a[href]')); } catch {}
+001657: for (const link of links) {
+001658: const rawHref = link.getAttribute('href') || link.href || '';
+001659: const patient = exactPatientPath(rawHref);
+001660: if (patient) {
+001661: const looksExactV2Anchor = link.matches?.('a.btn-success[href*="/patient/"]') || link.classList?.contains('btn-success');
+001662: if (looksExactV2Anchor) patientAnchorCount += 1;
+001663: if (!firstPatientPath) firstPatientPath = patient;
+001664: const patientRoute = patient.match(/^\/vehicles\/(\d+)\/patient\/(\d+)/i);
+001665: if (!patientPath && routeVehicleId && patientRoute?.[1] === routeVehicleId) {
+001666: patientPath = patient;
+001667: }
+001668: }
+001669: const prisoner = exactPrisonerPath(rawHref);
+001670: if (prisoner) {
+001671: if (!firstPrisonerPath) firstPrisonerPath = prisoner;
+001672: const prisonerRoute = prisoner.match(/^\/vehicles\/(\d+)\/gefangener\/(\d+)/i);
+001673: if (!prisonerPath && routeVehicleId && prisonerRoute?.[1] === routeVehicleId) {
+001674: prisonerPath = prisoner;
+001675: }
+001676: }
+001677: }
+001678: try {
+001679: structuredPrisonerRequests += scope.querySelectorAll('[data-transport-request="true"][data-transport-request-type="prisoner"]').length;
+001680: greenPrisonDestinations += scope.querySelectorAll('a.btn.btn-success[data-prison-id][href*="/gefangener/"]').length;
+001681: releaseLinks += scope.querySelectorAll('a.btn.btn-danger[data-method="post"][href*="/gefangene/entlassen"]').length;
+001682: } catch {}
+001683: let infoAlerts = [];
+001684: let successAlerts = [];
+001685: try { infoAlerts = Array.from(scope.querySelectorAll('.alert.alert-info')); } catch {}
+001686: try { successAlerts = Array.from(scope.querySelectorAll('.alert.alert-success')); } catch {}
+001687: for (const alert of infoAlerts) {
+001688: const text = normaliseText(alert.textContent || alert.innerText).toLowerCase();
+001689: if (text.includes('cell selection') || text.includes('the prisoners should be placed in a cell')) cellSelectionAlerts += 1;
+001690: }
+001691: for (const alert of successAlerts) {
+001692: const text = normaliseText(alert.textContent || alert.innerText).toLowerCase();
+001693: if (text.includes('the prisoners were released')) releaseSuccessAlerts += 1;
+001694: }
+001695: }
+001696: patientPath = patientPath || firstPatientPath;
+001697: prisonerPath = prisonerPath || firstPrisonerPath;
+001698: if (patientPath) evidence.push(`patient-route:${patientPath}`);
+001699: if (patientAnchorCount) evidence.push(`exact-patient-anchors:${patientAnchorCount}`);
+001700: if (structuredPrisonerRequests) evidence.push(`structured-prisoner-requests:${structuredPrisonerRequests}`);
+001701: if (cellSelectionAlerts) evidence.push(`cell-selection-alerts:${cellSelectionAlerts}`);
+001702: if (greenPrisonDestinations) evidence.push(`green-cell-destinations:${greenPrisonDestinations}`);
+001703: if (prisonerPath) evidence.push(`prisoner-route:${prisonerPath}`);
+001704: if (releaseLinks) evidence.push(`release-links:${releaseLinks}`);
+001705: if (releaseSuccessAlerts) evidence.push(`release-success-alerts:${releaseSuccessAlerts}`);
+001706: let kind = '';
+001707: if (patientPath || patientAnchorCount) kind = 'PATIENT';
+001708: if (structuredPrisonerRequests || cellSelectionAlerts || greenPrisonDestinations || prisonerPath || releaseLinks || releaseSuccessAlerts) {
+001709: kind = 'PRISONER';
+001710: }
+001711: return {
+001712: kind,
+001713: evidence,
+001714: documentsScanned: documents.length,
+001715: patientPath,
+001716: patientAnchorCount,
+001717: structuredPrisonerRequests,
+001718: greenPrisonDestinations,
+001719: prisonerPath,
+001720: releaseLinks,
+001721: releaseSuccessAlerts,
+001722: cellSelectionAlerts,
+001723: };
+001724: }
+001725: function transportContextIdentity(context, href = '') {
+001726: const kind = String(context?.kind || '');
+001727: if (!kind) return '';
+001728: const path = kind === 'PATIENT'
+001729: ? (exactPatientPath(href) || context.patientPath || '')
+001730: : (exactPrisonerPath(href) || context.prisonerPath || '');
+001731: const pattern = kind === 'PATIENT'
+001732: ? /^\/vehicles\/(\d+)\/patient\/(\d+)/i
+001733: : /^\/vehicles\/(\d+)\/gefangener\/(\d+)/i;
+001734: const match = String(path).match(pattern);
+001735: if (match) return `${kind}:${match[1]}:${match[2]}`;
+001736: const vehicleId = vehicleIdFromUrl(href) || state.transportServiceVehicleId || '';
+001737: const missionId = state.transportServiceMissionId || state.currentMissionId || '';
+001738: return `${kind}:${vehicleId || 'unknown'}:${missionId || 'unknown'}`;
+001739: }
+001740: function isPrisonerReleaseFallbackContext(context) {
+001741: return Boolean(
+001742: context?.kind === 'PRISONER' &&
+001743: Number(context.cellSelectionAlerts || 0) > 0 &&
+001744: Number(context.releaseLinks || 0) > 0 &&
+001745: !context.prisonerPath &&
+001746: Number(context.greenPrisonDestinations || 0) === 0
+001747: );
+001748: }
+001749: function isCompletedPrisonerDestinationContext(context, href = '') {
+001750: const route = exactPrisonerPath(href);
+001751: return Boolean(
+001752: context?.kind === 'PRISONER' &&
+001753: route &&
+001754: exactPrisonerPath(context.prisonerPath || '') === route &&
+001755: !Number(context.structuredPrisonerRequests || 0) &&
+001756: !Number(context.cellSelectionAlerts || 0) &&
+001757: !Number(context.greenPrisonDestinations || 0) &&
+001758: !Number(context.releaseLinks || 0) &&
+001759: !Number(context.releaseSuccessAlerts || 0)
+001760: );
+001761: }
+001762: function beginTransportEvent(context, href) {
+001763: if (!context?.kind) return;
+001764: const identity = transportContextIdentity(context, href);
+001765: if (
+001766: state.activeTransportEvent?.kind === context.kind &&
+001767: state.activeTransportEvent?.identity === identity
+001768: ) return;
+001769: if (state.activeTransportEvent) endTransportEvent('context-switched');
+001770: const event = {
+001771: kind: context.kind,
+001772: identity,
+001773: startedAt: nowIso(),
+001774: endedAt: '',
+001775: durationMs: 0,
+001776: missionId: state.currentMissionId || missionIdFromUrl(href),
+001777: startPath: pathFromUrl(href),
+001778: endPath: '',
+001779: outcome: 'active',
+001780: evidenceAtStart: context.evidence.slice(0, 12),
+001781: documentsScannedAtStart: context.documentsScanned,
+001782: evidenceAtEnd: [],
+001783: };
+001784: state.activeTransportEvent = event;
+001785: state.runTransportEvents.push(event);
+001786: if (state.runTransportEvents.length > TRANSPORT_EVENT_LIMIT) {
+001787: state.runTransportEvents.splice(0, state.runTransportEvents.length - TRANSPORT_EVENT_LIMIT);
+001788: }
+001789: if (context.kind === 'PATIENT') state.runPatientTransports += 1;
+001790: if (context.kind === 'PRISONER') state.runPrisonerTransports += 1;
+001791: log(`${context.kind === 'PATIENT' ? 'Patient' : 'Prisoner'} transport observation started.`, {
+001792: missionId: event.missionId,
+001793: evidence: event.evidenceAtStart,
+001794: });
+001795: render();
+001796: }
+001797: function endTransportEvent(outcome = 'context-ended', context = null, href = '') {
+001798: const event = state.activeTransportEvent;
+001799: if (!event) return;
+001800: event.endedAt = nowIso();
+001801: event.durationMs = Math.max(0, Date.now() - Date.parse(event.startedAt));
+001802: event.endPath = pathFromUrl(href || getWorkerHref());
+001803: event.outcome = outcome;
+001804: if (context?.evidence) event.evidenceAtEnd = context.evidence.slice(0, 12);
+001805: log(`${event.kind === 'PATIENT' ? 'Patient' : 'Prisoner'} transport observation ended.`, {
+001806: missionId: event.missionId,
+001807: durationMs: event.durationMs,
+001808: outcome,
+001809: evidenceAtEnd: event.evidenceAtEnd,
+001810: });
+001811: state.activeTransportEvent = null;
+001812: render();
+001813: }
+001814: function captureWorkerSnapshot() {
+001815: const href = getWorkerHref();
+001816: const doc = getWorkerDocument();
+001817: if (!href && !doc) return state.lastWorkerSnapshot;
+001818: const context = transportContextDetails(doc, href);
+001819: const control = findAutoModeControl(doc);
+001820: const snapshot = {
+001821: capturedAt: nowIso(),
+001822: href: href || '',
+001823: path: pathFromUrl(href),
+001824: missionId: missionIdFromUrl(href) || state.currentMissionId || '',
+001825: missionName: state.currentMissionName || missionNameForId(state.currentMissionId, doc),
+001826: sameOriginReadable: Boolean(doc),
+001827: readyState: doc?.readyState || '',
+001828: title: normaliseText(doc?.title || ''),
+001829: nexusWrapperPresent: Boolean(doc?.querySelector?.('#mission-finder-wrapper')),
+001830: controlPanelPresent: Boolean(doc?.querySelector?.('#control-panel')),
+001831: autoControlFound: Boolean(control),
+001832: autoControlText: control ? elementLabel(control) : state.autoControlText,
+001833: autoLooksRunning: Boolean(control && autoControlLooksRunning(control)),
+001834: workerDocumentSerial: state.workerDocumentSerial,
+001835: autoStartDocumentSerial: state.autoStartDocumentSerial,
+001836: autoRunningConfirmedDocumentSerial: state.autoRunningConfirmedDocumentSerial,
+001837: v2AutoStopRecord: readV2AutoStopRecord(),
+001838: usefulStatus: findUsefulNexusStatus(doc),
+001839: transport: context,
+001840: visibleMissionFrameOutsideWorker: Boolean(findVisibleForeignMissionFrame()),
+001841: };
+001842: try {
+001843: snapshot.bootstrapTrace = JSON.parse(JSON.stringify(doc?.defaultView?.__MCN_BOOT_TRACE__ || null));
+001844: } catch {
+001845: snapshot.bootstrapTrace = null;
+001846: }
+001847: state.lastWorkerSnapshot = snapshot;
+001848: return snapshot;
+001849: }
+001850: function log(message, data) {
+001851: const entry = {
+001852: at: nowIso(),
+001853: phase: state.phase,
+001854: message: normaliseText(message),
+001855: };
+001856: if (data !== undefined) {
+001857: try {
+001858: entry.data = JSON.parse(JSON.stringify(data));
+001859: } catch {
+001860: entry.data = String(data);
+001861: }
+001862: }
+001863: state.log.push(entry);
+001864: if (state.log.length > LOG_LIMIT) state.log.splice(0, state.log.length - LOG_LIMIT);
+001865: render();
+001866: }
+001867: function setPhase(phase, status, detail = '') {
+001868: state.phase = phase;
+001869: state.status = status;
+001870: state.detail = detail;
+001871: render();
+001872: }
+001873: function setError(message, detail = '') {
+001874: captureWorkerSnapshot();
+001875: state.lastError = normaliseText(message);
+001876: state.wanted = false;
+001877: state.running = false;
+001878: state.stopping = false;
+001879: state.lowQueuePaused = false;
+001880: state.transportServiceEligible = false;
+001881: clearPersistedRunIntent();
+001882: clearAllControllerTimers();
+001883: clearPostDispatchWatchdog('controller-error');
+001884: clearAutoRecoveryWatchdog('controller-error');
+001885: clearSharedV2QueueGuard('controller-error', state.currentMissionId);
+001886: clearSharedV2AutoRunning('controller-error');
+001887: pausePipelineController('controller-error', true);
+001888: clearTransportServiceState();
+001889: resetPriorityPending();
+001890: resetAutoStartTracking();
+001891: clearPromotedWorkTracking();
+001892: removeWorker(false);
+001893: markRunStopped();
+001894: setPhase('ERROR', state.lastError || 'Background Auto Mode error', detail);
+001895: log(state.lastError || 'Unknown error', detail ? { detail } : undefined);
+001896: saveRunContinuity();
+001897: }
+001898: function clearTimer(name, clearFn = window.clearTimeout) {
+001899: if (state[name] != null) {
+001900: clearFn(state[name]);
