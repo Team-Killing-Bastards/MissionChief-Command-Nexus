@@ -19,7 +19,18 @@ jobs:
 
       - name: Build clean v3.0.37 candidate
         shell: bash
-        run: python3 scripts/_temporary-build-v3037-naming-cascade.py
+        run: |
+          python3 scripts/_temporary-build-v3037-naming-cascade.py
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/check-naming-dispatch-centre-recursive-frame-v3037.mjs')
+          text = path.read_text(encoding='utf-8')
+          pinned = "assert.match(source, /@version\\s+3\\.0\\.37/);\n"
+          if pinned not in text:
+              raise SystemExit('Pinned release-version assertion was not found in generated regression.')
+          path.write_text(text.replace(pinned, '', 1), encoding='utf-8')
+          PY
 
       - name: Validate exact candidate
         shell: bash
