@@ -1,0 +1,131 @@
+name: Temporary v3.0.36 transport ownership inspection
+
+on:
+  push:
+    branches:
+      - hotfix/v3036-transport-owner-race
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    if: ${{ !contains(github.event.head_commit.message, '[skip v3036 inspection]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract exact ownership and transport functions
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/missionchief-command-nexus.user.js')
+          source = path.read_text(encoding='utf-8')
+
+          def function_span(name, start_at=0):
+              start = source.find(f'function {name}(', start_at)
+              if start < 0:
+                  return None
+              brace = source.find('{', start)
+              depth = 0
+              quote = ''
+              escaped = False
+              line_comment = False
+              block_comment = False
+              i = brace
+              while i < len(source):
+                  c = source[i]
+                  n = source[i + 1] if i + 1 < len(source) else ''
+                  if line_comment:
+                      if c == '\n': line_comment = False
+                      i += 1; continue
+                  if block_comment:
+                      if c == '*' and n == '/': block_comment = False; i += 2; continue
+                      i += 1; continue
+                  if quote:
+                      if escaped: escaped = False
+                      elif c == '\\': escaped = True
+                      elif c == quote: quote = ''
+                      i += 1; continue
+                  if c == '/' and n == '/': line_comment = True; i += 2; continue
+                  if c == '/' and n == '*': block_comment = True; i += 2; continue
+                  if c in ("'", '"', '`'): quote = c; i += 1; continue
+                  if c == '{': depth += 1
+                  elif c == '}':
+                      depth -= 1
+                      if depth == 0: return start, i + 1
+                  i += 1
+              return None
+
+          module = source.find('MODULE 2: MISSION FINDER')
+          groups = {
+              '.tmp-v3036-parent-functions.txt': [
+                  'installOwnershipBridgeInWindow', 'frameOwnershipBridge',
+                  'ensureActiveWorkerOwnership', 'setFrameOwnership',
+                  'findPersonalStructuredPrisonerContext', 'findExactPersonalPatientAnchor',
+                  'redirectWorkerToTransportService', 'startTransportOnlyWorker',
+                  'returnToTopMissionAfterTransport', 'maybeReturnFromCompletedPrisonerDestination',
+                  'createWorker', 'onWorkerLoad', 'watchWorker', 'removeWorker',
+              ],
+              '.tmp-v3036-mission-functions.txt': [
+                  'isMfV3ManagedActiveFrame', 'isMfV3ManagedActiveWorker',
+                  'isMfV3ManagedTransportWorker', 'claimCurrentMissionExecutionOwnership',
+                  'isCurrentMissionExecutionOwner', 'isMissionFinderRuntimeOwner',
+                  'isTransportAutomationAllowed', 'clearAllTransportAutomationFlags',
+                  'handleTransportRequestsAfterDispatch', 'syncBackgroundAutomationWatchers',
+                  'startGlobalTransportWatcher', 'stopGlobalTransportWatcher',
+                  'startBruteApproachTransportWatcher', 'stopBruteApproachTransportWatcher',
+                  'startMissionFinderObserver', 'stopMissionFinderObserver',
+                  'initialize',
+              ],
+          }
+          for output, names in groups.items():
+              parts = []
+              for name in names:
+                  span = function_span(name, module if output.endswith('mission-functions.txt') else 0)
+                  parts.append(f'===== {name} =====\n' + (source[span[0]:span[1]] if span else 'NOT FOUND'))
+              Path(output).write_text('\n\n'.join(parts) + '\n', encoding='utf-8')
+
+          lines = source.splitlines()
+          terms = [
+              'mission-observer-managed-active-owner',
+              'mission-observer-inactive-owner',
+              '__MCN_V3_OWNERSHIP_BRIDGE__',
+              '__MCN_V3_OWNERSHIP_ACTIVE__',
+              'markTransportSequenceActive()',
+              'handleTransportRequestsAfterDispatch(',
+              'isTransportAutomationAllowed()',
+              'isMfV3ManagedTransportWorker()',
+              'startMissionFinderObserver()',
+              'stopMissionFinderObserver(',
+          ]
+          ranges = []
+          for number, line in enumerate(lines, 1):
+              if any(term in line for term in terms):
+                  ranges.append((max(1, number - 20), min(len(lines), number + 45)))
+          merged = []
+          for start, end in ranges:
+              if merged and start <= merged[-1][1] + 3:
+                  merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+              else:
+                  merged.append((start, end))
+          report = []
+          for index, (start, end) in enumerate(merged, 1):
+              report.append(f'===== context-{index} [{start}-{end}] =====')
+              report.extend(f'{i:06d}: {lines[i-1]}' for i in range(start, end + 1))
+              report.append('')
+          Path('.tmp-v3036-exact-contexts.txt').write_text('\n'.join(report), encoding='utf-8')
+          PY
+
+      - name: Commit inspection maps
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .tmp-v3036-*.txt
+          git commit -m "Add v3.0.35 failure inspection maps [skip v3036 inspection]"
+          git push origin HEAD:hotfix/v3036-transport-owner-race
