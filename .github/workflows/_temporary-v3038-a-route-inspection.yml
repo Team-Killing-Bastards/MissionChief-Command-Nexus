@@ -18,7 +18,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Extract transport lifecycle authority
+      - name: Extract exact transport lifecycle functions
         shell: bash
         run: |
           python3 - <<'PY'
@@ -26,7 +26,6 @@ jobs:
 
           source_path = Path('src/missionchief-command-nexus.user.js')
           source = source_path.read_text(encoding='utf-8')
-          lines = source.splitlines()
 
           def function_span(name, start_at=0):
               start = source.find(f'function {name}(', start_at)
@@ -73,59 +72,38 @@ jobs:
               'createWorker',
               'refreshRadioTransportRequests',
               'radioRequestForVehicle',
-              'collectTransportContext',
               'detectTransportContext',
               'maybeAssistPatientTransport',
               'maybeAssistPrisonerTransport',
               'maybeHandleTransportServiceTimeout',
               'clearTransportServiceState',
-              'isMissionUrl',
-              'vehicleIdFromUrl',
-              'pausePipelineController',
-              'beginMissionRescan',
-              'chooseTopMission',
-              'actionableMissionSupply',
+              'correlateTransportMissionFromRadio',
+              'maybeEnforcePriority',
+              'maybeRecoverStalledNonMissionRedirect',
           ]
-          output = []
           for name in names:
               span = function_span(name)
-              output.append(f'===== {name} =====')
-              output.append(source[span[0]:span[1]] if span else 'NOT FOUND')
-              output.append('')
-          Path('.tmp-v3038-functions.txt').write_text('\n'.join(output), encoding='utf-8')
+              body = source[span[0]:span[1]] if span else f'NOT FOUND: {name}\n'
+              Path(f'.tmp-v3038-fn-{name}.txt').write_text(body + '\n', encoding='utf-8')
 
+          lines = source.splitlines()
           terms = [
               "workerRole: ''",
               'transportServiceActive:',
               'transportServiceKey:',
               'transportServiceDeferredUntil',
-              'redirectWorkerToTransportService(',
-              'startTransportOnlyWorker(',
-              "state.workerRole === 'MISSION_A'",
-              "state.workerRole === 'TRANSPORT_B'",
-              'vehicleIdFromUrl(href',
-              'collectTransport',
-              'detectTransport',
-              'patient-route:',
-              'exact-patient-anchors:',
-              'TRANSPORT_WARN',
+              'transportRecoveryAttempts:',
+              'radioRequestFirstSeenAt:',
           ]
-          ranges = []
+          contexts = []
           for number, line in enumerate(lines, 1):
               if any(term in line for term in terms):
-                  ranges.append((max(1, number-18), min(len(lines), number+45)))
-          merged = []
-          for start, end in ranges:
-              if merged and start <= merged[-1][1] + 3:
-                  merged[-1] = (merged[-1][0], max(merged[-1][1], end))
-              else:
-                  merged.append((start, end))
-          contexts = []
-          for index, (start, end) in enumerate(merged, 1):
-              contexts.append(f'===== context-{index} [{start}-{end}] =====')
-              contexts.extend(f'{i:06d}: {lines[i-1]}' for i in range(start, end+1))
-              contexts.append('')
-          Path('.tmp-v3038-contexts.txt').write_text('\n'.join(contexts), encoding='utf-8')
+                  start = max(1, number - 20)
+                  end = min(len(lines), number + 55)
+                  contexts.append(f'===== [{start}-{end}] =====')
+                  contexts.extend(f'{i:06d}: {lines[i-1]}' for i in range(start, end+1))
+                  contexts.append('')
+          Path('.tmp-v3038-state-context.txt').write_text('\n'.join(contexts), encoding='utf-8')
 
           tests = []
           for path in sorted(Path('scripts').glob('check-*.mjs')):
@@ -134,19 +112,18 @@ jobs:
                   'Worker B', 'TRANSPORT_B', 'MISSION_A',
                   'redirectWorkerToTransportService',
                   'startTransportOnlyWorker',
-                  'transport leakage',
                   'transportServiceActive',
               ]):
                   tests.append(f'===== {path} =====\n{text}')
           Path('.tmp-v3038-tests.txt').write_text('\n\n'.join(tests), encoding='utf-8')
           PY
 
-      - name: Commit inspection maps
+      - name: Commit exact function maps
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .tmp-v3038-*.txt
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "Add v3.0.38 transport inspection maps [skip v3038 inspection]"
+          git commit -m "Add exact v3.0.38 function maps [skip v3038 inspection]"
           git push origin HEAD:fix/v3038-a-route-transport-handoff
