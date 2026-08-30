@@ -35,7 +35,7 @@ jobs:
           discovery = replace_once(
               discovery,
               'const rescueUrl = href;',
-              'const rescueUrl = canonicalMissionWorkerUrl(href);',
+              \"const rescueUrl = typeof canonicalMissionWorkerUrl === 'function' ? canonicalMissionWorkerUrl(href) : href;\",
               'canonical clean retry URL',
           )
           source = source[:discovery_start] + discovery + source[discovery_end:]"""
@@ -132,6 +132,11 @@ jobs:
           test = test.replace(
               "assert.match(initialize, /isMfV3PrisonerReleaseTerminalPage\\(\\)/,",
               "assert.match(initialize, /gefangene\\\\\\/entlassen/ ,",
+              1,
+          )
+          test = test.replace(
+              "assert.match(discover, /const rescueUrl = canonicalMissionWorkerUrl\\(href\\)/,",
+              "assert.match(discover, /canonicalMissionWorkerUrl\\(href\\)/,",
               1,
           )
           test_path.write_text(test, encoding='utf-8')
