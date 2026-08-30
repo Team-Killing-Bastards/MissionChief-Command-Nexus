@@ -6,6 +6,16 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.39] - 2026-08-30
+
+### Fixed
+
+- Treat `/missions/{id}/gefangene/entlassen` as a terminal prisoner-release result rather than a reusable mission page. A confirmed “The prisoners were released” result now removes Worker A and continues from a fresh mission worker without waiting for Mission Finder.
+- Block Mission Finder initialization, Unit Finder, Dispatch and Auto Mode discovery on prisoner-release terminal/404 documents.
+- Reject prisoner-release terminal URLs from current resume storage and canonicalize any clean Worker A retry back to `/missions/{id}` so the terminal URL can never be replayed.
+- Add bounded three-second fail-closed handling when the terminal route loads without a readable success alert; the worker is removed and another actionable mission is selected without clicking any further control.
+- Increased the unified userscript version from `3.0.38` to `3.0.39`; Mission Finder remains `V10.6.177`.
+
 ## [3.0.38] - 2026-08-30
 
 ### Fixed

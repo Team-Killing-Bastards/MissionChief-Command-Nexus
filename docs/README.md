@@ -1,6 +1,6 @@
 # Command Nexus Documentation
 
-This directory separates current operating guidance from versioned historical records. The current baseline is Command Nexus `3.0.38` with Mission Finder `V10.6.177`, enforcing mission-only Worker A and on-demand transport-only Worker B through immutable frame-role admission.
+This directory separates current operating guidance from versioned historical records. The current baseline is Command Nexus `3.0.39` with Mission Finder `V10.6.177`, enforcing mission-only Worker A and on-demand transport-only Worker B through immutable frame-role admission.
 
 ## Current operational documentation
 
