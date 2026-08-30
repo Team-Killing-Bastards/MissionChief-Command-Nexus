@@ -73,6 +73,22 @@ jobs:
               raise SystemExit('Mission observer terminal guard marker was not found.')
           source = source.replace(old, new, 1)
 
+          old = f"""function startMissionFinderObserver() {{
+                  if ({inline_guard}) {{
+                      globalThis.__MCN_BOOT_MARK__?.('prisoner-release-terminal-result');
+                      return;
+                  }}
+                  if (mfV3DormantPreload) return;"""
+          new = f"""function startMissionFinderObserver() {{
+                  if (mfV3DormantPreload) return;
+                  if ({inline_guard}) {{
+                      globalThis.__MCN_BOOT_MARK__?.('prisoner-release-terminal-result');
+                      return;
+                  }}"""
+          if old not in source:
+              raise SystemExit('Dormant preload ordering marker was not found.')
+          source = source.replace(old, new, 1)
+
           old = "        if (isMfV3PrisonerReleaseTerminalPage()) return;"
           new = f"        if ({inline_guard}) return;"
           if old not in source:
