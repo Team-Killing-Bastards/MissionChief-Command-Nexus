@@ -46,17 +46,66 @@ jobs:
           python3 scripts/_temporary-build-v3039-prisoner-terminal.py
           python3 - <<'PY'
           from pathlib import Path
-          path = Path('src/missionchief-command-nexus.user.js')
-          source = path.read_text(encoding='utf-8')
+          source_path = Path('src/missionchief-command-nexus.user.js')
+          source = source_path.read_text(encoding='utf-8')
+          inline_guard = "/^\\/missions\\/\\d+\\/gefangene\\/entlassen\\/?$/i.test(String(globalThis.location?.pathname || ''))"
+
           old = """function shouldKeepMissionFinderObserverForCurrentFrame() {
                   if (isMfV3PrisonerReleaseTerminalPage()) return false;
                   if (MF_IS_TOP_WINDOW) return true;"""
-          new = """function shouldKeepMissionFinderObserverForCurrentFrame() {
-                  if (/^\\/missions\\/\\d+\\/gefangene\\/entlassen\\/?$/i.test(String(globalThis.location?.pathname || ''))) return false;
+          new = f"""function shouldKeepMissionFinderObserverForCurrentFrame() {{
+                  if ({inline_guard}) return false;
                   if (MF_IS_TOP_WINDOW) return true;"""
           if old not in source:
               raise SystemExit('Terminal observer self-contained guard marker was not found.')
-          path.write_text(source.replace(old, new, 1), encoding='utf-8')
+          source = source.replace(old, new, 1)
+
+          old = """        if (isMfV3PrisonerReleaseTerminalPage()) {
+                      globalThis.__MCN_BOOT_MARK__?.('prisoner-release-terminal-result');
+                      return;
+                  }"""
+          new = f"""        if ({inline_guard}) {{
+                      globalThis.__MCN_BOOT_MARK__?.('prisoner-release-terminal-result');
+                      return;
+                  }}"""
+          if old not in source:
+              raise SystemExit('Mission observer terminal guard marker was not found.')
+          source = source.replace(old, new, 1)
+
+          old = "        if (isMfV3PrisonerReleaseTerminalPage()) return;"
+          new = f"        if ({inline_guard}) return;"
+          if old not in source:
+              raise SystemExit('Mission initialize terminal guard marker was not found.')
+          source = source.replace(old, new, 1)
+
+          helper = """    function isMfV3PrisonerReleaseTerminalPage() {
+                  try {
+                      return /^\\/missions\\/\\d+\\/gefangene\\/entlassen\\/?$/i.test(
+                          String(window.location.pathname || '')
+                      );
+                  } catch (_error) {
+                      return false;
+                  }
+              }
+          """
+          if helper not in source:
+              raise SystemExit('Unused embedded terminal helper marker was not found.')
+          source = source.replace(helper, '', 1)
+          source_path.write_text(source, encoding='utf-8')
+
+          test_path = Path('scripts/check-v3-prisoner-release-terminal-v3039.mjs')
+          test = test_path.read_text(encoding='utf-8')
+          test = test.replace(
+              "observer.indexOf('isMfV3PrisonerReleaseTerminalPage()')",
+              "observer.indexOf('gefangene\\/entlassen')",
+              1,
+          )
+          test = test.replace(
+              "assert.match(initialize, /isMfV3PrisonerReleaseTerminalPage\\(\\)/,",
+              "assert.match(initialize, /gefangene\\\\\\/entlassen/ ,",
+              1,
+          )
+          test_path.write_text(test, encoding='utf-8')
           PY
 
       - name: Validate exact candidate
