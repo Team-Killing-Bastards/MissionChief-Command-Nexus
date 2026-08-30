@@ -18,7 +18,32 @@ jobs:
           fetch-depth: 0
 
       - name: Build prisoner release terminal candidate
-        run: python3 scripts/_temporary-build-v3039-prisoner-terminal.py
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/_temporary-build-v3039-prisoner-terminal.py')
+          text = path.read_text(encoding='utf-8')
+          old = """source = replace_once(
+              source,
+              'const rescueUrl = href;',
+              'const rescueUrl = canonicalMissionWorkerUrl(href);',
+              'canonical clean retry URL',
+          )"""
+          new = """discovery_start, discovery_end = function_span(source, 'waitForNexusAndStart')
+          discovery = source[discovery_start:discovery_end]
+          discovery = replace_once(
+              discovery,
+              'const rescueUrl = href;',
+              'const rescueUrl = canonicalMissionWorkerUrl(href);',
+              'canonical clean retry URL',
+          )
+          source = source[:discovery_start] + discovery + source[discovery_end:]"""
+          if old not in text:
+              raise SystemExit('Canonical retry builder patch marker was not found.')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+          python3 scripts/_temporary-build-v3039-prisoner-terminal.py
 
       - name: Validate exact candidate
         shell: bash
