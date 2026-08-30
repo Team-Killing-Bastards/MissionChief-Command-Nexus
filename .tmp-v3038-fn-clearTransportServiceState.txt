@@ -1,0 +1,9 @@
+function clearTransportServiceState() {
+state.transportServiceActive = false;
+state.transportServiceKey = '';
+state.transportServiceVehicleId = '';
+state.transportServiceMissionId = '';
+state.transportServiceStartedAt = 0;
+resetPatientAssistTracking();
+resetPrisonerAssistTracking();
+}

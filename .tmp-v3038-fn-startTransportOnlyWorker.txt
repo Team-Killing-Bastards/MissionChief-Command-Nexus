@@ -1,0 +1,32 @@
+function startTransportOnlyWorker(request, source = 'mission-wait') {
+if (state.worker?.isConnected || state.transportServiceActive ||
+!request?.vehicleId || !request?.missionId) return false;
+const url = sameOriginUrl(`/vehicles/${request.vehicleId}`);
+if (!url) return false;
+state.transportServiceEligible = false;
+state.transportServiceActive = true;
+state.transportServiceKey = request.key;
+state.transportServiceVehicleId = request.vehicleId;
+state.transportServiceMissionId = request.missionId;
+state.transportServiceStartedAt = Date.now();
+state.transportServiceAttempts += 1;
+state.currentMissionId = request.missionId;
+state.currentMissionName = missionNameForId(request.missionId) || state.currentMissionName;
+state.currentMissionUrl = request.missionUrl || state.currentMissionUrl;
+recordTransportService({ event: 'transport-worker-b-start', source,
+lowQueuePaused: state.lowQueuePaused, key: request.key,
+vehicleId: request.vehicleId, missionId: request.missionId,
+missionName: state.currentMissionName, url: url.href });
+clearTimer('missionRescanTimer', window.clearInterval);
+pausePipelineController('transport-worker-b-start', true);
+clearSharedV2AutoRunning('transport-worker-b-start');
+resetAutoStartTracking();
+state.running = false;
+createWorker(url.href, 'TRANSPORT_B');
+setPhase('TRANSPORT_SERVICE',
+state.lowQueuePaused ? 'B transport during mission pause' : 'B clearing personal transport',
+`${missionDisplay(request.missionId, state.currentMissionName)} | ${request.vehicleLabel || `vehicle ${request.vehicleId}`}.`);
+log('Created transport B.', {
+source, key: request.key, vehicleId: request.vehicleId, missionId: request.missionId });
+return true;
+}

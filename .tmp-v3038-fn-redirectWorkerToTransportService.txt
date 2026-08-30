@@ -1,0 +1,35 @@
+function redirectWorkerToTransportService(request, currentMissionId) {
+if (!request?.vehicleId || !request?.missionId || !state.worker?.isConnected ||
+state.workerRole !== 'MISSION_A' || state.transportServiceActive) return false;
+state.transportServiceEligible = false;
+const event = { event: 'mission-a-to-transport-b', key: request.key,
+vehicleId: request.vehicleId, missionId: request.missionId,
+missionName: missionNameForId(request.missionId), fromMissionId: currentMissionId || '' };
+recordTransportService(event);
+pausePipelineController('transport-worker-b-handoff', true);
+clearSharedV2AutoRunning('transport-worker-b-handoff');
+resetAutoStartTracking();
+state.running = false;
+setPhase('TRANSPORT_HANDOFF', 'Pausing A for B',
+`B clears ${request.vehicleLabel || `vehicle ${request.vehicleId}`}; then A restarts.`);
+log('Released A before starting transport B.', event);
+removeWorker(false);
+const workerFreeGeneration = state.workerGeneration;
+window.setTimeout(() => {
+if (!state.wanted || state.stopping || state.worker?.isConnected ||
+state.workerGeneration !== workerFreeGeneration) return;
+const liveRequest = refreshRadioTransportRequests().find(item => item.key === request.key) || null;
+if (liveRequest && startTransportOnlyWorker(liveRequest, 'mission-boundary-handoff')) return;
+recordTransportService({ event: 'transport-b-not-needed', key: request.key,
+vehicleId: request.vehicleId, missionId: request.missionId });
+const supply = actionableMissionSupply();
+if (supply.count < MINIMUM_ACTIONABLE_MISSIONS) {
+enterLowQueuePause('transport-handoff-cleared-below-minimum-supply');
+return;
+}
+const mission = supply.candidates[0] || chooseTopMission({ actionableOnly: true });
+if (mission?.url) createWorker(mission.url);
+else beginMissionRescan();
+}, 120);
+return true;
+}

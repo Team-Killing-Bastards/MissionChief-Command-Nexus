@@ -1,0 +1,66 @@
+function maybeEnforcePriority(doc, href, context, radioRequests = state.radioTransportRequests) {
+const activeControl = findAutoModeControl(doc);
+if (
+state.workerRole !== 'MISSION_A' ||
+!state.wanted ||
+!currentWorkerAutoConfirmed() ||
+!activeControl ||
+!autoControlLooksRunning(activeControl) ||
+state.stopping ||
+!state.worker?.isConnected
+) return;
+if (state.autoStopWarned && state.phase === 'AUTO_STOPPED') {
+resetPriorityPending();
+return;
+}
+if (state.transportServiceActive) {
+resetPriorityPending();
+return;
+}
+if (context?.kind) {
+resetPriorityPending();
+return;
+}
+if (state.postDispatchWatchdog) {
+resetPriorityPending();
+return;
+}
+const currentMissionId = missionIdFromUrl(href);
+if (!currentMissionId) {
+resetPriorityPending();
+return;
+}
+const navAge = Date.now() - state.lastWorkerNavigationAt;
+if (navAge > TOP_PRIORITY_NAV_WINDOW_MS) {
+state.transportServiceEligible = false;
+resetPriorityPending();
+return;
+}
+if (state.transportServiceEligible) {
+const request = transportServiceRequest(radioRequests);
+if (request) {
+const pendingKey = `TRANSPORT_SERVICE:${request.key}`;
+if (state.priorityPendingKey !== pendingKey) {
+state.priorityPendingKey = pendingKey;
+state.priorityPendingSince = Date.now();
+return;
+}
+if (Date.now() - state.priorityPendingSince < TRANSPORT_SERVICE_SETTLE_MS) return;
+if (redirectWorkerToTransportService(request, currentMissionId)) return;
+}
+resetPriorityPending();
+}
+const target = choosePriorityTarget();
+if (!target?.missionId || target.missionId === currentMissionId) {
+resetPriorityPending();
+return;
+}
+const pendingKey = `TOP_MISSION:${target.missionId}`;
+if (state.priorityPendingKey !== pendingKey) {
+state.priorityPendingKey = pendingKey;
+state.priorityPendingSince = Date.now();
+return;
+}
+if (Date.now() - state.priorityPendingSince < TOP_PRIORITY_STABLE_MS) return;
+redirectWorkerToPriority(target, currentMissionId);
+}

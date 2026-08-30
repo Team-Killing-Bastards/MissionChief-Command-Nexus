@@ -1,0 +1,3 @@
+function detectTransportContext(doc, href) {
+return transportContextDetails(doc, href);
+}

@@ -1,0 +1,23 @@
+function removeWorker(logRemoval = true) {
+clearTimer('workerLoadTimer');
+clearTimer('nexusDiscoveryTimer');
+clearTimer('watcherTimer', window.clearInterval);
+resetStaleCanonicalMissionCandidate();
+captureWorkerSnapshot();
+if (state.activeTransportEvent) endTransportEvent('worker-removed');
+clearPostDispatchWatchdog('worker-removed');
+const frame = state.worker;
+const role = state.workerRole || 'MISSION_A';
+state.worker = null;
+state.workerRole = '';
+forgetWorkerDocument();
+state.workerGeneration += 1;
+if (frame?.isConnected) {
+setFrameOwnership(frame, false, logRemoval ? 'active-worker-remove' : 'active-worker-replace');
+try { frame.name = `mcn-v3-retired-worker-${state.workerGeneration}`; } catch {}
+disposeManagedFrameRuntime(frame, logRemoval ? 'active-worker-remove' : 'active-worker-replace');
+try { frame.src = 'about:blank'; } catch {}
+try { frame.remove(); } catch {}
+if (logRemoval) log(`Removed ${role === 'TRANSPORT_B' ? 'transport B' : 'mission A'}.`);
+}
+}

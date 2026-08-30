@@ -1,0 +1,19 @@
+function correlateTransportMissionFromRadio(href, requests) {
+const vehicleId = vehicleIdFromUrl(href);
+if (!vehicleId) return null;
+const request = radioRequestForVehicle(vehicleId, requests);
+if (!request) return null;
+if (state.currentMissionId !== request.missionId) {
+const event = {
+event: 'radio-correlation',
+vehicleId,
+fromMissionId: state.currentMissionId || '',
+toMissionId: request.missionId,
+path: pathFromUrl(href),
+};
+state.currentMissionId = request.missionId;
+recordTransportAffinity(event);
+log('Correlated transport vehicle to its personal Radio mission without navigating the worker.', event);
+}
+return request;
+}
