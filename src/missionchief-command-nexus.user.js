@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.38
+// @version      3.0.39
 // @description  MissionChief safe background automation.
 // @author       MartyBlyth
 // @license      MIT
@@ -152,8 +152,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.38';
-const MASTER_VERSION = '3.0.38';
+const VERSION = '3.0.39';
+const MASTER_VERSION = '3.0.39';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -610,20 +610,106 @@ const handoffAt = Number(sessionGet(SESSION_RESUME_HANDOFF_AT) || 0);
 const ageMs = Date.now() - handoffAt;
 return handoffAt > 0 && ageMs >= 0 && ageMs <= CONTROLLER_RESUME_HANDOFF_MAX_AGE_MS;
 }
+
+function isPrisonerReleaseTerminalUrl(value) {
+const url = sameOriginUrl(value);
+return Boolean(url && /^\/missions\/\d+\/gefangene\/entlassen\/?$/i.test(url.pathname));
+}
+function canonicalMissionWorkerUrl(value) {
+const url = sameOriginUrl(value);
+if (!url) return String(value || '');
+if (!isPrisonerReleaseTerminalUrl(url.href)) return url.href;
+const missionId = missionIdFromUrl(url.href);
+const canonical = missionId ? sameOriginUrl(`/missions/${missionId}`) : null;
+return canonical?.href || url.href;
+}
+function hasConfirmedPrisonerReleaseSuccess(doc) {
+if (!doc?.querySelectorAll) return false;
+for (const alert of doc.querySelectorAll('.alert.alert-success')) {
+const text = normaliseText(alert.textContent).toLowerCase();
+if (/^the prisoners were released\.?$/.test(text)) return true;
+}
+return false;
+}
+function maybeFinishPrisonerReleaseTerminal(doc, href, source = 'watcher') {
+if (
+state.workerRole !== 'MISSION_A' || !state.wanted || state.stopping ||
+!state.worker?.isConnected || !isPrisonerReleaseTerminalUrl(href)
+) return false;
+const missionId = missionIdFromUrl(href) || state.currentMissionId;
+const key = `${missionId || 'unknown'}:prisoner-release-terminal`;
+if (state.prisonerReleaseSuccessKey !== key) {
+state.prisonerReleaseSuccessKey = key;
+state.prisonerReleaseSuccessSince = Date.now();
+}
+const confirmed = hasConfirmedPrisonerReleaseSuccess(doc);
+const elapsedMs = Math.max(0, Date.now() - state.prisonerReleaseSuccessSince);
+if (!confirmed && elapsedMs < 3000) {
+setPhase('PRISONER_RELEASE_RESULT', 'Waiting for prisoner release result',
+`Mission ${missionId || 'unknown'} reached the terminal release route. Mission Finder and Dispatch remain blocked.`);
+return true;
+}
+const event = {
+at: nowIso(), source, missionId, path: pathFromUrl(href), confirmed,
+elapsedMs, title: normaliseText(doc?.title).slice(0, 160),
+};
+if (confirmed) {
+state.prisonerReleaseSuccessRehooks += 1;
+state.prisonerReleaseHandledKeys.add(key);
+}
+state.prisonerReleaseSuccessHistory.push(event);
+if (state.prisonerReleaseSuccessHistory.length > TRANSPORT_SERVICE_HISTORY_LIMIT) {
+state.prisonerReleaseSuccessHistory.splice(0,
+state.prisonerReleaseSuccessHistory.length - TRANSPORT_SERVICE_HISTORY_LIMIT);
+}
+pausePipelineController('prisoner-release-terminal', true);
+clearSharedV2AutoRunning('prisoner-release-terminal');
+resetAutoStartTracking();
+state.running = false;
+state.bootstrapMissionUrl = '';
+state.currentMissionUrl = '';
+sessionSet(SESSION_RESUME_MISSION, '');
+setPhase('PRISONER_RELEASE_RETURN',
+confirmed ? 'Prisoners released; rebuilding mission A' : 'Release result unconfirmed; leaving terminal route',
+`Mission ${missionId || 'unknown'} terminal result will not be reused as a mission worker URL.`);
+log('Removed mission A from the terminal prisoner release result.', event);
+removeWorker(false);
+state.prisonerReleaseSuccessKey = '';
+state.prisonerReleaseSuccessSince = 0;
+compactControllerEphemeralMemory();
+saveRunContinuity();
+const workerFreeGeneration = state.workerGeneration;
+window.setTimeout(() => {
+if (!state.wanted || state.stopping || state.worker?.isConnected ||
+state.workerGeneration !== workerFreeGeneration) return;
+const supply = actionableMissionSupply();
+const mission = supply.candidates.find(item => item.missionId !== missionId) ||
+supply.candidates[0] || chooseTopMission({ actionableOnly: true });
+if (mission?.url) {
+persistResumeMission(mission.url);
+createWorker(mission.url);
+} else beginMissionRescan();
+}, CONTROLLER_RECYCLE_RESTART_DELAY_MS);
+return true;
+}
+
 function persistResumeMission(value) {
 const url = sameOriginUrl(value);
 if (
-url &&
-isMissionUrl(url.href) &&
+url && isMissionUrl(url.href) &&
+!/^\/missions\/\d+\/gefangene\/entlassen\/?$/i.test(url.pathname) &&
 !missionAlarmSubmissionId(url.href)
 ) sessionSet(SESSION_RESUME_MISSION, url.href);
 }
 function storedResumeMissionUrl() {
 const value = sessionGet(SESSION_RESUME_MISSION);
 const url = sameOriginUrl(value);
-return url && isMissionUrl(url.href) && !missionAlarmSubmissionId(url.href)
-? url.href
-: '';
+if (!url || !isMissionUrl(url.href) || missionAlarmSubmissionId(url.href) ||
+/^\/missions\/\d+\/gefangene\/entlassen\/?$/i.test(url.pathname)) {
+if (value) sessionSet(SESSION_RESUME_MISSION, '');
+return '';
+}
+return url.href;
 }
 function persistRunStart(value = state.runStartedAt || nowIso()) {
 if (value) sessionSet(SESSION_RUN_STARTED_AT, value);
@@ -5541,6 +5627,7 @@ if (Date.now() - state.priorityPendingSince < TOP_PRIORITY_STABLE_MS) return;
 redirectWorkerToPriority(target, currentMissionId);
 }
 function createWorker(url, role = 'MISSION_A') {
+if (role === 'MISSION_A' && typeof canonicalMissionWorkerUrl === 'function') url = canonicalMissionWorkerUrl(url);
 clearPostDispatchWatchdog('worker-recreated');
 removeWorker(false);
 state.nonMissionRedirectRecoveryInFlight = false;
@@ -6282,6 +6369,11 @@ setError(
 return;
 }
 const documentChanged = adoptWorkerDocument(doc, href, 'load-event');
+if (/\/missions\/\d+\/gefangene\/entlassen(?:[\/?#]|$)/i.test(String(href || '')) && typeof maybeFinishPrisonerReleaseTerminal === 'function' &&
+maybeFinishPrisonerReleaseTerminal(doc, href, 'worker-load')) {
+if (state.worker?.isConnected) startWatcher();
+return;
+}
 state.currentMissionUrl = href;
 state.currentMissionId = missionIdFromUrl(href) || state.transportServiceMissionId || state.currentMissionId;
 updateCurrentMissionName(doc);
@@ -6378,6 +6470,9 @@ return event;
 const attempt = () => {
 if (!state.wanted || generation !== state.workerGeneration || state.worker !== frame) return;
 const href = getWorkerHref(frame);
+const terminalDoc = getWorkerDocument(frame);
+if (/\/missions\/\d+\/gefangene\/entlassen(?:[\/?#]|$)/i.test(String(href || '')) && typeof maybeFinishPrisonerReleaseTerminal === 'function' &&
+maybeFinishPrisonerReleaseTerminal(terminalDoc, href, 'nexus-discovery')) return;
 const missionId = missionIdFromUrl(href);
 if (!missionId) {
 state.activeBootstrapRescueMissionId = '';
@@ -6426,7 +6521,7 @@ state.activeBootstrapRescueAttempts < ACTIVE_BOOTSTRAP_RESCUE_LIMIT_PER_MISSION
 state.activeBootstrapRescueMissionId = missionId;
 state.activeBootstrapRescueAttempts += 1;
 state.activeBootstrapRescues += 1;
-const rescueUrl = href;
+const rescueUrl = typeof canonicalMissionWorkerUrl === 'function' ? canonicalMissionWorkerUrl(href) : href;
 const bootstrap = captureBootstrap('pre-clean-a-only-retry', elapsed);
 log('Active Worker A did not mount V2 quickly enough; removing all preload contexts and reloading A once by itself.', {
 missionId,
@@ -6820,6 +6915,11 @@ setError(
 return;
 }
 const documentChanged = adoptWorkerDocument(doc, href, 'watcher');
+if (/\/missions\/\d+\/gefangene\/entlassen(?:[\/?#]|$)/i.test(String(href || '')) && typeof maybeFinishPrisonerReleaseTerminal === 'function' &&
+maybeFinishPrisonerReleaseTerminal(doc, href, 'watcher')) {
+captureWorkerSnapshot();
+return;
+}
 if (state.workerRole === 'TRANSPORT_B' && isMissionUrl(href)) {
 const requests = refreshRadioTransportRequests();
 const liveRequest = requests.find(item => item.key === state.transportServiceKey) || null;
@@ -18569,6 +18669,7 @@ bootMark('heavy-runtime-start');
             return false;
         }
     }
+
     function isMfV3ManagedTransportWorker() {
         try {
             return window.top !== window.self &&
@@ -51141,6 +51242,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
         updateAutoModeButton();
     }
     function initialize() {
+        if (/^\/missions\/\d+\/gefangene\/entlassen\/?$/i.test(String(globalThis.location?.pathname || ''))) return;
         if (typeof window !== 'undefined' && String(window.name || '').startsWith('mcn-v3-active-worker-transport-b-')) return;
         globalThis.__MCN_BOOT_MARK__?.('mission-initialize-entered', document.readyState);
         if (!isMissionPage()) return;
@@ -52094,6 +52196,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
         );
     }
     function shouldKeepMissionFinderObserverForCurrentFrame() {
+        if (/^\/missions\/\d+\/gefangene\/entlassen\/?$/i.test(String(globalThis.location?.pathname || ''))) return false;
         if (MF_IS_TOP_WINDOW) return true;
         if (!document.body || !isMissionPage()) return false;
         if (isMfV3ManagedActiveFrame()) return true;
@@ -52544,6 +52647,10 @@ async function handleAutoPrisonerReleaseAfterActions() {
     }
     function startMissionFinderObserver() {
         if (mfV3DormantPreload) return;
+        if (/^\/missions\/\d+\/gefangene\/entlassen\/?$/i.test(String(globalThis.location?.pathname || ''))) {
+            globalThis.__MCN_BOOT_MARK__?.('prisoner-release-terminal-result');
+            return;
+        }
         globalThis.__MCN_BOOT_MARK__?.('mission-observer-entered', document.readyState);
         if (isMfV3ManagedActiveFrame()) {
             globalThis.__MCN_BOOT_MARK__?.('mission-observer-managed-active-owner');
