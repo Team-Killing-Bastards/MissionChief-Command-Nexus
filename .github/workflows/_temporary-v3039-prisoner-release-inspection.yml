@@ -44,6 +44,20 @@ jobs:
           path.write_text(text.replace(old, new, 1), encoding='utf-8')
           PY
           python3 scripts/_temporary-build-v3039-prisoner-terminal.py
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('src/missionchief-command-nexus.user.js')
+          source = path.read_text(encoding='utf-8')
+          old = """function shouldKeepMissionFinderObserverForCurrentFrame() {
+                  if (isMfV3PrisonerReleaseTerminalPage()) return false;
+                  if (MF_IS_TOP_WINDOW) return true;"""
+          new = """function shouldKeepMissionFinderObserverForCurrentFrame() {
+                  if (/^\\/missions\\/\\d+\\/gefangene\\/entlassen\\/?$/i.test(String(globalThis.location?.pathname || ''))) return false;
+                  if (MF_IS_TOP_WINDOW) return true;"""
+          if old not in source:
+              raise SystemExit('Terminal observer self-contained guard marker was not found.')
+          path.write_text(source.replace(old, new, 1), encoding='utf-8')
+          PY
 
       - name: Validate exact candidate
         shell: bash
