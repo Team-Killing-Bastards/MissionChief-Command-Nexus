@@ -49,6 +49,7 @@ jobs:
           source_path = Path('src/missionchief-command-nexus.user.js')
           source = source_path.read_text(encoding='utf-8')
           inline_guard = "/^\\/missions\\/\\d+\\/gefangene\\/entlassen\\/?$/i.test(String(globalThis.location?.pathname || ''))"
+          href_guard = "/\\/missions\\/\\d+\\/gefangene\\/entlassen(?:[\\/?#]|$)/i.test(String(href || ''))"
 
           old = """function shouldKeepMissionFinderObserverForCurrentFrame() {
                   if (isMfV3PrisonerReleaseTerminalPage()) return false;
@@ -91,6 +92,34 @@ jobs:
           if helper not in source:
               raise SystemExit('Unused embedded terminal helper marker was not found.')
           source = source.replace(helper, '', 1)
+
+          guarded_calls = [
+              (
+                  "if (maybeFinishPrisonerReleaseTerminal(doc, href, 'worker-load')) {",
+                  f"if ({href_guard} && typeof maybeFinishPrisonerReleaseTerminal === 'function' &&\nmaybeFinishPrisonerReleaseTerminal(doc, href, 'worker-load')) {{",
+                  'worker-load terminal call',
+              ),
+              (
+                  "if (maybeFinishPrisonerReleaseTerminal(doc, href, 'watcher')) {",
+                  f"if ({href_guard} && typeof maybeFinishPrisonerReleaseTerminal === 'function' &&\nmaybeFinishPrisonerReleaseTerminal(doc, href, 'watcher')) {{",
+                  'watcher terminal call',
+              ),
+              (
+                  "if (maybeFinishPrisonerReleaseTerminal(terminalDoc, href, 'nexus-discovery')) return;",
+                  f"if ({href_guard} && typeof maybeFinishPrisonerReleaseTerminal === 'function' &&\nmaybeFinishPrisonerReleaseTerminal(terminalDoc, href, 'nexus-discovery')) return;",
+                  'discovery terminal call',
+              ),
+              (
+                  "if (role === 'MISSION_A') url = canonicalMissionWorkerUrl(url);",
+                  "if (role === 'MISSION_A' && typeof canonicalMissionWorkerUrl === 'function') url = canonicalMissionWorkerUrl(url);",
+                  'createWorker canonicalizer guard',
+              ),
+          ]
+          for old, new, label in guarded_calls:
+              if old not in source:
+                  raise SystemExit(f'{label} marker was not found.')
+              source = source.replace(old, new, 1)
+
           source_path.write_text(source, encoding='utf-8')
 
           test_path = Path('scripts/check-v3-prisoner-release-terminal-v3039.mjs')
