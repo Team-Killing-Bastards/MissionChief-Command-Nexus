@@ -1,5 +1,0 @@
-function radioRequestForVehicle(vehicleId, requests = state.radioTransportRequests) {
-const id = String(vehicleId || '');
-if (!id) return null;
-return (requests || []).find(request => String(request.vehicleId) === id) || null;
-}

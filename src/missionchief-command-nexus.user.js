@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.37
+// @version      3.0.38
 // @description  MissionChief safe background automation.
 // @author       MartyBlyth
 // @license      MIT
@@ -152,8 +152,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.37';
-const MASTER_VERSION = '3.0.37';
+const VERSION = '3.0.38';
+const MASTER_VERSION = '3.0.38';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -4776,9 +4776,9 @@ remainingPersonalRequests: (remainingRequests || []).length,
 });
 return true;
 }
-function refreshRadioTransportRequests() {
+function refreshRadioTransportRequests(force = false) {
 const observedAt = Date.now();
-if (state.radioScanAt && observedAt - state.radioScanAt < RADIO_SCAN_INTERVAL_MS) {
+if (!force && state.radioScanAt && observedAt - state.radioScanAt < RADIO_SCAN_INTERVAL_MS) {
 return state.radioTransportRequests.map(request => ({
 ...request,
 pendingMs: Math.max(0, observedAt - Number(request.firstSeenAt || observedAt)),
@@ -5098,6 +5098,74 @@ state.transportServiceMissionId = '';
 state.transportServiceStartedAt = 0;
 resetPatientAssistTracking();
 resetPrisonerAssistTracking();
+}
+function maybeHandoffMissionATransportRoute(doc, href, context = null, source = 'watcher') {
+if (
+state.workerRole !== 'MISSION_A' || state.transportServiceActive ||
+!state.wanted || state.stopping || !state.worker?.isConnected
+) return false;
+const vehicleId = vehicleIdFromUrl(href);
+const transport = context || detectTransportContext(doc, href);
+if (!vehicleId || !transport?.kind) return false;
+const request = radioRequestForVehicle(
+vehicleId,
+refreshRadioTransportRequests(true)
+);
+if (request?.key && request.missionId) {
+recordTransportService({
+event: 'mission-a-route-detected', source, key: request.key,
+vehicleId, missionId: request.missionId,
+fromMissionId: state.currentMissionId,
+evidence: (transport.evidence || []).slice(0, 6),
+});
+if (redirectWorkerToTransportService(request, state.currentMissionId)) return true;
+}
+const elapsedMs = Math.max(0, Date.now() - state.lastWorkerNavigationAt);
+if (elapsedMs < 6000) {
+if (state.phase !== 'TRANSPORT_HANDOFF_WAIT') {
+setPhase(
+'TRANSPORT_HANDOFF_WAIT',
+'Matching transport route to personal Radio',
+`Mission A cannot handle ${String(transport.kind).toLowerCase()} transport for vehicle ${vehicleId}. Waiting for the exact personal request.`
+);
+}
+return true;
+}
+const abandonedMissionId = state.currentMissionId;
+recordTransportService({
+event: 'mission-a-route-rejected', source, vehicleId,
+missionId: abandonedMissionId, elapsedMs,
+evidence: (transport.evidence || []).slice(0, 6),
+});
+pausePipelineController('mission-a-unowned-transport-route', true);
+clearSharedV2AutoRunning('mission-a-unowned-transport-route');
+resetAutoStartTracking();
+state.running = false;
+state.transportServiceEligible = true;
+removeWorker(false);
+const workerFreeGeneration = state.workerGeneration;
+setPhase(
+'TRANSPORT_HANDOFF_RECOVERY',
+'Removed mission A from an unowned transport route',
+`Vehicle ${vehicleId} had no proven personal Radio request. Nexus will retry the exact request once, then continue with another mission.`
+);
+window.setTimeout(() => {
+if (
+!state.wanted || state.stopping || state.worker?.isConnected ||
+state.workerGeneration !== workerFreeGeneration
+) return;
+const lateRequest = radioRequestForVehicle(
+vehicleId,
+refreshRadioTransportRequests(true)
+);
+if (lateRequest && startTransportOnlyWorker(lateRequest, 'mission-a-route-late-radio')) return;
+const supply = actionableMissionSupply();
+const mission = supply.candidates.find(item => item.missionId !== abandonedMissionId) ||
+supply.candidates[0] || chooseTopMission({ actionableOnly: true });
+if (mission?.url) createWorker(mission.url);
+else beginMissionRescan();
+}, 120);
+return true;
 }
 function redirectWorkerToTransportService(request, currentMissionId) {
 if (!request?.vehicleId || !request?.missionId || !state.worker?.isConnected ||
@@ -6239,6 +6307,11 @@ missionName: state.currentMissionName,
 pathname: new URL(href).pathname,
 balancedTransportService: state.transportServiceActive,
 });
+const loadTransportContext = detectTransportContext(doc, href);
+if (maybeHandoffMissionATransportRoute(doc, href, loadTransportContext, 'worker-load')) {
+if (state.workerRole === 'MISSION_A' && state.worker?.isConnected) startWatcher();
+return;
+}
 refreshRadioTransportRequests();
 if (state.workerRole === 'TRANSPORT_B' && isMissionUrl(href)) {
 setPhase('TRANSPORT_RETURN_WAIT', 'Worker B awaiting transport clearance',
@@ -6832,6 +6905,10 @@ installAirfieldOperationsSupervisorObservers(doc);
 const radioRequests = refreshRadioTransportRequests();
 correlateTransportMissionFromRadio(href, radioRequests);
 const context = detectTransportContext(doc, href);
+if (maybeHandoffMissionATransportRoute(doc, href, context, 'watcher')) {
+captureWorkerSnapshot();
+return;
+}
 if (maybeRecoverStalledNonMissionRedirect(doc, href, context)) {
 captureWorkerSnapshot();
 return;

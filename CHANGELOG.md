@@ -6,6 +6,16 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.38] - 2026-08-30
+
+### Fixed
+
+- Enforce a parent-controller invariant on both worker load and watcher paths: if mission Worker A reaches a verified patient or prisoner vehicle route, Nexus immediately force-rescans personal Radio and serializes the exact request through transport Worker B.
+- Preserve the normal one-second Radio scan throttle while allowing this ownership-critical route check to bypass the cache.
+- If no exact personal Radio request can be proven within six seconds, remove A, retry the exact request once, then continue from a different actionable mission without clicking any transport control.
+- Keep Alliance Radio excluded, Worker B transport-only, Worker A mission-only, the visible Mission Control overlay unchanged, and Mission Finder at `V10.6.177`.
+- Increased the unified userscript version from `3.0.37` to `3.0.38`.
+
 ## [3.0.37] - 2026-08-30
 
 ### Fixed

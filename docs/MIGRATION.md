@@ -41,7 +41,7 @@ Command Nexus now contains both systems in one `.user.js` file. The supported op
 
 ## Current storage position
 
-The current Command Nexus `3.0.37` source enforces mission-only Worker A and personal patient/prisoner transport-only Worker B at every transport, recovery and observer gate and retains versioned keys from both established engines plus V3 pipeline/session keys for sole-owner dispatch, adaptive page warming, recovery, low-supply pause, continuity and bounded endurance telemetry. Runtime recycling and fatal teardown clear only ephemeral/operational worker state; station, unit, personnel, training and durable setting keys are preserved. A complete formal migration matrix has not yet been proven for every combination of stored data.
+The current Command Nexus `3.0.38` source enforces mission-only Worker A and personal patient/prisoner transport-only Worker B at every transport, recovery and observer gate and retains versioned keys from both established engines plus V3 pipeline/session keys for sole-owner dispatch, adaptive page warming, recovery, low-supply pause, continuity and bounded endurance telemetry. Runtime recycling and fatal teardown clear only ephemeral/operational worker state; station, unit, personnel, training and durable setting keys are preserved. A complete formal migration matrix has not yet been proven for every combination of stored data.
 
 Development must therefore distinguish between:
 
