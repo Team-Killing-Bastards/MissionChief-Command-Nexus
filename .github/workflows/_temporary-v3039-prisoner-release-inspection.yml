@@ -178,6 +178,16 @@ jobs:
               "assert.match(stored, /gefangene/);",
               1,
           )
+          test = test.replace(
+              "const url = new URL(String(value || ''), this.location.origin);\n      return url.origin === this.location.origin ? url : null;",
+              "const url = new URL(String(value || ''), 'https://www.missionchief.co.uk');\n      return url.origin === 'https://www.missionchief.co.uk' ? url : null;",
+              1,
+          )
+          test = test.replace(
+              "const url = this.sameOriginUrl(value);",
+              "const url = new URL(String(value || ''), 'https://www.missionchief.co.uk');",
+              1,
+          )
           test_path.write_text(test, encoding='utf-8')
           PY
 
