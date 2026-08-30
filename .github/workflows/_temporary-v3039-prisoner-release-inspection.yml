@@ -50,6 +50,7 @@ jobs:
           source = source_path.read_text(encoding='utf-8')
           inline_guard = "/^\\/missions\\/\\d+\\/gefangene\\/entlassen\\/?$/i.test(String(globalThis.location?.pathname || ''))"
           href_guard = "/\\/missions\\/\\d+\\/gefangene\\/entlassen(?:[\\/?#]|$)/i.test(String(href || ''))"
+          pathname_guard = "/^\\/missions\\/\\d+\\/gefangene\\/entlassen\\/?$/i.test(url.pathname)"
 
           old = """function shouldKeepMissionFinderObserverForCurrentFrame() {
                   if (isMfV3PrisonerReleaseTerminalPage()) return false;
@@ -136,6 +137,18 @@ jobs:
                   raise SystemExit(f'{label} marker was not found.')
               source = source.replace(old, new, 1)
 
+          old = "!isPrisonerReleaseTerminalUrl(url.href) &&"
+          new = f"!{pathname_guard} &&"
+          if old not in source:
+              raise SystemExit('Persisted resume terminal guard marker was not found.')
+          source = source.replace(old, new, 1)
+
+          old = "isPrisonerReleaseTerminalUrl(url.href)) {"
+          new = f"{pathname_guard}) {{"
+          if old not in source:
+              raise SystemExit('Stored resume terminal guard marker was not found.')
+          source = source.replace(old, new, 1)
+
           source_path.write_text(source, encoding='utf-8')
 
           test_path = Path('scripts/check-v3-prisoner-release-terminal-v3039.mjs')
@@ -153,6 +166,16 @@ jobs:
           test = test.replace(
               "assert.match(discover, /const rescueUrl = canonicalMissionWorkerUrl\\(href\\)/,",
               "assert.match(discover, /canonicalMissionWorkerUrl\\(href\\)/,",
+              1,
+          )
+          test = test.replace(
+              "assert.match(persist, /!isPrisonerReleaseTerminalUrl\\(url\\.href\\)/);",
+              "assert.match(persist, /gefangene/);",
+              1,
+          )
+          test = test.replace(
+              "assert.match(stored, /isPrisonerReleaseTerminalUrl\\(url\\.href\\)/);",
+              "assert.match(stored, /gefangene/);",
               1,
           )
           test_path.write_text(test, encoding='utf-8')
