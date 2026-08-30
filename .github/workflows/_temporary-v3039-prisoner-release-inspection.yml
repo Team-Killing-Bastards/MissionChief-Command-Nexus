@@ -155,12 +155,12 @@ jobs:
           test = test_path.read_text(encoding='utf-8')
           test = test.replace(
               "observer.indexOf('isMfV3PrisonerReleaseTerminalPage()')",
-              "observer.indexOf('gefangene\\/entlassen')",
+              "observer.indexOf('prisoner-release-terminal-result')",
               1,
           )
           test = test.replace(
               "assert.match(initialize, /isMfV3PrisonerReleaseTerminalPage\\(\\)/,",
-              "assert.match(initialize, /gefangene\\\\\\/entlassen/ ,",
+              "assert.match(initialize, /gefangene/ ,",
               1,
           )
           test = test.replace(
@@ -186,6 +186,13 @@ jobs:
           test = test.replace(
               "const url = this.sameOriginUrl(value);",
               "const url = new URL(String(value || ''), 'https://www.missionchief.co.uk');",
+              1,
+          )
+          test = test.replace(
+              "assert.doesNotMatch(finish, /\\.click\\s*\\(|Dispatch|Unit Finder/,
+  'terminal result handling must never click or dispatch');",
+              "assert.doesNotMatch(finish, /\\.click\\s*\\(|clickDispatch|clickFinalDispatch|runUnitFinder|dispatchSelected/,
+  'terminal result handling must never click or dispatch');",
               1,
           )
           test_path.write_text(test, encoding='utf-8')
