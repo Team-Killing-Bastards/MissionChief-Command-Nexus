@@ -6,6 +6,17 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.40] - 2026-08-31
+
+### Fixed
+
+- Stop treating ordinary 20–30 second browser scheduling delays as sleep events. Visible-page recovery now requires 90 seconds and hidden-page recovery requires three minutes.
+- Make wake recovery Worker-role aware: a cleared transport B completes through the normal B-to-A path, while a still-live exact request rebuilds B instead of starting mission A.
+- Preserve oldest-first Radio timing across wake recovery and clear stale queue/opening locks without dropping the final-dispatch duplicate guard.
+- Make the immutable managed Worker A frame name terminal authority before DOM readiness, visible-primary ranking and mission execution ownership checks. A managed-active bootstrap can no longer emit the contradictory inactive-owner decision.
+- Clear shared queue and Auto Mode state before the one permitted clean Worker A bootstrap retry.
+- Increased the unified userscript version from `3.0.39` to `3.0.40`; Mission Finder remains `V10.6.177`.
+
 ## [3.0.39] - 2026-08-30
 
 ### Fixed

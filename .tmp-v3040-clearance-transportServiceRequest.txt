@@ -1,9 +1,0 @@
-function transportServiceRequest(requests = state.radioTransportRequests) {
-const now = Date.now();
-for (const request of requests || []) {
-const deferredUntil = Number(state.transportServiceDeferredUntil.get(request.key) || 0);
-if (deferredUntil > now) continue;
-return request;
-}
-return null;
-}
