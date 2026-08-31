@@ -25,14 +25,8 @@ jobs:
           from pathlib import Path
           path = Path('scripts/check-v3-active-bootstrap-recovery.mjs')
           text = path.read_text(encoding='utf-8')
-          marker = """    log: () => {},
-    pausePipelineController: () => {},
-    compactControllerEphemeralMemory: () => {},"""
-          replacement = """    log: () => {},
-    pausePipelineController: () => {},
-    clearSharedV2QueueGuard: () => true,
-    clearSharedV2AutoRunning: () => {},
-    compactControllerEphemeralMemory: () => {},"""
+          marker = "    log: () => {},\n    pausePipelineController: () => {},\n    compactControllerEphemeralMemory: () => {},"
+          replacement = "    log: () => {},\n    pausePipelineController: () => {},\n    clearSharedV2QueueGuard: () => true,\n    clearSharedV2AutoRunning: () => {},\n    compactControllerEphemeralMemory: () => {},"
           if marker not in text:
               raise SystemExit('Active-bootstrap harness insertion marker not found.')
           path.write_text(text.replace(marker, replacement, 1), encoding='utf-8')
