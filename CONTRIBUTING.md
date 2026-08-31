@@ -8,11 +8,12 @@ MissionChief Command Nexus is developed and technically owned by **MartyBlyth**.
 
 Before changing source code:
 
-1. Read [Developer Handoff](docs/DEVELOPER_HANDOFF.md).
-2. Read the relevant open issue and the [master v1.0.x tracker](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/10).
-3. Pull the latest `main` branch.
-4. Confirm the current version in `src/missionchief-command-nexus.user.js`.
-5. Record current behaviour in the same MissionChief environment before modifying it.
+1. Read [Current Project State](docs/PROJECT_STATE.md) and its linked accepted decisions.
+2. Read [Developer Handoff](docs/DEVELOPER_HANDOFF.md).
+3. Read the relevant open issue and the [master v1.0.x tracker](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/10).
+4. Pull the latest `main` branch.
+5. Confirm the current version in `src/missionchief-command-nexus.user.js`.
+6. Record current behaviour in the same MissionChief environment before modifying it.
 
 ## Repository workflow
 
@@ -39,6 +40,17 @@ src/missionchief-command-nexus.user.js
 
 Do not add a second distributable userscript, duplicate metadata block or alternative production source without prior technical agreement.
 
+## Current project-state maintenance
+
+`project-state.json` is the machine-readable operating index. Edit it whenever a release, accepted operating contract, current evidence, risk or next work changes. Then run:
+
+```bash
+node scripts/render-project-state.mjs
+node scripts/check-project-state.mjs
+```
+
+Do not hand-edit `docs/PROJECT_STATE.md`; it is generated. Important architectural changes require a new or superseding ADR in `docs/decisions/`. Raw diagnostics belong outside current state; add only a sanitised summary under `docs/evidence/` when the evidence must remain durable.
+
 ## Source changes
 
 Every source change intended for publication must:
@@ -61,6 +73,9 @@ Run from the repository root:
 ```bash
 node --check src/missionchief-command-nexus.user.js
 node scripts/validate-userscript.mjs
+node scripts/render-project-state.mjs --check
+node scripts/check-project-state.mjs
+for check in scripts/check-*.mjs; do node "$check"; done
 python3 scripts/check_repository.py
 ```
 

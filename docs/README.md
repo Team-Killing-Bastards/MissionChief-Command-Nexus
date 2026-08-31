@@ -4,6 +4,9 @@ This directory separates current operating guidance from versioned historical re
 
 ## Current operational documentation
 
+- [Current Project State](PROJECT_STATE.md) — generated current versions, locked decisions, evidence, risks and next work.
+- [Decision Register](decisions/README.md) — accepted architecture decisions and supersession rules.
+- [Evidence Register](evidence/README.md) — sanitised supporting evidence, kept separate from current truth.
 - [Developer Handoff](DEVELOPER_HANDOFF.md) — verified baseline, implementation shape, risks and safe resume workflow.
 - [Architecture](ARCHITECTURE.md) — current runtime boundaries, safety contracts and consolidation direction.
 - [Project Roadmap](ROADMAP.md) — completed production foundation and active engineering priorities.
@@ -23,6 +26,7 @@ These files preserve the exact state and recovery context of a past version. The
 ## Canonical project resources
 
 - [Main README](../README.md)
+- [Machine-readable project state](../project-state.json)
 - [Canonical userscript](../src/missionchief-command-nexus.user.js)
 - [Source directory guide](../src/README.md)
 - [Changelog](../CHANGELOG.md)

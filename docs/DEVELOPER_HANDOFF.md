@@ -1,6 +1,6 @@
 # Developer Handoff
 
-This is the first document to read when resuming MissionChief Command Nexus development.
+Read the generated [Current Project State](PROJECT_STATE.md) first. This document provides the deeper implementation handoff after the current versions, accepted decisions, evidence and next work are confirmed.
 
 **Developer and technical owner:** MartyBlyth  
 **Repository and documentation support:** Conroy1988
@@ -14,8 +14,9 @@ This is the first document to read when resuming MissionChief Command Nexus deve
 | Canonical userscript | `src/missionchief-command-nexus.user.js` |
 | Command Nexus version | `3.0.40` |
 | Mission Finder baseline | `V10.6.177` |
-| Resource Administration module | `V4.2.8` |
-| Unit / Station / Personnel UI versions | `3.3.27` / `1.3.22` / `1.3.12` |
+| Resource Administration module | `V4.2.9` |
+| Unit / Station / Personnel UI versions | `3.3.28` / `1.3.23` / `1.3.12` |
+| Current-state record | `project-state.json` → generated `docs/PROJECT_STATE.md` |
 | Userscript author metadata | `MartyBlyth` |
 | MissionChief domains | `www.missionchief.co.uk` and `police.missionchief.co.uk` |
 | Distribution source | Canonical userscript on trusted `main` |
@@ -56,8 +57,8 @@ The single-file shape is deliberate. Logical consolidation may continue, but est
 - A transport-only upgrade with no explicit missing-resource wording is rotated for transport continuation without being classified as a zero-selection fleet shortage.
 - A patient transport is operationally complete for the dispatcher as soon as its exact personal Radio request clears. If an in-flight navigation leaves Worker A on that Ambulance vehicle page, V3 protects any still-active destination selection, then rebuilds only the verified pending mission after the bounded redirect window instead of waiting for the Ambulance to arrive.
 - Prisoner handoffs prefer the first exact visible green destination with positive capacity. If no usable cell remains or the cell route disappears, Auto Mode runs the exact current-mission `Release Prisoners` fallback before Mission Update, vehicle expansion or Unit Finder; the generic V3 transport watchdog cannot rebuild Worker A underneath that release flow.
-- V3 owns an adaptive two-mission pipeline: Worker A is the sole dispatcher and dormant Worker B warms only the immediate next page without expanding the full vehicle table. Promotion is fail-closed unless the next mission and storage owner are verified.
-- V3 pauses with zero mission frames below two actionable personal missions, including the exact final Dispatch-only path, waits for two missions to remain stable, then creates a fresh A. A managed worker never enters Mission Finder's standalone 15-mission queue watcher. It recycles A/B after 12 advances or 8 minutes. RAM protection first learns the normal 60-second A+B baseline, then requires either 192 MiB sustained growth or the 768 MiB ceiling for 15 seconds before B is released and A uses an 8-advance/4-minute boundary recycle. No durable register is cleared.
+- V3 owns a serialized one-worker lifecycle: Worker A is mission-only and Worker B is created on demand for one exact personal patient/prisoner Radio request. A is removed before B starts, B is removed before a fresh A starts, and no dormant mission preload exists.
+- V3 pauses with zero background workers below two actionable personal missions, including the exact final Dispatch-only path, and resumes from a fresh A after two missions remain stable. Worker recycling, role-aware wake recovery and RAM protection never clear a durable register. Visible-page sleep recovery requires 90 seconds and hidden-page recovery requires three minutes.
 - V3 exports a true 12-hour run count, successful dispatch count, estimated mission value/rate, bounded timing percentiles and aggregate low-queue time. Staffing stops and recent confirmed-empty Ambulance exclusions include vehicle and station evidence but never personnel names.
 - Qualification-sensitive selection fails closed: exact compatible vehicles with missing or stale evidence first enter live assignment-page verification, but only fresh, complete Personnel Register evidence satisfies trained-personnel demand and Auto Mode stops without dispatch when verified coverage remains short.
 - Search Dog Unit (SAR) uses exact native MissionChief UK type `102` across Mission Finder selection, selected-unit verification and Unit Naming.
@@ -111,11 +112,11 @@ These remain evidence questions rather than claims of missing implementation:
 
 ## Current engineering priorities
 
-1. Expand live evidence and reproducible fixtures around high-risk mission selection.
-2. Complete migration, compatibility and long-session evidence.
-3. Keep regressions behavior-focused and the repository free of one-use builders or trigger artifacts.
-4. Consolidate shared lifecycle, storage and UI responsibilities only behind protected behavior.
-5. Keep the release path idempotent, auditable and recoverable.
+1. Complete issue [#396](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/396): reduce long-session memory growth without slowing the hot mission or transport path.
+2. Live-validate the 3.0.40 role-aware wake-recovery and managed Worker A admission contract.
+3. Expand live evidence and reproducible fixtures around high-risk mission selection.
+4. Keep regressions behaviour-focused and the repository free of one-use builders or trigger artifacts.
+5. Consolidate shared lifecycle, storage and UI responsibilities only behind protected behaviour.
 
 The authoritative active queue is the repository's [open issue list](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues). Versioned handovers and incident reports are historical records, not current operating instructions.
 
@@ -125,6 +126,10 @@ MartyBlyth controls source-code direction and final release approval. Repository
 
 ## Key references
 
+- [Machine-readable project state](../project-state.json)
+- [Generated current project state](PROJECT_STATE.md)
+- [Decision register](decisions/README.md)
+- [Evidence register](evidence/README.md)
 - [Canonical source](../src/missionchief-command-nexus.user.js)
 - [Architecture](ARCHITECTURE.md)
 - [Roadmap](ROADMAP.md)

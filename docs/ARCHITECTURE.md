@@ -4,6 +4,8 @@ This document describes the architecture in the current MissionChief Command Nex
 
 > Source-code direction and final technical decisions remain with **MartyBlyth**, the project developer. Conroy1988 provides repository and documentation support only.
 
+> Current versions, locked decisions, live-validation status and active work are indexed in [Current Project State](PROJECT_STATE.md). When this narrative conflicts with the generated state or canonical source, the canonical source wins.
+
 ## Current architecture
 
 The canonical distributable is a single userscript:
@@ -12,22 +14,22 @@ The canonical distributable is a single userscript:
 src/missionchief-command-nexus.user.js
 ```
 
-The canonical module baseline is Resource Administration `V4.2.8` and Mission Finder `V10.6.177`. The Resource Administration interfaces report Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.12`. Exact release and component-version validation belongs to `scripts/validate-userscript.mjs`; behavioral regressions do not pin these numbers.
+The canonical module baseline is Resource Administration `V4.2.9` and Mission Finder `V10.6.177`. The Resource Administration interfaces report Unit Naming `3.3.28`, Station Naming `1.3.23` and Personnel Assignment `1.3.12`. Exact release and component-version validation belongs to `scripts/validate-userscript.mjs`; behavioral regressions do not pin these numbers.
 
 It contains one userscript metadata block, a V3 ownership/pipeline controller and two retained runtime engines:
 
 ```text
 MissionChief Command Nexus
 │
-├── Metadata and V3 ownership/pipeline controller
-│   ├── Worker A sole-dispatch ownership
-│   ├── Adaptive dormant Worker B page-warm preload
-│   ├── Verified promotion and handoff
-│   ├── Transport-aware 8/16-second recovery
+├── Metadata and V3 ownership/lifecycle controller
+│   ├── Mission-only Worker A
+│   ├── On-demand personal transport-only Worker B
+│   ├── Serialized A-to-B and B-to-A handoff
+│   ├── Zero dormant mission preload
 │   ├── Two-mission low-supply pause/resume
 │   ├── Controller-owned final Dispatch-only handoff
 │   ├── Boundary-only worker lifecycle recycling
-│   └── Computer-sleep continuity recovery
+│   └── Role-aware suspended-browser recovery
 │
 ├── Resource Administration Engine
 │   ├── Unit naming
@@ -99,7 +101,7 @@ Every new or modified subsystem should follow these rules:
 7. Bound diagnostic output and persistent registries.
 8. Avoid full-page polling where an event or scoped observer can provide the same signal.
 
-V3 low-supply and memory lifecycle cleanup applies only to managed mission frames. A visible mission opened while Auto Mode is stopped mounts the manual Mission Finder controls but leaves the complete MissionChief vehicle list collapsed; Unit Finder, Mission Update and Ally Steal load it only after an explicit click. Worker A dispatches the current mission without opening the reserved final mission, transport processing remains authoritative, and teardown waits until no personal handoff is active. Confirmed Auto Mode cancels pending discovery, while discovery that observes a non-mission transport route returns immediately to the route watcher. If a cleared patient transport later leaves Worker A on `/vehicles/{id}`, the controller waits through the bounded redirect window, verifies that the exact vehicle has no personal Radio request or active destination context, then rebuilds only the exact pending mission; it never waits for the ambulance to arrive. A bootstrap failure may reload only its exact mission once; cumulative rescue telemetry never blocks a later mission's own bounded incident. Dormant B warms the immediate next mission but never expands its vehicle table. RAM protection learns the normal A+B startup baseline and only releases B after 15 seconds above either baseline plus 192 MiB or the 768 MiB hard ceiling. A is then restarted at the next verified boundary after its observers, timers, DOM caches and load handlers are detached. These cleanups must not clear Resource Administration or MissionChief station, unit, personnel, training or durable preference data.
+V3 low-supply and memory lifecycle cleanup applies only to managed background work. A visible mission opened while Auto Mode is stopped mounts the manual Mission Finder controls but leaves the complete MissionChief vehicle list collapsed; Unit Finder, Mission Update and Ally Steal load it only after an explicit click. Exactly one heavy worker realm exists: mission Worker A or transport Worker B. A never selects a patient/prisoner destination, B never runs Unit Finder or Dispatch, A is removed before B starts and B is removed before a fresh A starts. No dormant next-mission preload exists. Verified personal Radio requests are oldest-first and exact-identity; Alliance rows remain excluded. Prisoner-release result routes are terminal and cannot be persisted or replayed. A parent-appointed managed A is terminal positive authority before DOM readiness and visible-primary ranking. Ordinary 20–30 second scheduling delays do not trigger sleep recovery; visible recovery requires 90 seconds and hidden recovery requires three minutes. When a genuine gap affects B, the exact Radio request decides whether normal B completion runs or the same exact B is rebuilt. These cleanups must not clear Resource Administration or MissionChief station, unit, personnel, training or durable preference data.
 
 ## Storage and migration
 
@@ -286,4 +288,4 @@ Single verified Discord delivery receipt
 
 Repository-only changes keep the current userscript version. The release-state gate detects the already-complete version and must not create duplicate assets or notifications.
 
-See [Developer Handoff](DEVELOPER_HANDOFF.md), [Testing Strategy](TESTING.md) and [Release Process](RELEASE_PROCESS.md).
+See [Current Project State](PROJECT_STATE.md), [Decision Register](decisions/README.md), [Developer Handoff](DEVELOPER_HANDOFF.md), [Testing Strategy](TESTING.md) and [Release Process](RELEASE_PROCESS.md).

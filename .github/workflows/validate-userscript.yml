@@ -5,6 +5,11 @@ on:
     paths:
       - 'src/**'
       - 'scripts/**/*.mjs'
+      - 'project-state.json'
+      - 'docs/PROJECT_STATE.md'
+      - 'docs/project-state.schema.json'
+      - 'docs/decisions/**'
+      - 'docs/evidence/**'
       - '.github/workflows/validate-userscript.yml'
   push:
     branches:
@@ -12,6 +17,11 @@ on:
     paths:
       - 'src/**'
       - 'scripts/**/*.mjs'
+      - 'project-state.json'
+      - 'docs/PROJECT_STATE.md'
+      - 'docs/project-state.schema.json'
+      - 'docs/decisions/**'
+      - 'docs/evidence/**'
       - '.github/workflows/validate-userscript.yml'
   workflow_dispatch:
 
@@ -45,6 +55,9 @@ jobs:
 
       - name: Validate canonical metadata and module versions
         run: node scripts/validate-userscript.mjs
+
+      - name: Validate current project state
+        run: node scripts/check-project-state.mjs
 
       - name: Run complete permanent regression suite
         shell: bash

@@ -43,6 +43,9 @@ jobs:
       - name: Run repository checks
         run: python3 scripts/check_repository.py
 
+      - name: Validate current project state
+        run: node scripts/check-project-state.mjs
+
       - name: Validate persistent Auto Mode stop reasons
         run: node scripts/check-auto-stop-reason.mjs
 
