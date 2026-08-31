@@ -166,14 +166,16 @@ assert.doesNotMatch(timeout, /clickDispatch\s*\(|skip(?:Current)?Mission\s*\(/i,
 const wakeRecovery = extractFunction('recoverFromSuspendedTimerGap');
 for (const token of [
   'removeWorker(false)',
-  'state.radioRequestFirstSeenAt = new Map()',
-  'state.transportServiceDeferredUntil = new Map()',
-  "startTransportOnlyWorker(preferredRequest, 'wake-recovery-oldest-personal-transport')",
+  'refreshRadioTransportRequests(true)',
+  "state.workerRole === 'TRANSPORT_B'",
+  "returnToTopMissionAfterTransport('wake-recovery-request-cleared'",
+  "'wake-recovery-exact-transport-b'",
+  "'wake-recovery-oldest-personal-transport'",
 ]) assert.ok(wakeRecovery.includes(token), `sleep recovery lost ${token}`);
-assert.ok(
-  wakeRecovery.indexOf('removeWorker(false)') < wakeRecovery.indexOf('window.setTimeout'),
-  'wake recovery must end stale Worker A before scheduling replacement work'
-);
+assert.doesNotMatch(wakeRecovery, /radioRequestFirstSeenAt\s*=\s*new Map\(/,
+  'wake recovery must preserve oldest-first Radio timing');
+assert.doesNotMatch(wakeRecovery, /transportServiceDeferredUntil\s*=\s*new Map\(/,
+  'wake recovery must preserve bounded transport retry cooldowns');
 
 const staffingQuarantine = extractFunction('mfQuarantineExactStaffingVehicle');
 assert.ok(staffingQuarantine.includes('if (exactIds.length !== 1) return null'));

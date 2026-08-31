@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.39
+// @version      3.0.40
 // @description  MissionChief safe background automation.
 // @author       MartyBlyth
 // @license      MIT
@@ -152,8 +152,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.39';
-const MASTER_VERSION = '3.0.39';
+const VERSION = '3.0.40';
+const MASTER_VERSION = '3.0.40';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -249,7 +249,8 @@ const AUTO_STATE_DROPOUT_CIRCUIT_BREAKER_COUNT = 2;
 const AUTO_STATE_DROPOUT_HISTORY_LIMIT = 50;
 const AUTO_STATE_DROPOUT_RELOAD_LIMIT_AFTER_ACTIVE_ONLY = 1;
 const OWNERSHIP_BOOTSTRAP_HISTORY_LIMIT = 50;
-const SLEEP_GAP_RECOVERY_THRESHOLD_MS = 20000;
+const SLEEP_GAP_RECOVERY_THRESHOLD_MS = 90 * 1000;
+const SLEEP_GAP_HIDDEN_RECOVERY_THRESHOLD_MS = 3 * 60 * 1000;
 const SLEEP_GAP_HISTORY_LIMIT = 30;
 const V2_QUEUE_WAIT_ACTIVE_FLAG = 'mf_queue_wait_active_v10';
 const V2_FINAL_QUEUE_DISPATCH_FLAG = 'mf_final_queue_dispatch_clicked_v10';
@@ -6532,6 +6533,9 @@ totalRescues: state.activeBootstrapRescues,
 bootstrap,
 });
 pausePipelineController('active-bootstrap-rescue', true);
+clearSharedV2QueueGuard('active-bootstrap-clean-retry', missionId,
+{ preserveFinalDispatch: true });
+clearSharedV2AutoRunning('active-bootstrap-clean-retry');
 clearTimer('nexusDiscoveryTimer');
 window.setTimeout(() => {
 if (!state.wanted || generation !== state.workerGeneration || state.worker !== frame) return;
@@ -6809,39 +6813,44 @@ function maybeRecoverStrandedPrisonerHandoff(doc, href, context, statusText = ''
 return false;
 }
 function recoverFromSuspendedTimerGap(elapsedMs, source = 'watcher') {
-if (
-!state.wanted ||
-state.stopping ||
-state.wakeRecoveryActive ||
-elapsedMs < SLEEP_GAP_RECOVERY_THRESHOLD_MS
-) return false;
+const visibility = String(document.visibilityState || 'visible');
+const thresholdMs = visibility === 'hidden'
+? SLEEP_GAP_HIDDEN_RECOVERY_THRESHOLD_MS
+: SLEEP_GAP_RECOVERY_THRESHOLD_MS;
+if (!state.wanted || state.stopping || state.wakeRecoveryActive ||
+elapsedMs < thresholdMs) return false;
 const observedHref = getWorkerHref();
 const recoveryUrl = sleepRecoveryMissionUrl(observedHref);
-const observedRequests = collectRadioTransportRequests();
-const observedRequestMap = new Map(
-observedRequests.map(request => [request.key, request])
-);
-const preferredTransportRequest =
-state.radioTransportRequests
-.map(request => observedRequestMap.get(request.key))
-.find(Boolean) ||
-observedRequests[0] ||
-null;
-if (!recoveryUrl && !preferredTransportRequest) return false;
+const transportBActive = state.workerRole === 'TRANSPORT_B' &&
+state.transportServiceActive;
 state.wakeRecoveryActive = true;
+const freshRequests = refreshRadioTransportRequests(true);
+const service = {
+key: state.transportServiceKey,
+vehicleId: state.transportServiceVehicleId,
+missionId: state.transportServiceMissionId,
+};
+const exactTransportRequest = transportBActive
+? freshRequests.find(request => request.key === service.key ||
+(request.vehicleId === service.vehicleId && request.missionId === service.missionId)) || null
+: null;
+const preferredTransportRequest = transportServiceRequest(freshRequests);
+if (!recoveryUrl && !preferredTransportRequest && !transportBActive) {
+state.wakeRecoveryActive = false;
+return false;
+}
+const action = transportBActive
+? (exactTransportRequest ? 'rebuild-exact-transport-b' : 'complete-cleared-transport-b')
+: (preferredTransportRequest ? 'restart-oldest-personal-transport' : 'rebuild-mission-a');
 state.sleepGapRecoveries += 1;
 const event = {
-at: nowIso(),
-source,
-elapsedMs,
-observedPath: pathFromUrl(observedHref),
+at: nowIso(), source, elapsedMs, thresholdMs, visibility,
+workerRole: state.workerRole || '', observedPath: pathFromUrl(observedHref),
 recoveryMissionId: missionIdFromUrl(recoveryUrl),
 recoveryPath: pathFromUrl(recoveryUrl),
-discardedPreloads: state.pipelineSlots.filter(slot => slot.frame?.isConnected).length,
 transportServiceWasActive: state.transportServiceActive,
-pendingPersonalTransports: observedRequests.length,
-preferredTransportKey: preferredTransportRequest?.key || '',
-action: 'discard-workers-reset-stale-transport-timers-and-rescan',
+transportKey: service.key || '', pendingPersonalTransports: freshRequests.length,
+exactTransportStillRequested: Boolean(exactTransportRequest), action,
 };
 state.sleepGapHistory.push(event);
 if (state.sleepGapHistory.length > SLEEP_GAP_HISTORY_LIMIT) {
@@ -6854,7 +6863,21 @@ pausePipelineController('suspended-timer-gap-recovery', true);
 resetAutoStartTracking();
 clearPromotedWorkTracking();
 clearSharedV2AutoRunning('suspended-timer-gap-recovery');
+clearSharedV2QueueGuard('suspended-timer-gap-recovery', state.currentMissionId,
+{ preserveFinalDispatch: true });
 state.running = false;
+log('Detected a genuine suspended browser/computer gap.', event);
+if (transportBActive && !exactTransportRequest) {
+state.wakeRecoveryActive = false;
+if (returnToTopMissionAfterTransport('wake-recovery-request-cleared', service)) {
+return true;
+}
+state.wakeRecoveryActive = true;
+}
+if (transportBActive && exactTransportRequest) {
+if (state.activeTransportEvent) {
+endTransportEvent('wake-recovery-rebuild', null, observedHref);
+}
 removeWorker(false);
 clearTransportServiceState();
 state.transportKind = '';
@@ -6862,32 +6885,49 @@ state.transportIdentity = '';
 state.transportSince = 0;
 state.transportWarned = false;
 state.transportRecoveryAttempts = new Map();
-state.radioRequestFirstSeenAt = new Map();
-state.radioTransportRequests = [];
-state.radioRequestSince = 0;
-state.radioRequestWarned = false;
-state.radioRequestWarningKey = '';
-state.transportServiceDeferredUntil = new Map();
 state.transportServiceEligible = true;
-setPhase(
-'WAKE_RECOVERY',
-'Computer resumed; restarting safely',
-`A ${Math.round(elapsedMs / 1000)} second timer gap was detected. B was discarded and ${missionDisplay(missionIdFromUrl(recoveryUrl), missionNameForId(missionIdFromUrl(recoveryUrl)))} will reload without creating a skip.`
-);
-log('Detected a suspended browser/computer gap and protected V2 from stale wake-up timers.', event);
+setPhase('WAKE_RECOVERY', 'Resuming transport Worker B',
+`The exact request ${exactTransportRequest.key} remains live after a ${Math.round(elapsedMs / 1000)} second gap.`);
+const workerFreeGeneration = state.workerGeneration;
 window.setTimeout(() => {
-if (!state.wanted || state.stopping) return;
-const freshRequests = refreshRadioTransportRequests();
-const preferredRequest = freshRequests.find(request =>
-request.key === preferredTransportRequest?.key
-) || transportServiceRequest(freshRequests);
-if (
-preferredRequest &&
-startTransportOnlyWorker(preferredRequest, 'wake-recovery-oldest-personal-transport')
-) return;
+if (!state.wanted || state.stopping || state.worker?.isConnected ||
+state.workerGeneration !== workerFreeGeneration) {
+state.wakeRecoveryActive = false;
+return;
+}
+if (startTransportOnlyWorker(exactTransportRequest,
+'wake-recovery-exact-transport-b')) return;
+state.wakeRecoveryActive = false;
+beginMissionRescan();
+}, CONTROLLER_RECYCLE_RESTART_DELAY_MS);
+return true;
+}
+removeWorker(false);
+clearTransportServiceState();
+state.transportKind = '';
+state.transportIdentity = '';
+state.transportSince = 0;
+state.transportWarned = false;
+state.transportRecoveryAttempts = new Map();
+state.transportServiceEligible = true;
+setPhase('WAKE_RECOVERY', 'Computer resumed; restarting safely',
+`${Math.round(elapsedMs / 1000)} second timer gap confirmed. The next worker will start from clean parent-owned state.`);
+const workerFreeGeneration = state.workerGeneration;
+window.setTimeout(() => {
+if (!state.wanted || state.stopping || state.worker?.isConnected ||
+state.workerGeneration !== workerFreeGeneration) {
+state.wakeRecoveryActive = false;
+return;
+}
+const requests = refreshRadioTransportRequests(true);
+const preferredRequest = requests.find(request =>
+request.key === preferredTransportRequest?.key) || transportServiceRequest(requests);
+if (preferredRequest && startTransportOnlyWorker(preferredRequest,
+'wake-recovery-oldest-personal-transport')) return;
+state.wakeRecoveryActive = false;
 if (recoveryUrl) createWorker(recoveryUrl);
 else beginMissionRescan();
-}, 80);
+}, CONTROLLER_RECYCLE_RESTART_DELAY_MS);
 return true;
 }
 function checkForSuspendedTimerGap(source = 'watcher', now = Date.now()) {
@@ -31325,9 +31365,10 @@ let sessionRuntimeTicker = null;
         }
     }
     function claimCurrentMissionExecutionOwnership(reason = '') {
+        const managedActiveFrame = isMfV3ManagedActiveFrame();
         const primaryDocument =
             getPrimaryMissionRequirementDocument();
-        if (primaryDocument !== document) {
+        if (!managedActiveFrame && primaryDocument !== document) {
             return false;
         }
         const sharedTopWindow =
@@ -31343,9 +31384,10 @@ let sessionRuntimeTicker = null;
         return true;
     }
     function isCurrentMissionExecutionOwner(reason = '') {
+        const managedActiveFrame = isMfV3ManagedActiveFrame();
         const primaryDocument =
             getPrimaryMissionRequirementDocument();
-        if (primaryDocument !== document) {
+        if (!managedActiveFrame && primaryDocument !== document) {
             return false;
         }
         const sharedTopWindow =
@@ -52198,8 +52240,8 @@ async function handleAutoPrisonerReleaseAfterActions() {
     function shouldKeepMissionFinderObserverForCurrentFrame() {
         if (/^\/missions\/\d+\/gefangene\/entlassen\/?$/i.test(String(globalThis.location?.pathname || ''))) return false;
         if (MF_IS_TOP_WINDOW) return true;
-        if (!document.body || !isMissionPage()) return false;
         if (isMfV3ManagedActiveFrame()) return true;
+        if (!document.body || !isMissionPage()) return false;
         try {
             return getPrimaryMissionRequirementDocument() === document;
         } catch (_error) {
@@ -52652,13 +52694,14 @@ async function handleAutoPrisonerReleaseAfterActions() {
             return;
         }
         globalThis.__MCN_BOOT_MARK__?.('mission-observer-entered', document.readyState);
-        if (isMfV3ManagedActiveFrame()) {
+        const managedActiveFrame = isMfV3ManagedActiveFrame();
+        if (managedActiveFrame) {
             globalThis.__MCN_BOOT_MARK__?.('mission-observer-managed-active-owner');
         }
         if (mfMainMutationObserver) return;
         installMissionFinderRuntimeCleanup();
         installMissionFinderFrameRuntimeReconciliation();
-        if (!shouldKeepMissionFinderObserverForCurrentFrame()) {
+        if (!managedActiveFrame && !shouldKeepMissionFinderObserverForCurrentFrame()) {
             globalThis.__MCN_BOOT_MARK__?.('mission-observer-inactive-owner');
             suspendMissionFinderRuntimeForInactiveFrame(
                 'startup frame is not the active mission owner'

@@ -212,6 +212,8 @@ function createHarness({
     },
     log: () => {},
     pausePipelineController: () => {},
+    clearSharedV2QueueGuard: () => true,
+    clearSharedV2AutoRunning: () => {},
     compactControllerEphemeralMemory: () => {},
     removeWorker() {
       frame.isConnected = false;
