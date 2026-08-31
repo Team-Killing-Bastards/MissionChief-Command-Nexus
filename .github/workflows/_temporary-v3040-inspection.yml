@@ -1,4 +1,4 @@
-name: Temporary v3.0.40 exact wake-recovery inspection
+name: Temporary v3.0.40 ownership-gate inspection
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   inspect:
-    if: ${{ !contains(github.event.head_commit.message, '[skip v3040 exact]') }}
+    if: ${{ !contains(github.event.head_commit.message, '[skip v3040 gate]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -18,7 +18,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Extract small exact functions
+      - name: Extract exact ownership and queue functions
         shell: bash
         run: |
           python3 - <<'PY'
@@ -30,7 +30,31 @@ jobs:
               start = source.find(f'function {name}(', start_at)
               if start < 0:
                   return None
-              brace = source.find('{', start)
+              paren = source.find('(', start)
+              pdepth = 0
+              quote = ''
+              escaped = False
+              i = paren
+              while i < len(source):
+                  c = source[i]
+                  if quote:
+                      if escaped: escaped = False
+                      elif c == '\\': escaped = True
+                      elif c == quote: quote = ''
+                      i += 1; continue
+                  if c in ("'", '"', '`'):
+                      quote = c; i += 1; continue
+                  if c == '(':
+                      pdepth += 1
+                  elif c == ')':
+                      pdepth -= 1
+                      if pdepth == 0:
+                          i += 1
+                          break
+                  i += 1
+              brace = source.find('{', i)
+              if brace < 0:
+                  return None
               depth = 0
               quote = ''
               escaped = False
@@ -63,19 +87,15 @@ jobs:
 
           mission = source.find('MODULE 2: MISSION FINDER')
           names = [
-              'sleepRecoveryMissionUrl',
-              'checkForSuspendedTimerGap',
-              'recoverFromSuspendedTimerGap',
-              'returnToTopMissionAfterTransport',
               'clearSharedV2QueueGuard',
               'readSharedV2QueueGuardState',
-              'ensureActiveWorkerOwnership',
-              'installMissionFinderFrameRuntimeReconciliation',
-              'suspendMissionFinderRuntimeForInactiveFrame',
-              'shouldKeepMissionFinderObserverForCurrentFrame',
-              'startMissionFinderObserver',
-              'reconcileMissionFinderFrameRuntime',
-              'clearAllTransportAutomationFlags',
+              'isCurrentMissionExecutionOwner',
+              'claimCurrentMissionExecutionOwnership',
+              'getPrimaryMissionRequirementDocument',
+              'initialize',
+              'waitForNexusAndStart',
+              'requestV2FrameRuntimeReconcile',
+              'recoverFromSuspendedTimerGap',
           ]
           for name in names:
               candidates = []
@@ -83,41 +103,17 @@ jobs:
                   result = span(name, start_at)
                   if result and result not in candidates:
                       candidates.append(result)
-              text = []
+              chunks = []
               for index, (start, end) in enumerate(candidates, 1):
-                  text.append(f'// occurrence {index}; source line {source.count(chr(10), 0, start) + 1}')
-                  text.append(source[start:end])
-              Path(f'.tmp-v3040-{name}.txt').write_text('\n\n'.join(text) if text else 'NOT FOUND\n', encoding='utf-8')
-
-          start = max(0, source.find('const SLEEP_GAP_RECOVERY_THRESHOLD_MS') - 1000)
-          end = source.find('const SLEEP_GAP_HISTORY_LIMIT', start)
-          end = min(len(source), end + 500)
-          Path('.tmp-v3040-sleep-constants.txt').write_text(source[start:end], encoding='utf-8')
-
-          terms = [
-              'checkForSuspendedTimerGap(',
-              'recoverFromSuspendedTimerGap(',
-              'mission-observer-managed-active-owner',
-              'mission-observer-inactive-owner',
-              'clearSharedV2QueueGuard(',
-          ]
-          lines = source.splitlines()
-          out = []
-          for number, line in enumerate(lines, 1):
-              if any(term in line for term in terms):
-                  start_line = max(1, number - 8)
-                  end_line = min(len(lines), number + 18)
-                  out.append(f'===== line {number} [{start_line}-{end_line}] =====')
-                  out.extend(f'{i:06d}: {lines[i - 1]}' for i in range(start_line, end_line + 1))
-                  out.append('')
-          Path('.tmp-v3040-call-sites.txt').write_text('\n'.join(out), encoding='utf-8')
+                  chunks.append(f'// occurrence {index}; source line {source.count(chr(10), 0, start) + 1}\n{source[start:end]}')
+              Path(f'.tmp-v3040-gate-{name}.txt').write_text('\n\n'.join(chunks) if chunks else 'NOT FOUND\n', encoding='utf-8')
           PY
 
-      - name: Commit exact files
+      - name: Commit exact gate files
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .tmp-v3040-*.txt
-          git commit -m "Add exact v3.0.40 function extracts [skip v3040 exact]"
+          git add .tmp-v3040-gate-*.txt
+          git commit -m "Add exact v3.0.40 ownership gate extracts [skip v3040 gate]"
           git push origin HEAD:fix/v3040-role-aware-wake-recovery
