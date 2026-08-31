@@ -1,0 +1,292 @@
+000017: const ACTIVE_WORKER_NAME_PREFIX = 'mcn-v3-active-worker-';
+000024: function installOwnershipBridgeInWindow(targetWindow, initialActive, source = 'document-start') {
+000038: let activeOwner = Boolean(initialActive);
+000039: const ownershipTrace=targetWindow.__MCN_V3_OWNERSHIP_TRACE__||=[];
+000040: const traceOwnership=(event,detail='')=>{
+000044: const traceOwnershipBlock=(operation,key)=>traceOwnership(`blocked-${operation}`,String(key||''));
+000142: const ownershipBridge = installOwnershipBridgeInWindow(
+000158: const WORKER_ID = 'mcn-v3-background-mission-worker';
+000163: const SESSION_RESUME_MISSION = 'mcn_v3_resume_mission_v1';
+000165: const SESSION_TOP_PAGE_RESUMES = 'mcn_v3_top_page_resumes_v1';
+000167: const SESSION_RESUME_HANDOFF_AT = 'mcn_v3_resume_handoff_at_v1';
+000170: const WORKER_WIDTH = 1180;
+000171: const WORKER_HEIGHT = 900;
+000173: const WORKER_LOAD_TIMEOUT_MS = 30000;
+000176: const TRANSPORT_STALL_WARN_MS = 16000;
+000177: const TRANSPORT_HARD_RECOVERY_MS = 20000;
+000178: const TRANSPORT_RECOVERY_WINDOW_MS = 2 * 60 * 1000;
+000179: const TRANSPORT_RECOVERY_LIMIT = 1;
+000180: const TRANSPORT_RECOVERY_HISTORY_LIMIT = 40;
+000196: const TRANSPORT_EVENT_LIMIT = 30;
+000201: const POST_TRANSPORT_REHOOK_DELAY_MS = 300;
+000202: const TRANSPORT_ASSIST_DELAY_MS = 8000;
+000207: const TRANSPORT_SERVICE_SETTLE_MS = 180;
+000208: const TRANSPORT_SERVICE_MAX_MS = 18000;
+000209: const TRANSPORT_SERVICE_RETRY_COOLDOWN_MS = 30000;
+000210: const TRANSPORT_SERVICE_HISTORY_LIMIT = 60;
+000239: const ACTIVE_BOOTSTRAP_RESCUE_AFTER_MS = 6500;
+000240: const ACTIVE_BOOTSTRAP_RESCUE_LIMIT_PER_MISSION = 1;
+000251: const OWNERSHIP_BOOTSTRAP_HISTORY_LIMIT = 50;
+000252: const SLEEP_GAP_RECOVERY_THRESHOLD_MS = 20000;
+000253: const SLEEP_GAP_HISTORY_LIMIT = 30;
+000290: const LOW_QUEUE_RESUME_STABLE_MS = 1500;
+000304: const CONTROLLER_RESUME_HANDOFF_MAX_AGE_MS = 15 * 1000;
+000606: function persistedBackgroundResumeAllowed() {
+000618: function canonicalMissionWorkerUrl(value) {
+000681: const workerFreeGeneration = state.workerGeneration;
+000696: function persistResumeMission(value) {
+000704: function storedResumeMissionUrl() {
+001284: const workerName = cleanMissionCaption(
+001630: const transportRequest = transportServiceRequest(refreshRadioTransportRequests());
+001702: function getAccessibleTransportDocuments(rootDoc) {
+001734: function transportContextDetails(doc, href) {
+001819: function transportContextIdentity(context, href = '') {
+001856: function beginTransportEvent(context, href) {
+001891: function endTransportEvent(outcome = 'context-ended', context = null, href = '') {
+001908: function captureWorkerSnapshot() {
+002003: function clearTimer(name, clearFn = window.clearTimeout) {
+002009: function clearAllControllerTimers() {
+002353: function isTransportOnlyZeroSelection(evidence) {
+002432: function accessibleWorkerDocuments(rootDoc) {
+002850: const transportOnly = isTransportOnlyZeroSelection(zeroStop.evidence);
+003759: function frameOwnershipBridge(frame) {
+003793: function ensureActiveWorkerOwnership(frame, source = 'active-worker') {
+003839: function setFrameOwnership(frame, active, reason = 'ownership-change') {
+003899: const transportVehicleId = vehicleIdFromUrl(href);
+004700: function maybeFastReleaseStalePostTransportQueueGuard(doc, href, context) {
+004759: function chooseBootstrapMission() {
+004762: function collectRadioTransportRequests() {
+004821: function restoreAfterResolvedRadioTransportWarning(warnedKey, remainingRequests = []) {
+004865: function refreshRadioTransportRequests(force = false) {
+005000: function maybeAssistPrisonerTransport(doc, href, context, requests) {
+005102: function maybeAssistPatientTransport(doc, href, context, requests) {
+005164: function transportServiceRequest(requests = state.radioTransportRequests) {
+005173: function recordTransportService(event) {
+005179: function clearTransportServiceState() {
+005188: function maybeHandoffMissionATransportRoute(doc, href, context = null, source = 'watcher') {
+005194: const transport = context || detectTransportContext(doc, href);
+005232: const workerFreeGeneration = state.workerGeneration;
+005256: function redirectWorkerToTransportService(request, currentMissionId) {
+005272: const workerFreeGeneration = state.workerGeneration;
+005291: function startTransportOnlyWorker(request, source = 'mission-wait') {
+005323: function returnToTopMissionAfterTransport(reason, request = null) {
+005366: const workerFreeGeneration = state.workerGeneration;
+005374: function maybeHandleTransportServiceTimeout(requests) {
+005403: function recordTransportRecovery(event) {
+005415: function maybeRecoverStalledTransportContext(context, href, requests) {
+005418: function recordTransportAffinity(event) {
+005424: function correlateTransportMissionFromRadio(href, requests) {
+005443: function schedulePostTransportRehook(clearedKey) {
+005511: function redirectWorkerToPriority(target, currentMissionId) {
+005629: function createWorker(url, role = 'MISSION_A') {
+005636: const transportWorker = role === 'TRANSPORT_B';
+005693: function getWorkerDocument(frame = state.worker) {
+005702: function getWorkerHref(frame = state.worker) {
+005714: function maybeRecoverDisposedMissionWorker(href, doc, source = 'watcher') {
+005769: const workerFreeGeneration = state.workerGeneration;
+005778: function maybeRecoverMissionAlarmWorker(href) {
+005782: function maybeRecoverStaleCanonicalMissionWorker(href, doc, source) {
+005785: function applyActiveWorkerFrameStyle(frame) {
+005866: function maybeRecoverStalledPromotedWorker(doc, href, control, statusText = '') {
+005912: function forgetWorkerDocument() {
+005918: function adoptWorkerDocument(doc, href = '', source = 'worker') {
+005984: function currentWorkerAutoConfirmed() {
+006014: function requestV2FrameRuntimeReconcile(frame, generation, reason = 'pipeline-promotion') {
+006332: function detectTransportContext(doc, href) {
+006354: function onWorkerLoad(frame, generation) {
+006402: const loadTransportContext = detectTransportContext(doc, href);
+006459: const captureBootstrap = (reason, elapsedMs) => {
+006525: const bootstrap = captureBootstrap('pre-clean-a-only-retry', elapsed);
+006548: const workerFreeGeneration = state.workerGeneration;
+006557: const bootstrap = captureBootstrap('fatal-after-clean-a-only-retry', elapsed);
+006688: function sleepRecoveryMissionUrl(observedHref = '') {
+006811: function recoverFromSuspendedTimerGap(elapsedMs, source = 'watcher') {
+006824: const preferredTransportRequest =
+006893: function checkForSuspendedTimerGap(source = 'watcher', now = Date.now()) {
+006899: function watchWorker() {
+007034: const previousTransportIdentity = state.transportIdentity;
+007234: function removeWorker(logRemoval = true) {
+007709: const stalledTransports = state.runTransportEvents.filter(event =>
+007714: const stalledTransportMissionIds = new Set(
+007772: const liveWorkerSnapshot = captureWorkerSnapshot();
+007773: const workerSnapshot = liveWorkerSnapshot || state.lastWorkerSnapshot || {};
+008591: function resumePersistedBackground() {
+008607: const previousResumes = Math.max(0, Number(sessionGet(SESSION_TOP_PAGE_RESUMES) || 0));
+008610: const resume = () => {
+008747: const startupResumeAllowed = persistedBackgroundResumeAllowed();
+008896:     let PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = null;
+009157:     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+010122:         let navigationTimer = null;
+010357:         let timer = null;
+013538:         const timer = setTimeout(() => controller.abort(), timeoutMs);
+013668:             const ownerKey = String(
+013689:                 const sequenceOwners = registry.get(key);
+013712:         const sequenceOwners = STATION_STATE.nameSequencesByBase.get(key) || new Map();
+013715:         const ownerKey = String(
+013725:             const existingOwner = sequenceOwners.get(existingSequence);
+014406:         const worker = async () => {
+017153:         const timer = setTimeout(() => controller.abort(), timeoutMs);
+018073:         const timer = setTimeout(() => controller.abort(), timeoutMs);
+018673:     function isMfV3ManagedTransportWorker() {
+018683:     function isMfV3ManagedActiveWorker() {
+018686:             const ownershipBridge =
+018702:     let mfEventCollectibleScanTimer = null;
+018940:     let mfSilentQueueWatcherTimer = null;
+018942:     let mfGlobalTransportWatcherTimer = null;
+018943:     let mfGlobalTransportClicking = false;
+018944:     let mfLastTransportFingerprint = '';
+018945:     let mfLastTransportClickAt = 0;
+018946:     let mfBruteApproachWatcherTimer = null;
+018950:     let mfTransportApproachClicking = false;
+018951:     let mfTransportLastClickAt = 0;
+018952:     let mfTransportSequenceActive = false;
+018953:     let mfTransportContinuationRunning = false;
+018954:     let mfPostTransportRehookTimer = null;
+018955:     let mfPostTransportOpening = false;
+018956:     let mfTransportOwnerModal = null;
+018957:     let mfTransportOwnerApproachGoneAt = 0;
+018958:     let mfTransportOwnerCloseAttemptedAt = 0;
+018959:     let mfTransportMainStableAt = 0;
+018970:     const MF_TRANSPORT_REHOOK_LOCK_KEY = 'mf_transport_rehook_lock_until_v10_3_9x';
+018971:     const MF_TRANSPORT_REHOOK_REASON_KEY = 'mf_transport_rehook_reason_v10_3_9x';
+018972:     const MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY = 'mf_transport_rehook_recent_until_v10_3_9y';
+018976:     const MF_TRANSPORT_CLICK_LOCK_UNTIL_KEY = 'mf_transport_click_lock_until_v10_3_9zd';
+018977:     const MF_TRANSPORT_LAST_CLICK_AT_KEY = 'mf_transport_last_click_at_v10_3_9zd';
+018978:     const MF_TRANSPORT_LAST_CLICK_REASON_KEY = 'mf_transport_last_click_reason_v10_3_9zd';
+018979:     const MF_TRANSPORT_SHELL_WAIT_MS = 7000;
+018980:     const MF_TRANSPORT_MAIN_STABLE_MS = 3000;
+018990:     let mfAutoAdvanceResumeActive = false;
+019046:     let mfAutoUpgradeResumeActive = false;
+019539:     let mfMainMutationFlushTimer = null;
+019540:     let mfAutoLoopResumeTimer = null;
+019542:     let mfIssueRecorderMutationTimer = null;
+019546:     let mfIphoneNativePickerSyncTimer = null;
+019551:     let mfBackgroundWatcherSupervisorTimer = null;
+019553:     let mfRuntimeSuspendedForPageHide = false;
+019577:     let mfRuntimeSuspendedForInactiveFrame = false;
+019578:     let mfFrameRuntimeReconcileHandler = null;
+019579:     let mfRuntimeMemoryMaintenanceTimer = null;
+019586:     let mfRuntimeMemoryInactiveSuspendCount = 0;
+020026:     let mfTransportDocumentCache = {
+020030:     let mfTransportScopeCache = {
+020719:                 let ownerFrame = null;
+020720:                 let ownerFrameVisible = true;
+020721:                 let ownerFrameConnected = true;
+023295:             const ownerWindow =
+023430:     function isAmbulanceTransportRequest(originalName, mappedName) {
+023502:         const ownerDocument =
+023526:             const ownerWindow =
+023559:             const ownerWindow =
+030286:     let mfTrainedPersonnelMutationRefreshTimer = null;
+031230:                         const ownerDocument = frame.ownerDocument;
+031231:                         const ownerWindow =
+031234:                         const ownerModal = frame.closest(
+031327:     function claimCurrentMissionExecutionOwnership(reason = '') {
+031345:     function isCurrentMissionExecutionOwner(reason = '') {
+031354:             const owner =
+031369:     function getCurrentFrameOwnerMissionRoot(primaryDocument) {
+031376:             const ownerRoot = frame.closest(
+031474:             const ownerWindow = candidateDocument.defaultView;
+031515:             const ownerDocument = documents[scanIndex];
+031545:             const ownerWindow =
+032108:             const ownerDocument =
+032110:             const ownerWindow =
+032250:                 const ownerDocument =
+032545:         const currentFrameOwnerRoot =
+034317:     let mfMissionRequirementPreloadTimer = null;
+039926:     const MF_ALLY_RESUME_MIN_CLICK_AGE_MS = 1200;
+039930:     let mfAllyResumeActive = false;
+040144:             const ownerWindow =
+040325:                     const ownerWindow =
+040378:     async function resumeAllyStealAfterDispatchRefresh(
+042480:         const ownerDocument =
+042788:         const ownerDocument =
+044293:                 const ambulanceReplacesCriticalCareTransport =
+045994:     function stopAllBackgroundAutomationTimers(reason) {
+045995:         const timers = [
+046392:     function shouldBlockOpeningNewMissionForTransport(reason) {
+046395:         let vehicleTransport = false;
+046396:         let policeTransport = false;
+046409:         const lastTransportClick = Math.max(
+046432:     function getTransportRehookLockRemaining() {
+046436:     function isTransportRehookLockActive(reason) {
+046451:     function acquireTransportRehookLock(reason, durationMs) {
+046462:     function releaseTransportRehookLock(reason) {
+046574:     async function resumeAutoAfterMainMissionOpen(reason) {
+046638:     function invalidateTransportCaches() {
+046648:     function mfGetAccessibleDocumentsForTransport(forceRefresh = false) {
+046676:     function mfHasPotentialTransportUi() {
+046713:     function mfGetSharedTransportLastClickAt() {
+046719:     function mfAcquireSharedTransportClick(reason) {
+046748:     function mfMarkTransportOwner(button, reason) {
+046772:     function mfGetTransportOwnerModal() {
+046827:     function mfClearTransportOwner(reason) {
+046851:     function mfTransportShellReadyForRehook(reason) {
+047094:     function mfGetTransportModalScore(modal) {
+047108:     function mfGetTransportActiveScopes(forceRefresh = false) {
+047128:     function buildTransportActiveScopes() {
+047140:                 const hasTransportContext =
+047455:     const ownerKey =
+047519: function getAutoPrisonerReleaseOwnerContainer(releaseContext) {
+047556: function captureAutoPrisonerReleaseOwnerContext(releaseContext) {
+047826:     const ownerContainer = getAutoPrisonerReleaseOwnerContainer(releaseContext);
+047828:         const ownerContext = resolveAutoPrisonerReleaseDismissContext({
+048134:     const ownerKey = String(
+048205:     function mfIsPoliceOrPrisonerTransportActive() {
+048572:     function isTransportScreenBlockingQueueRestart() {
+048577:     function getButtonTextForTransport(element) {
+048586:     function isBadTransportButtonCandidate(element) {
+048602:     function scoreTransportButtonCandidate(element) {
+048622:     function mfIsExactPatientTransportAnchor(element) {
+048632:     function mfFindExactPatientTransportAnchor(root = document) {
+048641:     function mfGetExactPatientTransportRoots() {
+048667:     function mfFindExactPatientTransportAnchorDeep() {
+048674:     function findExactFirstApproachTransportButton() {
+048694:     function getTransportScreenFingerprint() {
+048704:     function isVehicleTransportModalVisible() {
+048727:     function isAnyTransportModalOrApproachVisible() {
+048735:     function markTransportSequenceActive() {
+048745:     function clearTransportSequenceActive() {
+048751:     function clearPostTransportRehookPending() {
+048757:     function isRecentTransportRehookWindowActive() {
+048768:     function isPostTransportRehookPending() {
+048781:     function isTransportAutomationAllowed() {
+048787:     function clearAllTransportAutomationFlags(reason) {
+048814:     function hasVisibleApproachButtonForTransportRehook() {
+048820:     function forceAutoModeBackOnForTransportRehook() {
+048836:     async function hardOpenFirstMissionFromMainAfterTransport(reason) {
+049022:     function wasTransportSequenceActive() {
+049028:     async function openFirstMissionAfterTransportAutoClose(reason) {
+049071:     function startPostTransportRehookWatcher() {
+049086:     function closeVehicleTransportModalIfDone(reason) {
+049089:     async function clickExactApproachTransportButton(reason) {
+049147:     function isAutoModeSessionActiveForTransportWatcher() {
+049150:     function startGlobalTransportApproachWatcher() {
+049174:     function mfIsApproachTransportVisible() {
+049177:     function mfBruteFindVehicleTransportModal() {
+049190:             const hasTransportWords =
+049238:     function mfBruteTransportFingerprint(button) {
+049278:     function mfBruteCloseTransportModalIfDone() {
+049342:     function startBruteApproachTransportWatcher() {
+049356:     function findTransportSendButton() {
+049372:     async function waitForTransportScreenAfterDispatch(timeoutMs) {
+049383:     async function handleTransportRequestsAfterDispatch(reason) {
+049754:     async function resumeAutoAdvanceAfterDispatch(
+049841:                 const transportResult =
+050337:     async function resumeAutoPostDispatchUpgrade(
+050638:     function scheduleAutoMemoryRecycleResume() {
+051751:     const MF_MUTATION_TRANSPORT_SELECTOR =
+052005:     function stopBruteApproachTransportWatcher() {
+052010:     function stopPostTransportRehookWatcher() {
+052035:         const transportWatcherRequired =
+052037:         const postTransportWatcherRequired = Boolean(
+052086:     function scheduleAutoModeLoopResume(reason = 'mutation observer') {
+052209:     function suspendMissionFinderRuntimeForInactiveFrame(
+052279:         const wasSuspended =
+052302:             const ownerWindow =
+052366:     function installMissionFinderFrameRuntimeReconciliation() {
+052383:     function suspendMissionFinderRuntimeForPageHide(
+052719:     function getMfV3OperationalOwnershipBridge() {
+052753:                     const ownershipBridge =
+052786:                     const ownershipBridge =
+052882: const ownership = () => window.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__ || window.__MCN_V3_PIPELINE_PRELOAD_BRIDGE__ || null;
