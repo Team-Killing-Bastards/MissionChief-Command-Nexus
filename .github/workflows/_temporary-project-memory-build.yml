@@ -50,11 +50,12 @@ jobs:
           python3 scripts/check_repository.py
           git diff --check
 
-      - name: Commit clean project-memory system
+      - name: Commit non-workflow project-memory files
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout HEAD -- .github/workflows
           git add -A
           git commit -m "Add durable project state, decisions and evidence index [skip durable memory build]"
           git push origin HEAD:docs/durable-project-memory
