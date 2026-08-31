@@ -1,0 +1,27 @@
+// occurrence 1; source line 52271
+
+function reconcileMissionFinderFrameRuntime(
+        reason = 'top-window ownership check'
+    ) {
+        if (MF_IS_TOP_WINDOW) return;
+        if (!shouldKeepMissionFinderObserverForCurrentFrame()) {
+            suspendMissionFinderRuntimeForInactiveFrame(reason);
+            return;
+        }
+        const wasSuspended =
+            mfRuntimeSuspendedForInactiveFrame;
+        mfRuntimeSuspendedForInactiveFrame = false;
+        if (!mfMainMutationObserver) {
+            startMissionFinderObserver();
+        }
+        if (
+            wasSuspended &&
+            isMissionPage() &&
+            !document.getElementById(
+                'mission-finder-wrapper'
+            )
+        ) {
+            initialize();
+        }
+        startMissionFinderRuntimeMemoryMaintenance();
+    }

@@ -1,0 +1,13 @@
+// occurrence 1; source line 52198
+
+function shouldKeepMissionFinderObserverForCurrentFrame() {
+        if (/^\/missions\/\d+\/gefangene\/entlassen\/?$/i.test(String(globalThis.location?.pathname || ''))) return false;
+        if (MF_IS_TOP_WINDOW) return true;
+        if (!document.body || !isMissionPage()) return false;
+        if (isMfV3ManagedActiveFrame()) return true;
+        try {
+            return getPrimaryMissionRequirementDocument() === document;
+        } catch (_error) {
+            return true;
+        }
+    }

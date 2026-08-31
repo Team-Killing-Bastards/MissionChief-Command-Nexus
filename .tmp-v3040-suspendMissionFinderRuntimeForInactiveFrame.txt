@@ -1,0 +1,64 @@
+// occurrence 1; source line 52209
+
+function suspendMissionFinderRuntimeForInactiveFrame(
+        reason = ''
+    ) {
+        if (MF_IS_TOP_WINDOW) return false;
+        if (mfMainMutationObserver) {
+            mfMainMutationObserver.disconnect();
+            mfMainMutationObserver = null;
+        }
+        if (mfMainMutationFlushTimer) {
+            clearTimeout(mfMainMutationFlushTimer);
+            mfMainMutationFlushTimer = null;
+        }
+        if (mfAutoLoopResumeTimer) {
+            clearTimeout(mfAutoLoopResumeTimer);
+            mfAutoLoopResumeTimer = null;
+        }
+        if (mfDebugRenderFrame !== null) {
+            try {
+                cancelAnimationFrame(mfDebugRenderFrame);
+            } catch (_error) {}
+            clearTimeout(mfDebugRenderFrame);
+            mfDebugRenderFrame = null;
+        }
+        if (mfVehicleLoadRenderFrame !== null) {
+            try {
+                cancelAnimationFrame(mfVehicleLoadRenderFrame);
+            } catch (_error) {}
+            clearTimeout(mfVehicleLoadRenderFrame);
+            mfVehicleLoadRenderFrame = null;
+        }
+        if (mfIphoneNativePickerSyncTimer) {
+            clearTimeout(mfIphoneNativePickerSyncTimer);
+            mfIphoneNativePickerSyncTimer = null;
+        }
+        mfMissingUnitRetryIntervals.forEach(intervalId => {
+            clearInterval(intervalId);
+        });
+        mfMissingUnitRetryIntervals.clear();
+        stopSessionRuntimeTicker();
+        stopMissionFinderRuntimeMemoryMaintenance();
+        cancelTrainedPersonnelPanelRefresh();
+        removeMissionFinderRuntimeMemoryActivityTracking();
+        cleanupMissionFinderIphoneNativePickerSurfaces();
+        releaseMissionFinderLargeEphemeralState(reason);
+        document.getElementById(
+            'mission-finder-wrapper'
+        )?.remove();
+        invalidateVehicleCheckboxCache();
+        invalidateMissionContextCaches();
+        invalidatePatientCountCache();
+        invalidateTransportCaches();
+        mfVehicleMatchCandidateCache.clear();
+        pruneLiveTrainingVerifyCache();
+        resetMainMutationFlags();
+        if (!mfRuntimeSuspendedForInactiveFrame) {
+            mfRuntimeMemoryInactiveSuspendCount += 1;
+        }
+        mfRuntimeSuspendedForInactiveFrame = true;
+        mfRuntimeMemoryLastReason =
+            String(reason || 'inactive mission frame');
+        return true;
+    }

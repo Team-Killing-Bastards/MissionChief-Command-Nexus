@@ -1,0 +1,53 @@
+// occurrence 1; source line 5323
+
+function returnToTopMissionAfterTransport(reason, request = null) {
+if (!state.wanted || state.stopping || !state.worker?.isConnected ||
+state.workerRole !== 'TRANSPORT_B') return false;
+const service = { key: state.transportServiceKey || request?.key || '',
+vehicleId: state.transportServiceVehicleId || request?.vehicleId || '',
+missionId: state.transportServiceMissionId || request?.missionId || '' };
+const paused = state.lowQueuePaused;
+clearTransportServiceState();
+clearSharedV2AutoRunning('transport-worker-b-complete');
+resetAutoStartTracking();
+state.running = false;
+removeWorker(false);
+compactControllerEphemeralMemory();
+saveRunContinuity();
+recordTransportService({ event: 'transport-worker-b-complete', reason, ...service });
+if (paused) {
+state.transportServiceEligible = true;
+setPhase('LOW_QUEUE_PAUSED', 'Transport cleared - waiting for 2 missions',
+`B released; ${state.lowQueueObservedCount} mission${state.lowQueueObservedCount === 1 ? '' : 's'} remain.`);
+beginMissionRescan();
+return true;
+}
+const supply = actionableMissionSupply();
+if (supply.count < MINIMUM_ACTIONABLE_MISSIONS) {
+enterLowQueuePause('transport-cleared-below-minimum-supply');
+return true;
+}
+const mission = supply.candidates[0] || chooseTopMission({ actionableOnly: true });
+if (!mission?.missionId || !mission.url) {
+setPhase('WAITING_MISSION', 'B cleared; waiting for mission',
+'B released; no mission available.');
+beginMissionRescan();
+return true;
+}
+state.postTransportRehooks += 1;
+state.currentMissionId = mission.missionId;
+state.currentMissionName = cleanMissionCaption(mission.caption) || missionNameForId(mission.missionId);
+state.currentMissionUrl = mission.url;
+persistResumeMission(mission.url);
+setPhase('TRANSPORT_RETURN', 'B cleared; starting mission A',
+`${missionDisplay(mission.missionId, state.currentMissionName)}`);
+log('Released B; starting A.', {
+reason, ...service, toMissionId: mission.missionId, toMissionName: state.currentMissionName });
+const workerFreeGeneration = state.workerGeneration;
+window.setTimeout(() => {
+if (!state.wanted || state.stopping || state.worker?.isConnected ||
+state.workerGeneration !== workerFreeGeneration) return;
+createWorker(mission.url);
+}, 120);
+return true;
+}

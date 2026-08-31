@@ -1,0 +1,19 @@
+// occurrence 1; source line 6688
+
+function sleepRecoveryMissionUrl(observedHref = '') {
+const candidates = [
+observedHref,
+state.currentMissionUrl,
+state.transportServiceMissionId
+? new URL(`/missions/${state.transportServiceMissionId}`, location.origin).href
+: '',
+storedResumeMissionUrl(),
+state.bootstrapMissionUrl,
+];
+for (const candidate of candidates) {
+const url = sameOriginUrl(candidate);
+if (url && isMissionUrl(url.href)) return url.href;
+}
+const mission = choosePriorityTarget() || chooseBootstrapMission();
+return mission?.url || '';
+}

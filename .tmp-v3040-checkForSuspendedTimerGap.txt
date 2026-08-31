@@ -1,0 +1,8 @@
+// occurrence 1; source line 6893
+
+function checkForSuspendedTimerGap(source = 'watcher', now = Date.now()) {
+const previous = Number(state.lastWatchHeartbeatAt || 0);
+state.lastWatchHeartbeatAt = now;
+if (!previous || state.wakeRecoveryActive) return state.wakeRecoveryActive;
+return recoverFromSuspendedTimerGap(Math.max(0, now - previous), source);
+}
