@@ -1,0 +1,54 @@
+name: Temporary durable project-memory build
+
+on:
+  push:
+    branches:
+      - docs/durable-project-memory
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: ${{ !contains(github.event.head_commit.message, '[skip durable memory build]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Build durable project records
+        run: python3 scripts/_temporary-build-durable-project-memory.py
+
+      - name: Render human-readable current state
+        run: node scripts/render-project-state.mjs
+
+      - name: Validate exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/render-project-state.mjs
+          node --check scripts/check-project-state.mjs
+          node scripts/check-project-state.mjs
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          for check in scripts/check-*.mjs; do
+            echo "Running ${check}"
+            node "${check}"
+          done
+          python3 -m pip install --disable-pip-version-check --no-cache-dir 'PyYAML==6.0.2'
+          python3 scripts/check_workflow_yaml.py
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Commit clean project-memory system
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Add durable project state, decisions and evidence index [skip durable memory build]"
+          git push origin HEAD:docs/durable-project-memory
