@@ -1,0 +1,18 @@
+// occurrence 1; source line 6014
+function requestV2FrameRuntimeReconcile(frame, generation, reason = 'pipeline-promotion') {
+pipelineRecord('v2-frame-runtime-reconcile-scheduled', {
+missionId: missionIdFromUrl(frameHref(frame)),
+reason,
+});
+for (const delay of [0, 75, 200, 500, 900]) {
+window.setTimeout(() => {
+if (!state.wanted || generation !== state.workerGeneration || state.worker !== frame || !frame?.isConnected) return;
+try {
+const doc = frame.contentDocument || frame.contentWindow?.document || null;
+if (!doc) return;
+const RuntimeEvent = doc.defaultView?.Event || Event;
+doc.dispatchEvent(new RuntimeEvent(V2_FRAME_RUNTIME_RECONCILE_EVENT));
+} catch {}
+}, delay);
+}
+}

@@ -1,0 +1,55 @@
+// occurrence 1; source line 4593
+function clearSharedV2QueueGuard(reason, missionId = '', options = {}) {
+const before = readSharedV2QueueGuardState();
+if (!sharedV2QueueGuardIsActive(before)) return false;
+const preserveFinalDispatch = options?.preserveFinalDispatch === true;
+for (const key of [
+V2_QUEUE_WAIT_ACTIVE_FLAG,
+V2_QUEUE_OPENING_MISSION_FLAG,
+V2_MAIN_MISSION_OPEN_LOCK_KEY,
+V2_MAIN_MISSION_OPEN_REASON_KEY,
+V2_MAIN_MISSION_PENDING_UNTIL_KEY,
+V2_MAIN_MISSION_PENDING_TARGET_KEY,
+V2_MAIN_MISSION_PENDING_REASON_KEY,
+]) {
+try { sessionStorage.removeItem(key); } catch {}
+}
+if (!preserveFinalDispatch) {
+try { sessionStorage.removeItem(V2_FINAL_QUEUE_DISPATCH_FLAG); } catch {}
+}
+const event = {
+at: nowIso(),
+missionId: String(missionId || state.currentMissionId || ''),
+missionName: missionNameForId(missionId || state.currentMissionId),
+reason: String(reason || 'background queue handoff confirmed'),
+preservedFinalDispatch: preserveFinalDispatch,
+before,
+};
+state.queueFastReleases += 1;
+if (
+state.activeMissionTiming?.missionId === event.missionId &&
+!state.activeMissionTiming.milestones?.queueFastRelease
+) {
+state.activeMissionTiming.milestones.queueFastRelease = {
+at: event.at,
+atMs: Date.now(),
+source: 'queue-fastpath',
+text: event.reason,
+};
+}
+state.queueFastReleaseHistory.push(event);
+if (state.queueFastReleaseHistory.length > QUEUE_FAST_RELEASE_HISTORY_LIMIT) {
+state.queueFastReleaseHistory.splice(
+0,
+state.queueFastReleaseHistory.length - QUEUE_FAST_RELEASE_HISTORY_LIMIT
+);
+}
+resetQueueFastReleaseCandidate();
+log(
+preserveFinalDispatch
+? 'Released stale V2 queue-opening locks while preserving the final-dispatch duplicate guard.'
+: 'Released stale shared V2 queue/opening guard after background handoff was confirmed.',
+event
+);
+return true;
+}
