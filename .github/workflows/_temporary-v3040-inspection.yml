@@ -18,7 +18,25 @@ jobs:
           fetch-depth: 0
 
       - name: Build v3.0.40 candidate
-        run: python3 scripts/_temporary-build-v3040-wake-recovery.py
+        shell: bash
+        run: |
+          python3 scripts/_temporary-build-v3040-wake-recovery.py
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/check-v3-active-bootstrap-recovery.mjs')
+          text = path.read_text(encoding='utf-8')
+          marker = """    log: () => {},
+    pausePipelineController: () => {},
+    compactControllerEphemeralMemory: () => {},"""
+          replacement = """    log: () => {},
+    pausePipelineController: () => {},
+    clearSharedV2QueueGuard: () => true,
+    clearSharedV2AutoRunning: () => {},
+    compactControllerEphemeralMemory: () => {},"""
+          if marker not in text:
+              raise SystemExit('Active-bootstrap harness insertion marker not found.')
+          path.write_text(text.replace(marker, replacement, 1), encoding='utf-8')
+          PY
 
       - name: Validate exact candidate
         shell: bash
