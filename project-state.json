@@ -1,0 +1,255 @@
+{
+  "$schema": "./docs/project-state.schema.json",
+  "schemaVersion": 1,
+  "lastUpdated": "2026-08-31",
+  "project": {
+    "name": "MissionChief Command Nexus",
+    "repository": "Team-Killing-Bastards/MissionChief-Command-Nexus",
+    "defaultBranch": "main",
+    "canonicalUserscript": "src/missionchief-command-nexus.user.js",
+    "technicalOwner": "MartyBlyth",
+    "documentationSupport": "Conroy1988"
+  },
+  "authority": {
+    "conflictRule": "The canonical userscript and verified release artifacts win over summaries. project-state.json is the current operating index; accepted ADRs explain locked decisions. Historical handovers, the Google Memory Bank and conversation memory must not silently override them.",
+    "precedence": [
+      {
+        "rank": 1,
+        "source": "Canonical userscript on trusted main and its verified release artifacts",
+        "path": "src/missionchief-command-nexus.user.js",
+        "purpose": "Implemented behaviour and distributable source"
+      },
+      {
+        "rank": 2,
+        "source": "Machine-readable current project state",
+        "path": "project-state.json",
+        "purpose": "Current versions, active decisions, evidence, risks and next work"
+      },
+      {
+        "rank": 3,
+        "source": "Accepted architecture decision records",
+        "path": "docs/decisions/README.md",
+        "purpose": "Why important contracts exist and what supersedes them"
+      },
+      {
+        "rank": 4,
+        "source": "Generated human-readable project state",
+        "path": "docs/PROJECT_STATE.md",
+        "purpose": "Readable view generated from project-state.json"
+      },
+      {
+        "rank": 5,
+        "source": "Sanitised evidence summaries and linked raw diagnostics",
+        "path": "docs/evidence/README.md",
+        "purpose": "Evidence supporting decisions without becoming current truth"
+      },
+      {
+        "rank": 6,
+        "source": "Connected Google Memory Bank and conversation memory",
+        "path": "",
+        "purpose": "Handover convenience and historical navigation only"
+      }
+    ]
+  },
+  "canonical": {
+    "status": "published",
+    "version": "3.0.40",
+    "sourceBytes": 2095358,
+    "sourceSha256": "9479f2836aae60e0259809aea29c000fbafa265cae2e3c176e2c67d6c69fdc01",
+    "components": {
+      "missionFinder": "10.6.177",
+      "resourceAdministration": "4.2.9",
+      "unitNaming": "3.3.28",
+      "stationNaming": "1.3.23",
+      "personnelAssignment": "1.3.12"
+    }
+  },
+  "production": {
+    "version": "3.0.40",
+    "tag": "v3.0.40",
+    "releaseCommit": "9f5ce8b5bac35b9fb2654a1712fba06363d94f5a",
+    "releaseUrl": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v3.0.40",
+    "publishedAt": "2026-08-31T06:52:56Z",
+    "asset": {
+      "name": "MissionChief-Command-Nexus-3.0.40.user.js",
+      "bytes": 2095358,
+      "sha256": "9479f2836aae60e0259809aea29c000fbafa265cae2e3c176e2c67d6c69fdc01"
+    },
+    "releaseStatus": "published",
+    "liveValidationStatus": "pending",
+    "liveValidationNote": "Repository and publication validation passed. The first live v3.0.40 run still needs to prove role-aware wake recovery and terminal managed Worker A admission under real MissionChief timing."
+  },
+  "architecture": {
+    "summary": "One lightweight parent controller owns exactly one heavy managed worker realm at a time. Mission Worker A handles mission selection and dispatch; on-demand Transport Worker B handles one exact personal patient or prisoner transport. No dormant mission preload exists.",
+    "workerA": {
+      "role": "MISSION_A",
+      "owns": [
+        "mission requirements and complete vehicle-list loading",
+        "Unit Finder and trained-personnel verification",
+        "vehicle selection and Dispatch",
+        "mission queue progression and safe mission-boundary handoff"
+      ],
+      "mustNot": [
+        "select patient or prisoner destinations",
+        "remain on a verified transport route",
+        "overlap an active Worker B"
+      ]
+    },
+    "workerB": {
+      "role": "TRANSPORT_B",
+      "owns": [
+        "one exact personal Radio request",
+        "patient hospital destination selection",
+        "prisoner cell or release handling",
+        "proof that the exact request cleared"
+      ],
+      "mustNot": [
+        "run Unit Finder or mission Auto Mode",
+        "select mission vehicles or click Dispatch",
+        "process Alliance transport",
+        "overlap or promote into Worker A"
+      ]
+    },
+    "invariants": [
+      "Worker A is removed before Worker B starts.",
+      "Worker B is removed before a fresh Worker A starts.",
+      "PIPELINE_PRELOAD_COUNT remains zero; B is reserved for transport.",
+      "Personal transport is exact-identity, oldest-first and fail-closed; Alliance rows are excluded.",
+      "Prisoner release result and 404 routes are terminal results, never reusable mission URLs.",
+      "A parent-appointed managed Worker A is terminal positive authority before DOM readiness and visible-primary ranking.",
+      "Visible Mission Control and manual actions remain independent of background worker ownership.",
+      "Durable station, vehicle, personnel, training and user-setting data are never cleared by runtime recovery.",
+      "Visible-page sleep recovery requires at least 90 seconds; hidden-page recovery requires at least three minutes."
+    ]
+  },
+  "lockedDecisions": [
+    {
+      "id": "ADR-0001",
+      "title": "Durable project records and authority order",
+      "file": "docs/decisions/0001-project-record-authority.md",
+      "status": "accepted",
+      "introducedIn": "repository maintenance 2026-08-31"
+    },
+    {
+      "id": "ADR-0002",
+      "title": "Mission Worker A and Transport Worker B are separate serialized roles",
+      "file": "docs/decisions/0002-mission-worker-a-transport-worker-b.md",
+      "status": "accepted",
+      "introducedIn": "3.0.35"
+    },
+    {
+      "id": "ADR-0003",
+      "title": "Only exact personal Radio transport enters Worker B",
+      "file": "docs/decisions/0003-personal-transport-queue-scope.md",
+      "status": "accepted",
+      "introducedIn": "3.0.35"
+    },
+    {
+      "id": "ADR-0004",
+      "title": "Qualification-sensitive dispatch is fail-closed",
+      "file": "docs/decisions/0004-trained-personnel-fail-closed.md",
+      "status": "accepted",
+      "introducedIn": "existing production contract"
+    },
+    {
+      "id": "ADR-0005",
+      "title": "Prisoner release routes are terminal results",
+      "file": "docs/decisions/0005-prisoner-release-terminal-routes.md",
+      "status": "accepted",
+      "introducedIn": "3.0.39"
+    },
+    {
+      "id": "ADR-0006",
+      "title": "Managed Worker A admission is terminal and wake recovery is role-aware",
+      "file": "docs/decisions/0006-managed-worker-admission-and-wake-recovery.md",
+      "status": "accepted",
+      "introducedIn": "3.0.40"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "RUN-2026-08-30-V3039",
+      "title": "Strong v3.0.39 live run and memory-risk baseline",
+      "file": "docs/evidence/live-run-v3.0.39-2026-08-30.md",
+      "kind": "sanitised-summary",
+      "supports": [
+        "MEMORY-001",
+        "A/B functional stability"
+      ]
+    }
+  ],
+  "openWork": [
+    {
+      "id": "MEMORY-001",
+      "priority": "P1",
+      "status": "ready",
+      "title": "Reduce long-session memory growth without slowing mission or transport throughput",
+      "issue": 396,
+      "issueUrl": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/396",
+      "evidence": [
+        "RUN-2026-08-30-V3039"
+      ],
+      "objective": "Produce repeatable memory reclamation at safe worker boundaries while preserving the current fast mission path and serialized A/B transport contract.",
+      "guardrails": [
+        "Do not slow normal Unit Finder, selection, Dispatch or destination selection to hide memory growth.",
+        "Never reset during selected-vehicle state, Dispatch, active transport, prisoner release or an unconfirmed queue transition.",
+        "Do not clear durable Resource Administration registers or user preferences.",
+        "Measure maintenance pauses separately from normal mission timing."
+      ],
+      "acceptanceCriteria": [
+        "Inventory and register every Nexus-owned observer, timer, listener, pending callback and retained Window/Document/DOM reference per worker generation.",
+        "Diagnostics prove retired worker scopes reach zero registered observers, timers, listeners and DOM references.",
+        "Use soft trim, full worker-realm reset and controller checkpoint reload as escalating safe-boundary actions.",
+        "On the reference two-hour Edge run, target a repeatable sawtooth below 900 MiB peak and below 600 MiB after reset where performance.memory is available.",
+        "Keep median Dispatch & Next timing and dispatches per hour within five percent of the pre-change reference, excluding recorded maintenance pauses.",
+        "No duplicate Dispatch, A/B overlap, transport regression or prisoner-release regression."
+      ]
+    },
+    {
+      "id": "TELEMETRY-001",
+      "priority": "P2",
+      "status": "backlog",
+      "title": "Restore mission credit capture in diagnostic exports",
+      "issue": null,
+      "issueUrl": "",
+      "evidence": [
+        "RUN-2026-08-30-V3039"
+      ],
+      "objective": "Capture estimated mission credits without touching dispatch behaviour.",
+      "guardrails": [
+        "Keep credit telemetry read-only and non-blocking.",
+        "Do not delay Unit Finder or Dispatch for missing credit text."
+      ],
+      "acceptanceCriteria": [
+        "A representative run records creditCaptureSuccesses greater than zero.",
+        "Missing credit evidence remains telemetry-only and never blocks a mission."
+      ]
+    }
+  ],
+  "knownRisks": [
+    {
+      "id": "RISK-MEMORY-001",
+      "severity": "high",
+      "summary": "Long sessions can retain more than 2 GiB of reported JavaScript heap despite logical worker recycling.",
+      "mitigation": "Issue #396 and MEMORY-001 require deterministic runtime-scope disposal plus a safe page-level reload backstop."
+    },
+    {
+      "id": "RISK-LIVE-001",
+      "severity": "medium",
+      "summary": "Command Nexus 3.0.40 is published but its new wake-recovery behaviour has not yet completed a recorded live validation run.",
+      "mitigation": "Run v3.0.40 from a clean MissionChief tab and inspect the exported wake/ownership evidence before changing thresholds."
+    }
+  ],
+  "handover": {
+    "nextAction": "Begin GitHub issue #396 with a read-only runtime-retention audit and diagnostic scope counters before changing cleanup thresholds or worker timing.",
+    "readOrder": [
+      "project-state.json",
+      "docs/PROJECT_STATE.md",
+      "docs/decisions/README.md",
+      "docs/DEVELOPER_HANDOFF.md",
+      "docs/evidence/live-run-v3.0.39-2026-08-30.md",
+      "src/missionchief-command-nexus.user.js"
+    ],
+    "updateRule": "Edit project-state.json, run node scripts/render-project-state.mjs, then run node scripts/check-project-state.mjs. Do not hand-edit docs/PROJECT_STATE.md. After merge or release, update the Google Memory Bank with a concise pointer to the verified repository state and read it back."
+  }
+}

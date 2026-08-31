@@ -51,6 +51,8 @@ Run from the repository root:
 ```bash
 node --check src/missionchief-command-nexus.user.js
 node scripts/validate-userscript.mjs
+node scripts/render-project-state.mjs --check
+node scripts/check-project-state.mjs
 for check in scripts/check-*.mjs; do node "$check"; done
 python3 scripts/check_repository.py
 git diff --check
@@ -149,8 +151,8 @@ For a serious live defect, prioritize stopping unsafe dispatch, repeated submiss
 
 For every production release, record the pull request, merge commit, public version, tag, release URL, checksums, tested environments, Greasy Fork result, Discord receipt and approval outcome in the relevant GitHub issue or release record.
 
-After a production release or an owner-approved operating-contract change, update the connected Google Memory Bank and Rules documents with what actually merged—not the planned state. Include the PR, merge commit, canonical versions, permanent regression or repository guard, delivery outcome and any rule that future work must preserve. Read the edited sections back to verify the records before declaring the work complete.
+After a production release or an owner-approved operating-contract change, update `project-state.json` with what actually merged—not the planned state. Regenerate `docs/PROJECT_STATE.md`, run `node scripts/check-project-state.mjs`, and add or supersede an ADR when the reason or locked behaviour changed. Then update the connected Google Memory Bank and Rules documents with a concise pointer to the verified repository state, PR, merge commit, delivery outcome and live-validation status. Read both records back before declaring the work complete.
 
-Repository-only maintenance must record that the canonical userscript was unchanged and that release reconciliation correctly avoided a duplicate publication.
+Repository-only maintenance must record that the canonical userscript was unchanged and that release reconciliation correctly avoided a duplicate publication. Raw diagnostics remain evidence; they are not pasted into current state.
 
-Start with [Developer Handoff](DEVELOPER_HANDOFF.md) when resuming development.
+Start with [Current Project State](PROJECT_STATE.md), then [Developer Handoff](DEVELOPER_HANDOFF.md), when resuming development.

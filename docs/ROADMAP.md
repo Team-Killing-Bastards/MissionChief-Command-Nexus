@@ -8,9 +8,9 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 ## Current production baseline — v3.0.40
 
 - [x] Publish one canonical userscript on trusted `main`.
-- [x] Publish Command Nexus `3.0.34` with Mission Finder `V10.6.177`, the proven `3.0.29` runtime and diagnostic-only Worker A lifecycle evidence, while retaining mission-level fulfilment/failure exports, optional High Risk Missing Person Ambulance coverage, standalone pop-out naming filters, exact PRV/SRV and Coastguard helicopter selection, transport/prisoner recovery, bounded endurance telemetry and station-aware staffing evidence.
-- [x] Keep one sole dispatcher active while one dormant worker page-warms the immediate next mission without expanding its vehicle table, and fail closed on uncertain ownership or handoff.
-- [x] Retain Resource Administration `V4.2.8`, with Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.12`.
+- [x] Publish Command Nexus `3.0.40` with Mission Finder `V10.6.177`, mission-only Worker A, exact personal transport-only Worker B, prisoner-release terminal handling and role-aware wake recovery.
+- [x] Keep exactly one heavy managed worker active: A is removed before B starts, B is removed before a fresh A starts, and no dormant mission preload exists.
+- [x] Retain Resource Administration `V4.2.9`, with Unit Naming `3.3.28`, Station Naming `1.3.23` and Personnel Assignment `1.3.12`.
 - [x] Protect duplicate initialization and independent engine startup.
 - [x] Provide Unit Naming, Station Naming and Personnel Assignment through background native-form workflows.
 - [x] Provide requirement parsing, patient handling, trained-capability selection, Mission Update, dispatch, Auto Mode and queue continuation.
@@ -44,10 +44,11 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 - [ ] Prove scope boundaries across normal, embedded and standalone Stations views.
 - [ ] Preserve Dispatch Centre, service, station-type and start-point hierarchy recovery after late rendering.
 
-### 3. Lifecycle, migration and compatibility
+### 3. Lifecycle, memory, migration and compatibility
 
+- [ ] Complete issue [#396](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/396): deterministic worker-scope disposal, safe escalating memory recovery and a two-hour no-slowdown benchmark.
 - [ ] Complete the persistent/session storage inventory and migration precedence rules.
-- [ ] Record long-session observer, timer, memory and CPU behavior.
+- [ ] Record long-session observer, timer, memory and CPU behaviour.
 - [ ] Test migration from each supported legacy-installation combination.
 - [ ] Maintain an evidence-backed browser, userscript-manager and device matrix for both MissionChief UK domains.
 
@@ -63,6 +64,7 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 - [x] Remove obsolete one-use builders, triggers and repair workflows from permanent automation.
 - [x] Make behavioral regressions version-agnostic and centralize canonical version validation.
 - [x] Separate current operational documentation from immutable historical handovers and incident records.
+- [x] Add machine-readable current state, generated human state, accepted ADRs, an evidence register and automated drift validation.
 - [ ] Keep trusted-main publication idempotent and retain a documented recovery path.
 - [ ] Keep temporary build mechanisms out of tracked permanent automation.
 - [ ] Record each production or operating-contract change in GitHub and the connected project operating records.
@@ -77,6 +79,6 @@ The original first-release milestone is complete. Command Nexus has a production
 - A versioned release or incident document remains historical and must not be rewritten as current guidance.
 - Every source behavior change needs a version increase, changelog entry and permanent regression.
 - Documentation-only and repository-administration work keeps the current userscript version when canonical source is unchanged.
-- Active priorities and acceptance criteria live in [GitHub Issues](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues).
+- Active priorities and acceptance criteria are indexed in [Current Project State](PROJECT_STATE.md) and linked to [GitHub Issues](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues).
 
-Start with the [Developer Handoff](DEVELOPER_HANDOFF.md) when resuming work.
+Start with [Current Project State](PROJECT_STATE.md), then the [Developer Handoff](DEVELOPER_HANDOFF.md), when resuming work.

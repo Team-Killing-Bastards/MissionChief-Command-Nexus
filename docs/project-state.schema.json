@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/blob/main/docs/project-state.schema.json",
+  "title": "MissionChief Command Nexus current project state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "lastUpdated",
+    "project",
+    "authority",
+    "canonical",
+    "production",
+    "architecture",
+    "lockedDecisions",
+    "evidence",
+    "openWork",
+    "knownRisks",
+    "handover"
+  ],
+  "properties": {
+    "$schema": { "const": "./docs/project-state.schema.json" },
+    "schemaVersion": { "const": 1 },
+    "lastUpdated": { "type": "string", "format": "date" },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "repository", "defaultBranch", "canonicalUserscript", "technicalOwner", "documentationSupport"],
+      "properties": {
+        "name": { "const": "MissionChief Command Nexus" },
+        "repository": { "const": "Team-Killing-Bastards/MissionChief-Command-Nexus" },
+        "defaultBranch": { "const": "main" },
+        "canonicalUserscript": { "const": "src/missionchief-command-nexus.user.js" },
+        "technicalOwner": { "type": "string", "minLength": 1 },
+        "documentationSupport": { "type": "string", "minLength": 1 }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["conflictRule", "precedence"],
+      "properties": {
+        "conflictRule": { "type": "string", "minLength": 20 },
+        "precedence": {
+          "type": "array",
+          "minItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["rank", "source", "path", "purpose"],
+            "properties": {
+              "rank": { "type": "integer", "minimum": 1 },
+              "source": { "type": "string", "minLength": 1 },
+              "path": { "type": "string" },
+              "purpose": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "canonical": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "version", "sourceBytes", "sourceSha256", "components"],
+      "properties": {
+        "status": { "enum": ["published", "candidate"] },
+        "version": { "$ref": "#/$defs/version" },
+        "sourceBytes": { "type": "integer", "minimum": 1 },
+        "sourceSha256": { "$ref": "#/$defs/sha256" },
+        "components": { "$ref": "#/$defs/components" }
+      }
+    },
+    "production": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "tag", "releaseCommit", "releaseUrl", "publishedAt", "asset", "releaseStatus", "liveValidationStatus", "liveValidationNote"],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "tag": { "type": "string", "pattern": "^v\\d+\\.\\d+\\.\\d+$" },
+        "releaseCommit": { "$ref": "#/$defs/commit" },
+        "releaseUrl": { "type": "string", "format": "uri" },
+        "publishedAt": { "type": "string", "format": "date-time" },
+        "asset": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "bytes", "sha256"],
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "bytes": { "type": "integer", "minimum": 1 },
+            "sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "releaseStatus": { "const": "published" },
+        "liveValidationStatus": { "enum": ["pending", "passed", "failed"] },
+        "liveValidationNote": { "type": "string", "minLength": 1 }
+      }
+    },
+    "architecture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "workerA", "workerB", "invariants"],
+      "properties": {
+        "summary": { "type": "string", "minLength": 1 },
+        "workerA": { "$ref": "#/$defs/worker" },
+        "workerB": { "$ref": "#/$defs/worker" },
+        "invariants": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "lockedDecisions": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/decision" } },
+    "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
+    "openWork": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/work" } },
+    "knownRisks": { "type": "array", "items": { "$ref": "#/$defs/risk" } },
+    "handover": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nextAction", "readOrder", "updateRule"],
+      "properties": {
+        "nextAction": { "type": "string", "minLength": 1 },
+        "readOrder": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "updateRule": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "components": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["missionFinder", "resourceAdministration", "unitNaming", "stationNaming", "personnelAssignment"],
+      "properties": {
+        "missionFinder": { "$ref": "#/$defs/version" },
+        "resourceAdministration": { "$ref": "#/$defs/version" },
+        "unitNaming": { "$ref": "#/$defs/version" },
+        "stationNaming": { "$ref": "#/$defs/version" },
+        "personnelAssignment": { "$ref": "#/$defs/version" }
+      }
+    },
+    "worker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "owns", "mustNot"],
+      "properties": {
+        "role": { "enum": ["MISSION_A", "TRANSPORT_B"] },
+        "owns": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "mustNot": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "file", "status", "introducedIn"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^ADR-\\d{4}$" },
+        "title": { "type": "string", "minLength": 1 },
+        "file": { "type": "string", "pattern": "^docs/decisions/\\d{4}-.+\\.md$" },
+        "status": { "enum": ["accepted", "superseded", "proposed"] },
+        "introducedIn": { "type": "string", "minLength": 1 }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "file", "kind", "supports"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "file": { "type": "string", "pattern": "^docs/evidence/.+\\.md$" },
+        "kind": { "type": "string", "minLength": 1 },
+        "supports": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "work": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "priority", "status", "title", "issue", "issueUrl", "evidence", "objective", "guardrails", "acceptanceCriteria"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Z]+-[0-9]{3}$" },
+        "priority": { "enum": ["P0", "P1", "P2", "P3"] },
+        "status": { "enum": ["ready", "in-progress", "blocked", "backlog", "done"] },
+        "title": { "type": "string", "minLength": 1 },
+        "issue": { "type": ["integer", "null"], "minimum": 1 },
+        "issueUrl": { "type": "string" },
+        "evidence": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "objective": { "type": "string", "minLength": 1 },
+        "guardrails": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "acceptanceCriteria": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "severity", "summary", "mitigation"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "severity": { "enum": ["low", "medium", "high", "critical"] },
+        "summary": { "type": "string", "minLength": 1 },
+        "mitigation": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

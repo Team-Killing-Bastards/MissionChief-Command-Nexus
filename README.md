@@ -19,13 +19,13 @@
 
 **Current version:** `3.0.40` · **Mission Finder engine:** `V10.6.177` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
-> **V3 production:** the stopped main map keeps only the lightweight controller. A visible mission with Auto Mode stopped mounts the manual controls but leaves MissionChief's complete vehicle list collapsed until Unit Finder, Mission Update or Ally Steal explicitly requests it. When started, one active Mission Finder dispatcher owns operational state while a lightweight, interaction-blocked B warms only the immediate next page; B mounts Mission Finder only after verified promotion to A. Final Dispatch-only completion returns to the V3 two-mission controller instead of entering Mission Finder's standalone queue watcher. A sustained adaptive heap guard—not the normal startup footprint—drops it to A-only and releases after a verified safe minute. Version 3.0.38 also enforces the split at the parent route boundary: any patient or prisoner vehicle route reached by mission Worker A is transferred to exact personal transport Worker B before transport handling can continue.
+> **V3 production:** the map page keeps a lightweight parent controller and exactly one heavy managed worker realm at a time. Worker A is mission-only: requirements, complete vehicle loading, Unit Finder, trained-personnel checks, selection, Dispatch and queue progression. On-demand Worker B handles one exact personal patient or prisoner Radio request and is destroyed before a fresh A starts. No dormant mission preload exists. Command Nexus 3.0.40 also makes wake recovery role-aware and treats the parent-appointed Worker A identity as terminal authority before DOM and visible-frame ranking. See the [current project state](docs/PROJECT_STATE.md) for the locked contract and active work.
 
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
 
-[**Command brief**](#command-brief) · [**Install**](#install-in-60-seconds) · [**Capability matrix**](#capability-matrix) · [**Operational chain**](#operational-chain) · [**Production status**](#current-production-capability) · [**Safety**](#safety-doctrine) · [**Architecture**](#system-architecture) · [**Ownership**](#ownership-and-contribution-record) · [**Release control**](#release-control)
+[**Project state**](docs/PROJECT_STATE.md) · [**Command brief**](#command-brief) · [**Install**](#install-in-60-seconds) · [**Capability matrix**](#capability-matrix) · [**Operational chain**](#operational-chain) · [**Production status**](#current-production-capability) · [**Safety**](#safety-doctrine) · [**Architecture**](#system-architecture) · [**Ownership**](#ownership-and-contribution-record) · [**Release control**](#release-control)
 
 </div>
 
@@ -144,7 +144,7 @@ The canonical source is [`src/missionchief-command-nexus.user.js`](src/missionch
 |---|---|
 | **Unit Finder** | Reads current mission demand and selects mapped vehicles and trained personnel |
 | **Mission Update / Upgrade** | Re-reads live requirements and adds only the remaining actionable shortage |
-| **Auto Mode** | Loads the complete vehicle list, evaluates demand, selects resources, validates readiness, and dispatches as a managed cycle; below two actionable personal missions it releases A/B and resumes from a fresh A only after two missions are stable |
+| **Auto Mode** | Loads the complete vehicle list, evaluates demand, selects resources, validates readiness, and dispatches as a managed cycle; below two actionable personal missions it releases the active worker and resumes from a fresh A only after two missions are stable |
 | **Patient demand** | Reconciles visible patients and ambulance demand when static mission text is incomplete |
 | **Exact specialist matching** | Uses vehicle IDs, assignment-page evidence, and required qualifications |
 | **Continuation** | Handles upgrades, queue progression, unattended recovery, and patient/prisoner transport controls |
@@ -209,9 +209,9 @@ Auto Mode validates readiness and final selected-unit state before dispatch. Cro
 
 ### Runtime hardening
 
-- Managed V3 leaves one personal mission in reserve: after dispatch and any patient/prisoner transport finish, fewer than two actionable missions triggers a zero-worker pause. A new personal radio request can temporarily create an exact transport-only A, which releases itself afterwards. Two missions must remain stable for 1.5 seconds before a fresh A and dormant B are created.
-- A/B are explicitly torn down and rebuilt at a verified boundary after 12 native advances or 8 minutes. Under memory pressure, B is released immediately and A uses an 8-advance/4-minute boundary recycle. Durable station, unit, personnel, training and setting registers are never cleared.
-- B preloads only the immediate next mission document and never expands the account-wide vehicle table. A confirmed stalled dispatch is quarantined from duplicate routing, and a fatal V3 error snapshots then releases every managed worker.
+- Managed V3 leaves one personal mission in reserve: after dispatch and any personal transport finish, fewer than two actionable missions triggers a zero-worker pause. A new exact personal Radio request may create transport-only Worker B during that pause; B releases itself afterwards. Two missions must remain stable for 1.5 seconds before a fresh mission Worker A starts.
+- A and B are serialized and never coexist. A is removed before exact transport B starts; B is removed before a fresh A starts. Boundary recycling and recovery never clear durable station, unit, personnel, training or user-setting registers.
+- There is no dormant mission preload. Worker B is reserved for exact personal transport, while confirmed stalled dispatches are quarantined from duplicate routing and fatal V3 errors snapshot then release the managed worker.
 - Permanent userscript observers were reduced from three to two.
 - Resource Administration now uses one filtered and animation-frame-coalesced lifecycle controller instead of two broad iOS observers.
 - Mission Finder ignores mutations generated by its own interface unless they represent a genuine wrapper lifecycle event.
