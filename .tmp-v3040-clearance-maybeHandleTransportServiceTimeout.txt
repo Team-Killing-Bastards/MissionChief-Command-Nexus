@@ -1,0 +1,29 @@
+function maybeHandleTransportServiceTimeout(requests) {
+if (state.workerRole !== 'TRANSPORT_B') return false;
+if (!state.transportServiceActive || !state.transportServiceStartedAt) return false;
+const elapsed = Date.now() - state.transportServiceStartedAt;
+if (elapsed < TRANSPORT_SERVICE_MAX_MS) return false;
+const key = state.transportServiceKey;
+const request = (requests || []).find(item => item.key === key) || null;
+if (request) {
+state.transportServiceDeferredUntil.set(
+key,
+Date.now() + TRANSPORT_SERVICE_RETRY_COOLDOWN_MS
+);
+}
+recordTransportService({
+event: 'service-timeout',
+key,
+vehicleId: state.transportServiceVehicleId,
+missionId: state.transportServiceMissionId,
+elapsedMs: elapsed,
+stillRequested: Boolean(request),
+});
+log('Transport side pass reached its bounded wait; missions will resume and this request can be retried later.', {
+key,
+elapsedMs: elapsed,
+stillRequested: Boolean(request),
+});
+returnToTopMissionAfterTransport('bounded-timeout', request);
+return true;
+}

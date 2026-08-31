@@ -1,0 +1,6 @@
+function recordTransportService(event) {
+state.transportServiceHistory.push({ at: nowIso(), ...event });
+if (state.transportServiceHistory.length > TRANSPORT_SERVICE_HISTORY_LIMIT) {
+state.transportServiceHistory.splice(0, state.transportServiceHistory.length - TRANSPORT_SERVICE_HISTORY_LIMIT);
+}
+}

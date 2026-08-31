@@ -1,0 +1,44 @@
+function restoreAfterResolvedRadioTransportWarning(warnedKey, remainingRequests = []) {
+if (
+!warnedKey ||
+state.phase !== 'TRANSPORT_WARN' ||
+!/personal radio transport request may be stalled/i.test(state.status || '') ||
+state.transportServiceActive ||
+state.transportKind ||
+state.autoStopWarned ||
+state.lastError
+) return false;
+if ((remainingRequests || []).some(request => request?.key === warnedKey)) return false;
+if (state.lowQueuePaused) {
+setPhase(
+'LOW_QUEUE_PAUSED',
+'Paused - waiting for 2 missions',
+`The warned personal transport request cleared. ${state.lowQueueObservedCount} actionable personal mission${state.lowQueueObservedCount === 1 ? '' : 's'} remain; no mission worker was started.`
+);
+} else if (state.postDispatchWatchdog) {
+setPhase(
+'POST_DISPATCH_RECOVERY',
+'Waiting for the verified mission handoff',
+`${missionDisplay(state.postDispatchWatchdog.missionId, state.postDispatchWatchdog.missionName)} remains protected by the dispatch watchdog. The cleared transport request no longer blocks recovery.`
+);
+} else if (state.wanted && state.worker?.isConnected) {
+const doc = getWorkerDocument();
+const status = findUsefulNexusStatus(doc);
+setPhase(
+'ACTIVE',
+'Background Auto Mode running',
+status || `${missionDisplay(state.currentMissionId, state.currentMissionName)} is active. The previous transport warning cleared.`
+);
+} else {
+setPhase(
+'WAITING_MISSION',
+'Waiting for the next mission',
+'The warned personal transport request cleared and no transport work remains.'
+);
+}
+log('Cleared stale Radio Transport warning after the exact request disappeared.', {
+key: warnedKey,
+remainingPersonalRequests: (remainingRequests || []).length,
+});
+return true;
+}

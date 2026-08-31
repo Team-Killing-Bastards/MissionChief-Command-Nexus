@@ -1,0 +1,35 @@
+function schedulePostTransportRehook(clearedKey) {
+const [vehicleId, missionId] = String(clearedKey || '').split(':');
+if (
+!vehicleId ||
+!missionId ||
+state.workerRole !== 'TRANSPORT_B' ||
+!state.transportServiceActive ||
+state.transportServiceKey !== clearedKey
+) return;
+state.transportServiceCleared += 1;
+recordTransportService({
+event: 'service-cleared',
+key: clearedKey,
+vehicleId,
+missionId,
+elapsedMs: state.transportServiceStartedAt
+? Date.now() - state.transportServiceStartedAt
+: 0,
+});
+window.setTimeout(() => {
+if (
+!state.wanted ||
+state.stopping ||
+state.workerRole !== 'TRANSPORT_B' ||
+!state.worker?.isConnected
+) return;
+const requests = refreshRadioTransportRequests();
+if (radioRequestForVehicle(vehicleId, requests)) return;
+returnToTopMissionAfterTransport('radio-cleared', {
+key: clearedKey,
+vehicleId,
+missionId,
+});
+}, POST_TRANSPORT_REHOOK_DELAY_MS);
+}
