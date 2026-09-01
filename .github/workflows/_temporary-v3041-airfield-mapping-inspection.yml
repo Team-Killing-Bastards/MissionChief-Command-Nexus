@@ -1,0 +1,78 @@
+name: Temporary v3.0.41 airfield command mapping inspection
+
+on:
+  push:
+    branches:
+      - fix/v3041-airfield-command-mapping
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    if: ${{ !contains(github.event.head_commit.message, '[skip v3041 inspect]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract exact mapping contexts
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source_path = Path('src/missionchief-command-nexus.user.js')
+          source = source_path.read_text(encoding='utf-8')
+          lines = source.splitlines()
+          terms = [
+              'Airfield Firefighting',
+              'Airfield Operations Vehicle',
+              'Airfield Operations Supervisor',
+              'Fire Officers or',
+              'canonicalRequirement',
+              'mapRequirement',
+              'requirementAlias',
+              'vehicleAlias',
+          ]
+          ranges = []
+          for number, line in enumerate(lines, 1):
+              if any(term.lower() in line.lower() for term in terms):
+                  ranges.append((max(1, number - 45), min(len(lines), number + 85)))
+          merged = []
+          for start, end in ranges:
+              if merged and start <= merged[-1][1] + 3:
+                  merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+              else:
+                  merged.append((start, end))
+          output = []
+          for index, (start, end) in enumerate(merged, 1):
+              output.append(f'===== source-context-{index} [{start}-{end}] =====')
+              output.extend(f'{i:06d}: {lines[i-1]}' for i in range(start, end + 1))
+              output.append('')
+          Path('.tmp-v3041-airfield-source-contexts.txt').write_text('\n'.join(output), encoding='utf-8')
+
+          tests = []
+          for path in sorted(Path('scripts').glob('check-*.mjs')):
+              text = path.read_text(encoding='utf-8')
+              if any(term.lower() in text.lower() for term in terms[:4]):
+                  tests.append(f'===== {path} =====\n{text}')
+          Path('.tmp-v3041-airfield-tests.txt').write_text('\n\n'.join(tests) or 'NO MATCHING TESTS\n', encoding='utf-8')
+
+          state_files = ['project-state.json', 'scripts/check-project-state.mjs', 'scripts/render-project-state.mjs']
+          Path('.tmp-v3041-project-state-context.txt').write_text(
+              '\n\n'.join(f'===== {name} =====\n{Path(name).read_text(encoding="utf-8")}' for name in state_files),
+              encoding='utf-8'
+          )
+          PY
+
+      - name: Commit inspection maps
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .tmp-v3041-*.txt
+          git commit -m "Add v3.0.41 airfield mapping inspection [skip v3041 inspect]"
+          git push origin HEAD:fix/v3041-airfield-command-mapping
