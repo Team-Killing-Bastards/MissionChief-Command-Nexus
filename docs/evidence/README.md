@@ -17,3 +17,4 @@ Evidence records support a specific decision, issue or live-validation claim. Th
 ## Existing capability evidence
 
 The other files in this directory retain issue-specific sanitised captures for medical, Fire/Airfield, SAR/Coastguard training profiles and exact MissionChief vehicle identities. Their issue number and file name identify the protected contract.
+- [Hot Brakes standalone Airfield command mapping failure — v3.0.40](hot-brakes-airfield-command-v3.0.40-2026-09-01.md)

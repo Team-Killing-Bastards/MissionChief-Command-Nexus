@@ -5,10 +5,10 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 **Developer and technical owner:** MartyBlyth  
 **Repository and documentation support:** Conroy1988
 
-## Current production baseline — v3.0.40
+## Current production baseline — v3.0.41
 
 - [x] Publish one canonical userscript on trusted `main`.
-- [x] Publish Command Nexus `3.0.40` with Mission Finder `V10.6.177`, mission-only Worker A, exact personal transport-only Worker B, prisoner-release terminal handling and role-aware wake recovery.
+- [x] Publish Command Nexus `3.0.41` with Mission Finder `V10.6.178`, mission-only Worker A, exact personal transport-only Worker B, prisoner-release terminal handling and role-aware wake recovery.
 - [x] Keep exactly one heavy managed worker active: A is removed before B starts, B is removed before a fresh A starts, and no dormant mission preload exists.
 - [x] Retain Resource Administration `V4.2.9`, with Unit Naming `3.3.28`, Station Naming `1.3.23` and Personnel Assignment `1.3.12`.
 - [x] Protect duplicate initialization and independent engine startup.
