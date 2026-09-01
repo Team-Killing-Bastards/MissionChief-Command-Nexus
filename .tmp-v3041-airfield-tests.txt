@@ -1,0 +1,367 @@
+===== scripts/check-airfield-operations-supervisor.mjs =====
+#!/usr/bin/env node
+import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
+
+const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
+const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
+const expect = (condition, message) => { if (!condition) fail(message); };
+
+function extractFunction(name) {
+  const marker = `function ${name}(`;
+  const start = source.indexOf(marker);
+  if (start < 0) fail(`Unable to find ${name}`);
+  const brace = source.indexOf('{', start);
+  let depth = 0, quote = '', escaped = false, lineComment = false, blockComment = false, regex = false, regexClass = false;
+  for (let i = brace; i < source.length; i += 1) {
+    const c = source[i], n = source[i + 1];
+    if (lineComment) { if (c === '\n') lineComment = false; continue; }
+    if (blockComment) { if (c === '*' && n === '/') { blockComment = false; i += 1; } continue; }
+    if (quote) {
+      if (escaped) { escaped = false; continue; }
+      if (c === '\\') { escaped = true; continue; }
+      if (c === quote) quote = '';
+      continue;
+    }
+    if (regex) {
+      if (escaped) { escaped = false; continue; }
+      if (c === '\\') { escaped = true; continue; }
+      if (c === '[') regexClass = true;
+      if (c === ']') regexClass = false;
+      if (c === '/' && !regexClass) regex = false;
+      continue;
+    }
+    if (c === '/' && n === '/') { lineComment = true; i += 1; continue; }
+    if (c === '/' && n === '*') { blockComment = true; i += 1; continue; }
+    if (c === "'" || c === '"' || c === '`') { quote = c; continue; }
+    if (c === '/' && /[=(,:;!&|?{}\[\]\n]/.test(source[i - 1] || '\n')) { regex = true; continue; }
+    if (c === '{') depth += 1;
+    if (c === '}' && --depth === 0) return source.slice(start, i + 1);
+  }
+  fail(`Unterminated ${name}`);
+}
+
+const matcher = extractFunction('isAirfieldOperationsSupervisorRequirementName');
+const context = { result: null };
+vm.runInNewContext(
+  `${matcher}\nresult = {` +
+  ` yes: ['Airfield Operations Supervisor', 'Airfield Operations Supervisors', 'Required Airfield Operations Supervisor', 'Required Airfield Operations Supervisors', '2 Airfield Operations Supervisors', 'Required 3 Airfield Operations Supervisors'].map(isAirfieldOperationsSupervisorRequirementName),` +
+  ` no: ['Airfield Operations Vehicle', 'Airfield Command', 'Operations Supervisor', 'Airport Fire Officer'].map(isAirfieldOperationsSupervisorRequirementName)` +
+  `};`,
+  context
+);
+expect(context.result.yes.every(Boolean), `Airfield Operations Supervisor alias rejected: ${JSON.stringify(context.result.yes)}`);
+expect(context.result.no.every(value => value === false), `Unrelated Airfield wording was captured: ${JSON.stringify(context.result.no)}`);
+
+for (const alias of [
+  'Airfield Operations Supervisor',
+  'Airfield Operations Supervisors',
+  'Required Airfield Operations Supervisor',
+  'Required Airfield Operations Supervisors',
+]) {
+  expect(
+    source.includes(`"${alias}": "Airfield Operations Supervisor"`),
+    `Airfield cross-reference must route ${alias} to the singular vehicle name`
+  );
+}
+
+expect(source.includes("const MF_AIRFIELD_OPERATIONS_SUPERVISOR_TYPE_ID = '80';"), 'Airfield Operations Supervisor must declare verified MissionChief type 80');
+const checkbox = extractFunction('isAirfieldOperationsSupervisorVehicleCheckbox');
+expect(checkbox.includes('.includes(MF_AIRFIELD_OPERATIONS_SUPERVISOR_TYPE_ID)'), 'Airfield selector must consume the exact type-80 constant');
+const classifier = extractFunction('isAirfieldOperationsSupervisorRequirement');
+expect(classifier.includes('isAirfieldOperationsSupervisorRequirementName(value)'), 'Airfield classifier must consume the strict requirement-name matcher');
+
+expect((source.match(/const airfieldSupervisorOnly =/g) || []).length >= 2, 'Airfield strict declarations are missing from shared selection paths');
+expect(source.includes('if (airfieldSupervisorOnly) {'), 'Airfield exact candidate-selection branch missing');
+expect(source.includes('return isAirfieldOperationsSupervisorVehicleCheckbox(input);'), 'Airfield exact type-80 candidate filter missing');
+expect(source.includes('matches = isAirfieldOperationsSupervisorVehicleCheckbox(input);'), 'Airfield selected-vehicle verification missing');
+expect(source.includes('isAirfieldOperationsSupervisorRequirement(originalName, mappedName) ||'), 'Airfield generic-fallback guard missing');
+
+console.log('PASS: Airfield Operations Supervisor singular/plural requirements route only to exact MissionChief vehicle type 80 across Unit Finder, Mission Update and Auto Mode.');
+
+
+===== scripts/check-v3-master-merge.mjs =====
+#!/usr/bin/env node
+import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
+
+const outputPath = 'src/missionchief-command-nexus.user.js';
+const source = await readFile(outputPath, 'utf8');
+const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
+const expect = (condition, message) => { if (!condition) fail(message); };
+
+try {
+  new vm.Script(source, { filename: outputPath });
+} catch (error) {
+  fail(`Generated master has invalid JavaScript syntax: ${error.message}`);
+}
+
+const bytes = Buffer.byteLength(source, 'utf8');
+expect(bytes < 2 * 1024 * 1024, `Generated master exceeds the 2 MiB userscript limit: ${bytes}`);
+expect((source.match(/\/\/ ==UserScript==/g) || []).length === 1, 'Generated master must have exactly one userscript metadata start');
+expect((source.match(/\/\/ ==\/UserScript==/g) || []).length === 1, 'Generated master must have exactly one userscript metadata end');
+expect(source.includes('// @name         MissionChief Command Nexus'), 'V3 production name missing');
+const metadataVersionLine = source.split(/\r?\n/).find(line => line.startsWith('// @' + 'version')) || '';
+const metadataVersion = metadataVersionLine.trim().split(/\s+/).at(-1) || '';
+expect(/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(metadataVersion), 'Production version metadata missing');
+expect(Number(metadataVersion.split('.')[0]) >= 3, 'Merged V3 source must remain on the V3-or-newer release line');
+expect(source.includes('// @run-at       document-start'), 'Merged master must start at document-start for frame ownership');
+
+const controllerIndex = source.indexOf('const VERSION =');
+const deferredIndex = source.indexOf('const startEmbeddedCommandNexus = () => {');
+const finderIndex = source.indexOf('MISSION FINDER V');
+expect(controllerIndex >= 0, 'V3 controller body missing');
+expect(source.includes(`const VERSION = '${metadataVersion}';`), 'V3 controller version must match userscript metadata');
+expect(source.includes(`const MASTER_VERSION = '${metadataVersion}';`), 'V3 master version must match userscript metadata');
+expect(deferredIndex > controllerIndex, 'Complete Command Nexus must be deferred after the controller');
+expect(finderIndex > deferredIndex, 'Mission Finder must be embedded inside the document-end-compatible start boundary');
+expect(source.includes("document.addEventListener('DOMContentLoaded', startEmbeddedCommandNexus, { once: true });"), 'Embedded Command Nexus DOM-ready boundary missing');
+
+for (const [needle, label] of [
+  ["const MF_AIRFIELD_OPERATIONS_SUPERVISOR_TYPE_ID = '80';", 'Airfield Operations Supervisor type 80'],
+  ["const MF_SEARCH_DOG_UNIT_TYPE_ID = '102';", 'Rescue/Search Dog type 102'],
+  ["const MF_NORMAL_AMBULANCE_TYPE_ID = '5';", 'Mission Upgrade Any vehicle ambulance type 5'],
+  ['Maximum amount of cars to tow', 'maximum car towing rule'],
+  ['Maximum amount of trucks to tow', 'maximum truck towing rule'],
+  ['POST_DISPATCH_SOFT_RECOVERY_MS = 5000', '5-second post-dispatch soft recovery'],
+  ['POST_DISPATCH_HARD_RECOVERY_MS = 16000', '16-second post-dispatch hard recovery'],
+  ['preserveFinalDispatch: true', 'duplicate-dispatch guard preservation'],
+  ['postDispatchPauseReason', 'transport-aware watchdog pause'],
+  ['PIPELINE_TARGET_ROTATION_GRACE_MS = 6000', 'B/C rotation grace'],
+  ['PIPELINE_READY_HANDOFF_GRACE_MS = 15000', 'ready B/C retention grace'],
+  ['transportServiceCleared', 'balanced personal transport clearing'],
+  ['RECOVERABLE_SHORTAGE_SKIP_ADVANCES = 20', '20-advance shortage cooldown'],
+]) {
+  expect(source.includes(needle), `Generated master is missing ${label}`);
+}
+
+expect(source.includes('mergedRuntime: true'), 'Diagnostics must identify the merged runtime');
+expect(source.includes('pairedV2Required: false'), 'Diagnostics must declare that no paired V2 script is required');
+expect(source.includes('if (managedFrameRole)'), 'A/B/C document-start ownership gate missing');
+expect(source.includes('MF_V3_DORMANT_PRELOAD_BRIDGE_KEY'), 'Embedded Mission Finder dormant-preload bridge missing');
+expect(source.includes('This controller NEVER clicks Dispatch itself') === false, 'Install build should not depend on the stripped design comment');
+
+console.log(`PASS: V3 master merge is syntactically valid, single-install, ${bytes} bytes, and preserves ownership, recovery, transport and exact vehicle-rule contracts.`);
+
+
+===== scripts/check-v3-transport-context-recovery.mjs =====
+#!/usr/bin/env node
+
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
+
+const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
+
+function extractFunction(name) {
+  const marker = `function ${name}(`;
+  const start = source.indexOf(marker);
+  assert.ok(start >= 0, `function ${name} must exist`);
+  const brace = source.indexOf('{', start);
+  let depth = 0;
+  let quote = '';
+  let escaped = false;
+  let lineComment = false;
+  let blockComment = false;
+  for (let index = brace; index < source.length; index += 1) {
+    const character = source[index];
+    const next = source[index + 1] || '';
+    if (lineComment) {
+      if (character === '\n') lineComment = false;
+      continue;
+    }
+    if (blockComment) {
+      if (character === '*' && next === '/') {
+        blockComment = false;
+        index += 1;
+      }
+      continue;
+    }
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (character === '\\') escaped = true;
+      else if (character === quote) quote = '';
+      continue;
+    }
+    if (character === '/' && next === '/') {
+      lineComment = true;
+      index += 1;
+      continue;
+    }
+    if (character === '/' && next === '*') {
+      blockComment = true;
+      index += 1;
+      continue;
+    }
+    if (character === "'" || character === '"' || character === '`') {
+      quote = character;
+      continue;
+    }
+    if (character === '{') depth += 1;
+    if (character === '}' && --depth === 0) return source.slice(start, index + 1);
+  }
+  assert.fail(`function ${name} is unterminated`);
+}
+
+for (const token of [
+  'const TRANSPORT_HARD_RECOVERY_MS = 20000;',
+  'const TRANSPORT_RECOVERY_LIMIT = 1;',
+  'const TRANSPORT_RECOVERY_WINDOW_MS = 2 * 60 * 1000;',
+  'const TRANSPORT_ASSIST_DELAY_MS = 8000;',
+]) assert.ok(source.includes(token), `missing bounded transport contract: ${token}`);
+
+const identityFunction = extractFunction('transportContextIdentity');
+const routePath = value => {
+  try { return new URL(value, 'https://www.missionchief.co.uk').pathname; }
+  catch { return ''; }
+};
+const identityContext = vm.createContext({
+  state: {
+    transportServiceVehicleId: '',
+    transportServiceMissionId: '',
+    currentMissionId: '9001',
+  },
+  exactPatientPath(value) {
+    const path = routePath(value);
+    return /^\/vehicles\/\d+\/patient\/\d+\/?$/i.test(path) ? path : '';
+  },
+  exactPrisonerPath(value) {
+    const path = routePath(value);
+    return /^\/vehicles\/\d+\/gefangener\/\d+\/?$/i.test(path) ? path : '';
+  },
+  vehicleIdFromUrl(value) {
+    return routePath(value).match(/^\/vehicles\/(\d+)/)?.[1] || '';
+  },
+});
+vm.runInContext(`${identityFunction}\nthis.identity = transportContextIdentity;`, identityContext);
+assert.equal(
+  identityContext.identity(
+    { kind: 'PATIENT', patientPath: '/vehicles/5141045/patient/111' },
+    'https://www.missionchief.co.uk/vehicles/5141045/patient/111'
+  ),
+  'PATIENT:5141045:111'
+);
+assert.equal(
+  identityContext.identity(
+    { kind: 'PATIENT', patientPath: '/vehicles/5005589/patient/222' },
+    'https://www.missionchief.co.uk/vehicles/5005589/patient/222'
+  ),
+  'PATIENT:5005589:222',
+  'a new patient vehicle/subject must be treated as a new transport context'
+);
+assert.equal(
+  identityContext.identity(
+    { kind: 'PRISONER', prisonerPath: '/vehicles/7007/gefangener/333' },
+    'https://www.missionchief.co.uk/vehicles/7007/gefangener/333'
+  ),
+  'PRISONER:7007:333'
+);
+
+const releaseFallbackFunction = extractFunction('isPrisonerReleaseFallbackContext');
+const releaseFallbackContext = vm.createContext({ Number, Boolean });
+vm.runInContext(
+  `${releaseFallbackFunction}\nthis.isReleaseFallback = isPrisonerReleaseFallbackContext;`,
+  releaseFallbackContext
+);
+const noCellReleaseEvidence = {
+  kind: 'PRISONER',
+  cellSelectionAlerts: 1,
+  releaseLinks: 1,
+  prisonerPath: '',
+  greenPrisonDestinations: 0,
+};
+assert.equal(
+  releaseFallbackContext.isReleaseFallback(noCellReleaseEvidence),
+  true,
+  'the diagnostic no-cell/release-only screen must be owned by Release Prisoners'
+);
+assert.equal(
+  releaseFallbackContext.isReleaseFallback({
+    ...noCellReleaseEvidence,
+    prisonerPath: '/vehicles/7007/gefangener/333',
+    greenPrisonDestinations: 24,
+  }),
+  false,
+  'an exact usable prisoner destination must remain on the normal transport path'
+);
+
+const watcher = extractFunction('watchWorker');
+for (const token of [
+  'contextIdentity !== state.transportIdentity',
+  "'context-identity-changed'",
+  'maybeHandleTransportServiceTimeout(radioRequests)',
+]) assert.ok(watcher.includes(token), `watcher lost exact transport progression check: ${token}`);
+
+for (const name of [
+  'maybeHandleConfirmedPrisonerReleaseSuccess',
+  'maybeReturnFromCompletedPrisonerDestination',
+  'maybeRecoverStalledTransportContext',
+  'maybeRecoverStrandedPrisonerHandoff',
+]) {
+  const legacy = extractFunction(name);
+  assert.match(legacy, /\{\s*return false;\s*\}$/,
+    `${name} must be disabled after the Worker A/B split`);
+}
+
+const timeout = extractFunction('maybeHandleTransportServiceTimeout');
+assert.match(timeout, /state\.workerRole !== 'TRANSPORT_B'/,
+  'only transport Worker B may run the bounded transport timeout');
+assert.match(timeout, /TRANSPORT_SERVICE_MAX_MS/);
+assert.doesNotMatch(timeout, /clickDispatch\s*\(|skip(?:Current)?Mission\s*\(/i,
+  'transport timeout must never dispatch or skip a mission');
+
+const wakeRecovery = extractFunction('recoverFromSuspendedTimerGap');
+for (const token of [
+  'removeWorker(false)',
+  'refreshRadioTransportRequests(true)',
+  "state.workerRole === 'TRANSPORT_B'",
+  "returnToTopMissionAfterTransport('wake-recovery-request-cleared'",
+  "'wake-recovery-exact-transport-b'",
+  "'wake-recovery-oldest-personal-transport'",
+]) assert.ok(wakeRecovery.includes(token), `sleep recovery lost ${token}`);
+assert.doesNotMatch(wakeRecovery, /radioRequestFirstSeenAt\s*=\s*new Map\(/,
+  'wake recovery must preserve oldest-first Radio timing');
+assert.doesNotMatch(wakeRecovery, /transportServiceDeferredUntil\s*=\s*new Map\(/,
+  'wake recovery must preserve bounded transport retry cooldowns');
+
+const staffingQuarantine = extractFunction('mfQuarantineExactStaffingVehicle');
+assert.ok(staffingQuarantine.includes('if (exactIds.length !== 1) return null'));
+assert.ok(staffingQuarantine.includes("data-mf-staffing-quarantined"));
+assert.doesNotMatch(staffingQuarantine, /localStorage\.(?:clear|removeItem)/);
+
+const staffingLabelContext = vm.createContext({});
+vm.runInContext(
+  `${extractFunction('mfStaffingAlertVehicleLabel')}\nthis.parseLabel = mfStaffingAlertVehicleLabel;`,
+  staffingLabelContext
+);
+assert.equal(
+  staffingLabelContext.parseLabel('UPPER FALLS-AS1-AB-4 has not enough personnel'),
+  'UPPER FALLS-AS1-AB-4'
+);
+assert.equal(
+  staffingLabelContext.parseLabel('ICCU has not enough personnel'),
+  'ICCU',
+  'generic labels remain visible to the unique-match fail-closed gate'
+);
+
+const creditContext = vm.createContext({ Number });
+vm.runInContext(
+  `${extractFunction('parseCreditValueFromText')}\nthis.parseCredits = parseCreditValueFromText;`,
+  creditContext
+);
+assert.equal(creditContext.parseCredits('Average Credits: £12,345'), 12345);
+assert.equal(creditContext.parseCredits('Average mission credits ~ 9,876'), 9876);
+assert.equal(creditContext.parseCredits('Credits: £1,234,567'), 0, 'the account balance must not be mistaken for mission value');
+assert.equal(creditContext.parseCredits('No reward is displayed'), 0);
+
+for (const token of [
+  '"Any vehicle": "Ambulance"',
+  '"Airfield Operations Supervisors": "Airfield Operations Supervisor"',
+  '"Rescue Dog": "Search Dog Unit"',
+  '"Maximum amount of cars to tow": "Flatbed Recovery Vehicle"',
+  '"Maximum amount of trucks to tow": "HGV Recovery Vehicle"',
+]) assert.ok(source.includes(token), `preserved cross-reference missing: ${token}`);
+
+console.log(
+  'PASS: exact transport identity, immediate no-cell prisoner release ownership, transport-B-only timeout ownership, sleep recovery, staffing quarantine, credit parsing, and banked vehicle cross-references are preserved.'
+);
