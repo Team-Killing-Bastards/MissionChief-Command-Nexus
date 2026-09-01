@@ -12,8 +12,8 @@ Read the generated [Current Project State](PROJECT_STATE.md) first. This documen
 | Repository | `Team-Killing-Bastards/MissionChief-Command-Nexus` |
 | Default branch | `main` |
 | Canonical userscript | `src/missionchief-command-nexus.user.js` |
-| Command Nexus version | `3.0.40` |
-| Mission Finder baseline | `V10.6.177` |
+| Command Nexus version | `3.0.41` |
+| Mission Finder baseline | `V10.6.178` |
 | Resource Administration module | `V4.2.9` |
 | Unit / Station / Personnel UI versions | `3.3.28` / `1.3.23` / `1.3.12` |
 | Current-state record | `project-state.json` → generated `docs/PROJECT_STATE.md` |
@@ -113,7 +113,7 @@ These remain evidence questions rather than claims of missing implementation:
 ## Current engineering priorities
 
 1. Complete issue [#396](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/396): reduce long-session memory growth without slowing the hot mission or transport path.
-2. Live-validate the 3.0.40 role-aware wake-recovery and managed Worker A admission contract.
+2. Live-validate the 3.0.41 role-aware wake-recovery and managed Worker A admission contract.
 3. Expand live evidence and reproducible fixtures around high-risk mission selection.
 4. Keep regressions behaviour-focused and the repository free of one-use builders or trigger artifacts.
 5. Consolidate shared lifecycle, storage and UI responsibilities only behind protected behaviour.

@@ -1,7 +1,7 @@
 {
   "$schema": "./docs/project-state.schema.json",
   "schemaVersion": 1,
-  "lastUpdated": "2026-08-31",
+  "lastUpdated": "2026-09-01",
   "project": {
     "name": "MissionChief Command Nexus",
     "repository": "Team-Killing-Bastards/MissionChief-Command-Nexus",
@@ -52,12 +52,12 @@
     ]
   },
   "canonical": {
-    "status": "published",
-    "version": "3.0.40",
-    "sourceBytes": 2095358,
-    "sourceSha256": "9479f2836aae60e0259809aea29c000fbafa265cae2e3c176e2c67d6c69fdc01",
+    "status": "candidate",
+    "version": "3.0.41",
+    "sourceBytes": 2095431,
+    "sourceSha256": "4212d3c05d862eb70f4eb3888793e8deda03780ae53dfac8e90d4fe74a0375dd",
     "components": {
-      "missionFinder": "10.6.177",
+      "missionFinder": "10.6.178",
       "resourceAdministration": "4.2.9",
       "unitNaming": "3.3.28",
       "stationNaming": "1.3.23",
@@ -176,6 +176,15 @@
         "MEMORY-001",
         "A/B functional stability"
       ]
+    },
+    {
+      "id": "RUN-2026-09-01-V3040-HOT-BRAKES",
+      "title": "Hot Brakes standalone Airfield command mapping failure",
+      "file": "docs/evidence/hot-brakes-airfield-command-v3.0.40-2026-09-01.md",
+      "kind": "sanitised-summary",
+      "supports": [
+        "Airfield Firefighting Command Vehicle mapping"
+      ]
     }
   ],
   "openWork": [
@@ -236,18 +245,19 @@
     {
       "id": "RISK-LIVE-001",
       "severity": "medium",
-      "summary": "Command Nexus 3.0.40 is published but its new wake-recovery behaviour has not yet completed a recorded live validation run.",
-      "mitigation": "Run v3.0.40 from a clean MissionChief tab and inspect the exported wake/ownership evidence before changing thresholds."
+      "summary": "The 3.0.41 standalone Airfield Firefighting Command Vehicle mapping requires live Hot Brakes validation.",
+      "mitigation": "Run Hot Brakes - Code D on 3.0.41 and confirm the explicit command-vehicle row selects an eligible Airfield FF Command Vehicle; treat any Police Inspector shortage separately."
     }
   ],
   "handover": {
-    "nextAction": "Begin GitHub issue #396 with a read-only runtime-retention audit and diagnostic scope counters before changing cleanup thresholds or worker timing.",
+    "nextAction": "Live-validate the 3.0.41 Hot Brakes Airfield command mapping, then begin GitHub issue #396 with the read-only runtime-retention audit.",
     "readOrder": [
       "project-state.json",
       "docs/PROJECT_STATE.md",
       "docs/decisions/README.md",
       "docs/DEVELOPER_HANDOFF.md",
       "docs/evidence/live-run-v3.0.39-2026-08-30.md",
+      "docs/evidence/hot-brakes-airfield-command-v3.0.40-2026-09-01.md",
       "src/missionchief-command-nexus.user.js"
     ],
     "updateRule": "Edit project-state.json, run node scripts/render-project-state.mjs, then run node scripts/check-project-state.mjs. Do not hand-edit docs/PROJECT_STATE.md. After merge or release, update the Google Memory Bank with a concise pointer to the verified repository state and read it back."

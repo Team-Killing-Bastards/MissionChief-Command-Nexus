@@ -6,6 +6,15 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.41] - 2026-09-01
+
+### Fixed
+
+- Map the standalone plural `Airfield Firefighting Command Vehicles` requirement used by **Hot Brakes - Code D** to the existing `Airfield FF Command Vehicle` selector.
+- Preserve `Fire Officers or Airfield Firefighting Command Vehicles` as the separate Fire Officer alternative; the new mapping applies only when the command vehicle is explicitly required.
+- Add an executable regression using the exact v3.0.40 diagnostic wording and bump Mission Finder from `V10.6.177` to `V10.6.178`.
+- Increased the unified userscript version from `3.0.40` to `3.0.41`.
+
 ## [3.0.40] - 2026-08-31
 
 ### Fixed
