@@ -22,6 +22,7 @@ jobs:
         run: |
           python3 scripts/_temporary-build-v3041-airfield-command-mapping.py
           sed -i "s/const MISSION_FINDER_VERSION = '10.6.177';/const MISSION_FINDER_VERSION = '10.6.178';/" scripts/check-v3-12-hour-endurance-telemetry.mjs
+          sed -i "s/MODULE 2: MISSION FINDER V10.6.178/MODULE 2: MISSION FINDER/; s/Mission Finder 10.6.178 must be present/Mission Finder module must be present/" scripts/check-airfield-firefighting-command-vehicle-mapping-v106178.mjs
 
       - name: Validate exact candidate
         shell: bash
