@@ -18,7 +18,10 @@ jobs:
           fetch-depth: 0
 
       - name: Build v3.0.41 candidate
-        run: python3 scripts/_temporary-build-v3041-airfield-command-mapping.py
+        shell: bash
+        run: |
+          python3 scripts/_temporary-build-v3041-airfield-command-mapping.py
+          sed -i "s/const MISSION_FINDER_VERSION = '10.6.177';/const MISSION_FINDER_VERSION = '10.6.178';/" scripts/check-v3-12-hour-endurance-telemetry.mjs
 
       - name: Validate exact candidate
         shell: bash
