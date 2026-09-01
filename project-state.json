@@ -52,7 +52,7 @@
     ]
   },
   "canonical": {
-    "status": "candidate",
+    "status": "published",
     "version": "3.0.41",
     "sourceBytes": 2095431,
     "sourceSha256": "4212d3c05d862eb70f4eb3888793e8deda03780ae53dfac8e90d4fe74a0375dd",
@@ -65,19 +65,19 @@
     }
   },
   "production": {
-    "version": "3.0.40",
-    "tag": "v3.0.40",
-    "releaseCommit": "9f5ce8b5bac35b9fb2654a1712fba06363d94f5a",
-    "releaseUrl": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v3.0.40",
-    "publishedAt": "2026-08-31T06:52:56Z",
+    "version": "3.0.41",
+    "tag": "v3.0.41",
+    "releaseCommit": "c288eeedb91adb3b0fe7e471fa72f0ec50806512",
+    "releaseUrl": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v3.0.41",
+    "publishedAt": "2026-09-01T19:04:22Z",
     "asset": {
-      "name": "MissionChief-Command-Nexus-3.0.40.user.js",
-      "bytes": 2095358,
-      "sha256": "9479f2836aae60e0259809aea29c000fbafa265cae2e3c176e2c67d6c69fdc01"
+      "name": "MissionChief-Command-Nexus-3.0.41.user.js",
+      "bytes": 2095431,
+      "sha256": "4212d3c05d862eb70f4eb3888793e8deda03780ae53dfac8e90d4fe74a0375dd"
     },
     "releaseStatus": "published",
     "liveValidationStatus": "pending",
-    "liveValidationNote": "Repository and publication validation passed. The first live v3.0.40 run still needs to prove role-aware wake recovery and terminal managed Worker A admission under real MissionChief timing."
+    "liveValidationNote": "Repository, release-asset, deployment and Discord verification passed. Live Hot Brakes - Code D validation must confirm the standalone Airfield command-vehicle row selects an eligible Airfield FF Command Vehicle; any Police Inspector shortage remains a separate fail-closed personnel result."
   },
   "architecture": {
     "summary": "One lightweight parent controller owns exactly one heavy managed worker realm at a time. Mission Worker A handles mission selection and dispatch; on-demand Transport Worker B handles one exact personal patient or prisoner transport. No dormant mission preload exists.",

@@ -10,17 +10,17 @@ Last updated: **2026-09-01**
 
 | Item | Current state |
 |---|---|
-| Canonical source status | `candidate` |
+| Canonical source status | `published` |
 | Canonical source version | `3.0.41` |
-| Public production release | `3.0.40` |
-| Production tag | `v3.0.40` |
-| Production commit | `9f5ce8b5bac35b9fb2654a1712fba06363d94f5a` |
-| Production asset | `MissionChief-Command-Nexus-3.0.40.user.js` (2,095,358 bytes) |
+| Public production release | `3.0.41` |
+| Production tag | `v3.0.41` |
+| Production commit | `c288eeedb91adb3b0fe7e471fa72f0ec50806512` |
+| Production asset | `MissionChief-Command-Nexus-3.0.41.user.js` (2,095,431 bytes) |
 | Source SHA-256 | `4212d3c05d862eb70f4eb3888793e8deda03780ae53dfac8e90d4fe74a0375dd` |
 | Release status | `published` |
 | Live validation | `pending` |
 
-Release: [https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v3.0.40](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v3.0.40)
+Release: [https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v3.0.41](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v3.0.41)
 
 ### Component versions
 
@@ -34,7 +34,7 @@ Release: [https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/re
 
 ### Live-validation note
 
-Repository and publication validation passed. The first live v3.0.40 run still needs to prove role-aware wake recovery and terminal managed Worker A admission under real MissionChief timing.
+Repository, release-asset, deployment and Discord verification passed. Live Hot Brakes - Code D validation must confirm the standalone Airfield command-vehicle row selects an eligible Airfield FF Command Vehicle; any Police Inspector shortage remains a separate fail-closed personnel result.
 
 ## Authority order
 
