@@ -18,11 +18,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Extract exact async and normal functions
+      - name: Extract exact live training refresh functions
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
 
@@ -68,80 +69,74 @@ jobs:
                       quote = ch
                       i += 1
                       continue
-                  if ch == open_char:
-                      depth += 1
+                  if ch == open_char: depth += 1
                   elif ch == close_char:
                       depth -= 1
-                      if depth == 0:
-                          return i
+                      if depth == 0: return i
                   i += 1
               return -1
 
+          function_matches = list(re.finditer(
+              r'(?m)^\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(', source
+          ))
+          function_names = [match.group(1) for match in function_matches]
+          relevant_names = [
+              name for name in function_names
+              if any(token in name.lower() for token in (
+                  'training', 'trained', 'registry', 'inspector', 'policevehicle',
+                  'police_vehicle', 'personnel', 'qualification'
+              ))
+          ]
+          Path('.tmp-v3042-training-function-index.txt').write_text(
+              '\n'.join(relevant_names) + '\n', encoding='utf-8'
+          )
+
           def extract_function(name):
-              candidates = [
-                  source.find(f'    async function {name}('),
-                  source.find(f'    function {name}('),
-                  source.find(f'async function {name}('),
-                  source.find(f'function {name}('),
-              ]
-              candidates = [value for value in candidates if value >= 0]
-              if not candidates:
-                  return f'FUNCTION NOT FOUND: {name}\n'
-              start = min(candidates)
-              paren = source.find('(', start)
+              matches = [match for match in function_matches if match.group(1) == name]
+              if not matches: return f'FUNCTION NOT FOUND: {name}\n'
+              start = matches[0].start()
+              paren = source.find('(', matches[0].start())
               paren_end = scan_balanced(paren, '(', ')')
-              if paren_end < 0:
-                  return f'PARAMETERS UNTERMINATED: {name}\n'
+              if paren_end < 0: return f'PARAMETERS UNTERMINATED: {name}\n'
               brace = source.find('{', paren_end)
               body_end = scan_balanced(brace, '{', '}')
-              if body_end < 0:
-                  return f'BODY UNTERMINATED: {name}\n'
+              if body_end < 0: return f'BODY UNTERMINATED: {name}\n'
               return source[start:body_end + 1] + '\n'
 
-          groups = {
-              'selection-orchestration': [
-                  'handleCombinedLogic',
-                  'processRequirementRows',
-                  'processVehicles',
-                  'selectVehiclesForTrainedPersonnelRequirements',
-                  'preparePoliceVehicleSafetyForRows',
-                  'ensurePoliceTrainingRegistryReady',
-                  'ensureLiveTrainingVerificationPool',
-              ],
-              'mission-update': [
-                  'readMissionUpdateRows',
-                  'getExplicitCurrentMissingRequirementRows',
-                  'hasExplicitCurrentMissingRequirementRows',
-                  'shouldRunPostSelectionMissionUpdate',
-                  'handleMissionUpdateUnits',
-                  'waitForMissionUpdateBeforeUnitFinder',
-              ],
-              'dispatch-readiness': [
-                  'waitForFastDispatchReadiness',
-                  'getCurrentAutoDispatchSelectionState',
-                  'isAutoSelectionValidForCurrentMission',
-                  'markAutoSelectionCompletedForCurrentMission',
-                  'retryAutoSelectionWhenZero',
-                  'runAutoModeLoop',
-                  'clickDispatchOnly',
-                  'clickMissionDispatchByValue',
-              ],
-              'training-registry': [
-                  'readPersonnelTrainingRegistry',
-                  'getRegistryEntryForMissionCheckbox',
-                  'isAuthoritativeLivePoliceTrainingEntry',
-                  'getRegistryTrainingQualifiedCount',
-                  'getRemainingTrainedPersonnelRequirements',
-                  'countSelectedTrainingVehicles',
-                  'verifyTrainingVehicleLive',
-                  'refreshTrainingRegistryEntries',
-              ],
-          }
-          for group, names in groups.items():
-              content = []
-              for name in names:
-                  content.append(f'===== FUNCTION {name} =====\n{extract_function(name)}')
-              Path(f'.tmp-v3042-exact-{group}.txt').write_text('\n\n'.join(content), encoding='utf-8')
+          requested = [
+              'prepareTrainedPersonnelRegistryForRows',
+              'refreshPoliceInspectorRegistryFromLiveVehicles',
+              'refreshOrdinaryPoliceRegistryFromLiveVehicles',
+              'refreshMissionTrainingRegistryFromLiveVehicles',
+              'refreshMissionVehicleTrainingEntry',
+              'verifyMissionVehicleTrainingEntry',
+              'getLiveTrainingVerificationCandidates',
+              'getStrictTrainingVerificationCandidateCheckboxes',
+              'refreshPoliceInspectorRegistryEntry',
+              'readPersonnelTrainingRegistry',
+              'writePersonnelTrainingRegistry',
+              'getRegistryEntryForMissionCheckbox',
+              'isStrictLiveVerifiedTrainingEntry',
+              'isAuthoritativeLivePoliceTrainingEntry',
+              'getRegistryTrainingQualifiedCount',
+              'getRemainingTrainedPersonnelRequirements',
+              'getTrainedCandidateMetrics',
+              'getTrainingCandidatePersonnelProfiles',
+          ]
+          # Also include every indexed function with refresh/verify/prepare in its name.
+          for name in relevant_names:
+              lowered = name.lower()
+              if any(token in lowered for token in ('refresh', 'verify', 'prepare')):
+                  requested.append(name)
+          seen = set()
+          blocks = []
+          for name in requested:
+              if name in seen: continue
+              seen.add(name)
+              blocks.append(f'===== FUNCTION {name} =====\n{extract_function(name)}')
+          Path('.tmp-v3042-live-training-refresh.txt').write_text(
+              '\n\n'.join(blocks), encoding='utf-8'
+          )
           PY
 
       - name: Commit exact function output
@@ -150,5 +145,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .tmp-v3042-*.txt
-          git commit -m "Extract exact async v3.0.42 dispatch functions [skip v3042 inspect]"
+          git commit -m "Extract live training refresh functions [skip v3042 inspect]"
           git push origin HEAD:fix/v3042-auto-trained-personnel-completeness
