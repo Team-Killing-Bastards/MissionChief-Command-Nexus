@@ -18,96 +18,118 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Extract trained-personnel and final-dispatch contexts
+      - name: Extract compact trained-personnel and dispatch contexts
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import bisect
+          import re
 
           source_path = Path('src/missionchief-command-nexus.user.js')
           source = source_path.read_text(encoding='utf-8')
-          lines = source.splitlines()
-          terms = [
-              'Armed Response Personnel',
-              'Armed Response',
+          newline_offsets = [0]
+          newline_offsets.extend(match.end() for match in re.finditer('\n', source))
+
+          def line_number(offset):
+              return bisect.bisect_right(newline_offsets, offset)
+
+          def compact_window(text, offset, before=4200, after=6200):
+              start = max(0, offset - before)
+              end = min(len(text), offset + after)
+              block = text[start:end]
+              # Keep context readable when the source contains generated one-line maps.
+              block = re.sub(r'(.{240})(?=.)', r'\1\n↳ ', block)
+              return start, end, block
+
+          needles = [
+              'Armed Response Personnel (In Armed Vehicles)',
               'Assigned Trained Police Vehicles',
               'Assigned trained vehicles',
+              'mission-definition-required-personnel',
+              'visible-missing-personnel-alert',
               'trained personnel short',
               'trained-personnel shortage',
-              'requiredPersonnel',
-              'liveMissingPersonnel',
-              'missingPersonnel',
-              'initialRequiredPersonnel',
+              'after-update-first-gate',
               'selectedVehicleIds',
               'checkedVehicleIds',
               'late additions',
-              'lateAddition',
-              'Dispatch & Next',
-              'dispatchButton',
-              'clickDispatch',
-              'mission-definition-required-personnel',
-              'visible-missing-personnel-alert',
-              'after-update-first-gate',
+              'Dispatch & Next clicked',
+              'Units ready for dispatch',
           ]
-          ranges = []
-          hits = []
-          for number, line in enumerate(lines, 1):
-              matched = [term for term in terms if term.lower() in line.lower()]
-              if matched:
-                  hits.append((number, matched, line))
-                  ranges.append((max(1, number - 70), min(len(lines), number + 130)))
-          merged = []
-          for start, end in sorted(ranges):
-              if merged and start <= merged[-1][1] + 5:
-                  merged[-1] = (merged[-1][0], max(merged[-1][1], end))
-              else:
-                  merged.append((start, end))
-          output = [f'SOURCE LINES: {len(lines)}', f'HITS: {len(hits)}', '']
-          output.append('===== HIT INDEX =====')
-          for number, matched, line in hits:
-              output.append(f'{number:06d} [{" | ".join(matched)}] {line}')
-          output.append('')
-          for index, (start, end) in enumerate(merged, 1):
-              output.append(f'===== SOURCE CONTEXT {index} [{start}-{end}] =====')
-              output.extend(f'{i:06d}: {lines[i-1]}' for i in range(start, end + 1))
-              output.append('')
-          Path('.tmp-v3042-source-contexts.txt').write_text('\n'.join(output), encoding='utf-8')
 
-          test_terms = [
-              'armed response', 'assigned trained', 'trained personnel',
-              'under-dispatch', 'late addition', 'mission update',
-              'initial trained', 'live missing', 'selected-unit',
-              'selected vehicle', 'dispatch',
+          output = [f'SOURCE BYTES: {len(source)}', '']
+          seen = set()
+          for needle in needles:
+              cursor = 0
+              occurrences = []
+              while True:
+                  pos = source.lower().find(needle.lower(), cursor)
+                  if pos < 0:
+                      break
+                  occurrences.append(pos)
+                  cursor = pos + len(needle)
+              output.append(f'===== NEEDLE: {needle} ({len(occurrences)} occurrence(s)) =====')
+              for occurrence_index, pos in enumerate(occurrences[:16], 1):
+                  key = (needle.lower(), pos)
+                  if key in seen:
+                      continue
+                  seen.add(key)
+                  start, end, block = compact_window(source, pos)
+                  prefix = source[max(0, pos - 14000):pos]
+                  symbols = re.findall(
+                      r'(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(|(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function\s*)?\(',
+                      prefix,
+                  )
+                  nearest = next((a or b for a, b in reversed(symbols) if a or b), '')
+                  output.append(
+                      f'--- occurrence {occurrence_index}; source line {line_number(pos)}; chars {start}-{end}; nearest symbol {nearest or "unknown"} ---'
+                  )
+                  output.append(block)
+                  output.append('')
+              output.append('')
+          Path('.tmp-v3042-targeted-source.txt').write_text('\n'.join(output), encoding='utf-8')
+
+          target_tests = [
+              'scripts/check-auto-dispatch-eod-required-personnel.mjs',
+              'scripts/check-initial-trained-personnel-authority.mjs',
+              'scripts/check-mission-definition-personnel-preload.mjs',
+              'scripts/check-mission-definition-trained-personnel.mjs',
+              'scripts/check-mission-update-single-pass.mjs',
+              'scripts/check-missing-on-mission-authority.mjs',
+              'scripts/check-missing-requirements-priority.mjs',
+              'scripts/check-police-irv-fallback.mjs',
+              'scripts/check-trained-coverage-optimizer.mjs',
+              'scripts/check-trained-personnel-fail-closed.mjs',
+              'scripts/check-trained-personnel-live-missing-display-v1081.mjs',
+              'scripts/check-trained-personnel-live-verification-pool.mjs',
+              'scripts/check-trained-personnel-on-scene-authority-v1080.mjs',
+              'scripts/check-v3-final-dispatch-handoff.mjs',
+              'scripts/check-v3-transport-only-zero-selection.mjs',
           ]
           test_output = []
+          for filename in target_tests:
+              path = Path(filename)
+              if path.exists():
+                  test_output.append(f'===== {filename} =====\n{path.read_text(encoding="utf-8")}')
+          Path('.tmp-v3042-targeted-tests.txt').write_text('\n\n'.join(test_output), encoding='utf-8')
+
+          # Compact index of every check containing the relevant wording.
+          index = []
+          terms = ['armed response', 'assigned trained', 'trained personnel', 'under-dispatch', 'late addition', 'final dispatch', 'checked ids']
           for path in sorted(Path('scripts').glob('check-*.mjs')):
               text = path.read_text(encoding='utf-8')
-              matched = [term for term in test_terms if term in text.lower() or term.replace(' ', '-') in path.name.lower()]
+              matched = [term for term in terms if term in text.lower() or term.replace(' ', '-') in path.name.lower()]
               if matched:
-                  test_output.append(f'===== {path} [{", ".join(matched)}] =====\n{text}')
-          Path('.tmp-v3042-test-contexts.txt').write_text('\n\n'.join(test_output) or 'NO MATCHING TESTS\n', encoding='utf-8')
-
-          # Capture historical PR patches for the exact contracts most likely to have regressed.
-          import subprocess
-          history = []
-          for pr in (94, 97, 102, 151, 166, 292, 294, 295):
-              try:
-                  patch = subprocess.check_output(
-                      ['git', 'show', '--format=fuller', '--stat', f'refs/pull/{pr}/merge'],
-                      text=True,
-                      stderr=subprocess.STDOUT,
-                  )
-              except Exception as exc:
-                  patch = f'UNAVAILABLE: {exc}'
-              history.append(f'===== PR {pr} MERGE SUMMARY =====\n{patch}')
-          Path('.tmp-v3042-history-index.txt').write_text('\n\n'.join(history), encoding='utf-8')
+                  index.append(f'{path}: {", ".join(matched)}')
+          Path('.tmp-v3042-test-index.txt').write_text('\n'.join(index) + '\n', encoding='utf-8')
           PY
 
-      - name: Commit inspection output
+      - name: Commit compact inspection output
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .tmp-v3042-*.txt
-          git commit -m "Add v3.0.42 trained dispatch inspection [skip v3042 inspect]"
+          git commit -m "Refresh v3.0.42 trained dispatch inspection [skip v3042 inspect]"
           git push origin HEAD:fix/v3042-auto-trained-personnel-completeness
