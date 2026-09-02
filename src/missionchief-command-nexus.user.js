@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.41
+// @version      3.0.42
 // @description  MissionChief safe background automation.
 // @author       MartyBlyth
 // @license      MIT
@@ -152,9 +152,9 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.41';
-const MASTER_VERSION = '3.0.41';
-const MISSION_FINDER_VERSION = '10.6.178';
+const VERSION = '3.0.42';
+const MASTER_VERSION = '3.0.42';
+const MISSION_FINDER_VERSION = '10.6.179';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
 const STYLE_ID = 'mcn-v3-map-controller-style';
@@ -18668,7 +18668,7 @@ bootMark('heavy-runtime-start');
     }
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.178
+         * MODULE 2: MISSION FINDER V10.6.179
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -20940,7 +20940,7 @@ bootMark('heavy-runtime-start');
             reason: String(reason || 'manual-export'),
             versions: {
                 commandNexus: '3.0.37',
-                missionFinder: 'V10.6.178',
+                missionFinder: 'V10.6.179',
                 personnelAssignment: '1.3.8'
             },
             mission: {
@@ -39334,11 +39334,37 @@ let sessionRuntimeTicker = null;
                     requirements,
                     sourceLabel
                 );
-                const result =
+                let result =
                     selectVehiclesForTrainedPersonnelRequirements(
                         requirements,
                         sourceLabel
                     );
+                if (
+                    !result.trainingSatisfied ||
+                    !result.vehicleCoverageSatisfied
+                ) {
+                    if (mfDebugEnabled) {
+                        debugLog(
+                            'TRAINED PERSONNEL FINAL RETRY',
+                            `${sourceLabel} | first verified pass remained short; waiting briefly, refreshing only unverified assignment pages and re-running the shared trained selector once.`
+                        );
+                    }
+                    updateStatusBox(
+                        'Unit Finder rechecking trained vehicle assignments once before blocking dispatch...'
+                    );
+                    await wait(250);
+                    const retrySource =
+                        `${sourceLabel} FINAL RETRY`;
+                    await refreshPoliceInspectorRegistryFromLiveVehicles(
+                        requirements,
+                        retrySource
+                    );
+                    result =
+                        selectVehiclesForTrainedPersonnelRequirements(
+                            requirements,
+                            retrySource
+                        );
+                }
                 const selectedCount =
                     result.selectedVehicleCount;
                 const displayedTarget =
@@ -51122,76 +51148,68 @@ async function handleAutoPrisonerReleaseAfterActions() {
                     );
                     break;
                 }
-                updateStatusBox(
-                    'Auto Mode: units not ready. Dispatching to skip mission...'
-                );
+                changeDispatchBoxColor(false);
+                const incompleteSelectionState =
+                    getCurrentAutoDispatchSelectionState();
+                const selectedCount =
+                    Math.max(
+                        0,
+                        parseInt(
+                            incompleteSelectionState?.selectedCount,
+                            10
+                        ) || 0
+                    );
                 addMissionLogEntry(
                     'skipped',
                     getCurrentMissionName(),
-                    'Units not ready',
+                    selectedCount > 0
+                        ? 'Incomplete Unit Finder selection; no vehicles dispatched'
+                        : 'Units not ready',
                     null
                 );
-                if (
-                    getCurrentAutoDispatchSelectionState()
-                        .selectedCount === 0
-                ) {
+                if (selectedCount === 0) {
                     stopAutoMode(
                         'Auto stopped: Unit Finder selected 0 vehicles after a full-list retry. The mission was not dispatched.'
                     );
                     break;
                 }
-                const queueStateBeforeDispatch = getNextMissionQueueState();
-                const finalQueueMission = isFinalQueueSignal(queueStateBeforeDispatch);
-                logQueueState('skip-before-dispatch', queueStateBeforeDispatch, finalQueueMission);
-                if (!claimAutoMissionDispatch(autoCycleMissionId)) {
-                    updateStatusBox(
-                        'Auto Mode: duplicate Dispatch blocked for this mission. Waiting for MissionChief to finish the existing handoff...'
-                    );
-                    break;
-                }
-                clearAutoAdvanceAfterDispatchState(
-                    'Auto skip uses native Dispatch-and-next'
-                );
-                if (finalQueueMission) {
-                    sessionStorage.setItem(
-                        MF_FINAL_QUEUE_DISPATCH_FLAG,
-                        'true'
-                    );
-                }
-                if (!isCurrentMissionExecutionOwner('before skip dispatch')) {
-                    removeMissionFinderPanelForClosedMission(
-                        'stale Auto Mode skip dispatch blocked'
-                    );
-                    break;
-                }
-                if (!clickDispatchOnly()) {
-                    releaseAutoMissionDispatch(autoCycleMissionId);
-                    sessionStorage.removeItem(
-                        MF_FINAL_QUEUE_DISPATCH_FLAG
-                    );
-                    stopAutoMode(
-                        finalQueueMission
-                            ? 'Auto stopped. Final mission Dispatch button was not found.'
-                            : 'Auto stopped. Dispatch & Next button was not found while skipping.'
-                    );
-                    break;
-                }
-                clearAutoSelectionMissionGuard(
-                    'skip mission dispatched'
-                );
-                resetVehicleLoadState();
-                if (finalQueueMission) {
-                    const restarted =
-                        await handleAfterFinalQueueDispatch(
-                            queueStateBeforeDispatch
-                        );
-                    if (restarted) {
-                        continue;
-                    }
-                    break;
-                }
-                updateStatusBox(
-                    'Auto Mode: Dispatch & Next clicked. Waiting for the next mission...'
+                const incompleteRows =
+                    (
+                        Array.isArray(vehicleLoadState.rows)
+                            ? vehicleLoadState.rows
+                            : []
+                    )
+                        .map(row => {
+                            const required =
+                                Math.max(
+                                    0,
+                                    parseInt(row?.required, 10) || 0
+                                );
+                            const selected =
+                                Math.max(
+                                    0,
+                                    parseInt(row?.selected, 10) || 0
+                                );
+                            return {
+                                name:
+                                    String(
+                                        row?.originalName ||
+                                        row?.mappedName ||
+                                        'Requirement'
+                                    ).trim(),
+                                shortfall:
+                                    Math.max(0, required - selected)
+                            };
+                        })
+                        .filter(row => row.shortfall > 0)
+                        .slice(0, 6)
+                        .map(row => `${row.name} x${row.shortfall}`);
+                const incompleteDetail =
+                    incompleteRows.length > 0
+                        ? ` Confirmed requirements still missing: ${incompleteRows.join(', ')}.`
+                        : '';
+                stopAutoMode(
+                    `Auto stopped: Required mission resource is unavailable. Unit Finder selected ${selectedCount} vehicle${selectedCount === 1 ? '' : 's'}, but the mission is not fully covered.${incompleteDetail} No vehicles were dispatched.`
                 );
                 break;
             }
@@ -52781,7 +52799,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
                     return 1;
                 },
                 missionFinderVersion() {
-                    return '10.6.178';
+                    return '10.6.179';
                 },
                 isDormant() {
                     return mfV3DormantPreload;
@@ -52802,7 +52820,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
                     } catch (_error) {}
                     return {
                         protocolVersion: 1,
-                        missionFinderVersion: '10.6.178',
+                        missionFinderVersion: '10.6.179',
                         dormant: mfV3DormantPreload,
                         promoted: mfV3DormantPreloadPromoted,
                         promotedAt: mfV3DormantPreloadPromotedAt,
@@ -52925,14 +52943,14 @@ const missionId = () => String(location.pathname || '').match(/^\/missions\/(\d+
 const ownership = () => window.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__ || window.__MCN_V3_PIPELINE_PRELOAD_BRIDGE__ || null;
 const bridge = Object.freeze({
 protocolVersion: () => 1,
-missionFinderVersion: () => '10.6.178',
+missionFinderVersion: () => '10.6.179',
 isDormant: () => !promoted,
 isPromoted: () => promoted,
 missionId,
 status() {
 return {
 protocolVersion: 1,
-missionFinderVersion: '10.6.178',
+missionFinderVersion: '10.6.179',
 dormant: !promoted,
 promoted,
 promotedAt,

@@ -6,6 +6,16 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.42] - 2026-09-02
+
+### Fixed
+
+- Give trained-personnel selection one bounded final live assignment refresh and selector pass before Auto Mode declares a verified shortage. Failed or incomplete assignment-page reads can therefore recover in the same Auto cycle instead of requiring a second manual Unit Finder click.
+- Stop Auto Mode from dispatching a partial checked vehicle set merely to skip an under-covered mission. Zero-selection and partial-selection failures now remain fail-closed and are handed back to the controller for normal shortage quarantine and retry.
+- Preserve the exact Armed Response contract: type-25 Armed Traffic Cars only, with each counted occupant holding both Roads Policing and Firearms qualifications.
+- Add permanent regressions for the trained-personnel retry and the no-partial-dispatch gate.
+- Increase Command Nexus from `3.0.41` to `3.0.42` and Mission Finder from `10.6.178` to `10.6.179`.
+
 ## [3.0.41] - 2026-09-01
 
 ### Fixed
