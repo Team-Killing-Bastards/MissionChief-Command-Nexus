@@ -1,0 +1,113 @@
+name: Temporary v3.0.42 trained dispatch inspection
+
+on:
+  push:
+    branches:
+      - fix/v3042-auto-trained-personnel-completeness
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    if: ${{ !contains(github.event.head_commit.message, '[skip v3042 inspect]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract trained-personnel and final-dispatch contexts
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source_path = Path('src/missionchief-command-nexus.user.js')
+          source = source_path.read_text(encoding='utf-8')
+          lines = source.splitlines()
+          terms = [
+              'Armed Response Personnel',
+              'Armed Response',
+              'Assigned Trained Police Vehicles',
+              'Assigned trained vehicles',
+              'trained personnel short',
+              'trained-personnel shortage',
+              'requiredPersonnel',
+              'liveMissingPersonnel',
+              'missingPersonnel',
+              'initialRequiredPersonnel',
+              'selectedVehicleIds',
+              'checkedVehicleIds',
+              'late additions',
+              'lateAddition',
+              'Dispatch & Next',
+              'dispatchButton',
+              'clickDispatch',
+              'mission-definition-required-personnel',
+              'visible-missing-personnel-alert',
+              'after-update-first-gate',
+          ]
+          ranges = []
+          hits = []
+          for number, line in enumerate(lines, 1):
+              matched = [term for term in terms if term.lower() in line.lower()]
+              if matched:
+                  hits.append((number, matched, line))
+                  ranges.append((max(1, number - 70), min(len(lines), number + 130)))
+          merged = []
+          for start, end in sorted(ranges):
+              if merged and start <= merged[-1][1] + 5:
+                  merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+              else:
+                  merged.append((start, end))
+          output = [f'SOURCE LINES: {len(lines)}', f'HITS: {len(hits)}', '']
+          output.append('===== HIT INDEX =====')
+          for number, matched, line in hits:
+              output.append(f'{number:06d} [{" | ".join(matched)}] {line}')
+          output.append('')
+          for index, (start, end) in enumerate(merged, 1):
+              output.append(f'===== SOURCE CONTEXT {index} [{start}-{end}] =====')
+              output.extend(f'{i:06d}: {lines[i-1]}' for i in range(start, end + 1))
+              output.append('')
+          Path('.tmp-v3042-source-contexts.txt').write_text('\n'.join(output), encoding='utf-8')
+
+          test_terms = [
+              'armed response', 'assigned trained', 'trained personnel',
+              'under-dispatch', 'late addition', 'mission update',
+              'initial trained', 'live missing', 'selected-unit',
+              'selected vehicle', 'dispatch',
+          ]
+          test_output = []
+          for path in sorted(Path('scripts').glob('check-*.mjs')):
+              text = path.read_text(encoding='utf-8')
+              matched = [term for term in test_terms if term in text.lower() or term.replace(' ', '-') in path.name.lower()]
+              if matched:
+                  test_output.append(f'===== {path} [{", ".join(matched)}] =====\n{text}')
+          Path('.tmp-v3042-test-contexts.txt').write_text('\n\n'.join(test_output) or 'NO MATCHING TESTS\n', encoding='utf-8')
+
+          # Capture historical PR patches for the exact contracts most likely to have regressed.
+          import subprocess
+          history = []
+          for pr in (94, 97, 102, 151, 166, 292, 294, 295):
+              try:
+                  patch = subprocess.check_output(
+                      ['git', 'show', '--format=fuller', '--stat', f'refs/pull/{pr}/merge'],
+                      text=True,
+                      stderr=subprocess.STDOUT,
+                  )
+              except Exception as exc:
+                  patch = f'UNAVAILABLE: {exc}'
+              history.append(f'===== PR {pr} MERGE SUMMARY =====\n{patch}')
+          Path('.tmp-v3042-history-index.txt').write_text('\n\n'.join(history), encoding='utf-8')
+          PY
+
+      - name: Commit inspection output
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .tmp-v3042-*.txt
+          git commit -m "Add v3.0.42 trained dispatch inspection [skip v3042 inspect]"
+          git push origin HEAD:fix/v3042-auto-trained-personnel-completeness
