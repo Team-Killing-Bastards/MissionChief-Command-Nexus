@@ -1,7 +1,7 @@
 {
   "$schema": "./docs/project-state.schema.json",
   "schemaVersion": 1,
-  "lastUpdated": "2026-09-01",
+  "lastUpdated": "2026-09-02",
   "project": {
     "name": "MissionChief Command Nexus",
     "repository": "Team-Killing-Bastards/MissionChief-Command-Nexus",
@@ -52,12 +52,12 @@
     ]
   },
   "canonical": {
-    "status": "published",
-    "version": "3.0.41",
-    "sourceBytes": 2095431,
-    "sourceSha256": "4212d3c05d862eb70f4eb3888793e8deda03780ae53dfac8e90d4fe74a0375dd",
+    "status": "candidate",
+    "version": "3.0.42",
+    "sourceBytes": 2096471,
+    "sourceSha256": "5e4d83e0004e4e07bb88a56c1448dd2c54124cc3a3a0d45ea760b29b423a4eb0",
     "components": {
-      "missionFinder": "10.6.178",
+      "missionFinder": "10.6.179",
       "resourceAdministration": "4.2.9",
       "unitNaming": "3.3.28",
       "stationNaming": "1.3.23",
@@ -185,6 +185,16 @@
       "supports": [
         "Airfield Firefighting Command Vehicle mapping"
       ]
+    },
+    {
+      "id": "RUN-2026-09-02-V3041-ARMED-AUTO",
+      "title": "Auto Armed Response false shortage and partial dispatch",
+      "file": "docs/evidence/auto-armed-personnel-and-partial-dispatch-v3.0.41-2026-09-02.md",
+      "kind": "sanitised-summary",
+      "supports": [
+        "bounded trained-personnel final retry",
+        "no partial dispatch on incomplete coverage"
+      ]
     }
   ],
   "openWork": [
@@ -247,10 +257,16 @@
       "severity": "medium",
       "summary": "The 3.0.41 standalone Airfield Firefighting Command Vehicle mapping requires live Hot Brakes validation.",
       "mitigation": "Run Hot Brakes - Code D on 3.0.41 and confirm the explicit command-vehicle row selects an eligible Airfield FF Command Vehicle; treat any Police Inspector shortage separately."
+    },
+    {
+      "id": "RISK-LIVE-002",
+      "severity": "medium",
+      "summary": "The 3.0.42 trained-personnel final retry and no-partial-dispatch gate require live Auto Mode validation.",
+      "mitigation": "Run a fully staffed Armed Response mission and an intentionally under-covered mission; confirm the first completes in one Auto cycle and the second dispatches zero vehicles before controller quarantine."
     }
   ],
   "handover": {
-    "nextAction": "Live-validate the 3.0.41 Hot Brakes Airfield command mapping, then begin GitHub issue #396 with the read-only runtime-retention audit.",
+    "nextAction": "Live-validate the 3.0.42 Armed Response retry and no-partial-dispatch behaviour, then continue GitHub issue #396 with the read-only runtime-retention audit.",
     "readOrder": [
       "project-state.json",
       "docs/PROJECT_STATE.md",
@@ -258,6 +274,7 @@
       "docs/DEVELOPER_HANDOFF.md",
       "docs/evidence/live-run-v3.0.39-2026-08-30.md",
       "docs/evidence/hot-brakes-airfield-command-v3.0.40-2026-09-01.md",
+      "docs/evidence/auto-armed-personnel-and-partial-dispatch-v3.0.41-2026-09-02.md",
       "src/missionchief-command-nexus.user.js"
     ],
     "updateRule": "Edit project-state.json, run node scripts/render-project-state.mjs, then run node scripts/check-project-state.mjs. Do not hand-edit docs/PROJECT_STATE.md. After merge or release, update the Google Memory Bank with a concise pointer to the verified repository state and read it back."
