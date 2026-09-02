@@ -1,0 +1,991 @@
+===== FUNCTION waitForFastDispatchReadiness =====
+    async function waitForFastDispatchReadiness(
+        reason,
+        options = {}
+    ) {
+        const minimumWait = Number.isFinite(options.minimumWait)
+            ? options.minimumWait
+            : 250;
+        const stableFor = Number.isFinite(options.stableFor)
+            ? options.stableFor
+            : 450;
+        const timeout = Number.isFinite(options.timeout)
+            ? options.timeout
+            : 2000;
+        const startedAt = Date.now();
+        let lastSignature = '';
+        let stableSince = 0;
+        while (Date.now() - startedAt < timeout) {
+            if (
+                isManualAutoStopActive() ||
+                !autoModeRunning
+            ) {
+                return false;
+            }
+            if (
+                detectAndLatchStaffingBlock(
+                    `fast-ready-${reason}`
+                )
+            ) {
+                return false;
+            }
+            const signature =
+                getDispatchReadinessSignature();
+            if (signature !== lastSignature) {
+                lastSignature = signature;
+                stableSince = Date.now();
+            }
+            const elapsed = Date.now() - startedAt;
+            const stableElapsed = Date.now() - stableSince;
+            if (
+                elapsed >= minimumWait &&
+                stableElapsed >= stableFor &&
+                !isLoadingBarVisible()
+            ) {
+                if (mfDebugEnabled) {
+                    debugLog(
+                        'FAST DISPATCH',
+                        `${reason || 'selection'} stable after ${elapsed}ms`
+                    );
+                }
+                return true;
+            }
+            await wait(100);
+        }
+        if (mfDebugEnabled) {
+            debugLog(
+                'FAST DISPATCH',
+                `${reason || 'selection'} reached ${timeout}ms safety limit`
+            );
+        }
+        return true;
+    }
+
+
+===== FUNCTION getCurrentAutoDispatchSelectionState =====
+    function getCurrentAutoDispatchSelectionState() {
+        const badge =
+            document.getElementById(
+                'vehicle_amount'
+            );
+        const badgeCount =
+            parseInt(
+                (
+                    badge?.textContent ||
+                    badge?.innerText ||
+                    '0'
+                ).replace(/[^0-9]/g, ''),
+                10
+            ) || 0;
+        const checkedCount =
+            document.querySelectorAll(
+                'input.vehicle_checkbox:checked'
+            ).length;
+        return {
+            badgeCount,
+            checkedCount,
+            selectedCount:
+                Math.max(
+                    badgeCount,
+                    checkedCount
+                )
+        };
+    }
+
+
+===== FUNCTION isAutoSelectionValidForCurrentMission =====
+    function isAutoSelectionValidForCurrentMission() {
+        const missionId =
+            getCurrentMissionIdForQueueRestart();
+        return !!(
+            missionId &&
+            mfAutoSelectionMissionId &&
+            missionId ===
+                mfAutoSelectionMissionId &&
+            mfAutoSelectionCompletedAt > 0
+        );
+    }
+
+
+===== FUNCTION markAutoSelectionCompletedForCurrentMission =====
+    function markAutoSelectionCompletedForCurrentMission(
+        reason = ''
+    ) {
+        const missionId =
+            getCurrentMissionIdForQueueRestart();
+        mfAutoSelectionMissionId =
+            missionId ||
+            '';
+        mfAutoSelectionCompletedAt =
+            Date.now();
+        if (mfDebugEnabled) {
+            debugLog(
+                'AUTO SELECTION GUARD',
+                `Completed | mission=${missionId || 'unknown'} | reason=${reason || 'unknown'}`
+            );
+        }
+        return !!missionId;
+    }
+
+
+===== FUNCTION retryAutoSelectionWhenZero =====
+    async function retryAutoSelectionWhenZero() {
+        const before =
+            getCurrentAutoDispatchSelectionState();
+        if (
+            before.selectedCount > 0
+        ) {
+            return true;
+        }
+        updateStatusBox(
+            'Auto Mode selected 0 vehicles. Waiting for the vehicle list and retrying once...'
+        );
+        await waitForVehicleCheckboxListStable(
+            6000,
+            900,
+            {
+                minimumWaitMs: 700,
+                requireNonZero: true
+            }
+        );
+        resetVehicleLoadState();
+        changeDispatchBoxColor(false);
+        const updateRows =
+            readMissionUpdateRows({
+                silent: true
+            });
+        if (updateRows.length > 0) {
+            clearSelectionGuards();
+            await preparePoliceVehicleSafetyForRows(
+                updateRows,
+                'AUTO ZERO-SELECTION UPDATE'
+            );
+            handleMissionUpdateUnits(
+                false,
+                updateRows
+            );
+        } else {
+            try {
+                await withTimeout(
+                    handleCombinedLogic(),
+                    45000,
+                    'Auto Mode zero-selection retry'
+                );
+            } catch (error) {
+                console.warn(
+                    'Mission Finder zero-selection retry failed:',
+                    error
+                );
+            }
+            const lateUpdateRows =
+                readMissionUpdateRows({
+                    silent: true
+                });
+            if (
+                lateUpdateRows.length > 0
+            ) {
+                clearSelectionGuards();
+                await preparePoliceVehicleSafetyForRows(
+                    lateUpdateRows,
+                    'AUTO LATE UPDATE'
+                );
+                handleMissionUpdateUnits(
+                    false,
+                    lateUpdateRows
+                );
+            }
+        }
+        await waitForFastDispatchReadiness(
+            'zero-selection recovery',
+            {
+                minimumWait: 200,
+                stableFor: 350,
+                timeout: 1600
+            }
+        );
+        const after =
+            getCurrentAutoDispatchSelectionState();
+        if (
+            after.selectedCount > 0
+        ) {
+            updateStatusBox(
+                `Auto Mode retry selected ${after.selectedCount} vehicle(s).`
+            );
+            return true;
+        }
+        vehicleLoadState.ready = false;
+        changeDispatchBoxColor(false);
+        updateStatusBox(
+            'Auto Mode retry still selected 0 vehicles.'
+        );
+        return false;
+    }
+
+
+===== FUNCTION runAutoModeLoop =====
+    async function runAutoModeLoop() {
+        if (isManualAutoStopActive()) return;
+        if (autoModeLoopActive) return;
+        if (!isCurrentMissionExecutionOwner('Auto Mode start')) {
+            removeMissionFinderPanelForClosedMission(
+                'inactive previous mission instance'
+            );
+            return;
+        }
+        autoModeLoopActive = true;
+        while (autoModeRunning && !isManualAutoStopActive()) {
+            if (!isCurrentMissionExecutionOwner('Auto Mode cycle')) {
+                removeMissionFinderPanelForClosedMission(
+                    'another mission became active'
+                );
+                break;
+            }
+            if (sessionStorage.getItem(MF_QUEUE_OPENING_MISSION_FLAG) === 'true') {
+                if (getMainMissionOpenLockRemaining() <= 0) {
+                    sessionStorage.removeItem(MF_QUEUE_OPENING_MISSION_FLAG);
+                    mfSilentQueueOpening = false;
+                    releaseMainMissionOpenLock('opening flag expired');
+                    if (mfDebugEnabled) {
+                        debugLog('QUEUE OPEN GUARD', 'Expired queue-opening flag cleared.');
+                    }
+                } else {
+                    updateStatusBox('Queue restart is opening the next mission...');
+                    await wait(350);
+                    continue;
+                }
+            }
+            if (sessionStorage.getItem(MF_FINAL_QUEUE_DISPATCH_FLAG) === 'true') {
+                const restarted = await waitForQueueRestartAndOpenMission('same-screen-after-final-dispatch');
+                if (restarted) {
+                    continue;
+                }
+                break;
+            }
+            if (!isMissionPage()) {
+                updateStatusBox('Auto Mode waiting for next mission...');
+                await wait(500);
+                continue;
+            }
+            const autoCycleMissionId =
+                getCurrentMissionIdForQueueRestart();
+            if (
+                requestAutoMissionMemoryRecycle(
+                    'high JavaScript heap before Unit Finder'
+                )
+            ) {
+                autoModeLoopActive = false;
+                updateAutoModeButton();
+                return;
+            }
+            const prisonerCellGate =
+                await handleAutoPrisonerCellBeforeUnitFinder();
+            if (prisonerCellGate !== 'none') {
+                clearAutoSelectionMissionGuard(
+                    'prisoner cell handoff before Unit Finder'
+                );
+                resetVehicleLoadState();
+                changeDispatchBoxColor(false);
+                if (prisonerCellGate === 'stuck') {
+                    stopAutoMode(
+                        'Auto stopped: no prisoner cell could be selected and the exact Release Prisoners fallback could not be completed. Unit Finder was not started.'
+                    );
+                    break;
+                }
+                await wait(
+                    prisonerCellGate === 'waiting'
+                        ? 500
+                        : 850
+                );
+                continue;
+            }
+            clearAutoSelectionMissionGuard(
+                'starting Auto mission cycle'
+            );
+            resetVehicleLoadState();
+            changeDispatchBoxColor(
+                false
+            );
+            resetStaffingBlockForCurrentMission(
+                'Auto Mode cycle'
+            );
+            const earlyUpdateRows =
+                await waitForMissionUpdateBeforeUnitFinder(
+                    'auto-cycle-before-vehicle-load'
+                );
+            if (
+                !autoModeRunning ||
+                isManualAutoStopActive()
+            ) {
+                break;
+            }
+            const earlyExplicitMissingRows =
+                getExplicitCurrentMissingRequirementRows(
+                    earlyUpdateRows
+                );
+            const hasEarlyExplicitMissingRequirements =
+                earlyExplicitMissingRows.length > 0;
+            const hasEarlyMissingOnMissionTableAuthority =
+                hasVisibleCurrentMissingOnMissionTable();
+            const hasEarlyCurrentMissionUpdateAuthority =
+                hasEarlyExplicitMissingRequirements ||
+                hasEarlyMissingOnMissionTableAuthority;
+            // Patient-only alerts never suppress the attachment route.
+            let prefetchedAttachmentRowsPromise = null;
+            const staffingBlockedAtFirstGate =
+                detectAndLatchStaffingBlock(
+                    'after-update-first-gate'
+                );
+            if (mfStaffingQuarantineRetryRequested) {
+                mfStaffingQuarantineRetryRequested = false;
+            }
+            if (staffingBlockedAtFirstGate) {
+                vehicleLoadState.ready = false;
+                changeDispatchBoxColor(false);
+            } else {
+                prefetchedAttachmentRowsPromise =
+                    hasEarlyCurrentMissionUpdateAuthority
+                        ? null
+                        : readLiveMissionRequirements();
+                const autoVehicleLoadState =
+                    await ensureVehicleListLoaded({
+                        stableTimeoutMs:
+                            MF_AUTO_VEHICLE_LIST_STABLE_TIMEOUT_MS,
+                        stableForMs:
+                            MF_AUTO_VEHICLE_LIST_STABLE_FOR_MS,
+                        minimumSettleMs:
+                            MF_AUTO_VEHICLE_LIST_MIN_SETTLE_MS,
+                        loadTimeoutMs:
+                            MF_AUTO_VEHICLE_LIST_LOAD_TIMEOUT_MS,
+                        requireNonZero: true
+                    });
+                if (!autoVehicleLoadState.ready) {
+                    vehicleLoadState.ready = false;
+                    changeDispatchBoxColor(false);
+                    stopAutoMode(
+                        'Auto stopped: the complete vehicle list did not become stable before Unit Finder. No units were selected.'
+                    );
+                    break;
+                }
+            }
+            let autoMissionUpdateRowsHandled = 0;
+            const autoSelectionRunState = {
+                usedCurrentMissionUpdateAuthority:
+                    hasEarlyCurrentMissionUpdateAuthority
+            };
+            if (
+                earlyUpdateRows.length > 0 &&
+                mfDebugEnabled
+            ) {
+                debugLog(
+                    'AUTO SOURCE PRIORITY',
+                    hasEarlyCurrentMissionUpdateAuthority
+                        ? (
+                            hasEarlyExplicitMissingRequirements
+                                ? `Explicit missing requirements detected (${earlyExplicitMissingRows.length} row(s)); full attachment prefetch suppressed.`
+                                : 'Missing on mission table detected; full attachment prefetch suppressed even though no positive Still needed row exists.'
+                        )
+                        : `Early update snapshot contained no Missing on mission table or explicit Missing Vehicles/Personnel authority; normal attachment route retained.`
+                );
+            }
+            if (mfStaffingBlockActive) {
+                updateStatusBox(
+                    'Auto Mode: staffing/qualification shortage found. Skipping extra vehicle selection.'
+                );
+                changeDispatchBoxColor(false);
+            } else {
+                updateStatusBox(
+                    'Auto Mode running Unit Finder from Vehicle and Personnel Requirements...'
+                );
+                try {
+                    await withTimeout(
+                        handleCombinedLogic({
+                            vehicleListAlreadyLoaded: true,
+                            attachmentRowsPromise: prefetchedAttachmentRowsPromise,
+                            selectionRunState: autoSelectionRunState
+                        }),
+                        45000,
+                        'Auto Mode Unit Finder'
+                    );
+                } catch (error) {
+                    console.warn(
+                        'Mission Finder Auto Mode timeout:',
+                        error
+                    );
+                    debugLog(
+                        'AUTO TIMEOUT',
+                        error.message ||
+                        String(error)
+                    );
+                    changeDispatchBoxColor(false);
+                }
+                await waitForFastDispatchReadiness(
+                    'Unit Finder selection',
+                    {
+                        minimumWait: 150,
+                        stableFor: 300,
+                        timeout: 1200
+                    }
+                );
+                if (!autoModeRunning) break;
+                if (
+                    shouldRunPostSelectionMissionUpdate(
+                        autoSelectionRunState
+                    )
+                ) {
+                    updateStatusBox(
+                        'Auto Mode checking the manual Mission Update source...'
+                    );
+                    const postUnitFinderUpdateRows =
+                        readMissionUpdateRows();
+                    const postUnitFinderExplicitMissingRows =
+                        getExplicitCurrentMissingRequirementRows(
+                            postUnitFinderUpdateRows
+                        );
+                    autoMissionUpdateRowsHandled =
+                        postUnitFinderExplicitMissingRows.length;
+                    if (
+                        postUnitFinderExplicitMissingRows.length > 0
+                    ) {
+                        clearSelectionGuards();
+                        await preparePoliceVehicleSafetyForRows(
+                            postUnitFinderExplicitMissingRows,
+                            'AUTO MISSION UPDATE'
+                        );
+                        const updated =
+                            handleMissionUpdateUnits(
+                                false,
+                                postUnitFinderExplicitMissingRows
+                            );
+                        if (updated) {
+                            await waitForFastDispatchReadiness(
+                                'mission update fix',
+                                {
+                                    minimumWait: 100,
+                                    stableFor: 250,
+                                    timeout: 900
+                                }
+                            );
+                        }
+                    } else if (mfDebugEnabled) {
+                        debugLog(
+                            'AUTO MISSION UPDATE SKIP',
+                            'No explicit current Missing Vehicles/Personnel rows; the full definition table was not reprocessed.'
+                        );
+                    }
+                } else {
+                    autoMissionUpdateRowsHandled = Math.max(
+                        1,
+                        earlyUpdateRows.length
+                    );
+                    if (mfDebugEnabled) {
+                        debugLog(
+                            'AUTO MISSION UPDATE SINGLE PASS',
+                            'Current Mission Update authority was already processed during the main selection pass; duplicate post-selection processing was suppressed.'
+                        );
+                    }
+                }
+            }
+            if (!autoModeRunning) break;
+            if (!isCurrentMissionExecutionOwner('before Auto dispatch validation')) {
+                removeMissionFinderPanelForClosedMission(
+                    'stale Auto Mode instance blocked before dispatch'
+                );
+                break;
+            }
+            const missionIdAfterSelection =
+                getCurrentMissionIdForQueueRestart();
+            if (
+                !autoCycleMissionId ||
+                !missionIdAfterSelection ||
+                missionIdAfterSelection !==
+                    autoCycleMissionId
+            ) {
+                clearAutoSelectionMissionGuard(
+                    'mission changed during Unit Finder'
+                );
+                resetVehicleLoadState();
+                updateStatusBox(
+                    'Auto Mode: mission changed during selection. Restarting Unit Finder on the current mission...'
+                );
+                await wait(300);
+                continue;
+            }
+            markAutoSelectionCompletedForCurrentMission(
+                autoMissionUpdateRowsHandled > 0
+                    ? 'Unit Finder and Mission Update completed'
+                    : 'Unit Finder completed'
+            );
+            if (
+                !mfStaffingBlockActive &&
+                getCurrentAutoDispatchSelectionState()
+                    .selectedCount === 0
+            ) {
+                await retryAutoSelectionWhenZero();
+            }
+            if (!autoModeRunning) break;
+            const prisonerReleaseResult =
+                await handleAutoPrisonerReleaseAfterActions();
+            if (prisonerReleaseResult !== 'none') {
+                clearAutoSelectionMissionGuard(
+                    'final prisoner release fallback'
+                );
+                resetVehicleLoadState();
+                changeDispatchBoxColor(false);
+                if (prisonerReleaseResult === 'stuck') {
+                    stopAutoMode(
+                        'Auto stopped: all other actions completed, but the remaining prisoners could not be placed or released. Dispatch was not clicked.'
+                    );
+                    break;
+                }
+                await wait(
+                    prisonerReleaseResult === 'waiting'
+                        ? 500
+                        : 850
+                );
+                continue;
+            }
+            const visibleProblemAlert = getVisibleInlineProblemAlertText();
+            if (visibleProblemAlert) {
+                vehicleLoadState.ready = false;
+                changeDispatchBoxColor(false);
+                if (mfDebugEnabled) {
+                    debugLog('READY BLOCK', `Visible problem alert before dispatch: ${visibleProblemAlert.slice(0, 260)}`);
+                }
+            }
+            let personnelQualificationAlert =
+                getInlinePersonnelQualificationAlertText();
+            detectAndLatchStaffingBlock(
+                'final dispatch decision'
+            );
+            if (mfStaffingQuarantineRetryRequested) {
+                mfStaffingQuarantineRetryRequested = false;
+                clearAutoSelectionMissionGuard(
+                    'runtime staffing quarantine retry'
+                );
+                resetVehicleLoadState();
+                changeDispatchBoxColor(false);
+                updateStatusBox(
+                    'Auto Mode: excluded the exact staffing-failed vehicle. Re-running Unit Finder on this mission...'
+                );
+                await wait(180);
+                continue;
+            }
+            personnelQualificationAlert =
+                getInlinePersonnelQualificationAlertText();
+            if (
+                personnelQualificationAlert ||
+                mfStaffingBlockActive
+            ) {
+                vehicleLoadState.ready = false;
+                changeDispatchBoxColor(false);
+                if (mfDebugEnabled) {
+                    debugLog('PERSONNEL ALERT', `Inline alert found before dispatch decision: ${personnelQualificationAlert.slice(0, 240)}`);
+                }
+            }
+            if (
+                !isAutoSelectionValidForCurrentMission()
+            ) {
+                clearAutoSelectionMissionGuard(
+                    'selection belongs to another mission'
+                );
+                resetVehicleLoadState();
+                updateStatusBox(
+                    'Auto Mode: blocked a stale Dispatch. Running Unit Finder on the current mission...'
+                );
+                await wait(250);
+                continue;
+            }
+            const prvSrvSelectionConfirmed =
+                await confirmPrvSrvSelectionBeforeDispatch(
+                    'Auto Mode final dispatch decision'
+                );
+            if (!prvSrvSelectionConfirmed) {
+                const blockText = String(
+                    mfPrvSrvSelectionBlockText ||
+                    'Confirmed PRV/SRV units are still missing.'
+                ).trim();
+                stopAutoMode(
+                    `Auto stopped: ${blockText} Dispatch was not clicked.`
+                );
+                break;
+            }
+            if (!vehicleLoadState.ready) {
+                const staffingBlocked =
+                    !!personnelQualificationAlert ||
+                    mfStaffingBlockActive ||
+                    vehicleLoadState.trainedPersonnelBlocked === true;
+                if (staffingBlocked) {
+                    const blockText =
+                        String(
+                            vehicleLoadState.trainedPersonnelBlockText ||
+                            mfStaffingBlockText ||
+                            personnelQualificationAlert ||
+                            'Verified trained personnel are still missing.'
+                        ).trim();
+                    addMissionLogEntry(
+                        'skipped',
+                        getCurrentMissionName(),
+                        'Verified trained-personnel shortage; dispatch blocked',
+                        null
+                    );
+                    stopAutoMode(
+                        `Auto stopped: ${blockText} Dispatch was not clicked.`
+                    );
+                    break;
+                }
+                updateStatusBox(
+                    'Auto Mode: units not ready. Dispatching to skip mission...'
+                );
+                addMissionLogEntry(
+                    'skipped',
+                    getCurrentMissionName(),
+                    'Units not ready',
+                    null
+                );
+                if (
+                    getCurrentAutoDispatchSelectionState()
+                        .selectedCount === 0
+                ) {
+                    stopAutoMode(
+                        'Auto stopped: Unit Finder selected 0 vehicles after a full-list retry. The mission was not dispatched.'
+                    );
+                    break;
+                }
+                const queueStateBeforeDispatch = getNextMissionQueueState();
+                const finalQueueMission = isFinalQueueSignal(queueStateBeforeDispatch);
+                logQueueState('skip-before-dispatch', queueStateBeforeDispatch, finalQueueMission);
+                if (!claimAutoMissionDispatch(autoCycleMissionId)) {
+                    updateStatusBox(
+                        'Auto Mode: duplicate Dispatch blocked for this mission. Waiting for MissionChief to finish the existing handoff...'
+                    );
+                    break;
+                }
+                clearAutoAdvanceAfterDispatchState(
+                    'Auto skip uses native Dispatch-and-next'
+                );
+                if (finalQueueMission) {
+                    sessionStorage.setItem(
+                        MF_FINAL_QUEUE_DISPATCH_FLAG,
+                        'true'
+                    );
+                }
+                if (!isCurrentMissionExecutionOwner('before skip dispatch')) {
+                    removeMissionFinderPanelForClosedMission(
+                        'stale Auto Mode skip dispatch blocked'
+                    );
+                    break;
+                }
+                if (!clickDispatchOnly()) {
+                    releaseAutoMissionDispatch(autoCycleMissionId);
+                    sessionStorage.removeItem(
+                        MF_FINAL_QUEUE_DISPATCH_FLAG
+                    );
+                    stopAutoMode(
+                        finalQueueMission
+                            ? 'Auto stopped. Final mission Dispatch button was not found.'
+                            : 'Auto stopped. Dispatch & Next button was not found while skipping.'
+                    );
+                    break;
+                }
+                clearAutoSelectionMissionGuard(
+                    'skip mission dispatched'
+                );
+                resetVehicleLoadState();
+                if (finalQueueMission) {
+                    const restarted =
+                        await handleAfterFinalQueueDispatch(
+                            queueStateBeforeDispatch
+                        );
+                    if (restarted) {
+                        continue;
+                    }
+                    break;
+                }
+                updateStatusBox(
+                    'Auto Mode: Dispatch & Next clicked. Waiting for the next mission...'
+                );
+                break;
+            }
+            updateStatusBox('Auto Mode dispatching mission...');
+            const missionName = getCurrentMissionName();
+            const missionCredits = getMissionCredits();
+            const queueStateBeforeDispatch = getNextMissionQueueState();
+            const finalQueueMission = isFinalQueueSignal(queueStateBeforeDispatch);
+            logQueueState('complete-before-dispatch', queueStateBeforeDispatch, finalQueueMission);
+            if (
+                !await confirmPrvSrvSelectionBeforeDispatch(
+                    'Auto Mode immediate pre-dispatch recheck'
+                )
+            ) {
+                stopAutoMode(
+                    `Auto stopped: ${mfPrvSrvSelectionBlockText || 'Confirmed PRV/SRV units are still missing.'} Dispatch was not clicked.`
+                );
+                break;
+            }
+            if (!claimAutoMissionDispatch(autoCycleMissionId)) {
+                updateStatusBox(
+                    'Auto Mode: duplicate Dispatch blocked for this mission. Waiting for MissionChief to finish the existing handoff...'
+                );
+                break;
+            }
+            clearAutoAdvanceAfterDispatchState(
+                'Auto completed mission dispatch'
+            );
+            if (finalQueueMission) {
+                sessionStorage.setItem(
+                    MF_FINAL_QUEUE_DISPATCH_FLAG,
+                    'true'
+                );
+            }
+            if (!isCurrentMissionExecutionOwner('before completed dispatch')) {
+                removeMissionFinderPanelForClosedMission(
+                    'stale Auto Mode completed dispatch blocked'
+                );
+                break;
+            }
+            const dispatchResult =
+                clickMissionDispatchByValue(
+                    missionCredits,
+                    'Auto Mode completed mission'
+                );
+            if (!dispatchResult.clicked) {
+                releaseAutoMissionDispatch(autoCycleMissionId);
+                sessionStorage.removeItem(
+                    MF_FINAL_QUEUE_DISPATCH_FLAG
+                );
+                stopAutoMode(
+                    finalQueueMission
+                        ? 'Auto stopped: final mission Dispatch button was not found.'
+                        : 'Auto stopped: Dispatch & Next button was not found.'
+                );
+                break;
+            }
+            clearAutoSelectionMissionGuard(
+                'completed mission dispatched'
+            );
+            addMissionLogEntry(
+                'completed',
+                missionName,
+                dispatchResult.shared
+                    ? 'Dispatched and shared'
+                    : '',
+                missionCredits
+            );
+            resetVehicleLoadState();
+            updateStatusBox(
+                dispatchResult.shared
+                    ? 'Auto Mode: Dispatch & Share clicked. Waiting for the next mission...'
+                    : finalQueueMission
+                        ? 'Auto Mode: final mission dispatched. Restarting the queue...'
+                        : 'Auto Mode: Dispatch & Next clicked. Waiting for the next mission...'
+            );
+            if (finalQueueMission) {
+                const restarted =
+                    await handleAfterFinalQueueDispatch(
+                        queueStateBeforeDispatch
+                    );
+                if (restarted) {
+                    continue;
+                }
+                break;
+            }
+            break;
+        }
+        autoModeLoopActive = false;
+        updateAutoModeButton();
+    }
+
+
+===== FUNCTION clickDispatchOnly =====
+    function clickDispatchOnly() {
+        const queueState =
+            getNextMissionQueueState();
+        const v3LowQueueBoundary =
+            isV3LowQueuePauseSignal(
+                queueState
+            );
+        const dispatchNextButton =
+            !v3LowQueueBoundary && Array.from(
+                document.querySelectorAll(
+                    'a.alert_next'
+                )
+            ).find(button => {
+                if (
+                    !button ||
+                    !isElementVisible(button)
+                ) {
+                    return false;
+                }
+                if (
+                    button.id ===
+                    'mission_next_mission_btn'
+                ) {
+                    return false;
+                }
+                const disabled =
+                    button.hasAttribute(
+                        'disabled'
+                    ) ||
+                    button.getAttribute(
+                        'aria-disabled'
+                    ) === 'true' ||
+                    button.classList.contains(
+                        'disabled'
+                    );
+                return !disabled;
+            }) ||
+            null;
+        if (dispatchNextButton) {
+            try {
+                dispatchNextButton.scrollIntoView({
+                    block: 'center',
+                    inline: 'center'
+                });
+            } catch (error) {}
+            try {
+                dispatchNextButton.click();
+                return true;
+            } catch (error) {
+                return realClickForQueueRestart(
+                    dispatchNextButton
+                );
+            }
+        }
+        const isDispatchOnlyBoundary =
+            !!queueState?.exists &&
+            (
+                queueState.count === 0 ||
+                v3LowQueueBoundary
+            );
+        if (!isDispatchOnlyBoundary) {
+            return false;
+        }
+        const finalDispatchButton =
+            Array.from(
+                document.querySelectorAll(
+                    'a#mission_alarm_btn'
+                )
+            ).find(button => {
+                if (
+                    !button ||
+                    !isElementVisible(button)
+                ) {
+                    return false;
+                }
+                const disabled =
+                    button.hasAttribute(
+                        'disabled'
+                    ) ||
+                    button.getAttribute(
+                        'aria-disabled'
+                    ) === 'true' ||
+                    button.classList.contains(
+                        'disabled'
+                    );
+                if (disabled) {
+                    return false;
+                }
+                const title = (
+                    button.getAttribute(
+                        'title'
+                    ) ||
+                    ''
+                )
+                    .replace(/\s+/g, ' ')
+                    .trim()
+                    .toLowerCase();
+                const visibleText = (
+                    button.textContent ||
+                    button.innerText ||
+                    ''
+                )
+                    .replace(/\s+/g, ' ')
+                    .trim()
+                    .toLowerCase();
+                return (
+                    title.startsWith(
+                        'dispatch'
+                    ) &&
+                    !title.includes(
+                        'next'
+                    ) &&
+                    visibleText.startsWith(
+                        'dispatch'
+                    )
+                );
+            }) ||
+            null;
+        if (!finalDispatchButton) {
+            return false;
+        }
+        try {
+            finalDispatchButton.scrollIntoView({
+                block: 'center',
+                inline: 'center'
+            });
+        } catch (error) {}
+        try {
+            finalDispatchButton.click();
+            return true;
+        } catch (error) {
+            return realClickForQueueRestart(
+                finalDispatchButton
+            );
+        }
+    }
+
+
+===== FUNCTION clickMissionDispatchByValue =====
+    function clickMissionDispatchByValue(
+        missionCredits,
+        reason
+    ) {
+        const credits = Number(missionCredits || 0);
+        const shouldShare =
+            credits > MF_SHARE_CREDIT_THRESHOLD;
+        if (shouldShare) {
+            const advanceState =
+                createAutoAdvanceAfterDispatchState(
+                    reason || 'Auto Mode high-value mission',
+                    'auto'
+                );
+            if (advanceState) {
+                writeAutoAdvanceAfterDispatchState(
+                    advanceState
+                );
+            }
+            if (clickDispatchAndShareOnly()) {
+                updateStatusBox(
+                    `High-value mission (${credits.toLocaleString('en-GB')} credits): Dispatch & Share clicked. Moving to the next mission...`
+                );
+                if (advanceState) {
+                    setTimeout(
+                        function() {
+                            resumeAutoAdvanceAfterDispatch(
+                                'same-document Auto Mode Dispatch & Share'
+                            );
+                        },
+                        800
+                    );
+                }
+                return {
+                    clicked: true,
+                    shared: true,
+                    advancePending:
+                        !!advanceState
+                };
+            }
+            clearAutoAdvanceAfterDispatchState(
+                'Auto Mode Dispatch & Share unavailable'
+            );
+        }
+        clearAutoAdvanceAfterDispatchState(
+            'normal Auto Mode Dispatch & Next'
+        );
+        const clicked = clickDispatchOnly();
+        return {
+            clicked,
+            shared: false,
+            advancePending: false
+        };
+    }
