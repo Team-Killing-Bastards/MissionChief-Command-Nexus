@@ -18,7 +18,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Extract V3 recoverable Auto-stop classification
+      - name: Extract V3 recoverable stop functions
         shell: bash
         run: |
           python3 - <<'PY'
@@ -49,10 +49,8 @@ jobs:
                       elif ch == '\\': escaped = True
                       elif ch == quote: quote = ''
                       i += 1; continue
-                  if ch == '/' and nxt == '/':
-                      line_comment = True; i += 2; continue
-                  if ch == '/' and nxt == '*':
-                      block_comment = True; i += 2; continue
+                  if ch == '/' and nxt == '/': line_comment = True; i += 2; continue
+                  if ch == '/' and nxt == '*': block_comment = True; i += 2; continue
                   if ch in "'\"`": quote = ch; i += 1; continue
                   if ch == open_char: depth += 1
                   elif ch == close_char:
@@ -61,9 +59,10 @@ jobs:
                   i += 1
               return -1
 
-          functions = list(re.finditer(r'(?m)^\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(', source))
+          function_matches = list(re.finditer(r'(?m)^\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(', source))
+
           def extract(name):
-              match = next((item for item in functions if item.group(1) == name), None)
+              match = next((item for item in function_matches if item.group(1) == name), None)
               if not match: return f'FUNCTION NOT FOUND: {name}\n'
               paren = source.find('(', match.start())
               paren_end = scan_balanced(paren, '(', ')')
@@ -71,42 +70,21 @@ jobs:
               body_end = scan_balanced(brace, '{', '}')
               return source[match.start():body_end + 1] + '\n' if body_end >= 0 else f'UNTERMINATED: {name}\n'
 
-          relevant = []
-          for match in functions:
-              name = match.group(1)
-              lower = name.lower()
-              if any(token in lower for token in (
-                  'recoverable', 'skip', 'autostop', 'auto_stop', 'stoprecord',
-                  'shortage', 'quarantine', 'temporary', 'failurecategory'
-              )):
-                  relevant.append(name)
-          Path('.tmp-v3042-skip-function-index.txt').write_text('\n'.join(relevant) + '\n', encoding='utf-8')
-
-          terms = [
-              'RESOURCE_SHORTAGE',
-              'Required mission resource is unavailable',
-              'Verified trained-personnel shortage',
-              'Unit Finder selected 0 vehicles',
-              'Units not ready',
-              'v2AutoStopRecord',
+          names = [
+              'collectAutoStopEvidence',
+              'classifyGenericRecoverableAutoStop',
               'registerRecoverableMissionSkip',
+              'redirectAfterRecoverableSkip',
+              'maybeHandleRecoverableAutoStop',
+              'maybeRedirectSkippedMissionBeforeAuto',
+              'readV2AutoStopRecord',
+              'activeMissionSkipRecords',
+              'isMissionTemporarilySkipped',
           ]
-          enclosing = []
-          seen = set()
-          for term in terms:
-              cursor = 0
-              while True:
-                  pos = source.find(term, cursor)
-                  if pos < 0: break
-                  previous = [match for match in functions if match.start() <= pos]
-                  if previous:
-                      name = previous[-1].group(1)
-                      key = (term, name)
-                      if key not in seen:
-                          seen.add(key)
-                          enclosing.append(f'===== TERM {term} IN {name} =====\n{extract(name)}')
-                  cursor = pos + len(term)
-          Path('.tmp-v3042-auto-stop-classification.txt').write_text('\n\n'.join(enclosing), encoding='utf-8')
+          Path('.tmp-v3042-recoverable-stop-functions.txt').write_text(
+              '\n\n'.join(f'===== FUNCTION {name} =====\n{extract(name)}' for name in names),
+              encoding='utf-8'
+          )
           PY
 
       - name: Commit classification output
@@ -115,5 +93,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .tmp-v3042-*.txt
-          git commit -m "Extract recoverable Auto-stop classification [skip v3042 inspect]"
+          git commit -m "Extract V3 recoverable stop functions [skip v3042 inspect]"
           git push origin HEAD:fix/v3042-auto-trained-personnel-completeness
