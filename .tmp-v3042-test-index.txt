@@ -1,0 +1,15 @@
+scripts/check-hazmat-personnel-osu.mjs: trained personnel
+scripts/check-initial-trained-personnel-authority.mjs: trained personnel
+scripts/check-mission-definition-trained-personnel.mjs: trained personnel
+scripts/check-mission-update-single-pass.mjs: trained personnel
+scripts/check-police-unit-naming-classes-v10105.mjs: armed response
+scripts/check-prv-srv-confirmed-selection.mjs: final dispatch, checked ids
+scripts/check-trained-coverage-optimizer.mjs: armed response
+scripts/check-trained-personnel-fail-closed.mjs: trained personnel
+scripts/check-trained-personnel-live-missing-display-v1081.mjs: trained personnel
+scripts/check-trained-personnel-live-verification-pool.mjs: trained personnel
+scripts/check-trained-personnel-on-scene-authority-v1080.mjs: trained personnel
+scripts/check-trained-personnel-panel.mjs: trained personnel
+scripts/check-v3-final-dispatch-handoff.mjs: final dispatch
+scripts/check-v3-stale-canonical-mission-recovery.mjs: final dispatch
+scripts/check-vehicle-load-preloaded-requirements-v1075.mjs: trained personnel
