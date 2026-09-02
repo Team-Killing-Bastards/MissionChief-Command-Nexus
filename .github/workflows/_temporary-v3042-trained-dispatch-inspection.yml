@@ -18,7 +18,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Extract exact live training refresh functions
+      - name: Extract V3 recoverable Auto-stop classification
         shell: bash
         run: |
           python3 - <<'PY'
@@ -39,36 +39,21 @@ jobs:
                   nxt = source[i + 1] if i + 1 < len(source) else ''
                   if line_comment:
                       if ch == '\n': line_comment = False
-                      i += 1
-                      continue
+                      i += 1; continue
                   if block_comment:
                       if ch == '*' and nxt == '/':
-                          block_comment = False
-                          i += 2
-                          continue
-                      i += 1
-                      continue
+                          block_comment = False; i += 2; continue
+                      i += 1; continue
                   if quote:
-                      if escaped:
-                          escaped = False
-                      elif ch == '\\':
-                          escaped = True
-                      elif ch == quote:
-                          quote = ''
-                      i += 1
-                      continue
+                      if escaped: escaped = False
+                      elif ch == '\\': escaped = True
+                      elif ch == quote: quote = ''
+                      i += 1; continue
                   if ch == '/' and nxt == '/':
-                      line_comment = True
-                      i += 2
-                      continue
+                      line_comment = True; i += 2; continue
                   if ch == '/' and nxt == '*':
-                      block_comment = True
-                      i += 2
-                      continue
-                  if ch in "'\"`":
-                      quote = ch
-                      i += 1
-                      continue
+                      block_comment = True; i += 2; continue
+                  if ch in "'\"`": quote = ch; i += 1; continue
                   if ch == open_char: depth += 1
                   elif ch == close_char:
                       depth -= 1
@@ -76,74 +61,59 @@ jobs:
                   i += 1
               return -1
 
-          function_matches = list(re.finditer(
-              r'(?m)^\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(', source
-          ))
-          function_names = [match.group(1) for match in function_matches]
-          relevant_names = [
-              name for name in function_names
-              if any(token in name.lower() for token in (
-                  'training', 'trained', 'registry', 'inspector', 'policevehicle',
-                  'police_vehicle', 'personnel', 'qualification'
-              ))
-          ]
-          Path('.tmp-v3042-training-function-index.txt').write_text(
-              '\n'.join(relevant_names) + '\n', encoding='utf-8'
-          )
-
-          def extract_function(name):
-              matches = [match for match in function_matches if match.group(1) == name]
-              if not matches: return f'FUNCTION NOT FOUND: {name}\n'
-              start = matches[0].start()
-              paren = source.find('(', matches[0].start())
+          functions = list(re.finditer(r'(?m)^\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(', source))
+          def extract(name):
+              match = next((item for item in functions if item.group(1) == name), None)
+              if not match: return f'FUNCTION NOT FOUND: {name}\n'
+              paren = source.find('(', match.start())
               paren_end = scan_balanced(paren, '(', ')')
-              if paren_end < 0: return f'PARAMETERS UNTERMINATED: {name}\n'
               brace = source.find('{', paren_end)
               body_end = scan_balanced(brace, '{', '}')
-              if body_end < 0: return f'BODY UNTERMINATED: {name}\n'
-              return source[start:body_end + 1] + '\n'
+              return source[match.start():body_end + 1] + '\n' if body_end >= 0 else f'UNTERMINATED: {name}\n'
 
-          requested = [
-              'prepareTrainedPersonnelRegistryForRows',
-              'refreshPoliceInspectorRegistryFromLiveVehicles',
-              'refreshOrdinaryPoliceRegistryFromLiveVehicles',
-              'refreshMissionTrainingRegistryFromLiveVehicles',
-              'refreshMissionVehicleTrainingEntry',
-              'verifyMissionVehicleTrainingEntry',
-              'getLiveTrainingVerificationCandidates',
-              'getStrictTrainingVerificationCandidateCheckboxes',
-              'refreshPoliceInspectorRegistryEntry',
-              'readPersonnelTrainingRegistry',
-              'writePersonnelTrainingRegistry',
-              'getRegistryEntryForMissionCheckbox',
-              'isStrictLiveVerifiedTrainingEntry',
-              'isAuthoritativeLivePoliceTrainingEntry',
-              'getRegistryTrainingQualifiedCount',
-              'getRemainingTrainedPersonnelRequirements',
-              'getTrainedCandidateMetrics',
-              'getTrainingCandidatePersonnelProfiles',
+          relevant = []
+          for match in functions:
+              name = match.group(1)
+              lower = name.lower()
+              if any(token in lower for token in (
+                  'recoverable', 'skip', 'autostop', 'auto_stop', 'stoprecord',
+                  'shortage', 'quarantine', 'temporary', 'failurecategory'
+              )):
+                  relevant.append(name)
+          Path('.tmp-v3042-skip-function-index.txt').write_text('\n'.join(relevant) + '\n', encoding='utf-8')
+
+          terms = [
+              'RESOURCE_SHORTAGE',
+              'Required mission resource is unavailable',
+              'Verified trained-personnel shortage',
+              'Unit Finder selected 0 vehicles',
+              'Units not ready',
+              'v2AutoStopRecord',
+              'registerRecoverableMissionSkip',
           ]
-          # Also include every indexed function with refresh/verify/prepare in its name.
-          for name in relevant_names:
-              lowered = name.lower()
-              if any(token in lowered for token in ('refresh', 'verify', 'prepare')):
-                  requested.append(name)
+          enclosing = []
           seen = set()
-          blocks = []
-          for name in requested:
-              if name in seen: continue
-              seen.add(name)
-              blocks.append(f'===== FUNCTION {name} =====\n{extract_function(name)}')
-          Path('.tmp-v3042-live-training-refresh.txt').write_text(
-              '\n\n'.join(blocks), encoding='utf-8'
-          )
+          for term in terms:
+              cursor = 0
+              while True:
+                  pos = source.find(term, cursor)
+                  if pos < 0: break
+                  previous = [match for match in functions if match.start() <= pos]
+                  if previous:
+                      name = previous[-1].group(1)
+                      key = (term, name)
+                      if key not in seen:
+                          seen.add(key)
+                          enclosing.append(f'===== TERM {term} IN {name} =====\n{extract(name)}')
+                  cursor = pos + len(term)
+          Path('.tmp-v3042-auto-stop-classification.txt').write_text('\n\n'.join(enclosing), encoding='utf-8')
           PY
 
-      - name: Commit exact function output
+      - name: Commit classification output
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .tmp-v3042-*.txt
-          git commit -m "Extract live training refresh functions [skip v3042 inspect]"
+          git commit -m "Extract recoverable Auto-stop classification [skip v3042 inspect]"
           git push origin HEAD:fix/v3042-auto-trained-personnel-completeness
