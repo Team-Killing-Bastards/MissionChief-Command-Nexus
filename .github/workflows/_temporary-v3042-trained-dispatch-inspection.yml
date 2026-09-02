@@ -18,30 +18,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Extract exact trained-personnel functions
+      - name: Extract exact async and normal functions
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
 
           source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
 
-          def extract_function(name):
-              patterns = [f'    async function {name}(', f'    function {name}(', f'async function {name}(', f'function {name}(']
-              starts = [source.find(pattern) for pattern in patterns]
-              starts = [value for value in starts if value >= 0]
-              if not starts:
-                  return f'FUNCTION NOT FOUND: {name}\n'
-              start = min(starts)
-              brace = source.find('{', start)
+          def scan_balanced(start, open_char, close_char):
               depth = 0
               quote = ''
               escaped = False
               line_comment = False
               block_comment = False
-              template_depth = 0
-              i = brace
+              i = start
               while i < len(source):
                   ch = source[i]
                   nxt = source[i + 1] if i + 1 < len(source) else ''
@@ -59,23 +50,9 @@ jobs:
                   if quote:
                       if escaped:
                           escaped = False
-                          i += 1
-                          continue
-                      if ch == '\\':
+                      elif ch == '\\':
                           escaped = True
-                          i += 1
-                          continue
-                      if quote == '`' and ch == '$' and nxt == '{':
-                          template_depth += 1
-                          depth += 1
-                          i += 2
-                          continue
-                      if quote == '`' and ch == '}' and template_depth > 0:
-                          template_depth -= 1
-                          depth -= 1
-                          i += 1
-                          continue
-                      if ch == quote and template_depth == 0:
+                      elif ch == quote:
                           quote = ''
                       i += 1
                       continue
@@ -91,89 +68,80 @@ jobs:
                       quote = ch
                       i += 1
                       continue
-                  if ch == '{': depth += 1
-                  elif ch == '}':
+                  if ch == open_char:
+                      depth += 1
+                  elif ch == close_char:
                       depth -= 1
                       if depth == 0:
-                          return source[start:i + 1] + '\n'
+                          return i
                   i += 1
-              return f'UNTERMINATED FUNCTION: {name}\n'
+              return -1
 
-          function_groups = {
-              'trained-parsing': [
-                  'cleanRequirementName',
-                  'getTrainedPersonnelRequirementsFromFreeText',
-                  'getMissionDefinitionTrainedPersonnelRequirements',
-                  'extractMissionDefinitionRequiredPersonnelRows',
-                  'extractLiveMissionRequirementRows',
-                  'normalisePublicOrderTrainedRequirements',
-                  'getTrainingRequirementPersonnelTarget',
-                  'getTrainingRequirementEligibleTypeIds',
-                  'getTrainingRequirementVehicleCapacity',
-                  'getPreferredTrainedVehicleCountForRequirement',
-              ],
-              'trained-selection': [
-                  'getTrainingRequirementQualifiedCount',
-                  'getTrainingCandidatePersonnelProfiles',
-                  'doesTrainingProfileSatisfyRequirement',
-                  'applyTrainingCandidateCoverage',
-                  'getTrainedVehicleSelectionScore',
-                  'getTrainedPersonnelVehicleTarget',
-                  'formatTrainedPersonnelShortfall',
-                  'blockTrainedPersonnelDispatch',
+          def extract_function(name):
+              candidates = [
+                  source.find(f'    async function {name}('),
+                  source.find(f'    function {name}('),
+                  source.find(f'async function {name}('),
+                  source.find(f'function {name}('),
+              ]
+              candidates = [value for value in candidates if value >= 0]
+              if not candidates:
+                  return f'FUNCTION NOT FOUND: {name}\n'
+              start = min(candidates)
+              paren = source.find('(', start)
+              paren_end = scan_balanced(paren, '(', ')')
+              if paren_end < 0:
+                  return f'PARAMETERS UNTERMINATED: {name}\n'
+              brace = source.find('{', paren_end)
+              body_end = scan_balanced(brace, '{', '}')
+              if body_end < 0:
+                  return f'BODY UNTERMINATED: {name}\n'
+              return source[start:body_end + 1] + '\n'
+
+          groups = {
+              'selection-orchestration': [
+                  'handleCombinedLogic',
                   'processRequirementRows',
                   'processVehicles',
+                  'selectVehiclesForTrainedPersonnelRequirements',
+                  'preparePoliceVehicleSafetyForRows',
+                  'ensurePoliceTrainingRegistryReady',
+                  'ensureLiveTrainingVerificationPool',
               ],
-              'auto-update-dispatch': [
+              'mission-update': [
+                  'readMissionUpdateRows',
                   'getExplicitCurrentMissingRequirementRows',
                   'hasExplicitCurrentMissingRequirementRows',
                   'shouldRunPostSelectionMissionUpdate',
                   'handleMissionUpdateUnits',
+                  'waitForMissionUpdateBeforeUnitFinder',
+              ],
+              'dispatch-readiness': [
+                  'waitForFastDispatchReadiness',
+                  'getCurrentAutoDispatchSelectionState',
+                  'isAutoSelectionValidForCurrentMission',
+                  'markAutoSelectionCompletedForCurrentMission',
+                  'retryAutoSelectionWhenZero',
                   'runAutoModeLoop',
+                  'clickDispatchOnly',
+                  'clickMissionDispatchByValue',
+              ],
+              'training-registry': [
+                  'readPersonnelTrainingRegistry',
+                  'getRegistryEntryForMissionCheckbox',
+                  'isAuthoritativeLivePoliceTrainingEntry',
+                  'getRegistryTrainingQualifiedCount',
+                  'getRemainingTrainedPersonnelRequirements',
+                  'countSelectedTrainingVehicles',
+                  'verifyTrainingVehicleLive',
+                  'refreshTrainingRegistryEntries',
               ],
           }
-
-          for group, names in function_groups.items():
-              blocks = []
+          for group, names in groups.items():
+              content = []
               for name in names:
-                  blocks.append(f'===== FUNCTION {name} =====\n{extract_function(name)}')
-              Path(f'.tmp-v3042-functions-{group}.txt').write_text('\n\n'.join(blocks), encoding='utf-8')
-
-          # Capture the trained pattern table and all enclosing functions containing critical calls.
-          pattern_start = source.find('    const MF_TRAINED_PERSONNEL_PATTERNS =')
-          pattern_end = source.find('\n\n    let mfKeepPanelPosition', pattern_start)
-          Path('.tmp-v3042-trained-patterns.txt').write_text(
-              source[pattern_start:pattern_end] if pattern_start >= 0 and pattern_end > pattern_start else 'PATTERN BLOCK NOT FOUND\n',
-              encoding='utf-8'
-          )
-
-          terms = [
-              'runTrainedSelection();',
-              'blockTrainedPersonnelDispatch(',
-              'formatTrainedPersonnelShortfall(',
-              'postUnitFinderExplicitMissingRows',
-              'autoSelectionRunState',
-              'Dispatch was not clicked.',
-              'missionDefinitionRequiredPersonnel',
-              'armed_response_personnel',
-          ]
-          signatures = list(re.finditer(r'(?m)^\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(', source))
-          enclosing = []
-          seen = set()
-          for term in terms:
-              cursor = 0
-              while True:
-                  pos = source.find(term, cursor)
-                  if pos < 0: break
-                  preceding = [match for match in signatures if match.start() <= pos]
-                  if preceding:
-                      name = preceding[-1].group(1)
-                      key = (term, name)
-                      if key not in seen:
-                          seen.add(key)
-                          enclosing.append(f'===== TERM {term} IN {name} =====\n{extract_function(name)}')
-                  cursor = pos + len(term)
-          Path('.tmp-v3042-critical-enclosing.txt').write_text('\n\n'.join(enclosing), encoding='utf-8')
+                  content.append(f'===== FUNCTION {name} =====\n{extract_function(name)}')
+              Path(f'.tmp-v3042-exact-{group}.txt').write_text('\n\n'.join(content), encoding='utf-8')
           PY
 
       - name: Commit exact function output
@@ -182,5 +150,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .tmp-v3042-*.txt
-          git commit -m "Extract exact v3.0.42 trained dispatch functions [skip v3042 inspect]"
+          git commit -m "Extract exact async v3.0.42 dispatch functions [skip v3042 inspect]"
           git push origin HEAD:fix/v3042-auto-trained-personnel-completeness
