@@ -151,11 +151,7 @@ expect(
   'A known non-39 type must fail closed even when its display name contains OSU'
 );
 
-const allMatching = sliceBetween(
-  '    function getAllMatchingVehicleCheckboxes(originalName, mappedName, includeChecked) {',
-  '\n    function getMatchingVehicleCheckboxes(originalName, mappedName) {',
-  'all-matching vehicle selector'
-);
+const allMatching = extractFunction('getAllMatchingVehicleCheckboxes');
 expect(
   allMatching.includes('isFireOperationalSupportRequirement(originalName, mappedName)'),
   'Unit Finder exact OSU branch missing'

@@ -1,7 +1,7 @@
 {
   "$schema": "./docs/project-state.schema.json",
   "schemaVersion": 1,
-  "lastUpdated": "2026-09-02",
+  "lastUpdated": "2026-09-03",
   "project": {
     "name": "MissionChief Command Nexus",
     "repository": "Team-Killing-Bastards/MissionChief-Command-Nexus",
@@ -53,11 +53,11 @@
   },
   "canonical": {
     "status": "candidate",
-    "version": "3.0.42",
-    "sourceBytes": 2096471,
-    "sourceSha256": "5e4d83e0004e4e07bb88a56c1448dd2c54124cc3a3a0d45ea760b29b423a4eb0",
+    "version": "3.0.43",
+    "sourceBytes": 2080437,
+    "sourceSha256": "00473770dcad063edd9596fd855bb6bc2bb1dc72ca41ddae4460e459943e261b",
     "components": {
-      "missionFinder": "10.6.179",
+      "missionFinder": "10.6.180",
       "resourceAdministration": "4.2.9",
       "unitNaming": "3.3.28",
       "stationNaming": "1.3.23",
@@ -65,19 +65,19 @@
     }
   },
   "production": {
-    "version": "3.0.41",
-    "tag": "v3.0.41",
-    "releaseCommit": "c288eeedb91adb3b0fe7e471fa72f0ec50806512",
-    "releaseUrl": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v3.0.41",
-    "publishedAt": "2026-09-01T19:04:22Z",
+    "version": "3.0.42",
+    "tag": "v3.0.42",
+    "releaseCommit": "cae34b09c37a941624c18492d95e8519e2cffc4c",
+    "releaseUrl": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v3.0.42",
+    "publishedAt": "2026-09-02T18:24:59Z",
     "asset": {
-      "name": "MissionChief-Command-Nexus-3.0.41.user.js",
-      "bytes": 2095431,
-      "sha256": "4212d3c05d862eb70f4eb3888793e8deda03780ae53dfac8e90d4fe74a0375dd"
+      "name": "MissionChief-Command-Nexus-3.0.42.user.js",
+      "bytes": 2096471,
+      "sha256": "5e4d83e0004e4e07bb88a56c1448dd2c54124cc3a3a0d45ea760b29b423a4eb0"
     },
     "releaseStatus": "published",
-    "liveValidationStatus": "pending",
-    "liveValidationNote": "Repository, release-asset, deployment and Discord verification passed. Live Hot Brakes - Code D validation must confirm the standalone Airfield command-vehicle row selects an eligible Airfield FF Command Vehicle; any Police Inspector shortage remains a separate fail-closed personnel result."
+    "liveValidationStatus": "failed",
+    "liveValidationNote": "3.0.42 prevented known partial dispatches, but the 3 September exports exposed a diagnostics gap: shortage paths did not retain enough station/candidate rejection evidence."
   },
   "architecture": {
     "summary": "One lightweight parent controller owns exactly one heavy managed worker realm at a time. Mission Worker A handles mission selection and dispatch; on-demand Transport Worker B handles one exact personal patient or prisoner transport. No dormant mission preload exists.",
@@ -195,6 +195,16 @@
         "bounded trained-personnel final retry",
         "no partial dispatch on incomplete coverage"
       ]
+    },
+    {
+      "id": "RUN-2026-09-03-V3042-STATION-DIAGNOSTICS",
+      "title": "Shortage station diagnostics gap",
+      "file": "docs/evidence/shortage-station-diagnostics-gap-v3.0.42-2026-09-03.md",
+      "kind": "sanitised-summary",
+      "supports": [
+        "station-level shortage evidence",
+        "candidate rejection diagnostics"
+      ]
     }
   ],
   "openWork": [
@@ -266,7 +276,7 @@
     }
   ],
   "handover": {
-    "nextAction": "Live-validate the 3.0.42 Armed Response retry and no-partial-dispatch behaviour, then continue GitHub issue #396 with the read-only runtime-retention audit.",
+    "nextAction": "Install and run 3.0.43, then export diagnostics after shortage/trained-personnel events and rank run.failureDiagnostics.stationIssueSummary before changing any selection rules.",
     "readOrder": [
       "project-state.json",
       "docs/PROJECT_STATE.md",
@@ -275,6 +285,7 @@
       "docs/evidence/live-run-v3.0.39-2026-08-30.md",
       "docs/evidence/hot-brakes-airfield-command-v3.0.40-2026-09-01.md",
       "docs/evidence/auto-armed-personnel-and-partial-dispatch-v3.0.41-2026-09-02.md",
+      "docs/evidence/shortage-station-diagnostics-gap-v3.0.42-2026-09-03.md",
       "src/missionchief-command-nexus.user.js"
     ],
     "updateRule": "Edit project-state.json, run node scripts/render-project-state.mjs, then run node scripts/check-project-state.mjs. Do not hand-edit docs/PROJECT_STATE.md. After merge or release, update the Google Memory Bank with a concise pointer to the verified repository state and read it back."

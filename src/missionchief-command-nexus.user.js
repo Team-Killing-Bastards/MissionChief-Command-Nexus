@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.42
+// @version      3.0.43
 // @description  MissionChief safe background automation.
 // @author       MartyBlyth
 // @license      MIT
@@ -152,9 +152,9 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.42';
-const MASTER_VERSION = '3.0.42';
-const MISSION_FINDER_VERSION = '10.6.179';
+const VERSION = '3.0.43';
+const MASTER_VERSION = '3.0.43';
+const MISSION_FINDER_VERSION = '10.6.180';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
 const STYLE_ID = 'mcn-v3-map-controller-style';
@@ -7655,6 +7655,8 @@ fulfilment: 'unknown',
 dispatchObserved: false,
 requirements: [],
 selectionShortfalls: [],
+requirementCandidateEvidence: [],
+trainedCandidateEvidence: [],
 visibleAlerts: [],
 selectedVehicleCount: 0,
 transportEvents: [],
@@ -7700,6 +7702,8 @@ status: String(row.status || ''),
 }));
 mission.requirements = missingRows;
 mission.selectionShortfalls = selectionShortfalls;
+mission.requirementCandidateEvidence = Array.isArray(snapshot?.selectionSummary?.requirementCandidateEvidence) ? snapshot.selectionSummary.requirementCandidateEvidence : [];
+mission.trainedCandidateEvidence = Array.isArray(snapshot?.selectionSummary?.trainedCandidateEvidence) ? snapshot.selectionSummary.trainedCandidateEvidence : [];
 mission.visibleAlerts = Array.isArray(snapshot?.requirementContext?.visibleAlerts)
 ? snapshot.requirementContext.visibleAlerts.slice(0, 20).map(String) : [];
 mission.selectedVehicleCount = Array.isArray(snapshot?.selectionSummary?.selectedVehicles)
@@ -7761,6 +7765,8 @@ mission.staffingFailures.length ||
 mission.retriesAndRecoveries.length ||
 stalledTransportMissionIds.has(mission.missionId)
 );
+const stationIssueMap=new Map(),vehicleIssueMap=new Map();
+missions.forEach(mission=>[...(mission.requirementCandidateEvidence||[]),...(mission.trainedCandidateEvidence||[])].forEach(group=>(group.candidates||[]).forEach(vehicle=>{const reason=String(vehicle.reason||'unknown');if(/^selected/.test(reason))return;const sk=vehicle.stationName||vehicle.stationHref||vehicle.buildingId||'Unknown station',s=stationIssueMap.get(sk)||{stationName:vehicle.stationName||'Unknown station',stationHref:vehicle.stationHref||'',buildingId:vehicle.buildingId||'',occurrences:0,missionIds:new Set(),requirements:new Set(),reasons:{}};s.occurrences+=1;s.missionIds.add(mission.missionId);s.requirements.add(String(group.label||group.name||group.mappedName||group.code||''));s.reasons[reason]=(s.reasons[reason]||0)+1;stationIssueMap.set(sk,s);const vk=vehicle.vehicleId||`${sk}|${vehicle.vehicleName}`,v=vehicleIssueMap.get(vk)||{vehicleId:vehicle.vehicleId||'',vehicleName:vehicle.vehicleName||'',stationName:vehicle.stationName||'',stationHref:vehicle.stationHref||'',buildingId:vehicle.buildingId||'',occurrences:0,missionIds:new Set(),requirements:new Set(),reasons:{}};v.occurrences+=1;v.missionIds.add(mission.missionId);v.requirements.add(String(group.label||group.name||group.mappedName||group.code||''));v.reasons[reason]=(v.reasons[reason]||0)+1;vehicleIssueMap.set(vk,v);})));const compactIssue=item=>({...item,missionIds:Array.from(item.missionIds),requirements:Array.from(item.requirements).filter(Boolean)}),stationIssueSummary=Array.from(stationIssueMap.values()).map(compactIssue).sort((a,b)=>b.occurrences-a.occurrences||a.stationName.localeCompare(b.stationName)).slice(0,100),vehicleIssueSummary=Array.from(vehicleIssueMap.values()).map(compactIssue).sort((a,b)=>b.occurrences-a.occurrences).slice(0,160);
 return {
 schemaVersion: 1,
 meaning: {
@@ -7779,6 +7785,8 @@ dispatchObserved: missions.filter(item => item.dispatchObserved).length,
 missionsWithTransport: missions.filter(item => item.transportEvents.length).length,
 stalledTransportCount: stalledTransports.length,
 staffingFailureCount: Number(staffingFailures?.currentRunFailureCount || 0),
+stationIssueCount: stationIssueSummary.length,
+vehicleIssueCount: vehicleIssueSummary.length,
 zeroSelectionRecoveryCount: state.zeroSelectionRecoveries,
 postDispatchHardRecoveryCount: state.postDispatchHardRecoveries,
 transportHardRecoveryCount: state.transportHardRecoveries,
@@ -7796,6 +7804,8 @@ postDispatchWatchdog: state.postDispatchWatchdog ? { ...state.postDispatchWatchd
 autoStopRecord: readV2AutoStopRecord(),
 },
 stalledTransports,
+stationIssueSummary,
+vehicleIssueSummary,
 unresolvedMissions,
 missions,
 unitFinderSnapshotsRetained: snapshots.length,
@@ -18668,7 +18678,7 @@ bootMark('heavy-runtime-start');
     }
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.179
+         * MODULE 2: MISSION FINDER V10.6.180
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -20924,173 +20934,189 @@ bootMark('heavy-runtime-start');
             }
         };
     }
-    function mfBuildUnitFinderDiagnosticSnapshot(reason) {
-        let liveRows = [];
-        try {
-            liveRows = readMissionUpdateRows({ silent: true });
-        } catch (_error) {}
-        const selectedVehicles =
-            mfGetDiagnosticSelectedVehicles();
-        const diagnosticBoxes = getVehicleCheckboxSnapshot(true);
-        return {
-            schema: 'missionchief-unit-finder-diagnostics',
-            schemaVersion: 1,
-            capturedAt: new Date().toISOString(),
-            capturedAtUnix: Date.now(),
-            reason: String(reason || 'manual-export'),
-            versions: {
-                commandNexus: '3.0.37',
-                missionFinder: 'V10.6.179',
-                personnelAssignment: '1.3.8'
-            },
-            mission: {
-                missionId:
-                    getCurrentMissionIdForQueueRestart() || '',
-                missionKey:
-                    getLocalMissionInstanceKey() || '',
-                missionName:
-                    getCurrentMissionName() || '',
-                pageUrl: String(window.location.href || ''),
-                host: String(window.location.host || '')
-            },
-            execution: {
-                autoModeRunning:
-                    autoModeRunning === true ||
-                    sessionStorage.getItem(
-                        'mf_auto_mode_running'
-                    ) === 'true',
-                ready: vehicleLoadState.ready === true,
-                staffingBlockActive:
-                    mfStaffingBlockActive === true,
-                staffingBlockText:
-                    String(mfStaffingBlockText || ''),
-                ambulanceOfficerThresholdEnabled:
-                    mfAmbulanceOfficerThresholdEnabled,
-                ambulanceOfficerThreshold:
-                    mfAmbulanceOfficerThreshold,
-                alwaysSendAmbulanceToHighRiskMissingPerson:
-                    mfAlwaysSendAmbulanceToHighRiskMissingPerson === true,
-                highRiskMissingPersonMission:
-                    isConfiguredHighRiskMissingPersonMission(),
-                processedSelectionKeys:
-                    Array.from(processedSelectionKeys || [])
-            },
-            requirementContext: {
-                ...mfUnitFinderDiagnosticContext,
-                missionDefinitionRawRows:
-                    mfLastMissionDefinitionRawRows.map(row => ({
-                        label: String(row.label || ''),
-                        value: String(row.value || '')
-                    })),
-                currentLiveRequirementRows:
-                    mfSerialiseDiagnosticRequirementRows(liveRows),
-                visibleAlerts:
-                    mfGetDiagnosticVisibleAlerts()
-            },
-            selectionSummary: {
-                vehicleInventory: {total: diagnosticBoxes.length,searchDogType102: diagnosticBoxes.filter(isSearchDogUnitVehicleCheckbox).length,availableSearchDogType102: diagnosticBoxes.filter(input => !input.disabled && !input.checked && isSearchDogUnitVehicleCheckbox(input)).length,loadControlVisible: isVehicleListLoadControlVisible(),loadingIndicatorVisible: isVehicleListLoadingIndicatorVisible()},
-                vehicleLoadState: {
-                    rows: vehicleLoadState.rows.map(row => ({
-                        originalName: String(row.originalName || ''),
-                        mappedName: String(row.mappedName || ''),
-                        required: Math.max(
-                            0,
-                            parseInt(row.required, 10) || 0
-                        ),
-                        selected: Math.max(
-                            0,
-                            parseInt(row.selected, 10) || 0
-                        ),
-                        status: String(row.status || '')
-                    })),
-                    patients: Math.max(
-                        0,
-                        parseInt(vehicleLoadState.patients, 10) || 0
-                    ),
-                    ambulances: Math.max(
-                        0,
-                        parseInt(vehicleLoadState.ambulances, 10) || 0
-                    ),
-                    ready: vehicleLoadState.ready === true
-                },
-                selectedVehicles,
-                knownUnstaffedAmbulanceExclusions:
-                    mfKnownUnstaffedAmbulanceExclusions
-                        .slice(0, 40)
-                        .map(vehicle => ({ ...vehicle }))
-            },
-            environment: {
-                language: String(navigator.language || ''),
-                userAgent: String(navigator.userAgent || '')
-            }
-        };
-    }
-    function mfPersistUnitFinderDiagnostic(reason) {
-        const snapshot =
-            mfBuildUnitFinderDiagnosticSnapshot(reason);
-        const hasUsefulData = !!(
-            snapshot.requirementContext.updatedAt ||
-            snapshot.requirementContext.suppliedRows.length ||
-            snapshot.requirementContext.processedRows.length ||
-            snapshot.requirementContext.currentLiveRequirementRows.length ||
-            snapshot.requirementContext.visibleAlerts.length ||
-            snapshot.selectionSummary.vehicleLoadState.rows.length ||
-            snapshot.selectionSummary.selectedVehicles.length ||
-            snapshot.selectionSummary.knownUnstaffedAmbulanceExclusions.length
-        );
-        if (!hasUsefulData) return snapshot;
-        const emptyMissionUpdateSnapshot =
-            reason === 'not-ready' &&
-            snapshot.requirementContext.mode === 'mission-update' &&
-            snapshot.requirementContext.suppliedRows.length === 0 &&
-            snapshot.requirementContext.processedRows.length === 0 &&
-            snapshot.requirementContext.currentLiveRequirementRows.length === 0 &&
-            snapshot.requirementContext.visibleAlerts.length === 0 &&
-            snapshot.selectionSummary.vehicleLoadState.rows.length === 0;
-        if (emptyMissionUpdateSnapshot) return snapshot;
-        const signature = JSON.stringify({
-            mission: snapshot.mission.missionKey || snapshot.mission.missionId,
-            reason: snapshot.reason,
-            mode: snapshot.requirementContext.mode,
-            source: snapshot.requirementContext.sourceLabel,
-            ready: snapshot.execution.ready,
-            rows: snapshot.selectionSummary.vehicleLoadState.rows,
-            selected: snapshot.selectionSummary.selectedVehicles
-                .map(vehicle => vehicle.vehicleId || vehicle.vehicleName),
-            knownUnstaffed:
-                snapshot.selectionSummary.knownUnstaffedAmbulanceExclusions
-                    .map(vehicle => vehicle.vehicleId || vehicle.vehicleName)
-        });
-        if (
-            signature === mfLastUnitFinderDiagnosticSignature &&
-            reason !== 'manual-export'
-        ) {
-            return snapshot;
-        }
-        mfLastUnitFinderDiagnosticSignature = signature;
-        const history = mfReadUnitFinderDiagnosticHistory();
-        history.push(snapshot);
-        const boundedHistory =
-            mfBoundUnitFinderDiagnosticHistory(history);
-        try {
-            localStorage.setItem(
-                MF_UNIT_FINDER_DIAGNOSTICS_KEY,
-                boundedHistory.encoded
-            );
-        } catch (_error) {
-            try {
-                const fallback =
-                    mfBoundUnitFinderDiagnosticHistory(
-                        boundedHistory.history.slice(-4)
-                    );
-                localStorage.setItem(
-                    MF_UNIT_FINDER_DIAGNOSTICS_KEY,
-                    fallback.encoded
-                );
-            } catch (_ignored) {}
-        }
-        return snapshot;
-    }
+function mfDiagnosticVehicleEvidence(input,registry,reason=''){
+const row=input?.closest?.('tr')||null,reg=mfGetDiagnosticRegistryEvidence(input,registry),link=row?.querySelector?.('a[href*="/buildings/"]')||null;
+const attr=name=>String(input?.getAttribute?.(name)||row?.getAttribute?.(name)||''),buildingId=attr('building_id')||attr('building-id')||attr('data-building-id');
+const stationName=String(reg?.stationName||link?.textContent||link?.innerText||'').replace(/\s+/g,' ').trim().slice(0,240),stationHref=String(reg?.stationHref||link?.getAttribute?.('href')||'').slice(0,500);
+return{vehicleId:getMissionVehicleId(input),vehicleName:getVehicleDebugName(input),vehicleTypeIds:getVehicleTypeIdentifiers(input).map(String).slice(0,8),stationName,stationHref,buildingId,checked:input?.checked===true,disabled:input?.disabled===true,reason:String(reason||''),registryMatchMode:String(reg?.matchType||''),registrySource:String(reg?.source||''),assignedPersonnelCount:Number.isFinite(Number(reg?.assignedPersonnelCount))?Math.max(0,parseInt(reg.assignedPersonnelCount,10)||0):null,assignmentScanComplete:reg?.assignmentScanComplete===true,trainingProfilesComplete:reg?.trainingProfilesComplete===true};
+}
+function mfDiagnosticStationSummary(items){
+const map=new Map();(items||[]).forEach(v=>{const key=v.stationName||v.stationHref||v.buildingId||'Unknown station',x=map.get(key)||{stationName:v.stationName||'Unknown station',stationHref:v.stationHref||'',buildingId:v.buildingId||'',candidateCount:0,selectedCount:0,disabledCount:0,availableUnselectedCount:0,qualifyingPersonnel:0,reasons:{}};x.candidateCount+=1;if(v.checked)x.selectedCount+=1;if(v.disabled)x.disabledCount+=1;if(!v.checked&&!v.disabled)x.availableUnselectedCount+=1;x.qualifyingPersonnel+=Math.max(0,Number(v.qualifyingPersonnelCount||0));const r=String(v.reason||'unknown');x.reasons[r]=(x.reasons[r]||0)+1;map.set(key,x);});return Array.from(map.values()).sort((a,b)=>b.disabledCount-a.disabledCount||b.availableUnselectedCount-a.availableUnselectedCount||b.candidateCount-a.candidateCount||a.stationName.localeCompare(b.stationName));
+}
+function mfGetDiagnosticRequirementCandidateEvidence(rows){
+let registry={vehicles:{}};try{registry=readPersonnelTrainingRegistry();}catch(_error){}return(rows||[]).filter(r=>Number(r?.required||0)>Number(r?.selected||0)&&!/assigned trained/i.test(String(r?.originalName||r?.mappedName||''))).map(r=>{let boxes=[];try{boxes=getAllMatchingVehicleCheckboxes(r.originalName,r.mappedName,true,true);}catch(_error){}const items=boxes.map(input=>mfDiagnosticVehicleEvidence(input,registry,input.checked?'selected':input.disabled?'disabled-or-unavailable':'available-not-selected'));return{name:String(r.originalName||r.mappedName||''),mappedName:String(r.mappedName||''),required:Math.max(0,Number(r.required||0)),selected:Math.max(0,Number(r.selected||0)),shortfall:Math.max(0,Number(r.required||0)-Number(r.selected||0)),matchedCandidates:items.length,selectedCandidates:items.filter(v=>v.checked).length,disabledOrUnavailable:items.filter(v=>v.disabled&&!v.checked).length,availableUnselected:items.filter(v=>!v.disabled&&!v.checked).length,stationSummary:mfDiagnosticStationSummary(items),candidates:items.slice(0,16)};});
+}
+function mfGetDiagnosticTrainedCandidateEvidence(rows){
+let registry={vehicles:{}};try{registry=readPersonnelTrainingRegistry();}catch(_error){}const reqMap=new Map();(rows||[]).forEach(row=>(row?.personnelTrainingRequirements||[]).forEach(req=>{const key=JSON.stringify([req.code,req.requirementType,req.requiredTrainingCodes,req.eligibleVehicleTypeIds]);const old=reqMap.get(key);if(!old||Number(req.personnelRequired||req.required||0)>Number(old.personnelRequired||old.required||0))reqMap.set(key,req);}));const boxes=getVehicleCheckboxSnapshot(true);return Array.from(reqMap.values()).map(req=>{const types=new Set((req.eligibleVehicleTypeIds||[]).map(String)),codes=(req.requiredTrainingCodes||[]).map(String);const items=boxes.filter(input=>getVehicleTypeIdentifiers(input).some(id=>types.has(String(id)))).map(input=>{const match=getRegistryEntryForMissionCheckbox(input,registry),entry=match?.entry||null,profiles=Array.isArray(entry?.assignedTrainingProfiles)?entry.assignedTrainingProfiles:[],qualifying=profiles.filter(profile=>codes.every(code=>(profile||[]).map(String).includes(code))).length;let reason=input.checked?'selected-qualified':input.disabled?'disabled-or-unavailable':!entry?'registry-entry-missing':entry.assignmentScanComplete!==true?'assignment-scan-incomplete':entry.trainingProfilesComplete!==true?'training-profiles-incomplete':qualifying<=0?'no-required-training-combination':'available-qualified-not-selected';return{...mfDiagnosticVehicleEvidence(input,registry,reason),qualifyingPersonnelCount:qualifying,requiredTrainingCodes:codes};});return{code:String(req.code||''),label:String(req.label||''),requirementType:String(req.requirementType||''),required:Math.max(0,Number(req.required||0)),personnelRequired:Math.max(0,Number(req.personnelRequired||0)),requiredTrainingCodes:codes,eligibleVehicleTypeIds:Array.from(types),candidatesFound:items.length,qualifyingPersonnelFound:items.reduce((sum,v)=>sum+Math.max(0,Number(v.qualifyingPersonnelCount||0)),0),stationSummary:mfDiagnosticStationSummary(items),candidates:items.slice(0,24)};}).filter(item=>item.personnelRequired>0||item.required>0);
+}
+function mfBuildUnitFinderDiagnosticSnapshot(reason) {
+let liveRows = [];
+try {
+liveRows = readMissionUpdateRows({ silent: true });
+} catch (_error) {}
+const selectedVehicles =
+mfGetDiagnosticSelectedVehicles();
+const diagnosticBoxes = getVehicleCheckboxSnapshot(true);
+const diagnosticLoadRows = vehicleLoadState.rows.map(row => ({
+originalName: String(row.originalName || ''), mappedName: String(row.mappedName || ''),
+required: Math.max(0, parseInt(row.required, 10) || 0), selected: Math.max(0, parseInt(row.selected, 10) || 0),
+status: String(row.status || '')
+}));
+const requirementCandidateEvidence = mfGetDiagnosticRequirementCandidateEvidence(diagnosticLoadRows);
+const trainedCandidateEvidence = mfGetDiagnosticTrainedCandidateEvidence(mfUnitFinderDiagnosticContext.processedRows);
+return {
+schema: 'missionchief-unit-finder-diagnostics',
+schemaVersion: 1,
+capturedAt: new Date().toISOString(),
+capturedAtUnix: Date.now(),
+reason: String(reason || 'manual-export'),
+versions: {
+commandNexus: '3.0.43',
+missionFinder: 'V10.6.180',
+personnelAssignment: '1.3.12'
+},
+mission: {
+missionId:
+getCurrentMissionIdForQueueRestart() || '',
+missionKey:
+getLocalMissionInstanceKey() || '',
+missionName:
+getCurrentMissionName() || '',
+pageUrl: String(window.location.href || ''),
+host: String(window.location.host || '')
+},
+execution: {
+autoModeRunning:
+autoModeRunning === true ||
+sessionStorage.getItem(
+'mf_auto_mode_running'
+) === 'true',
+ready: vehicleLoadState.ready === true,
+staffingBlockActive:
+mfStaffingBlockActive === true,
+staffingBlockText:
+String(mfStaffingBlockText || ''),
+ambulanceOfficerThresholdEnabled:
+mfAmbulanceOfficerThresholdEnabled,
+ambulanceOfficerThreshold:
+mfAmbulanceOfficerThreshold,
+alwaysSendAmbulanceToHighRiskMissingPerson:
+mfAlwaysSendAmbulanceToHighRiskMissingPerson === true,
+highRiskMissingPersonMission:
+isConfiguredHighRiskMissingPersonMission(),
+processedSelectionKeys:
+Array.from(processedSelectionKeys || [])
+},
+requirementContext: {
+...mfUnitFinderDiagnosticContext,
+missionDefinitionRawRows:
+mfLastMissionDefinitionRawRows.map(row => ({
+label: String(row.label || ''),
+value: String(row.value || '')
+})),
+currentLiveRequirementRows:
+mfSerialiseDiagnosticRequirementRows(liveRows),
+visibleAlerts:
+mfGetDiagnosticVisibleAlerts()
+},
+selectionSummary: {
+vehicleInventory: {total: diagnosticBoxes.length,searchDogType102: diagnosticBoxes.filter(isSearchDogUnitVehicleCheckbox).length,availableSearchDogType102: diagnosticBoxes.filter(input => !input.disabled && !input.checked && isSearchDogUnitVehicleCheckbox(input)).length,loadControlVisible: isVehicleListLoadControlVisible(),loadingIndicatorVisible: isVehicleListLoadingIndicatorVisible()},
+vehicleLoadState: {
+rows: diagnosticLoadRows,
+patients: Math.max(
+0,
+parseInt(vehicleLoadState.patients, 10) || 0
+),
+ambulances: Math.max(
+0,
+parseInt(vehicleLoadState.ambulances, 10) || 0
+),
+ready: vehicleLoadState.ready === true
+},
+requirementCandidateEvidence,
+trainedCandidateEvidence,
+selectedVehicles,
+knownUnstaffedAmbulanceExclusions:
+mfKnownUnstaffedAmbulanceExclusions
+.slice(0, 40)
+.map(vehicle => ({ ...vehicle }))
+},
+environment: {
+language: String(navigator.language || ''),
+userAgent: String(navigator.userAgent || '')
+}
+};
+}
+function mfPersistUnitFinderDiagnostic(reason) {
+const snapshot =
+mfBuildUnitFinderDiagnosticSnapshot(reason);
+const hasUsefulData = !!(
+snapshot.requirementContext.updatedAt ||
+snapshot.requirementContext.suppliedRows.length ||
+snapshot.requirementContext.processedRows.length ||
+snapshot.requirementContext.currentLiveRequirementRows.length ||
+snapshot.requirementContext.visibleAlerts.length ||
+snapshot.selectionSummary.vehicleLoadState.rows.length ||
+snapshot.selectionSummary.requirementCandidateEvidence.length ||
+snapshot.selectionSummary.trainedCandidateEvidence.length ||
+snapshot.selectionSummary.selectedVehicles.length ||
+snapshot.selectionSummary.knownUnstaffedAmbulanceExclusions.length
+);
+if (!hasUsefulData) return snapshot;
+const emptyMissionUpdateSnapshot =
+reason === 'not-ready' &&
+snapshot.requirementContext.mode === 'mission-update' &&
+snapshot.requirementContext.suppliedRows.length === 0 &&
+snapshot.requirementContext.processedRows.length === 0 &&
+snapshot.requirementContext.currentLiveRequirementRows.length === 0 &&
+snapshot.requirementContext.visibleAlerts.length === 0 &&
+snapshot.selectionSummary.vehicleLoadState.rows.length === 0;
+if (emptyMissionUpdateSnapshot) return snapshot;
+const signature = JSON.stringify({
+mission: snapshot.mission.missionKey || snapshot.mission.missionId,
+reason: snapshot.reason,
+mode: snapshot.requirementContext.mode,
+source: snapshot.requirementContext.sourceLabel,
+ready: snapshot.execution.ready,
+rows: snapshot.selectionSummary.vehicleLoadState.rows,
+selected: snapshot.selectionSummary.selectedVehicles
+.map(vehicle => vehicle.vehicleId || vehicle.vehicleName),
+candidateIssues: snapshot.selectionSummary.requirementCandidateEvidence.map(item => [item.mappedName,item.shortfall,item.disabledOrUnavailable,item.availableUnselected]),
+trainedIssues: snapshot.selectionSummary.trainedCandidateEvidence.map(item => [item.code,item.personnelRequired,item.qualifyingPersonnelFound]),
+knownUnstaffed:
+snapshot.selectionSummary.knownUnstaffedAmbulanceExclusions
+.map(vehicle => vehicle.vehicleId || vehicle.vehicleName)
+});
+if (
+signature === mfLastUnitFinderDiagnosticSignature &&
+reason !== 'manual-export'
+) {
+return snapshot;
+}
+mfLastUnitFinderDiagnosticSignature = signature;
+const history = mfReadUnitFinderDiagnosticHistory();
+history.push(snapshot);
+const boundedHistory =
+mfBoundUnitFinderDiagnosticHistory(history);
+try {
+localStorage.setItem(
+MF_UNIT_FINDER_DIAGNOSTICS_KEY,
+boundedHistory.encoded
+);
+} catch (_error) {
+try {
+const fallback =
+mfBoundUnitFinderDiagnosticHistory(
+boundedHistory.history.slice(-4)
+);
+localStorage.setItem(
+MF_UNIT_FINDER_DIAGNOSTICS_KEY,
+fallback.encoded
+);
+} catch (_ignored) {}
+}
+return snapshot;
+}
     function mfBoundStaffingFailureHistory(history) {
         let bounded = (Array.isArray(history) ? history : [])
             .slice(-MF_STAFFING_FAILURE_HISTORY_LIMIT);
@@ -23799,717 +23825,717 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 normalised === 'marine eod response vehicles';
         });
     }
-    function getAllMatchingVehicleCheckboxes(originalName, mappedName, includeChecked) {
-        mfApplyStoredStaffingQuarantine();
-        if (isFireOperationalSupportRequirement(originalName, mappedName)) {
-            return sortVehicleCheckboxesByBestArrival(getVehicleCheckboxSnapshot().filter(input => {
-                if (input.disabled) return false;
-                if (!includeChecked && input.checked) return false;
-                return isFireOperationalSupportUnitCheckbox(input);
-            }));
-        }
-        if (isFireEngineRequirement(originalName, mappedName)) {
-            return sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) return false;
-                    if (!includeChecked && input.checked) return false;
-                    return isFireEngineVehicleCheckbox(input);
-                })
-            );
-        }
-        if (isAnyVehicleAmbulanceRequirement(originalName, mappedName)) {
-            return sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) return false;
-                    if (!includeChecked && input.checked) return false;
-                    return isNormalAmbulanceVehicleCheckbox(input);
-                })
-            );
-        }
-        const eodResponseMode =
-            getEodResponseRequirementMode(
-                originalName,
-                mappedName
-            );
-        if (eodResponseMode) {
-            return sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) return false;
-                    if (!includeChecked && input.checked) return false;
-                    return eodResponseMode === 'marine'
-                        ? isMarineEodResponseVehicleCheckbox(input)
-                        : isEodResponseVehicleCheckbox(input);
-                })
-            );
-        }
-        const coastguardHelicopterTypeId = getCoastguardRescueHelicopterTypeId(originalName, mappedName);
-        if (coastguardHelicopterTypeId) {
-            return sortVehicleCheckboxesByBestArrival(getVehicleCheckboxSnapshot().filter(input =>
-                !input.disabled && (includeChecked || !input.checked) && isCoastguardRescueHelicopterVehicleCheckbox(input, coastguardHelicopterTypeId)));
-        }
-        const prvSrvTypeId = getPrvSrvRequirementTypeId(
-            originalName,
-            mappedName
-        );
-        if (prvSrvTypeId) {
-            return sortVehicleCheckboxesByBestArrival(
-                getUniquePrvSrvVehicleCheckboxes(
-                    prvSrvTypeId,
-                    input => (
-                        !input.disabled &&
-                        (includeChecked || !input.checked)
-                    )
-                )
-            );
-        }
-        const candidates = getVehicleMatchCandidates(originalName, mappedName);
-        const strictExactOnly = isAmbulanceTransportRequest(originalName, mappedName);
-        const standardAmbulanceEtaPreferred = strictExactOnly;
-        const ambulanceOfficerOnly =
-            isAmbulanceOfficerRequirement(
-                originalName,
-                mappedName
-            );
-        const sartecPrefixOnly = isSartecRequirement(
-            originalName,
-            mappedName
-        );
-        if (sartecPrefixOnly) {
-            const available = getVehicleCheckboxSnapshot().filter(input =>
-                !input.disabled && (includeChecked || !input.checked));
-            const preferred = available.filter(isHomeResponseSar4x4Checkbox);
-            return sortVehicleCheckboxesByBestArrival(preferred.length ? preferred : available.filter(isSartecVehicleCheckbox));
-        }
-        const rrvTypeOnly =
-            isRrvRequirement(
-                originalName,
-                mappedName
-            );
-        const aerialApplianceOrRescueStairsPreferred =
-            isAerialApplianceOrRescueStairsRequirement(
-                originalName
-            );
-        const fireEngineOrRivPreferred =
-            isFireEngineOrRivRequirement(
-                originalName
-            );
-        const rivTypeOnly =
-            isRivRequirement(
-                originalName,
-                mappedName
-            );
-        const rivOrMajorFoamTenderPreferred =
-            isRivOrMajorFoamTenderRequirement(
-                originalName,
-                mappedName
-            );
-        const policeAirMode =
-            getPoliceAirRequirementMode(
-                originalName,
-                mappedName
-            );
-        const policeCarOnly =
-            isPoliceCarRequirement(
-                originalName,
-                mappedName
-            );
-        const roadRailOnly =
-            isRoadRailUnitRequirement(
-                originalName,
-                mappedName
-            );
-        const flatbedRecoveryOnly =
-            isFlatbedRecoveryVehicleRequirement(
-                originalName,
-                mappedName
-            );
-        const hgvRecoveryOnly =
-            isHgvRecoveryVehicleRequirement(
-                originalName,
-                mappedName
-            );
-        const airfieldSupervisorOnly =
-            isAirfieldOperationsSupervisorRequirement(
-                originalName,
-                mappedName
-            );
-        const searchDogUnitOnly =
-            isSearchDogUnitRequirement(
-                originalName,
-                mappedName
-            );
-        const crvOnly =
-            isCrvRequirement(
-                originalName,
-                mappedName
-            );
-        const controlVanOnly =
-            isControlVanRequirement(
-                originalName,
-                mappedName
-            );
-        const airAmbulanceOnly =
-            isAirAmbulanceRequirement(
-                originalName,
-                mappedName
-            );
-        const criticalCareTransferOnly =
-            isCriticalCareTransferAmbulanceRequirement(
-                originalName,
-                mappedName
-            );
-        const genericCriticalCare =
-            isGenericCriticalCareRequirement(
-                originalName,
-                mappedName
-            );
-        const atvCarrierOnly =
-            isAtvCarrierRequirement(
-                originalName,
-                mappedName
-            );
-        const seagoingVesselOnly =
-            isSeagoingVesselRequirement(
-                originalName,
-                mappedName
-            );
-        const dogSupportOnly =
-            isDogSupportUnitRequirement(
-                originalName,
-                mappedName
-            );
-        const operationalSupportOnly =
-            isOperationalSupportOrSarVehicleRequirement(
-                originalName,
-                mappedName
-            );
-        const generic4x4Only =
-            isGeneric4x4VehicleRequirement(
-                originalName,
-                mappedName
-            );
-        const mountainRescue4x4Preferred =
-            isMountainRescueOrSar4x4Requirement(
-                originalName,
-                mappedName
-            );
-        const iccuPreferred =
-            isIccuOrAmbulanceControlRequirement(
-                originalName,
-                mappedName
-            );
-        if (standardAmbulanceEtaPreferred) {
-            const orderedAmbulanceMatches =
-                sortVehicleCheckboxesByBestArrival(
-                    getVehicleCheckboxSnapshot().filter(input => {
-                        if (input.disabled) return false;
-                        if (!includeChecked && input.checked) return false;
-                        return isStandardAmbulanceEtaVehicleCheckbox(input);
-                    })
-                );
-            if (mfDebugEnabled) {
-                const roadCount = orderedAmbulanceMatches.filter(input =>
-                    getVehicleTypeIdentifiers(input).includes('5')
-                ).length;
-                const hemsCount = orderedAmbulanceMatches.filter(input =>
-                    getVehicleTypeIdentifiers(input).includes('9')
-                ).length;
-                debugLog(
-                    'AMBULANCE ETA PRIORITY',
-                    `${originalName} -> ${mappedName} | road=${roadCount} | HEMS=${hemsCount} | first=${orderedAmbulanceMatches[0] ? getVehicleDebugName(orderedAmbulanceMatches[0]) : 'none'}`
-                );
-            }
-            return orderedAmbulanceMatches;
-        }
-        if (roadRailOnly) {
-            return sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) return false;
-                    if (!includeChecked && input.checked) return false;
-                    return isRoadRailUnitVehicleCheckbox(input);
-                })
-            );
-        }
-        if (flatbedRecoveryOnly) {
-            return sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) return false;
-                    if (!includeChecked && input.checked) return false;
-                    return isFlatbedRecoveryVehicleCheckbox(input);
-                })
-            );
-        }
-        if (searchDogUnitOnly) {
-            return sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) return false;
-                    if (!includeChecked && input.checked) return false;
-                    return isSearchDogUnitVehicleCheckbox(input);
-                })
-            );
-        }
-        if (hgvRecoveryOnly) {
-            return sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) return false;
-                    if (!includeChecked && input.checked) return false;
-                    return isHgvRecoveryVehicleCheckbox(input);
-                })
-            );
-        }
-        if (airfieldSupervisorOnly) {
-            return sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) return false;
-                    if (!includeChecked && input.checked) return false;
-                    return isAirfieldOperationsSupervisorVehicleCheckbox(input);
-                })
-            );
-        }
-        if (crvOnly) {
-            return sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) return false;
-                    if (!includeChecked && input.checked) return false;
-                    return isCrvVehicleCheckbox(input);
-                })
-            );
-        }
-        if (controlVanOnly) {
-            return sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) return false;
-                    if (!includeChecked && input.checked) return false;
-                    return isControlVanVehicleCheckbox(input);
-                })
-            );
-        }
-        if (airAmbulanceOnly) {
-            return sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) return false;
-                    if (!includeChecked && input.checked) return false;
-                    return isAirAmbulanceVehicleCheckbox(input);
-                })
-            );
-        }
-        if (criticalCareTransferOnly) {
-            return sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) return false;
-                    if (!includeChecked && input.checked) return false;
-                    return isCriticalCareTransferAmbulanceCheckbox(input);
-                })
-            );
-        }
-        if (genericCriticalCare) {
-            const registry = readPersonnelTrainingRegistry();
-            return sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) return false;
-                    if (!includeChecked && input.checked) return false;
-                    return isGenericCriticalCareVehicleCheckbox(input, registry);
-                })
-            );
-        }
-        if (seagoingVesselOnly) {
-            return sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) return false;
-                    if (!includeChecked && input.checked) return false;
-                    return isSeagoingVesselCheckbox(input);
-                })
-            );
-        }
-        if (
-            aerialApplianceOrRescueStairsPreferred
-        ) {
-            const orderedMatches =
-                getAerialApplianceOrRescueStairsVehicleCheckboxes(
-                    includeChecked
-                );
-            if (mfDebugEnabled) {
-                const rescueStairsCount =
-                    orderedMatches.filter(
-                        isRescueStairsVehicleCheckbox
-                    ).length;
-                const carpCount =
-                    orderedMatches.length -
-                    rescueStairsCount;
-                debugLog(
-                    'RESCUE STAIRS CARP PRIORITY',
-                    `${originalName} -> ${mappedName} | Rescue Stairs matches=${rescueStairsCount} first | CARP remainder matches=${carpCount} | returned=${orderedMatches.length}`
-                );
-            }
-            return orderedMatches;
-        }
-        if (
-            fireEngineOrRivPreferred
-        ) {
-            const orderedMatches =
-                getFireEngineOrRivVehicleCheckboxes(
-                    includeChecked
-                );
-            if (mfDebugEnabled) {
-                const rivCount =
-                    orderedMatches.filter(
-                        isRivVehicleCheckbox
-                    ).length;
-                const rescuePumpCount =
-                    orderedMatches.length -
-                    rivCount;
-                debugLog(
-                    'RIV FIRE ENGINE PRIORITY',
-                    `${originalName} -> ${mappedName} | RIV matches=${rivCount} first | Rescue Pump remainder matches=${rescuePumpCount} | returned=${orderedMatches.length}`
-                );
-            }
-            return orderedMatches;
-        }
-        if (
-            rivOrMajorFoamTenderPreferred
-        ) {
-            const eligible =
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) {
-                        return false;
-                    }
-                    if (
-                        !includeChecked &&
-                        input.checked
-                    ) {
-                        return false;
-                    }
-                    return (
-                        isRivVehicleCheckbox(
-                            input
-                        ) ||
-                        isMajorFoamTenderVehicleCheckbox(
-                            input
-                        )
-                    );
-                });
-            const rivMatches =
-                sortVehicleCheckboxesByBestArrival(
-                    eligible.filter(
-                        isRivVehicleCheckbox
-                    )
-                );
-            if (
-                rivMatches.length >
-                0
-            ) {
-                return rivMatches;
-            }
-            return sortVehicleCheckboxesByBestArrival(
-                eligible.filter(
-                    isMajorFoamTenderVehicleCheckbox
-                )
-            );
-        }
-        if (atvCarrierOnly) {
-            return sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) {
-                        return false;
-                    }
-                    if (
-                        !includeChecked &&
-                        input.checked
-                    ) {
-                        return false;
-                    }
-                    return isAtvCarrierCheckbox(
-                        input
-                    );
-                })
-            );
-        }
-        if (dogSupportOnly) {
-            return sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) {
-                        return false;
-                    }
-                    if (
-                        !includeChecked &&
-                        input.checked
-                    ) {
-                        return false;
-                    }
-                    return isDogSupportUnitCheckbox(
-                        input
-                    );
-                })
-            );
-        }
-        if (operationalSupportOnly) {
-            return sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) return false;
-                    if (!includeChecked && input.checked) return false;
-                    return isOperationalSupportVanCheckbox(input);
-                })
-            );
-        }
-        if (iccuPreferred) {
-            const eligible =
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) {
-                        return false;
-                    }
-                    if (
-                        !includeChecked &&
-                        input.checked
-                    ) {
-                        return false;
-                    }
-                    return (
-                        isIccuVehicleCheckbox(
-                            input
-                        ) ||
-                        isAmbulanceControlUnitCheckbox(
-                            input
-                        )
-                    );
-                });
-            const iccuMatches =
-                sortVehicleCheckboxesByBestArrival(
-                    eligible.filter(
-                        isIccuVehicleCheckbox
-                    )
-                );
-            const ambulanceControlFallbackMatches =
-                sortVehicleCheckboxesByBestArrival(
-                    eligible.filter(
-                        input =>
-                            !isIccuVehicleCheckbox(input) &&
-                            isAmbulanceControlUnitCheckbox(input)
-                    )
-                );
-            return [
-                ...iccuMatches,
-                ...ambulanceControlFallbackMatches
-            ];
-        }
-        if (generic4x4Only) {
-            return sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) {
-                        return false;
-                    }
-                    if (
-                        !includeChecked &&
-                        input.checked
-                    ) {
-                        return false;
-                    }
-                    return isGeneric4x4VehicleCheckbox(
-                        input
-                    );
-                })
-            );
-        }
-        if (mountainRescue4x4Preferred) {
-            const eligible =
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) {
-                        return false;
-                    }
-                    if (
-                        !includeChecked &&
-                        input.checked
-                    ) {
-                        return false;
-                    }
-                    return (
-                        isMountainRescue4x4Checkbox(
-                            input
-                        ) ||
-                        isSar4x4Checkbox(
-                            input
-                        )
-                    );
-                });
-            const mountainRescueMatches =
-                sortVehicleCheckboxesByBestArrival(
-                    eligible.filter(
-                        isMountainRescue4x4Checkbox
-                    )
-                );
-            const sarFallbackMatches =
-                sortVehicleCheckboxesByBestArrival(
-                    eligible.filter(
-                        isSar4x4Checkbox
-                    )
-                );
-            const orderedMatches = [
-                ...mountainRescueMatches,
-                ...sarFallbackMatches
-            ];
-            if (mfDebugEnabled) {
-                debugLog(
-                    'MOUNTAIN 4X4 PRIORITY',
-                    `${originalName} -> ${mappedName} | Mountain Rescue 4x4 matches=${mountainRescueMatches.length} first | SAR 4x4 matches=${sarFallbackMatches.length} fallback | returned=${orderedMatches.length}`
-                );
-            }
-            return orderedMatches;
-        }
-        if (policeAirMode) {
-            const eligible =
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) {
-                        return false;
-                    }
-                    if (
-                        !includeChecked &&
-                        input.checked
-                    ) {
-                        return false;
-                    }
-                    if (policeAirMode === 'helicopter') {
-                        return isPoliceHelicopterCheckbox(input);
-                    }
-                    if (policeAirMode === 'drone') {
-                        return isPoliceDroneCheckbox(input);
-                    }
-                    if (policeAirMode === 'generic-drone') {
-                        return isGenericDroneCheckbox(input);
-                    }
-                    return (
-                        isPoliceHelicopterCheckbox(input) ||
-                        isPoliceDroneCheckbox(input)
-                    );
-                });
-            if (policeAirMode === 'helicopter') {
-                return sortVehicleCheckboxesByBestArrival(
-                    eligible.filter(
-                        isPoliceHelicopterCheckbox
-                    )
-                );
-            }
-            if (policeAirMode === 'drone') {
-                return sortVehicleCheckboxesByBestArrival(
-                    eligible.filter(
-                        isPoliceDroneCheckbox
-                    )
-                );
-            }
-            if (policeAirMode === 'generic-drone') {
-                return sortVehicleCheckboxesByBestArrival(
-                    eligible.filter(
-                        isGenericDroneCheckbox
-                    )
-                );
-            }
-            const sortedDroneMatches =
-                sortVehicleCheckboxesByBestArrival(
-                    eligible.filter(
-                        isPoliceDroneCheckbox
-                    )
-                );
-            const sortedHelicopterMatches =
-                sortVehicleCheckboxesByBestArrival(
-                    eligible.filter(
-                        isPoliceHelicopterCheckbox
-                    )
-                );
-            return [
-                ...sortedDroneMatches,
-                ...sortedHelicopterMatches
-            ];
-        }
-        if (policeCarOnly) {
-            const registry =
-                readPersonnelTrainingRegistry();
-            const policeCarCandidates =
-                sortVehicleCheckboxesByBestArrival(
-                    getVehicleCheckboxSnapshot().filter(input => {
-                        if (input.disabled) return false;
-                        if (!includeChecked && input.checked) return false;
-                        return isOrdinaryPoliceIrvCheckboxEligible(
-                            input,
-                            registry,
-                            {
-                                allowUnknown: true,
-                                allowProtected: true
-                            }
-                        );
-                    })
-                );
-            return orderOrdinaryPoliceIrvCandidates(
-                policeCarCandidates,
-                registry
-            );
-        }
-        const matches = getVehicleCheckboxSnapshot().filter(input => {
-            if (input.disabled) return false;
-            if (!includeChecked && input.checked) return false;
-            if (ambulanceOfficerOnly) {
-                return isAmbulanceOfficerVehicleCheckbox(
-                    input
-                );
-            }
-            if (sartecPrefixOnly) {
-                return isSartecVehicleCheckbox(
-                    input
-                );
-            }
-            if (rrvTypeOnly) {
-                return isRrvVehicleCheckbox(
-                    input
-                );
-            }
-            if (rivTypeOnly) {
-                return isRivVehicleCheckbox(
-                    input
-                );
-            }
-            if (policeCarOnly) {
-                return isPoliceCarVehicleCheckbox(
-                    input
-                );
-            }
-            const values = getCheckboxVehicleValues(input);
-            return vehicleValuesMatchCandidates(values, candidates, strictExactOnly);
-        });
-        if (mfDebugEnabled && strictExactOnly) {
-            debugLog('AMBULANCE STRICT', `${originalName} -> ${mappedName} | exact-match boxes=${matches.length}`);
-        }
-        if (mfDebugEnabled && sartecPrefixOnly) {
-            debugLog(
-                'SARTEC PREFIX',
-                `${originalName} -> ${mappedName} | displayed-name-prefix boxes=${matches.length}`
-            );
-        }
-        if (
-            mfDebugEnabled &&
-            rrvTypeOnly
-        ) {
-            debugLog(
-                'RRV STRICT',
-                `${originalName} -> ${mappedName} | RRV type boxes=${matches.length}`
-            );
-        }
-        if (
-            mfDebugEnabled &&
-            rivTypeOnly
-        ) {
-            debugLog(
-                'RIV STRICT',
-                `${originalName} -> ${mappedName} | RIV type boxes=${matches.length}`
-            );
-        }
-        if (
-            mfDebugEnabled &&
-            policeCarOnly
-        ) {
-            debugLog(
-                'POLICE CAR STRICT',
-                `${originalName} -> ${mappedName} | Police Car/IRV type boxes=${matches.length}`
-            );
-        }
-        return sortVehicleCheckboxesByBestArrival(matches);
-    }
+function getAllMatchingVehicleCheckboxes(originalName, mappedName, includeChecked, includeDisabled = false) {
+mfApplyStoredStaffingQuarantine();
+if (isFireOperationalSupportRequirement(originalName, mappedName)) {
+return sortVehicleCheckboxesByBestArrival(getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) return false;
+if (!includeChecked && input.checked) return false;
+return isFireOperationalSupportUnitCheckbox(input);
+}));
+}
+if (isFireEngineRequirement(originalName, mappedName)) {
+return sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) return false;
+if (!includeChecked && input.checked) return false;
+return isFireEngineVehicleCheckbox(input);
+})
+);
+}
+if (isAnyVehicleAmbulanceRequirement(originalName, mappedName)) {
+return sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) return false;
+if (!includeChecked && input.checked) return false;
+return isNormalAmbulanceVehicleCheckbox(input);
+})
+);
+}
+const eodResponseMode =
+getEodResponseRequirementMode(
+originalName,
+mappedName
+);
+if (eodResponseMode) {
+return sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) return false;
+if (!includeChecked && input.checked) return false;
+return eodResponseMode === 'marine'
+? isMarineEodResponseVehicleCheckbox(input)
+: isEodResponseVehicleCheckbox(input);
+})
+);
+}
+const coastguardHelicopterTypeId = getCoastguardRescueHelicopterTypeId(originalName, mappedName);
+if (coastguardHelicopterTypeId) {
+return sortVehicleCheckboxesByBestArrival(getVehicleCheckboxSnapshot().filter(input =>
+(includeDisabled || !input.disabled) && (includeChecked || !input.checked) && isCoastguardRescueHelicopterVehicleCheckbox(input, coastguardHelicopterTypeId)));
+}
+const prvSrvTypeId = getPrvSrvRequirementTypeId(
+originalName,
+mappedName
+);
+if (prvSrvTypeId) {
+return sortVehicleCheckboxesByBestArrival(
+getUniquePrvSrvVehicleCheckboxes(
+prvSrvTypeId,
+input => (
+(includeDisabled || !input.disabled) &&
+(includeChecked || !input.checked)
+)
+)
+);
+}
+const candidates = getVehicleMatchCandidates(originalName, mappedName);
+const strictExactOnly = isAmbulanceTransportRequest(originalName, mappedName);
+const standardAmbulanceEtaPreferred = strictExactOnly;
+const ambulanceOfficerOnly =
+isAmbulanceOfficerRequirement(
+originalName,
+mappedName
+);
+const sartecPrefixOnly = isSartecRequirement(
+originalName,
+mappedName
+);
+if (sartecPrefixOnly) {
+const available = getVehicleCheckboxSnapshot().filter(input =>
+(includeDisabled || !input.disabled) && (includeChecked || !input.checked));
+const preferred = available.filter(isHomeResponseSar4x4Checkbox);
+return sortVehicleCheckboxesByBestArrival(preferred.length ? preferred : available.filter(isSartecVehicleCheckbox));
+}
+const rrvTypeOnly =
+isRrvRequirement(
+originalName,
+mappedName
+);
+const aerialApplianceOrRescueStairsPreferred =
+isAerialApplianceOrRescueStairsRequirement(
+originalName
+);
+const fireEngineOrRivPreferred =
+isFireEngineOrRivRequirement(
+originalName
+);
+const rivTypeOnly =
+isRivRequirement(
+originalName,
+mappedName
+);
+const rivOrMajorFoamTenderPreferred =
+isRivOrMajorFoamTenderRequirement(
+originalName,
+mappedName
+);
+const policeAirMode =
+getPoliceAirRequirementMode(
+originalName,
+mappedName
+);
+const policeCarOnly =
+isPoliceCarRequirement(
+originalName,
+mappedName
+);
+const roadRailOnly =
+isRoadRailUnitRequirement(
+originalName,
+mappedName
+);
+const flatbedRecoveryOnly =
+isFlatbedRecoveryVehicleRequirement(
+originalName,
+mappedName
+);
+const hgvRecoveryOnly =
+isHgvRecoveryVehicleRequirement(
+originalName,
+mappedName
+);
+const airfieldSupervisorOnly =
+isAirfieldOperationsSupervisorRequirement(
+originalName,
+mappedName
+);
+const searchDogUnitOnly =
+isSearchDogUnitRequirement(
+originalName,
+mappedName
+);
+const crvOnly =
+isCrvRequirement(
+originalName,
+mappedName
+);
+const controlVanOnly =
+isControlVanRequirement(
+originalName,
+mappedName
+);
+const airAmbulanceOnly =
+isAirAmbulanceRequirement(
+originalName,
+mappedName
+);
+const criticalCareTransferOnly =
+isCriticalCareTransferAmbulanceRequirement(
+originalName,
+mappedName
+);
+const genericCriticalCare =
+isGenericCriticalCareRequirement(
+originalName,
+mappedName
+);
+const atvCarrierOnly =
+isAtvCarrierRequirement(
+originalName,
+mappedName
+);
+const seagoingVesselOnly =
+isSeagoingVesselRequirement(
+originalName,
+mappedName
+);
+const dogSupportOnly =
+isDogSupportUnitRequirement(
+originalName,
+mappedName
+);
+const operationalSupportOnly =
+isOperationalSupportOrSarVehicleRequirement(
+originalName,
+mappedName
+);
+const generic4x4Only =
+isGeneric4x4VehicleRequirement(
+originalName,
+mappedName
+);
+const mountainRescue4x4Preferred =
+isMountainRescueOrSar4x4Requirement(
+originalName,
+mappedName
+);
+const iccuPreferred =
+isIccuOrAmbulanceControlRequirement(
+originalName,
+mappedName
+);
+if (standardAmbulanceEtaPreferred) {
+const orderedAmbulanceMatches =
+sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) return false;
+if (!includeChecked && input.checked) return false;
+return isStandardAmbulanceEtaVehicleCheckbox(input);
+})
+);
+if (mfDebugEnabled) {
+const roadCount = orderedAmbulanceMatches.filter(input =>
+getVehicleTypeIdentifiers(input).includes('5')
+).length;
+const hemsCount = orderedAmbulanceMatches.filter(input =>
+getVehicleTypeIdentifiers(input).includes('9')
+).length;
+debugLog(
+'AMBULANCE ETA PRIORITY',
+`${originalName} -> ${mappedName} | road=${roadCount} | HEMS=${hemsCount} | first=${orderedAmbulanceMatches[0] ? getVehicleDebugName(orderedAmbulanceMatches[0]) : 'none'}`
+);
+}
+return orderedAmbulanceMatches;
+}
+if (roadRailOnly) {
+return sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) return false;
+if (!includeChecked && input.checked) return false;
+return isRoadRailUnitVehicleCheckbox(input);
+})
+);
+}
+if (flatbedRecoveryOnly) {
+return sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) return false;
+if (!includeChecked && input.checked) return false;
+return isFlatbedRecoveryVehicleCheckbox(input);
+})
+);
+}
+if (searchDogUnitOnly) {
+return sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) return false;
+if (!includeChecked && input.checked) return false;
+return isSearchDogUnitVehicleCheckbox(input);
+})
+);
+}
+if (hgvRecoveryOnly) {
+return sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) return false;
+if (!includeChecked && input.checked) return false;
+return isHgvRecoveryVehicleCheckbox(input);
+})
+);
+}
+if (airfieldSupervisorOnly) {
+return sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) return false;
+if (!includeChecked && input.checked) return false;
+return isAirfieldOperationsSupervisorVehicleCheckbox(input);
+})
+);
+}
+if (crvOnly) {
+return sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) return false;
+if (!includeChecked && input.checked) return false;
+return isCrvVehicleCheckbox(input);
+})
+);
+}
+if (controlVanOnly) {
+return sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) return false;
+if (!includeChecked && input.checked) return false;
+return isControlVanVehicleCheckbox(input);
+})
+);
+}
+if (airAmbulanceOnly) {
+return sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) return false;
+if (!includeChecked && input.checked) return false;
+return isAirAmbulanceVehicleCheckbox(input);
+})
+);
+}
+if (criticalCareTransferOnly) {
+return sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) return false;
+if (!includeChecked && input.checked) return false;
+return isCriticalCareTransferAmbulanceCheckbox(input);
+})
+);
+}
+if (genericCriticalCare) {
+const registry = readPersonnelTrainingRegistry();
+return sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) return false;
+if (!includeChecked && input.checked) return false;
+return isGenericCriticalCareVehicleCheckbox(input, registry);
+})
+);
+}
+if (seagoingVesselOnly) {
+return sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) return false;
+if (!includeChecked && input.checked) return false;
+return isSeagoingVesselCheckbox(input);
+})
+);
+}
+if (
+aerialApplianceOrRescueStairsPreferred
+) {
+const orderedMatches =
+getAerialApplianceOrRescueStairsVehicleCheckboxes(
+includeChecked
+);
+if (mfDebugEnabled) {
+const rescueStairsCount =
+orderedMatches.filter(
+isRescueStairsVehicleCheckbox
+).length;
+const carpCount =
+orderedMatches.length -
+rescueStairsCount;
+debugLog(
+'RESCUE STAIRS CARP PRIORITY',
+`${originalName} -> ${mappedName} | Rescue Stairs matches=${rescueStairsCount} first | CARP remainder matches=${carpCount} | returned=${orderedMatches.length}`
+);
+}
+return orderedMatches;
+}
+if (
+fireEngineOrRivPreferred
+) {
+const orderedMatches =
+getFireEngineOrRivVehicleCheckboxes(
+includeChecked
+);
+if (mfDebugEnabled) {
+const rivCount =
+orderedMatches.filter(
+isRivVehicleCheckbox
+).length;
+const rescuePumpCount =
+orderedMatches.length -
+rivCount;
+debugLog(
+'RIV FIRE ENGINE PRIORITY',
+`${originalName} -> ${mappedName} | RIV matches=${rivCount} first | Rescue Pump remainder matches=${rescuePumpCount} | returned=${orderedMatches.length}`
+);
+}
+return orderedMatches;
+}
+if (
+rivOrMajorFoamTenderPreferred
+) {
+const eligible =
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) {
+return false;
+}
+if (
+!includeChecked &&
+input.checked
+) {
+return false;
+}
+return (
+isRivVehicleCheckbox(
+input
+) ||
+isMajorFoamTenderVehicleCheckbox(
+input
+)
+);
+});
+const rivMatches =
+sortVehicleCheckboxesByBestArrival(
+eligible.filter(
+isRivVehicleCheckbox
+)
+);
+if (
+rivMatches.length >
+0
+) {
+return rivMatches;
+}
+return sortVehicleCheckboxesByBestArrival(
+eligible.filter(
+isMajorFoamTenderVehicleCheckbox
+)
+);
+}
+if (atvCarrierOnly) {
+return sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) {
+return false;
+}
+if (
+!includeChecked &&
+input.checked
+) {
+return false;
+}
+return isAtvCarrierCheckbox(
+input
+);
+})
+);
+}
+if (dogSupportOnly) {
+return sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) {
+return false;
+}
+if (
+!includeChecked &&
+input.checked
+) {
+return false;
+}
+return isDogSupportUnitCheckbox(
+input
+);
+})
+);
+}
+if (operationalSupportOnly) {
+return sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) return false;
+if (!includeChecked && input.checked) return false;
+return isOperationalSupportVanCheckbox(input);
+})
+);
+}
+if (iccuPreferred) {
+const eligible =
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) {
+return false;
+}
+if (
+!includeChecked &&
+input.checked
+) {
+return false;
+}
+return (
+isIccuVehicleCheckbox(
+input
+) ||
+isAmbulanceControlUnitCheckbox(
+input
+)
+);
+});
+const iccuMatches =
+sortVehicleCheckboxesByBestArrival(
+eligible.filter(
+isIccuVehicleCheckbox
+)
+);
+const ambulanceControlFallbackMatches =
+sortVehicleCheckboxesByBestArrival(
+eligible.filter(
+input =>
+!isIccuVehicleCheckbox(input) &&
+isAmbulanceControlUnitCheckbox(input)
+)
+);
+return [
+...iccuMatches,
+...ambulanceControlFallbackMatches
+];
+}
+if (generic4x4Only) {
+return sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) {
+return false;
+}
+if (
+!includeChecked &&
+input.checked
+) {
+return false;
+}
+return isGeneric4x4VehicleCheckbox(
+input
+);
+})
+);
+}
+if (mountainRescue4x4Preferred) {
+const eligible =
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) {
+return false;
+}
+if (
+!includeChecked &&
+input.checked
+) {
+return false;
+}
+return (
+isMountainRescue4x4Checkbox(
+input
+) ||
+isSar4x4Checkbox(
+input
+)
+);
+});
+const mountainRescueMatches =
+sortVehicleCheckboxesByBestArrival(
+eligible.filter(
+isMountainRescue4x4Checkbox
+)
+);
+const sarFallbackMatches =
+sortVehicleCheckboxesByBestArrival(
+eligible.filter(
+isSar4x4Checkbox
+)
+);
+const orderedMatches = [
+...mountainRescueMatches,
+...sarFallbackMatches
+];
+if (mfDebugEnabled) {
+debugLog(
+'MOUNTAIN 4X4 PRIORITY',
+`${originalName} -> ${mappedName} | Mountain Rescue 4x4 matches=${mountainRescueMatches.length} first | SAR 4x4 matches=${sarFallbackMatches.length} fallback | returned=${orderedMatches.length}`
+);
+}
+return orderedMatches;
+}
+if (policeAirMode) {
+const eligible =
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) {
+return false;
+}
+if (
+!includeChecked &&
+input.checked
+) {
+return false;
+}
+if (policeAirMode === 'helicopter') {
+return isPoliceHelicopterCheckbox(input);
+}
+if (policeAirMode === 'drone') {
+return isPoliceDroneCheckbox(input);
+}
+if (policeAirMode === 'generic-drone') {
+return isGenericDroneCheckbox(input);
+}
+return (
+isPoliceHelicopterCheckbox(input) ||
+isPoliceDroneCheckbox(input)
+);
+});
+if (policeAirMode === 'helicopter') {
+return sortVehicleCheckboxesByBestArrival(
+eligible.filter(
+isPoliceHelicopterCheckbox
+)
+);
+}
+if (policeAirMode === 'drone') {
+return sortVehicleCheckboxesByBestArrival(
+eligible.filter(
+isPoliceDroneCheckbox
+)
+);
+}
+if (policeAirMode === 'generic-drone') {
+return sortVehicleCheckboxesByBestArrival(
+eligible.filter(
+isGenericDroneCheckbox
+)
+);
+}
+const sortedDroneMatches =
+sortVehicleCheckboxesByBestArrival(
+eligible.filter(
+isPoliceDroneCheckbox
+)
+);
+const sortedHelicopterMatches =
+sortVehicleCheckboxesByBestArrival(
+eligible.filter(
+isPoliceHelicopterCheckbox
+)
+);
+return [
+...sortedDroneMatches,
+...sortedHelicopterMatches
+];
+}
+if (policeCarOnly) {
+const registry =
+readPersonnelTrainingRegistry();
+const policeCarCandidates =
+sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) return false;
+if (!includeChecked && input.checked) return false;
+return isOrdinaryPoliceIrvCheckboxEligible(
+input,
+registry,
+{
+allowUnknown: true,
+allowProtected: true
+}
+);
+})
+);
+return orderOrdinaryPoliceIrvCandidates(
+policeCarCandidates,
+registry
+);
+}
+const matches = getVehicleCheckboxSnapshot().filter(input => {
+if (!includeDisabled && input.disabled) return false;
+if (!includeChecked && input.checked) return false;
+if (ambulanceOfficerOnly) {
+return isAmbulanceOfficerVehicleCheckbox(
+input
+);
+}
+if (sartecPrefixOnly) {
+return isSartecVehicleCheckbox(
+input
+);
+}
+if (rrvTypeOnly) {
+return isRrvVehicleCheckbox(
+input
+);
+}
+if (rivTypeOnly) {
+return isRivVehicleCheckbox(
+input
+);
+}
+if (policeCarOnly) {
+return isPoliceCarVehicleCheckbox(
+input
+);
+}
+const values = getCheckboxVehicleValues(input);
+return vehicleValuesMatchCandidates(values, candidates, strictExactOnly);
+});
+if (mfDebugEnabled && strictExactOnly) {
+debugLog('AMBULANCE STRICT', `${originalName} -> ${mappedName} | exact-match boxes=${matches.length}`);
+}
+if (mfDebugEnabled && sartecPrefixOnly) {
+debugLog(
+'SARTEC PREFIX',
+`${originalName} -> ${mappedName} | displayed-name-prefix boxes=${matches.length}`
+);
+}
+if (
+mfDebugEnabled &&
+rrvTypeOnly
+) {
+debugLog(
+'RRV STRICT',
+`${originalName} -> ${mappedName} | RRV type boxes=${matches.length}`
+);
+}
+if (
+mfDebugEnabled &&
+rivTypeOnly
+) {
+debugLog(
+'RIV STRICT',
+`${originalName} -> ${mappedName} | RIV type boxes=${matches.length}`
+);
+}
+if (
+mfDebugEnabled &&
+policeCarOnly
+) {
+debugLog(
+'POLICE CAR STRICT',
+`${originalName} -> ${mappedName} | Police Car/IRV type boxes=${matches.length}`
+);
+}
+return sortVehicleCheckboxesByBestArrival(matches);
+}
     function getMatchingVehicleCheckboxes(originalName, mappedName) {
         return getAllMatchingVehicleCheckboxes(originalName, mappedName, false);
     }
@@ -37215,449 +37241,449 @@ let sessionRuntimeTicker = null;
             return array.indexOf(checkbox) === index;
         });
     }
-    async function refreshPoliceInspectorRegistryFromLiveVehicles(
-        requirements,
-        source = 'UPDATE'
-    ) {
-        if (
-            !hasStrictPoliceTrainingRequirement(
-                requirements
-            )
-        ) {
-            return {
-                refreshed: false,
-                pagesRead: 0,
-                qualifyingVehicles: 0
-            };
-        }
-        let registry =
-            readPersonnelTrainingRegistry();
-        if (!registry.vehicles) {
-            registry.vehicles = {};
-        }
-        const requirementList =
-            Array.isArray(requirements)
-                ? requirements
-                : [];
-        const allCandidates =
-            sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(checkbox => {
-                    if (
-                        !checkbox ||
-                        (checkbox.disabled && !checkbox.checked) ||
-                        !getMissionVehicleId(checkbox)
-                    ) {
-                        return false;
-                    }
-                    const registryMatch =
-                        getRegistryEntryForMissionCheckbox(
-                            checkbox,
-                            registry
-                        );
-                    return requirementList.some(requirement => {
-                        return isCheckboxVehicleTypeEligibleForTrainingRequirement(
-                            checkbox,
-                            requirement,
-                            registryMatch.entry
-                        );
-                    });
-                })
-            );
-        const orderedCandidates =
-            orderStrictPoliceTrainingCandidates(
-                allCandidates,
-                requirementList,
-                registry
-            );
-        const verifiedIds = new Set();
-        const now = Date.now();
-        orderedCandidates.forEach(checkbox => {
-            const vehicleId =
-                getMissionVehicleId(checkbox);
-            const entry =
-                registry.vehicles?.[vehicleId];
-            const cachedAt =
-                Number(
-                    mfLiveTrainingVerifyCache.get(
-                        vehicleId
-                    ) ||
-                    0
-                );
-            if (
-                vehicleId &&
-                isAuthoritativeLivePoliceTrainingEntry(entry) &&
-                now - cachedAt <=
-                    MF_LIVE_TRAINING_VERIFY_CACHE_MS
-            ) {
-                verifiedIds.add(vehicleId);
-            }
-        });
-        const requirementsSatisfiedByVerified = () => {
-            const verifiedCheckboxes =
-                orderedCandidates.filter(checkbox => {
-                    return verifiedIds.has(
-                        getMissionVehicleId(checkbox)
-                    );
-                });
-            return getRemainingTrainedPersonnelRequirements(
-                requirementList,
-                verifiedCheckboxes,
-                registry
-            ).every(requirement => {
-                return requirement.remaining <= 0;
-            });
-        };
-        if (requirementsSatisfiedByVerified()) {
-            return {
-                refreshed: false,
-                pagesRead: 0,
-                qualifyingVehicles:
-                    verifiedIds.size
-            };
-        }
-        const unverifiedCandidates =
-            orderedCandidates.filter(checkbox => {
-                const vehicleId =
-                    getMissionVehicleId(checkbox);
-                return (
-                    vehicleId &&
-                    !verifiedIds.has(vehicleId)
-                );
-            });
-        const registryHintedCandidates =
-            unverifiedCandidates.filter(checkbox => {
-                const registryMatch =
-                    getRegistryEntryForMissionCheckbox(
-                        checkbox,
-                        registry
-                    );
-                return (
-                    getUnverifiedRegistryTrainingHintScore(
-                        requirementList,
-                        registryMatch.entry
-                    ) > 0
-                );
-            });
-        const hintedSet =
-            new Set(registryHintedCandidates);
-        const remainingCandidates =
-            unverifiedCandidates.filter(checkbox => {
-                return !hintedSet.has(checkbox);
-            });
-        const pagesToRead = [
-            ...registryHintedCandidates,
-            ...remainingCandidates
-        ];
-        let pagesRead = 0;
-        let changed = false;
-        for (
-            let offset = 0;
-            offset < pagesToRead.length;
-            offset += MF_LIVE_TRAINING_VERIFY_BATCH_SIZE
-        ) {
-            const batch = pagesToRead.slice(
-                offset,
-                offset + MF_LIVE_TRAINING_VERIFY_BATCH_SIZE
-            );
-            const results = await Promise.all(
-                batch.map(async checkbox => {
-                    const vehicleId =
-                        getMissionVehicleId(checkbox);
-                    try {
-                        const response = await fetch(
-                            `/vehicles/${vehicleId}/zuweisung`,
-                            {
-                                credentials: 'include',
-                                cache: 'no-store',
-                                headers: {
-                                    Accept: 'text/html,application/xhtml+xml'
-                                }
-                            }
-                        );
-                        if (!response.ok) {
-                            return null;
-                        }
-                        return {
-                            checkbox,
-                            vehicleId,
-                            parsed:
-                                parseLivePoliceTrainingAssignments(
-                                    await response.text(),
-                                    vehicleId
-                                )
-                        };
-                    } catch (_error) {
-                        return null;
-                    }
-                })
-            );
-            results
-                .filter(result => {
-                    return result?.parsed?.assignmentScanComplete;
-                })
-                .forEach(result => {
-                    const {
-                        checkbox,
-                        vehicleId,
-                        parsed
-                    } = result;
-                    const existing =
-                        registry.vehicles?.[vehicleId] ||
-                        {};
-                    const detectedType =
-                        String(
-                            getVehicleTypeIdentifiers(checkbox)[0] ||
-                            parsed.detectedVehicleTypeId ||
-                            existing.vehicleTypeId ||
-                            ''
-                        );
-                    registry.vehicles[vehicleId] = {
-                        ...existing,
-                        vehicleId,
-                        vehicleName:
-                            existing.vehicleName ||
-                            getVehicleDebugName(checkbox),
-                        vehicleTypeId:
-                            detectedType,
-                        assignedPersonnelCount:
-                            parsed.assignedPersonnelCount,
-                        assignmentScanComplete:
-                            parsed.assignmentScanComplete,
-                        personnelRowsSeen:
-                            parsed.personnelRowsSeen,
-                        trainingCounts: {
-                            ...(
-                                existing.trainingCounts &&
-                                typeof existing.trainingCounts ===
-                                    'object'
-                                    ? existing.trainingCounts
-                                    : {}
-                            ),
-                            ...parsed.trainingCounts
-                        },
-                        trainingCombinationCounts: {
-                            ...(
-                                existing.trainingCombinationCounts &&
-                                typeof existing.trainingCombinationCounts ===
-                                    'object'
-                                    ? existing.trainingCombinationCounts
-                                    : {}
-                            ),
-                            ...parsed.trainingCombinationCounts
-                        },
-                        assignedTrainingProfiles:
-                            parsed.assignedTrainingProfiles,
-                        trainingProfilesComplete:
-                            parsed.trainingProfilesComplete,
-                        updatedAt:
-                            Date.now(),
-                        source:
-                            `${MF_STRICT_TRAINING_SOURCE_PREFIX}` +
-                            `coverage-${String(source || 'update').toLowerCase()}-v106101`
-                    };
-                    markLiveTrainingVehicleVerified(
-                        vehicleId
-                    );
-                    verifiedIds.add(vehicleId);
-                    pagesRead += 1;
-                    changed = true;
-                });
-            if (changed) {
-                savePersonnelTrainingRegistry(
-                    registry
-                );
-            }
-            if (requirementsSatisfiedByVerified()) {
-                break;
-            }
-        }
-        return {
-            refreshed: changed,
-            pagesRead,
-            qualifyingVehicles:
-                verifiedIds.size
-        };
-    }
-    async function refreshArmedResponseRegistryFromLiveVehicles(
-        requirements,
-        source = 'UPDATE'
-    ) {
-        const armedRequirements = (
-            Array.isArray(requirements) ? requirements : []
-        ).filter(requirement => {
-            return requirement?.requirementType ===
-                'armed_response_atc_vehicle';
-        });
-        if (!armedRequirements.length) {
-            return {
-                refreshed: false,
-                pagesRead: 0,
-                qualifyingVehicles: 0
-            };
-        }
-        let registry = readPersonnelTrainingRegistry();
-        if (!registry.vehicles) registry.vehicles = {};
-        const candidates = sortVehicleCheckboxesByBestArrival(
-            getVehicleCheckboxSnapshot().filter(checkbox => {
-                return (
-                    (!checkbox.disabled || checkbox.checked) &&
-                    isArmedTrafficCarVehicleCheckbox(checkbox) &&
-                    !!getMissionVehicleId(checkbox)
-                );
-            })
-        );
-        const orderedCandidates = orderStrictPoliceTrainingCandidates(
-            candidates,
-            armedRequirements,
-            registry
-        );
-        const verifiedIds = new Set();
-        const now = Date.now();
-        orderedCandidates.forEach(checkbox => {
-            const vehicleId = getMissionVehicleId(checkbox);
-            const entry = registry.vehicles?.[vehicleId];
-            const cachedAt = Number(
-                mfLiveTrainingVerifyCache.get(vehicleId) || 0
-            );
-            if (
-                vehicleId &&
-                String(entry?.vehicleTypeId || '') === '25' &&
-                isAuthoritativeLivePoliceTrainingEntry(entry) &&
-                now - cachedAt <= MF_LIVE_TRAINING_VERIFY_CACHE_MS
-            ) {
-                verifiedIds.add(vehicleId);
-            }
-        });
-        const requirementsSatisfiedByVerified = () => {
-            const verifiedCheckboxes = orderedCandidates.filter(checkbox => {
-                return verifiedIds.has(getMissionVehicleId(checkbox));
-            });
-            return getRemainingTrainedPersonnelRequirements(
-                armedRequirements,
-                verifiedCheckboxes,
-                registry
-            ).every(requirement => requirement.remaining <= 0);
-        };
-        if (requirementsSatisfiedByVerified()) {
-            return {
-                refreshed: false,
-                pagesRead: 0,
-                qualifyingVehicles: verifiedIds.size
-            };
-        }
-        const unverified = orderedCandidates.filter(checkbox => {
-            const vehicleId = getMissionVehicleId(checkbox);
-            return vehicleId && !verifiedIds.has(vehicleId);
-        });
-        const hinted = unverified.filter(checkbox => {
-            const entry = getRegistryEntryForMissionCheckbox(
-                checkbox,
-                registry
-            ).entry;
-            return getUnverifiedRegistryTrainingHintScore(
-                armedRequirements,
-                entry
-            ) > 0;
-        });
-        const hintedSet = new Set(hinted);
-        const pagesToRead = [
-            ...hinted,
-            ...unverified.filter(checkbox => !hintedSet.has(checkbox))
-        ];
-        let pagesRead = 0;
-        let changed = false;
-        for (
-            let offset = 0;
-            offset < pagesToRead.length;
-            offset += MF_LIVE_TRAINING_VERIFY_BATCH_SIZE
-        ) {
-            const batch = pagesToRead.slice(
-                offset,
-                offset + MF_LIVE_TRAINING_VERIFY_BATCH_SIZE
-            );
-            const results = await Promise.all(
-                batch.map(async checkbox => {
-                    const vehicleId = getMissionVehicleId(checkbox);
-                    try {
-                        const response = await fetch(
-                            `/vehicles/${vehicleId}/zuweisung`,
-                            {
-                                credentials: 'include',
-                                cache: 'no-store',
-                                headers: {
-                                    Accept: 'text/html,application/xhtml+xml'
-                                }
-                            }
-                        );
-                        if (!response.ok) return null;
-                        return {
-                            checkbox,
-                            vehicleId,
-                            parsed: parseLivePoliceTrainingAssignments(
-                                await response.text(),
-                                vehicleId
-                            )
-                        };
-                    } catch (_error) {
-                        return null;
-                    }
-                })
-            );
-            results
-                .filter(result => result?.parsed?.assignmentScanComplete)
-                .forEach(result => {
-                    const existing = registry.vehicles?.[result.vehicleId] || {};
-                    registry.vehicles[result.vehicleId] = {
-                        ...existing,
-                        vehicleId: result.vehicleId,
-                        vehicleName:
-                            existing.vehicleName ||
-                            getVehicleDebugName(result.checkbox),
-                        vehicleTypeId: '25',
-                        assignedPersonnelCount:
-                            result.parsed.assignedPersonnelCount,
-                        assignmentScanComplete:
-                            result.parsed.assignmentScanComplete,
-                        personnelRowsSeen:
-                            result.parsed.personnelRowsSeen,
-                        trainingCounts: {
-                            ...(
-                                existing.trainingCounts &&
-                                typeof existing.trainingCounts === 'object'
-                                    ? existing.trainingCounts
-                                    : {}
-                            ),
-                            ...result.parsed.trainingCounts
-                        },
-                        trainingCombinationCounts: {
-                            ...(
-                                existing.trainingCombinationCounts &&
-                                typeof existing.trainingCombinationCounts === 'object'
-                                    ? existing.trainingCombinationCounts
-                                    : {}
-                            ),
-                            ...result.parsed.trainingCombinationCounts
-                        },
-                        updatedAt: Date.now(),
-                        source:
-                            `${MF_STRICT_TRAINING_SOURCE_PREFIX}armed-response-${String(source || 'update').toLowerCase()}-v10676`
-                    };
-                    markLiveTrainingVehicleVerified(
-                        result.vehicleId
-                    );
-                    verifiedIds.add(result.vehicleId);
-                    pagesRead += 1;
-                    changed = true;
-                });
-            if (changed) savePersonnelTrainingRegistry(registry);
-            if (requirementsSatisfiedByVerified()) break;
-        }
-        return {
-            refreshed: changed,
-            pagesRead,
-            qualifyingVehicles: verifiedIds.size
-        };
-    }
+async function refreshPoliceInspectorRegistryFromLiveVehicles(
+requirements,
+source = 'UPDATE'
+) {
+if (
+!hasStrictPoliceTrainingRequirement(
+requirements
+)
+) {
+return {
+refreshed: false,
+pagesRead: 0,
+qualifyingVehicles: 0
+};
+}
+let registry =
+readPersonnelTrainingRegistry();
+if (!registry.vehicles) {
+registry.vehicles = {};
+}
+const requirementList =
+Array.isArray(requirements)
+? requirements
+: [];
+const allCandidates =
+sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(checkbox => {
+if (
+!checkbox ||
+(checkbox.disabled && !checkbox.checked) ||
+!getMissionVehicleId(checkbox)
+) {
+return false;
+}
+const registryMatch =
+getRegistryEntryForMissionCheckbox(
+checkbox,
+registry
+);
+return requirementList.some(requirement => {
+return isCheckboxVehicleTypeEligibleForTrainingRequirement(
+checkbox,
+requirement,
+registryMatch.entry
+);
+});
+})
+);
+const orderedCandidates =
+orderStrictPoliceTrainingCandidates(
+allCandidates,
+requirementList,
+registry
+);
+const verifiedIds = new Set();
+const now = Date.now();
+orderedCandidates.forEach(checkbox => {
+const vehicleId =
+getMissionVehicleId(checkbox);
+const entry =
+registry.vehicles?.[vehicleId];
+const cachedAt =
+Number(
+mfLiveTrainingVerifyCache.get(
+vehicleId
+) ||
+0
+);
+if (
+vehicleId &&
+isAuthoritativeLivePoliceTrainingEntry(entry) &&
+now - cachedAt <=
+MF_LIVE_TRAINING_VERIFY_CACHE_MS
+) {
+verifiedIds.add(vehicleId);
+}
+});
+const requirementsSatisfiedByVerified = () => {
+const verifiedCheckboxes =
+orderedCandidates.filter(checkbox => {
+return verifiedIds.has(
+getMissionVehicleId(checkbox)
+);
+});
+return getRemainingTrainedPersonnelRequirements(
+requirementList,
+verifiedCheckboxes,
+registry
+).every(requirement => {
+return requirement.remaining <= 0;
+});
+};
+if (requirementsSatisfiedByVerified()) {
+return {
+refreshed: false,
+pagesRead: 0,
+qualifyingVehicles:
+verifiedIds.size
+};
+}
+const unverifiedCandidates =
+orderedCandidates.filter(checkbox => {
+const vehicleId =
+getMissionVehicleId(checkbox);
+return (
+vehicleId &&
+!verifiedIds.has(vehicleId)
+);
+});
+const registryHintedCandidates =
+unverifiedCandidates.filter(checkbox => {
+const registryMatch =
+getRegistryEntryForMissionCheckbox(
+checkbox,
+registry
+);
+return (
+getUnverifiedRegistryTrainingHintScore(
+requirementList,
+registryMatch.entry
+) > 0
+);
+});
+const hintedSet =
+new Set(registryHintedCandidates);
+const remainingCandidates =
+unverifiedCandidates.filter(checkbox => {
+return !hintedSet.has(checkbox);
+});
+const pagesToRead = [
+...registryHintedCandidates,
+...remainingCandidates
+];
+let pagesRead = 0;
+let changed = false;
+for (
+let offset = 0;
+offset < pagesToRead.length;
+offset += MF_LIVE_TRAINING_VERIFY_BATCH_SIZE
+) {
+const batch = pagesToRead.slice(
+offset,
+offset + MF_LIVE_TRAINING_VERIFY_BATCH_SIZE
+);
+const results = await Promise.all(
+batch.map(async checkbox => {
+const vehicleId =
+getMissionVehicleId(checkbox);
+try {
+const response = await fetch(
+`/vehicles/${vehicleId}/zuweisung`,
+{
+credentials: 'include',
+cache: 'no-store',
+headers: {
+Accept: 'text/html,application/xhtml+xml'
+}
+}
+);
+if (!response.ok) {
+return null;
+}
+return {
+checkbox,
+vehicleId,
+parsed:
+parseLivePoliceTrainingAssignments(
+await response.text(),
+vehicleId
+)
+};
+} catch (_error) {
+return null;
+}
+})
+);
+results
+.filter(result => {
+return result?.parsed?.assignmentScanComplete;
+})
+.forEach(result => {
+const {
+checkbox,
+vehicleId,
+parsed
+} = result;
+const existing =
+registry.vehicles?.[vehicleId] ||
+{};
+const detectedType =
+String(
+getVehicleTypeIdentifiers(checkbox)[0] ||
+parsed.detectedVehicleTypeId ||
+existing.vehicleTypeId ||
+''
+);
+registry.vehicles[vehicleId] = {
+...existing,
+vehicleId,
+vehicleName:
+existing.vehicleName ||
+getVehicleDebugName(checkbox),
+vehicleTypeId:
+detectedType,
+assignedPersonnelCount:
+parsed.assignedPersonnelCount,
+assignmentScanComplete:
+parsed.assignmentScanComplete,
+personnelRowsSeen:
+parsed.personnelRowsSeen,
+trainingCounts: {
+...(
+existing.trainingCounts &&
+typeof existing.trainingCounts ===
+'object'
+? existing.trainingCounts
+: {}
+),
+...parsed.trainingCounts
+},
+trainingCombinationCounts: {
+...(
+existing.trainingCombinationCounts &&
+typeof existing.trainingCombinationCounts ===
+'object'
+? existing.trainingCombinationCounts
+: {}
+),
+...parsed.trainingCombinationCounts
+},
+assignedTrainingProfiles:
+parsed.assignedTrainingProfiles,
+trainingProfilesComplete:
+parsed.trainingProfilesComplete,
+updatedAt:
+Date.now(),
+source:
+`${MF_STRICT_TRAINING_SOURCE_PREFIX}` +
+`coverage-${String(source || 'update').toLowerCase()}-v106101`
+};
+markLiveTrainingVehicleVerified(
+vehicleId
+);
+verifiedIds.add(vehicleId);
+pagesRead += 1;
+changed = true;
+});
+if (changed) {
+savePersonnelTrainingRegistry(
+registry
+);
+}
+if (requirementsSatisfiedByVerified()) {
+break;
+}
+}
+return {
+refreshed: changed,
+pagesRead,
+qualifyingVehicles:
+verifiedIds.size
+};
+}
+async function refreshArmedResponseRegistryFromLiveVehicles(
+requirements,
+source = 'UPDATE'
+) {
+const armedRequirements = (
+Array.isArray(requirements) ? requirements : []
+).filter(requirement => {
+return requirement?.requirementType ===
+'armed_response_atc_vehicle';
+});
+if (!armedRequirements.length) {
+return {
+refreshed: false,
+pagesRead: 0,
+qualifyingVehicles: 0
+};
+}
+let registry = readPersonnelTrainingRegistry();
+if (!registry.vehicles) registry.vehicles = {};
+const candidates = sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(checkbox => {
+return (
+(!checkbox.disabled || checkbox.checked) &&
+isArmedTrafficCarVehicleCheckbox(checkbox) &&
+!!getMissionVehicleId(checkbox)
+);
+})
+);
+const orderedCandidates = orderStrictPoliceTrainingCandidates(
+candidates,
+armedRequirements,
+registry
+);
+const verifiedIds = new Set();
+const now = Date.now();
+orderedCandidates.forEach(checkbox => {
+const vehicleId = getMissionVehicleId(checkbox);
+const entry = registry.vehicles?.[vehicleId];
+const cachedAt = Number(
+mfLiveTrainingVerifyCache.get(vehicleId) || 0
+);
+if (
+vehicleId &&
+String(entry?.vehicleTypeId || '') === '25' &&
+isAuthoritativeLivePoliceTrainingEntry(entry) &&
+now - cachedAt <= MF_LIVE_TRAINING_VERIFY_CACHE_MS
+) {
+verifiedIds.add(vehicleId);
+}
+});
+const requirementsSatisfiedByVerified = () => {
+const verifiedCheckboxes = orderedCandidates.filter(checkbox => {
+return verifiedIds.has(getMissionVehicleId(checkbox));
+});
+return getRemainingTrainedPersonnelRequirements(
+armedRequirements,
+verifiedCheckboxes,
+registry
+).every(requirement => requirement.remaining <= 0);
+};
+if (requirementsSatisfiedByVerified()) {
+return {
+refreshed: false,
+pagesRead: 0,
+qualifyingVehicles: verifiedIds.size
+};
+}
+const unverified = orderedCandidates.filter(checkbox => {
+const vehicleId = getMissionVehicleId(checkbox);
+return vehicleId && !verifiedIds.has(vehicleId);
+});
+const hinted = unverified.filter(checkbox => {
+const entry = getRegistryEntryForMissionCheckbox(
+checkbox,
+registry
+).entry;
+return getUnverifiedRegistryTrainingHintScore(
+armedRequirements,
+entry
+) > 0;
+});
+const hintedSet = new Set(hinted);
+const pagesToRead = [
+...hinted,
+...unverified.filter(checkbox => !hintedSet.has(checkbox))
+];
+let pagesRead = 0;
+let changed = false;
+for (
+let offset = 0;
+offset < pagesToRead.length;
+offset += MF_LIVE_TRAINING_VERIFY_BATCH_SIZE
+) {
+const batch = pagesToRead.slice(
+offset,
+offset + MF_LIVE_TRAINING_VERIFY_BATCH_SIZE
+);
+const results = await Promise.all(
+batch.map(async checkbox => {
+const vehicleId = getMissionVehicleId(checkbox);
+try {
+const response = await fetch(
+`/vehicles/${vehicleId}/zuweisung`,
+{
+credentials: 'include',
+cache: 'no-store',
+headers: {
+Accept: 'text/html,application/xhtml+xml'
+}
+}
+);
+if (!response.ok) return null;
+return {
+checkbox,
+vehicleId,
+parsed: parseLivePoliceTrainingAssignments(
+await response.text(),
+vehicleId
+)
+};
+} catch (_error) {
+return null;
+}
+})
+);
+results
+.filter(result => result?.parsed?.assignmentScanComplete)
+.forEach(result => {
+const existing = registry.vehicles?.[result.vehicleId] || {};
+registry.vehicles[result.vehicleId] = {
+...existing,
+vehicleId: result.vehicleId,
+vehicleName:
+existing.vehicleName ||
+getVehicleDebugName(result.checkbox),
+vehicleTypeId: '25',
+assignedPersonnelCount:
+result.parsed.assignedPersonnelCount,
+assignmentScanComplete:
+result.parsed.assignmentScanComplete,
+personnelRowsSeen:
+result.parsed.personnelRowsSeen,
+trainingCounts: {
+...(
+existing.trainingCounts &&
+typeof existing.trainingCounts === 'object'
+? existing.trainingCounts
+: {}
+),
+...result.parsed.trainingCounts
+},
+trainingCombinationCounts: {
+...(
+existing.trainingCombinationCounts &&
+typeof existing.trainingCombinationCounts === 'object'
+? existing.trainingCombinationCounts
+: {}
+),
+...result.parsed.trainingCombinationCounts
+},
+updatedAt: Date.now(),
+source:
+`${MF_STRICT_TRAINING_SOURCE_PREFIX}armed-response-${String(source || 'update').toLowerCase()}-v10676`
+};
+markLiveTrainingVehicleVerified(
+result.vehicleId
+);
+verifiedIds.add(result.vehicleId);
+pagesRead += 1;
+changed = true;
+});
+if (changed) savePersonnelTrainingRegistry(registry);
+if (requirementsSatisfiedByVerified()) break;
+}
+return {
+refreshed: changed,
+pagesRead,
+qualifyingVehicles: verifiedIds.size
+};
+}
     function getOrdinaryPoliceVehicleRequirementCount(
         rows
     ) {
@@ -38098,203 +38124,203 @@ let sessionRuntimeTicker = null;
             })
             .length;
     }
-    function selectVehiclesForTrainedPersonnelRequirements(
-        requirements,
-        source = 'UPDATE'
-    ) {
-        const registry =
-            readPersonnelTrainingRegistry();
-        const registryVehicleCount =
-            Object.keys(
-                registry.vehicles ||
-                {}
-            ).length;
-        const selected =
-            getVehicleCheckboxSnapshot().filter(
-                checkbox => checkbox.checked
-            );
-        let remaining =
-            getRemainingTrainedPersonnelRequirements(
-                requirements,
-                selected,
-                registry
-            );
-        const initiallyTrainingCovered =
-            remaining.every(requirement => {
-                return requirement.remaining <= 0;
-            });
-        if (initiallyTrainingCovered) {
-            return {
-                satisfied:
-                    true,
-                vehicleCoverageSatisfied:
-                    true,
-                trainingSatisfied:
-                    true,
-                selectedVehicles:
-                    0,
-                trainedVehicles:
-                    0,
-                fallbackVehicles:
-                    0,
-                selectedVehicleCount:
-                    countSelectedTrainingVehicles(
-                        requirements,
-                        registry
-                    ),
-                remaining,
-                trainingRemaining:
-                    remaining,
-                capacityRemaining:
-                    remaining,
-                registryVehicleCount
-            };
-        }
-        const readyCandidates =
-            sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(checkbox => {
-                    if (
-                        checkbox.disabled ||
-                        checkbox.checked
-                    ) {
-                        return false;
-                    }
-                    const registryMatch =
-                        getRegistryEntryForMissionCheckbox(
-                            checkbox,
-                            registry
-                        );
-                    return (
-                        Array.isArray(requirements)
-                            ? requirements
-                            : []
-                    ).some(requirement => {
-                        return isCheckboxEligibleForTrainingRequirement(
-                            checkbox,
-                            requirement,
-                            registryMatch.entry
-                        );
-                    });
-                })
-            );
-        const arrivalIndex =
-            new Map(
-                readyCandidates.map((checkbox, index) => [
-                    checkbox,
-                    index
-                ])
-            );
-        const used = new Set();
-        let selectedVehicles = 0;
-        let trainedVehicles = 0;
-        const runTrainedSelection = () => {
-            while (
-                remaining.some(requirement => {
-                    return requirement.remaining > 0;
-                })
-            ) {
-                let bestCheckbox = null;
-                let bestEntry = null;
-                let bestMetrics = null;
-                let bestScore =
-                    Number.NEGATIVE_INFINITY;
-                readyCandidates.forEach(checkbox => {
-                    if (used.has(checkbox)) {
-                        return;
-                    }
-                    const registryMatch =
-                        getRegistryEntryForMissionCheckbox(
-                            checkbox,
-                            registry
-                        );
-                    const metrics =
-                        getTrainedCandidateMetrics(
-                            remaining,
-                            checkbox,
-                            registryMatch.entry
-                        );
-                    const score =
-                        getTrainedVehicleSelectionScore(
-                            metrics
-                        );
-                    if (
-                        score > bestScore ||
-                        (
-                            score === bestScore &&
-                            bestCheckbox &&
-                            arrivalIndex.get(checkbox) <
-                                arrivalIndex.get(bestCheckbox)
-                        )
-                    ) {
-                        bestCheckbox = checkbox;
-                        bestEntry = registryMatch.entry;
-                        bestMetrics = metrics;
-                        bestScore = score;
-                    }
-                });
-                if (
-                    !bestCheckbox ||
-                    !bestMetrics?.eligible ||
-                    bestMetrics.trainedUseful <= 0
-                ) {
-                    break;
-                }
-                used.add(bestCheckbox);
-                if (!clickVehicleElement(bestCheckbox)) {
-                    continue;
-                }
-                selectedVehicles += 1;
-                trainedVehicles += 1;
-                remaining =
-                    applyTrainingCandidateToRemaining(
-                        remaining,
-                        bestCheckbox,
-                        bestEntry
-                    );
-                if (mfDebugEnabled) {
-                    debugLog(
-                        'TRAINED COVERAGE CLICK',
-                        `${source} | ${getVehicleDebugName(bestCheckbox)} | ` +
-                        `trained=${bestMetrics.trainedUseful} | ` +
-                        `capacity=${bestMetrics.capacityUseful} | ` +
-                        `overshoot=${bestMetrics.overshoot} | ` +
-                        `training remaining=${remaining.map(item => `${item.label}:${item.remaining}`).join(', ')} | ` +
-                        `capacity remaining=${remaining.map(item => `${item.label}:${item.capacityRemaining}`).join(', ')}`
-                    );
-                }
-            }
-        };
-        runTrainedSelection();
-        const vehicleCoverageSatisfied =
-            remaining.every(requirement => {
-                return requirement.capacityRemaining <= 0;
-            });
-        const trainingSatisfied =
-            remaining.every(requirement => {
-                return requirement.remaining <= 0;
-            });
-        return {
-            satisfied:
-                trainingSatisfied,
-            vehicleCoverageSatisfied,
-            trainingSatisfied,
-            selectedVehicles,
-            trainedVehicles,
-            fallbackVehicles:
-                0,
-            selectedVehicleCount:
-                countSelectedTrainingVehicles(
-                    requirements,
-                    registry
-                ),
-            remaining,
-            trainingRemaining:
-                remaining,
-            capacityRemaining:
-                remaining,
-            registryVehicleCount
-        };
-    }
+function selectVehiclesForTrainedPersonnelRequirements(
+requirements,
+source = 'UPDATE'
+) {
+const registry =
+readPersonnelTrainingRegistry();
+const registryVehicleCount =
+Object.keys(
+registry.vehicles ||
+{}
+).length;
+const selected =
+getVehicleCheckboxSnapshot().filter(
+checkbox => checkbox.checked
+);
+let remaining =
+getRemainingTrainedPersonnelRequirements(
+requirements,
+selected,
+registry
+);
+const initiallyTrainingCovered =
+remaining.every(requirement => {
+return requirement.remaining <= 0;
+});
+if (initiallyTrainingCovered) {
+return {
+satisfied:
+true,
+vehicleCoverageSatisfied:
+true,
+trainingSatisfied:
+true,
+selectedVehicles:
+0,
+trainedVehicles:
+0,
+fallbackVehicles:
+0,
+selectedVehicleCount:
+countSelectedTrainingVehicles(
+requirements,
+registry
+),
+remaining,
+trainingRemaining:
+remaining,
+capacityRemaining:
+remaining,
+registryVehicleCount
+};
+}
+const readyCandidates =
+sortVehicleCheckboxesByBestArrival(
+getVehicleCheckboxSnapshot().filter(checkbox => {
+if (
+checkbox.disabled ||
+checkbox.checked
+) {
+return false;
+}
+const registryMatch =
+getRegistryEntryForMissionCheckbox(
+checkbox,
+registry
+);
+return (
+Array.isArray(requirements)
+? requirements
+: []
+).some(requirement => {
+return isCheckboxEligibleForTrainingRequirement(
+checkbox,
+requirement,
+registryMatch.entry
+);
+});
+})
+);
+const arrivalIndex =
+new Map(
+readyCandidates.map((checkbox, index) => [
+checkbox,
+index
+])
+);
+const used = new Set();
+let selectedVehicles = 0;
+let trainedVehicles = 0;
+const runTrainedSelection = () => {
+while (
+remaining.some(requirement => {
+return requirement.remaining > 0;
+})
+) {
+let bestCheckbox = null;
+let bestEntry = null;
+let bestMetrics = null;
+let bestScore =
+Number.NEGATIVE_INFINITY;
+readyCandidates.forEach(checkbox => {
+if (used.has(checkbox)) {
+return;
+}
+const registryMatch =
+getRegistryEntryForMissionCheckbox(
+checkbox,
+registry
+);
+const metrics =
+getTrainedCandidateMetrics(
+remaining,
+checkbox,
+registryMatch.entry
+);
+const score =
+getTrainedVehicleSelectionScore(
+metrics
+);
+if (
+score > bestScore ||
+(
+score === bestScore &&
+bestCheckbox &&
+arrivalIndex.get(checkbox) <
+arrivalIndex.get(bestCheckbox)
+)
+) {
+bestCheckbox = checkbox;
+bestEntry = registryMatch.entry;
+bestMetrics = metrics;
+bestScore = score;
+}
+});
+if (
+!bestCheckbox ||
+!bestMetrics?.eligible ||
+bestMetrics.trainedUseful <= 0
+) {
+break;
+}
+used.add(bestCheckbox);
+if (!clickVehicleElement(bestCheckbox)) {
+continue;
+}
+selectedVehicles += 1;
+trainedVehicles += 1;
+remaining =
+applyTrainingCandidateToRemaining(
+remaining,
+bestCheckbox,
+bestEntry
+);
+if (mfDebugEnabled) {
+debugLog(
+'TRAINED COVERAGE CLICK',
+`${source} | ${getVehicleDebugName(bestCheckbox)} | ` +
+`trained=${bestMetrics.trainedUseful} | ` +
+`capacity=${bestMetrics.capacityUseful} | ` +
+`overshoot=${bestMetrics.overshoot} | ` +
+`training remaining=${remaining.map(item => `${item.label}:${item.remaining}`).join(', ')} | ` +
+`capacity remaining=${remaining.map(item => `${item.label}:${item.capacityRemaining}`).join(', ')}`
+);
+}
+}
+};
+runTrainedSelection();
+const vehicleCoverageSatisfied =
+remaining.every(requirement => {
+return requirement.capacityRemaining <= 0;
+});
+const trainingSatisfied =
+remaining.every(requirement => {
+return requirement.remaining <= 0;
+});
+return {
+satisfied:
+trainingSatisfied,
+vehicleCoverageSatisfied,
+trainingSatisfied,
+selectedVehicles,
+trainedVehicles,
+fallbackVehicles:
+0,
+selectedVehicleCount:
+countSelectedTrainingVehicles(
+requirements,
+registry
+),
+remaining,
+trainingRemaining:
+remaining,
+capacityRemaining:
+remaining,
+registryVehicleCount
+};
+}
     function getPoliceOfficerVehicleRequirement(
         requirementName,
         personnelRequired
@@ -52799,7 +52825,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
                     return 1;
                 },
                 missionFinderVersion() {
-                    return '10.6.179';
+                    return '10.6.180';
                 },
                 isDormant() {
                     return mfV3DormantPreload;
@@ -52820,7 +52846,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
                     } catch (_error) {}
                     return {
                         protocolVersion: 1,
-                        missionFinderVersion: '10.6.179',
+                        missionFinderVersion: '10.6.180',
                         dormant: mfV3DormantPreload,
                         promoted: mfV3DormantPreloadPromoted,
                         promotedAt: mfV3DormantPreloadPromotedAt,
@@ -52943,14 +52969,14 @@ const missionId = () => String(location.pathname || '').match(/^\/missions\/(\d+
 const ownership = () => window.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__ || window.__MCN_V3_PIPELINE_PRELOAD_BRIDGE__ || null;
 const bridge = Object.freeze({
 protocolVersion: () => 1,
-missionFinderVersion: () => '10.6.179',
+missionFinderVersion: () => '10.6.180',
 isDormant: () => !promoted,
 isPromoted: () => promoted,
 missionId,
 status() {
 return {
 protocolVersion: 1,
-missionFinderVersion: '10.6.179',
+missionFinderVersion: '10.6.180',
 dormant: !promoted,
 promoted,
 promotedAt,

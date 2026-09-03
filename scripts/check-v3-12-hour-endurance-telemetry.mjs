@@ -57,7 +57,7 @@ function extractFunction(name) {
 }
 
 for (const token of [
-  "const MISSION_FINDER_VERSION = '10.6.179';",
+  "const MISSION_FINDER_VERSION = '10.6.180';",
   'const RUN_MISSION_ID_HISTORY_LIMIT = 5000;',
   'const MISSION_TIMING_SAMPLE_LIMIT = 5000;',
   "const V2_SESSION_STATS_KEY = 'mf_session_stats_v1';",
