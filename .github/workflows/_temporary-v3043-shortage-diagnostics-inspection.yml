@@ -50,14 +50,22 @@ jobs:
 
           python3 - <<'PY'
           from pathlib import Path
+
           path = Path('scripts/check-hazmat-osu-issue-215.mjs')
           text = path.read_text(encoding='utf-8')
           old = "'    function getAllMatchingVehicleCheckboxes(originalName, mappedName, includeChecked) {'"
           new = "'function getAllMatchingVehicleCheckboxes(originalName, mappedName, includeChecked, includeDisabled = false) {'"
           if old not in text:
               raise SystemExit('HazMat matcher signature regression marker not found.')
-          text = text.replace(old, new, 1)
-          path.write_text(text, encoding='utf-8')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          path = Path('scripts/check-open-issues-batch.mjs')
+          text = path.read_text(encoding='utf-8')
+          old = "'    function getAllMatchingVehicleCheckboxes('"
+          new = "'function getAllMatchingVehicleCheckboxes('"
+          if old not in text:
+              raise SystemExit('Open-issues matcher start regression marker not found.')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
           PY
 
       - name: Validate exact clean candidate
