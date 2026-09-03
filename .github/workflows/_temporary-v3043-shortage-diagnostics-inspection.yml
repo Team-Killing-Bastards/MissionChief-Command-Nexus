@@ -1,0 +1,191 @@
+name: Temporary v3.0.43 shortage diagnostics inspection
+
+on:
+  push:
+    branches:
+      - feat/v3043-shortage-diagnostics
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    if: ${{ !contains(github.event.head_commit.message, '[skip v3043 inspect]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract diagnostics and candidate-selection functions
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          source_path = Path('src/missionchief-command-nexus.user.js')
+          source = source_path.read_text(encoding='utf-8')
+
+          def scan_balanced(text, start, open_char, close_char):
+              depth = 0
+              quote = ''
+              escaped = False
+              line_comment = False
+              block_comment = False
+              i = start
+              while i < len(text):
+                  ch = text[i]
+                  nxt = text[i + 1] if i + 1 < len(text) else ''
+                  if line_comment:
+                      if ch == '\n': line_comment = False
+                      i += 1; continue
+                  if block_comment:
+                      if ch == '*' and nxt == '/':
+                          block_comment = False; i += 2; continue
+                      i += 1; continue
+                  if quote:
+                      if escaped: escaped = False
+                      elif ch == '\\': escaped = True
+                      elif ch == quote: quote = ''
+                      i += 1; continue
+                  if ch == '/' and nxt == '/': line_comment = True; i += 2; continue
+                  if ch == '/' and nxt == '*': block_comment = True; i += 2; continue
+                  if ch in "'\"`": quote = ch; i += 1; continue
+                  if ch == open_char: depth += 1
+                  elif ch == close_char:
+                      depth -= 1
+                      if depth == 0: return i
+                  i += 1
+              return -1
+
+          function_matches = list(re.finditer(
+              r'(?m)^\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(', source
+          ))
+
+          def extract_function(name):
+              match = next((item for item in function_matches if item.group(1) == name), None)
+              if not match:
+                  return f'FUNCTION NOT FOUND: {name}\n'
+              paren = source.find('(', match.start())
+              paren_end = scan_balanced(source, paren, '(', ')')
+              brace = source.find('{', paren_end)
+              body_end = scan_balanced(source, brace, '{', '}')
+              if body_end < 0:
+                  return f'UNTERMINATED FUNCTION: {name}\n'
+              return source[match.start():body_end + 1] + '\n'
+
+          # Index functions whose names suggest diagnostics, selection, stations or personnel evidence.
+          indexed = []
+          for match in function_matches:
+              name = match.group(1)
+              lowered = name.lower()
+              if any(token in lowered for token in (
+                  'diagnostic', 'failure', 'snapshot', 'staffing', 'station', 'vehicle',
+                  'candidate', 'shortfall', 'trained', 'training', 'registry', 'requirement',
+                  'selection', 'fulfil', 'export'
+              )):
+                  indexed.append(name)
+          Path('.tmp-v3043-function-index.txt').write_text('\n'.join(indexed) + '\n', encoding='utf-8')
+
+          terms = [
+              'staffingFailures',
+              'stationSummary',
+              'vehicleSummary',
+              'failureDiagnostics',
+              'unitFinderSnapshotsRetained',
+              'selectionShortfalls',
+              'selectedVehicleCount',
+              'staffingFailures:',
+              'privacyNote',
+              'currentRunFailures',
+              'runtimeQuarantinedVehicles',
+              'getRegistryEntryForMissionCheckbox',
+              'selectVehiclesForTrainedPersonnelRequirements',
+              'getTrainingCandidatePersonnelProfiles',
+              'eligibleVehicleTypeIds',
+              'vehicleName',
+              'stationName',
+              'buildingName',
+              'buildingId',
+              'vehicleId',
+              'Required mission resource is unavailable',
+              'Confirmed requirements still missing',
+          ]
+
+          blocks = []
+          seen_names = set()
+          term_hits = []
+          for term in terms:
+              cursor = 0
+              while True:
+                  pos = source.find(term, cursor)
+                  if pos < 0: break
+                  previous = [match for match in function_matches if match.start() <= pos]
+                  name = previous[-1].group(1) if previous else ''
+                  term_hits.append((term, pos, name))
+                  if name and name not in seen_names:
+                      seen_names.add(name)
+                      blocks.append(f'===== FUNCTION {name} =====\n{extract_function(name)}')
+                  cursor = pos + len(term)
+
+          Path('.tmp-v3043-term-hits.txt').write_text(
+              '\n'.join(f'{term} | char {pos} | {name or "TOPLEVEL"}' for term, pos, name in term_hits) + '\n',
+              encoding='utf-8'
+          )
+          Path('.tmp-v3043-enclosing-functions.txt').write_text('\n\n'.join(blocks), encoding='utf-8')
+
+          # Explicit likely functions if present.
+          requested = [
+              'buildFailureDiagnostics',
+              'collectFailureDiagnostics',
+              'diagnosticsSnapshot',
+              'buildDiagnosticsExport',
+              'recordUnitFinderSnapshot',
+              'recordStaffingFailure',
+              'recordStaffingEvent',
+              'recordVehicleStaffingFailure',
+              'getStaffingFailureSummary',
+              'getRegistryEntryForMissionCheckbox',
+              'selectVehiclesForTrainedPersonnelRequirements',
+              'getTrainingCandidatePersonnelProfiles',
+              'getTrainedCandidateMetrics',
+              'getRegistryTrainingQualifiedCount',
+              'processRequirementRows',
+              'processVehicles',
+              'getVehicleTypeIdFromCheckbox',
+              'getVehicleIdFromCheckbox',
+              'getVehicleNameFromCheckbox',
+              'getVehicleBuildingId',
+              'getBuildingName',
+              'getStationName',
+          ]
+          explicit = []
+          for name in requested:
+              explicit.append(f'===== FUNCTION {name} =====\n{extract_function(name)}')
+          Path('.tmp-v3043-explicit-functions.txt').write_text('\n\n'.join(explicit), encoding='utf-8')
+
+          # Relevant regression tests.
+          test_terms = [
+              'staffingFailures', 'stationSummary', 'vehicleSummary', 'failureDiagnostics',
+              'selectionShortfalls', 'trained-personnel', 'trained personnel', 'candidate',
+              'resource shortage', 'diagnostic export', 'unit finder snapshot'
+          ]
+          tests = []
+          for path in sorted(Path('scripts').glob('check-*.mjs')):
+              text = path.read_text(encoding='utf-8')
+              matched = [term for term in test_terms if term.lower() in text.lower() or term.replace(' ', '-') in path.name.lower()]
+              if matched:
+                  tests.append(f'===== {path} [{", ".join(matched)}] =====\n{text}')
+          Path('.tmp-v3043-relevant-tests.txt').write_text('\n\n'.join(tests), encoding='utf-8')
+          PY
+
+      - name: Commit inspection output
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .tmp-v3043-*.txt
+          git commit -m "Add v3.0.43 shortage diagnostics inspection [skip v3043 inspect]"
+          git push origin HEAD:feat/v3043-shortage-diagnostics
