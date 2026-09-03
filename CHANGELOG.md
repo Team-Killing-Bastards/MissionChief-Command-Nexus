@@ -6,6 +6,16 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.43] - 2026-09-03
+
+### Diagnostics
+
+- Add diagnostic-only candidate tracing for incomplete Unit Finder requirements. The export now shows exact vehicle IDs/names, station identity when available, selected/disabled/available state and the reason a matched candidate did not satisfy the mission.
+- Add trained-personnel candidate evidence with required training codes, verified assignment/profile state and qualifying-personnel counts by vehicle and station. Personnel names are never exported.
+- Add `stationIssueSummary` and `vehicleIssueSummary` to run failure diagnostics so repeated shortages can be ranked by station, vehicle, requirement and rejection reason.
+- Reuse the canonical Unit Finder requirement matcher with an opt-in diagnostic `includeDisabled` flag; normal selection behavior remains unchanged because all existing calls retain the default `false` value.
+- Correct stale component labels inside Unit Finder diagnostics and increase Command Nexus from `3.0.42` to `3.0.43` / Mission Finder from `10.6.179` to `10.6.180`.
+
 ## [3.0.42] - 2026-09-02
 
 ### Fixed

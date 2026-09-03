@@ -17,9 +17,9 @@
 </tr>
 </table>
 
-**Current version:** `3.0.42` · **Mission Finder engine:** `V10.6.179` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `3.0.43` · **Mission Finder engine:** `V10.6.180` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
-> **V3 production:** the map page keeps a lightweight parent controller and exactly one heavy managed worker realm at a time. Worker A is mission-only: requirements, complete vehicle loading, Unit Finder, trained-personnel checks, selection, Dispatch and queue progression. On-demand Worker B handles one exact personal patient or prisoner Radio request and is destroyed before a fresh A starts. No dormant mission preload exists. Command Nexus 3.0.42 also makes wake recovery role-aware and treats the parent-appointed Worker A identity as terminal authority before DOM and visible-frame ranking. See the [current project state](docs/PROJECT_STATE.md) for the locked contract and active work.
+> **V3 production:** the map page keeps a lightweight parent controller and exactly one heavy managed worker realm at a time. Worker A is mission-only: requirements, complete vehicle loading, Unit Finder, trained-personnel checks, selection, Dispatch and queue progression. On-demand Worker B handles one exact personal patient or prisoner Radio request and is destroyed before a fresh A starts. No dormant mission preload exists. Command Nexus 3.0.43 also makes wake recovery role-aware and treats the parent-appointed Worker A identity as terminal authority before DOM and visible-frame ranking. See the [current project state](docs/PROJECT_STATE.md) for the locked contract and active work.
 
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)

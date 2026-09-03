@@ -15,7 +15,7 @@ function expect(condition, message) {
 }
 
 function extractFunction(name) {
-  const signature = new RegExp(`^    (?:async\\s+)?function ${name}\\(`, 'm');
+  const signature = new RegExp(`^\\s*(?:async\\s+)?function ${name}\\(`, 'm');
   const match = signature.exec(source);
   if (!match) fail(`Unable to find ${name}`);
 

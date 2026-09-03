@@ -22,6 +22,31 @@ function extractBetween(startText, endText, label) {
   return source.slice(start, end);
 }
 
+function extractFunction(name) {
+  const start = source.indexOf(`function ${name}(`);
+  if (start < 0) fail(`Unable to find function ${name}`);
+  const brace = source.indexOf('{', start);
+  let depth = 0;
+  let quote = '';
+  let escaped = false;
+  for (let index = brace; index < source.length; index += 1) {
+    const character = source[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (character === '\\') escaped = true;
+      else if (character === quote) quote = '';
+      continue;
+    }
+    if (character === '"' || character === "'" || character === '`') {
+      quote = character;
+      continue;
+    }
+    if (character === '{') depth += 1;
+    if (character === '}' && --depth === 0) return source.slice(start, index + 1);
+  }
+  fail(`Unterminated function ${name}`);
+}
+
 
 // #126 PSU registry and assigned staff.
 requireText('function getPersonnelVehicleTypeIdFromRow(row)', 'broad vehicle-type discovery');
@@ -66,11 +91,7 @@ requireText('trainingCounts.critical_care', 'Critical Care training verification
 requireText('sortVehicleCheckboxesByBestArrival(', 'shared nearest-arrival ordering');
 requireText('function isCriticalCareTransferAmbulanceRequirement(', 'explicit type-98 exception');
 
-const allMatching = extractBetween(
-  '    function getAllMatchingVehicleCheckboxes(',
-  '    function getMatchingVehicleCheckboxes(',
-  'shared candidate selector'
-);
+const allMatching = extractFunction('getAllMatchingVehicleCheckboxes');
 for (const token of [
   'if (crvOnly)',
   'if (controlVanOnly)',

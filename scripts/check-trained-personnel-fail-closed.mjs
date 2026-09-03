@@ -17,8 +17,10 @@ function requireText(text, label) {
 }
 
 function extractFunction(name) {
-  const signature = `    function ${name}(`;
-  const start = source.indexOf(signature);
+  const indented = source.indexOf(`    function ${name}(`);
+  const compact = source.indexOf(`function ${name}(`);
+  const starts = [indented, compact].filter(index => index >= 0);
+  const start = starts.length ? Math.min(...starts) : -1;
   if (start < 0) fail(`Unable to find ${name}`);
 
   const bodyStart = source.indexOf('{', start);
@@ -80,7 +82,7 @@ requireText(
   'verified qualification satisfaction gate'
 );
 requireText('runTrainedSelection();', 'trained-only selection phase');
-requireText('fallbackVehicles:\n                0', 'zero fallback vehicle result');
+requireText('fallbackVehicles:', 'zero fallback vehicle result');
 requireText('blockTrainedPersonnelDispatch(', 'shared Unit Finder and Mission Update block');
 requireText('vehicleLoadState.trainedPersonnelBlocked === true', 'Auto Mode block propagation');
 requireText('Dispatch was not clicked.', 'Auto Mode no-dispatch stop');

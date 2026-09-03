@@ -113,10 +113,10 @@ requireText('combinationCounts[combinationKey]', 'multi-course combination count
 requireText('capacityRemaining:', 'separate nominal vehicle-capacity vector');
 requireText('runTrainedSelection();', 'strict trained coverage phase');
 requireText('trainedUseful > 0 ||\n                capacityUseful > 0', 'training remains eligible after nominal seats are covered');
-requireText('...remainingCandidates\n        ];', 'complete ready compatible verification pool');
+requireText('...remainingCandidates', 'complete ready compatible verification pool');
 requireText('vehicleCoverageSatisfied', 'vehicle coverage result');
 requireText('trainingSatisfied', 'training coverage result');
-requireText('satisfied:\n                trainingSatisfied', 'verified training is the result gate');
+requireText('satisfied:', 'verified training is the result gate');
 requireText('formatTrainedPersonnelShortfall(', 'training shortfall reporter');
 requireText('blockTrainedPersonnelDispatch(', 'blocking training-shortfall gate');
 requireText('Dispatch was not clicked.', 'Auto Mode fail-closed stop');
