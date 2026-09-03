@@ -1,4 +1,4 @@
-name: Temporary v3.0.43 exact diagnostics inspection
+name: Temporary v3.0.43 shortage diagnostics build
 
 on:
   push:
@@ -9,149 +9,42 @@ permissions:
   contents: write
 
 jobs:
-  inspect:
-    if: ${{ !contains(github.event.head_commit.message, '[skip v3043 exact]') }}
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Extract exact diagnostic functions
+      - name: Build v3.0.43 candidate
+        run: python3 scripts/_temporary-build-v3043-shortage-diagnostics.py
+
+      - name: Validate exact clean candidate
         shell: bash
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/check-project-state.mjs
+          for check in scripts/check-*.mjs; do
+            echo "Running ${check}"
+            node "${check}"
+          done
+          python3 scripts/check_repository.py
+          git diff --check
+          test ! -e .github/workflows/_temporary-v3043-shortage-diagnostics-inspection.yml
+          test ! -e scripts/_temporary-build-v3043-shortage-diagnostics.py
+          if find . -maxdepth 1 -name '.tmp-v3043-*' -print -quit | grep -q .; then
+            echo 'Temporary v3.0.43 inspection files remain.' >&2
+            exit 1
+          fi
 
-          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
-
-          def scan_balanced(start, open_char, close_char):
-              depth = 0
-              quote = ''
-              escaped = False
-              line_comment = False
-              block_comment = False
-              i = start
-              while i < len(source):
-                  ch = source[i]
-                  nxt = source[i+1] if i+1 < len(source) else ''
-                  if line_comment:
-                      if ch == '\n': line_comment = False
-                      i += 1; continue
-                  if block_comment:
-                      if ch == '*' and nxt == '/':
-                          block_comment = False; i += 2; continue
-                      i += 1; continue
-                  if quote:
-                      if escaped: escaped = False
-                      elif ch == '\\': escaped = True
-                      elif ch == quote: quote = ''
-                      i += 1; continue
-                  if ch == '/' and nxt == '/': line_comment = True; i += 2; continue
-                  if ch == '/' and nxt == '*': block_comment = True; i += 2; continue
-                  if ch in "'\"`": quote = ch; i += 1; continue
-                  if ch == open_char: depth += 1
-                  elif ch == close_char:
-                      depth -= 1
-                      if depth == 0: return i
-                  i += 1
-              return -1
-
-          functions = list(re.finditer(r'(?m)^\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(', source))
-          def extract(name):
-              match = next((item for item in functions if item.group(1) == name), None)
-              if not match: return f'FUNCTION NOT FOUND: {name}\n'
-              paren = source.find('(', match.start())
-              paren_end = scan_balanced(paren, '(', ')')
-              brace = source.find('{', paren_end)
-              body_end = scan_balanced(brace, '{', '}')
-              if body_end < 0: return f'UNTERMINATED: {name}\n'
-              return source[match.start():body_end+1] + '\n'
-
-          groups = {
-              'controller-diagnostics': [
-                  'staffingFailureDiagnosticsSnapshot',
-                  'buildRunFailureDiagnostics',
-                  'diagnosticsSnapshot',
-              ],
-              'unitfinder-diagnostics': [
-                  'mfSerialiseDiagnosticTrainingRequirement',
-                  'mfSerialiseDiagnosticRequirementRow',
-                  'mfSerialiseDiagnosticRequirementRows',
-                  'mfSetUnitFinderDiagnosticContext',
-                  'mfGetDiagnosticRegistryEvidence',
-                  'mfGetDiagnosticSelectedVehicles',
-                  'mfGetDiagnosticVisibleAlerts',
-                  'mfBuildUnitFinderDiagnosticSnapshot',
-                  'mfPersistUnitFinderDiagnostic',
-                  'exportUnitFinderDiagnostics',
-              ],
-              'trained-selection': [
-                  'getRegistryEntryForMissionCheckbox',
-                  'getTrainingCandidatePersonnelProfiles',
-                  'getTrainedCandidateMetrics',
-                  'selectVehiclesForTrainedPersonnelRequirements',
-                  'refreshPoliceInspectorRegistryFromLiveVehicles',
-                  'refreshArmedResponseRegistryFromLiveVehicles',
-                  'refreshOrdinaryPoliceRegistryFromLiveVehicles',
-                  'processRequirementRows',
-              ],
-              'ordinary-selection': [
-                  'getVehicleDebugName',
-                  'getCheckboxVehicleValues',
-                  'getExtendedVehicleValues',
-                  'getAllMatchingVehicleCheckboxes',
-                  'getMatchingVehicleCheckboxes',
-                  'countSelectedMatchingVehicles',
-                  'addOrUpdateVehicleRow',
-                  'setVehicleStatus',
-                  'selectVehicleUnits',
-              ],
-              'staffing-history': [
-                  'mfStaffingAlertVehicleLabel',
-                  'mfCompactStaffingVehicle',
-                  'mfRecordStaffingFailure',
-                  'mfReadStaffingFailureHistory',
-              ],
-          }
-          for group, names in groups.items():
-              blocks = [f'===== FUNCTION {name} =====\n{extract(name)}' for name in names]
-              Path(f'.tmp-v3043-exact-{group}.txt').write_text('\n\n'.join(blocks), encoding='utf-8')
-
-          # Capture surrounding top-level constants/state keys for Unit Finder diagnostics.
-          terms = [
-              'MF_UNIT_FINDER_DIAGNOSTIC',
-              'MF_STAFFING_FAILURE',
-              'mfUnitFinderDiagnostic',
-              'mfStaffingFailure',
-              'unitFinderDiagnostic',
-          ]
-          lines = source.splitlines()
-          contexts = []
-          for number, line in enumerate(lines, 1):
-              if any(term.lower() in line.lower() for term in terms):
-                  contexts.append((max(1, number-20), min(len(lines), number+35)))
-          merged = []
-          for start, end in contexts:
-              if merged and start <= merged[-1][1] + 2:
-                  merged[-1] = (merged[-1][0], max(merged[-1][1], end))
-              else:
-                  merged.append((start, end))
-          out = []
-          for idx, (start, end) in enumerate(merged, 1):
-              out.append(f'===== CONTEXT {idx} [{start}-{end}] =====')
-              out.extend(f'{i:06d}: {lines[i-1]}' for i in range(start, end+1))
-              out.append('')
-          Path('.tmp-v3043-diagnostic-state-contexts.txt').write_text('\n'.join(out), encoding='utf-8')
-          PY
-
-      - name: Commit exact output
+      - name: Commit clean candidate
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .tmp-v3043-*.txt
-          git commit -m "Add exact v3.0.43 diagnostic functions [skip v3043 exact]"
+          git add -A
+          git commit -m "Add station-level shortage diagnostics"
           git push origin HEAD:feat/v3043-shortage-diagnostics
