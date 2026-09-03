@@ -1,0 +1,678 @@
+===== FUNCTION staffingFailureDiagnosticsSnapshot =====
+function staffingFailureDiagnosticsSnapshot() {
+const rawHistory = readJsonStorage(sessionStorage, V2_STAFFING_FAILURE_HISTORY_KEY, []);
+const runtimeQuarantine = readJsonStorage(sessionStorage, V2_STAFFING_QUARANTINE_KEY, []);
+const history = (Array.isArray(rawHistory) ? rawHistory : [])
+.filter(record => record && typeof record === 'object');
+const stationMap = new Map();
+const vehicleMap = new Map();
+history.forEach(record => {
+const confirmedEmptyIds = new Set(
+(record.knownEmptyAmbulanceExclusions || []).map(vehicle => vehicle.vehicleId).filter(Boolean)
+);
+const vehicles = Array.from(new Map([
+...(record.selectedVehicles || []),
+...(record.knownEmptyAmbulanceExclusions || []),
+].map(vehicle => [
+vehicle.vehicleId || `${vehicle.stationName}|${vehicle.vehicleName}`,
+vehicle,
+])).values());
+const eventStations = new Set();
+vehicles.forEach(vehicle => {
+const stationKey = vehicle.stationName || vehicle.stationHref || 'Unknown station';
+const station = stationMap.get(stationKey) || {
+stationName: vehicle.stationName || 'Unknown station',
+stationHref: vehicle.stationHref || '',
+events: 0,
+candidateOccurrences: 0,
+confirmedEmptyOccurrences: 0,
+vehicleIds: new Set(),
+};
+station.candidateOccurrences += 1;
+if (confirmedEmptyIds.has(vehicle.vehicleId)) station.confirmedEmptyOccurrences += 1;
+if (vehicle.vehicleId) station.vehicleIds.add(vehicle.vehicleId);
+stationMap.set(stationKey, station);
+eventStations.add(stationKey);
+if (vehicle.vehicleId) {
+const existingVehicle = vehicleMap.get(vehicle.vehicleId) || {
+...vehicle,
+failureCandidateOccurrences: 0,
+confirmedEmptyOccurrences: 0,
+};
+existingVehicle.failureCandidateOccurrences += 1;
+if (confirmedEmptyIds.has(vehicle.vehicleId)) existingVehicle.confirmedEmptyOccurrences += 1;
+vehicleMap.set(vehicle.vehicleId, existingVehicle);
+}
+});
+eventStations.forEach(stationKey => {
+const station = stationMap.get(stationKey);
+if (station) station.events += 1;
+});
+});
+const stationSummary = Array.from(stationMap.values())
+.map(station => ({
+...station,
+vehicleIds: Array.from(station.vehicleIds),
+}))
+.sort((left, right) =>
+right.confirmedEmptyOccurrences - left.confirmedEmptyOccurrences ||
+right.events - left.events ||
+left.stationName.localeCompare(right.stationName)
+);
+return {
+privacyNote: 'Contains vehicle and station identifiers, but never personnel names.',
+currentRunEventCount: history.length,
+currentRunFailureCount: history.filter(record =>
+String(record.eventType || 'dispatch-block') === 'dispatch-block'
+).length,
+preflightExclusionEventCount: history.filter(record =>
+record.eventType === 'preflight-exclusion'
+).length,
+currentRunEvents: history,
+currentRunFailures: history.filter(record =>
+String(record.eventType || 'dispatch-block') === 'dispatch-block'
+),
+stationSummary,
+vehicleSummary: Array.from(vehicleMap.values()).sort((left, right) =>
+right.confirmedEmptyOccurrences - left.confirmedEmptyOccurrences ||
+right.failureCandidateOccurrences - left.failureCandidateOccurrences
+),
+runtimeQuarantineCount: Array.isArray(runtimeQuarantine) ? runtimeQuarantine.length : 0,
+runtimeQuarantinedVehicles: Array.isArray(runtimeQuarantine)
+? runtimeQuarantine.slice(-80)
+: [],
+};
+}
+
+
+===== FUNCTION buildRunFailureDiagnostics =====
+function buildRunFailureDiagnostics(missionValue, staffingFailures) {
+const unitFinderHistory = readJsonStorage(localStorage, V2_UNIT_FINDER_DIAGNOSTICS_KEY, []);
+const snapshots = (Array.isArray(unitFinderHistory) ? unitFinderHistory : [])
+.filter(item => item && typeof item === 'object');
+const byMission = new Map();
+const ensureMission = (missionId, missionName = '') => {
+const id = String(missionId || '');
+if (!id) return null;
+if (!byMission.has(id)) {
+byMission.set(id, {
+missionId: id,
+missionName: cleanMissionCaption(missionName || missionNameForId(id)),
+fulfilment: 'unknown',
+dispatchObserved: false,
+requirements: [],
+selectionShortfalls: [],
+visibleAlerts: [],
+selectedVehicleCount: 0,
+transportEvents: [],
+staffingFailures: [],
+retriesAndRecoveries: [],
+creditCapture: null,
+evidenceCapturedAt: '',
+});
+}
+const record = byMission.get(id);
+if (!record.missionName && missionName) record.missionName = cleanMissionCaption(missionName);
+return record;
+};
+state.runMissionIds.forEach(id => ensureMission(id));
+snapshots.forEach(snapshot => {
+const mission = ensureMission(snapshot?.mission?.missionId, snapshot?.mission?.missionName);
+if (!mission) return;
+const liveRows = Array.isArray(snapshot?.requirementContext?.currentLiveRequirementRows)
+? snapshot.requirementContext.currentLiveRequirementRows : [];
+const processedRows = Array.isArray(snapshot?.requirementContext?.processedRows)
+? snapshot.requirementContext.processedRows : [];
+const loadRows = Array.isArray(snapshot?.selectionSummary?.vehicleLoadState?.rows)
+? snapshot.selectionSummary.vehicleLoadState.rows : [];
+const missingRows = [...liveRows, ...processedRows]
+.filter(row => Number(row?.stillNeeded || 0) > 0)
+.map(row => ({
+name: String(row.unitName || row.mappedName || ''),
+mappedName: String(row.mappedName || ''),
+stillNeeded: Math.max(0, Number(row.stillNeeded || 0)),
+requiredTotal: Math.max(0, Number(row.requiredTotal || 0)),
+source: String(row.source || ''),
+personnelRequirement: String(row.personnelRequirement || ''),
+}));
+const selectionShortfalls = loadRows
+.filter(row => Number(row?.selected || 0) < Number(row?.required || 0))
+.map(row => ({
+name: String(row.originalName || row.mappedName || ''),
+mappedName: String(row.mappedName || ''),
+required: Math.max(0, Number(row.required || 0)),
+selected: Math.max(0, Number(row.selected || 0)),
+shortfall: Math.max(0, Number(row.required || 0) - Number(row.selected || 0)),
+status: String(row.status || ''),
+}));
+mission.requirements = missingRows;
+mission.selectionShortfalls = selectionShortfalls;
+mission.visibleAlerts = Array.isArray(snapshot?.requirementContext?.visibleAlerts)
+? snapshot.requirementContext.visibleAlerts.slice(0, 20).map(String) : [];
+mission.selectedVehicleCount = Array.isArray(snapshot?.selectionSummary?.selectedVehicles)
+? snapshot.selectionSummary.selectedVehicles.length : 0;
+mission.dispatchObserved = mission.dispatchObserved || /^before-dispatch/.test(String(snapshot.reason || ''));
+mission.evidenceCapturedAt = String(snapshot.capturedAt || '');
+const ready = snapshot?.execution?.ready === true || snapshot?.selectionSummary?.vehicleLoadState?.ready === true;
+if (missingRows.length || selectionShortfalls.length || snapshot?.execution?.staffingBlockActive === true) {
+mission.fulfilment = mission.selectedVehicleCount > 0 ? 'partially-fulfilled' : 'unfulfilled';
+} else if (ready || mission.dispatchObserved) {
+mission.fulfilment = 'fully-fulfilled';
+}
+});
+state.missionTimingHistory.forEach(timing => {
+const mission = ensureMission(timing?.missionId, timing?.missionName);
+if (!mission) return;
+mission.dispatchObserved = mission.dispatchObserved || Boolean(
+timing?.milestones?.dispatchNext || timing?.milestones?.dispatchShare || timing?.milestones?.finalDispatch
+);
+mission.timing = { ...timing };
+});
+state.runTransportEvents.forEach(event => {
+const mission = ensureMission(event?.missionId);
+if (mission) mission.transportEvents.push({ ...event });
+});
+(staffingFailures?.currentRunEvents || []).forEach(event => {
+const mission = ensureMission(event?.missionId, event?.missionName);
+if (mission) mission.staffingFailures.push({ ...event });
+});
+[
+['mission-skip', state.missionSkipHistory],
+['auto-recovery', state.autoRecoveryHistory],
+['zero-selection', state.zeroSelectionHistory],
+['transport-recovery', state.transportRecoveryHistory],
+['post-dispatch-recovery', state.postDispatchRecoveryHistory],
+['promotion-stall', state.promotionRecoveryHistory],
+['active-control-dropout', state.activeControlDropoutHistory],
+].forEach(([category, events]) => (events || []).forEach(event => {
+const mission = ensureMission(event?.missionId || event?.currentMissionId, event?.missionName);
+if (mission) mission.retriesAndRecoveries.push({ category, ...event });
+}));
+(missionValue?.recentEntries || []).forEach(entry => {
+const mission = ensureMission(entry?.missionId, entry?.missionName);
+if (mission) mission.creditCapture = { ...entry };
+});
+const missions = Array.from(byMission.values());
+const stalledTransports = state.runTransportEvents.filter(event =>
+event?.outcome === 'active' ||
+Number(event?.durationMs || 0) >= TRANSPORT_STALL_WARN_MS ||
+/stuck|failed|circuit|recovery/i.test(String(event?.outcome || ''))
+).map(event => ({ ...event }));
+const stalledTransportMissionIds = new Set(
+stalledTransports.map(event => String(event.missionId || '')).filter(Boolean)
+);
+const unresolvedMissions = missions.filter(mission =>
+mission.fulfilment === 'partially-fulfilled' ||
+mission.fulfilment === 'unfulfilled' ||
+mission.staffingFailures.length ||
+mission.retriesAndRecoveries.length ||
+stalledTransportMissionIds.has(mission.missionId)
+);
+return {
+schemaVersion: 1,
+meaning: {
+fullyFulfilled: 'Unit Finder reported ready with no remaining requirement or selection shortfall at the last captured attempt.',
+partiallyFulfilled: 'Some vehicles were selected, but a requirement, staffing block or selection shortfall remained.',
+unfulfilled: 'No selected vehicle evidence was captured while requirements or a staffing block remained.',
+unknown: 'The run did not retain enough Unit Finder evidence to prove fulfilment. This must not be treated as success.',
+},
+summary: {
+missionsObserved: missions.length,
+fullyFulfilled: missions.filter(item => item.fulfilment === 'fully-fulfilled').length,
+partiallyFulfilled: missions.filter(item => item.fulfilment === 'partially-fulfilled').length,
+unfulfilled: missions.filter(item => item.fulfilment === 'unfulfilled').length,
+unknown: missions.filter(item => item.fulfilment === 'unknown').length,
+dispatchObserved: missions.filter(item => item.dispatchObserved).length,
+missionsWithTransport: missions.filter(item => item.transportEvents.length).length,
+stalledTransportCount: stalledTransports.length,
+staffingFailureCount: Number(staffingFailures?.currentRunFailureCount || 0),
+zeroSelectionRecoveryCount: state.zeroSelectionRecoveries,
+postDispatchHardRecoveryCount: state.postDispatchHardRecoveries,
+transportHardRecoveryCount: state.transportHardRecoveries,
+creditCaptureMisses: Number(missionValue?.creditCaptureMisses || 0),
+},
+currentBlocker: {
+missionId: state.currentMissionId,
+missionName: state.currentMissionName,
+phase: state.phase,
+status: state.status,
+detail: state.detail,
+lastError: state.lastError,
+activeTransport: state.activeTransportEvent ? { ...state.activeTransportEvent } : null,
+postDispatchWatchdog: state.postDispatchWatchdog ? { ...state.postDispatchWatchdog } : null,
+autoStopRecord: readV2AutoStopRecord(),
+},
+stalledTransports,
+unresolvedMissions,
+missions,
+unitFinderSnapshotsRetained: snapshots.length,
+unitFinderHistoryLimitWarning: snapshots.length >= 120
+? 'Unit Finder history reached its retention limit; older mission-level fulfilment evidence may have been discarded.'
+: '',
+};
+}
+
+
+===== FUNCTION diagnosticsSnapshot =====
+function diagnosticsSnapshot() {
+const href = getWorkerHref();
+const doc = getWorkerDocument();
+const autoControl = findAutoModeControl(doc);
+const candidates = collectMissionCandidates();
+const liveWorkerSnapshot = captureWorkerSnapshot();
+const workerSnapshot = liveWorkerSnapshot || state.lastWorkerSnapshot || {};
+const v2AutoStopRecord = readV2AutoStopRecord();
+const runEndMs = state.runStoppedAt ? Date.parse(state.runStoppedAt) : Date.now();
+const runStartMs = state.runStartedAt ? Date.parse(state.runStartedAt) : 0;
+const elapsedSeconds = runStartMs ? Math.max(0, Math.round((runEndMs - runStartMs) / 1000)) : 0;
+const missionValue = missionFinderRunValueSnapshot(elapsedSeconds);
+const staffingFailures = staffingFailureDiagnosticsSnapshot();
+const failureDiagnostics = buildRunFailureDiagnostics(missionValue, staffingFailures);
+const actionableSupply = actionableMissionSupply({
+excludeMissionId: state.lowQueuePaused ? state.lowQueueTriggerMissionId : '',
+});
+return {
+generatedAt: nowIso(),
+controllerVersion: VERSION,
+masterVersion: MASTER_VERSION,
+missionFinderVersion: MISSION_FINDER_VERSION,
+mergedRuntime: true,
+heavyRuntimeLoaded: window.__MCN_HEAVY_RUNTIME_LOADED__ === true,
+pairedV2Required: false,
+page: {
+origin: location.origin,
+pathname: location.pathname,
+missionListPresent: Boolean(findMissionListRoot()),
+missionCandidateCount: candidates.length,
+nonAllianceLikeCandidateCount: candidates.filter(item => !item.allianceLike).length,
+actionableMissionSupply: actionableSupply.count,
+minimumActionableMissions: MINIMUM_ACTIONABLE_MISSIONS,
+actionableMissionIds: actionableSupply.missionIds,
+topMission: compactMissionCandidate(chooseTopMission()),
+visualTopMission: state.visualTopMission ? { ...state.visualTopMission } : null,
+activeMissionSkips: activeMissionSkipRecords(),
+radioTransportRequests: refreshRadioTransportRequests().map(request => ({ ...request })),
+allianceRadioRequestsIgnored: state.runAllianceRadioIgnored,
+},
+run: {
+startedAt: state.runStartedAt || '',
+stoppedAt: state.runStoppedAt || '',
+elapsedSeconds: runStartMs ? Math.max(0, Math.round((runEndMs - runStartMs) / 1000)) : 0,
+uniqueMissionCount: state.runUniqueMissionCount,
+missionIdsRetained: state.runMissionIds.length,
+missionIdHistoryLimit: RUN_MISSION_ID_HISTORY_LIMIT,
+missionIdsTruncated: state.runUniqueMissionCount > state.runMissionIds.length,
+missionIds: state.runMissionIds.slice(),
+successfulDispatchCount: missionValue.completedDispatches,
+missionValue,
+failureDiagnostics,
+workerLoads: state.runWorkerLoads,
+navigationChanges: state.runNavigations,
+retries: state.runRetries,
+patientTransportContexts: state.runPatientTransports,
+prisonerTransportContexts: state.runPrisonerTransports,
+radioTransportRequestsSeen: state.runRadioTransportRequests,
+allianceRadioRequestsIgnored: state.runAllianceRadioIgnored,
+patientAssistAttempts: state.patientAssistAttempts,
+prisonerAssistAttempts: state.prisonerAssistAttempts,
+nativeMissionAdvances: state.nativeMissionAdvances,
+topPageResumes: state.topPageResumes,
+lowQueuePauses: state.lowQueuePauses,
+lowQueueCompletedPauses: state.lowQueueCompletedPauses,
+lowQueueTotalPausedMs: state.lowQueueTotalPausedMs + (
+state.lowQueuePaused && state.lowQueuePauseSince
+? Math.max(0, Date.now() - state.lowQueuePauseSince)
+: 0
+),
+lowQueueLongestPauseMs: Math.max(
+state.lowQueueLongestPauseMs,
+state.lowQueuePaused && state.lowQueuePauseSince
+? Math.max(0, Date.now() - state.lowQueuePauseSince)
+: 0
+),
+lowQueueHistory: state.lowQueueHistory.slice(),
+runtimeRecycles: state.runtimeRecycles,
+runtimeRecycleHistory: state.runtimeRecycleHistory.slice(),
+managedRuntimeDisposals: state.managedRuntimeDisposals,
+zeroSelectionRecoveries: state.zeroSelectionRecoveries,
+zeroSelectionHistory: state.zeroSelectionHistory.slice(),
+autoRecoverySkips: state.autoRecoverySkips,
+autoRecoveryHistory: state.autoRecoveryHistory.slice(),
+autoRecoveryWatchdog: state.autoRecoveryCandidateKey ? {
+missionId: state.autoRecoveryCandidateMissionId,
+missionName: missionNameForId(state.autoRecoveryCandidateMissionId),
+category: state.autoRecoveryCandidateCategory,
+reason: state.autoRecoveryCandidateReason,
+elapsedMs: Math.max(0, Date.now() - state.autoRecoveryCandidateSince),
+waitMs: state.autoRecoveryCandidateWaitMs || AUTO_RECOVERY_WATCHDOG_MS,
+evidence: state.autoRecoveryCandidateEvidence,
+} : null,
+recoverableMissionSkips: state.recoverableMissionSkips,
+activeMissionSkips: activeMissionSkipRecords(),
+missionSkipHistory: state.missionSkipHistory.slice(),
+airfieldAliasRewrites: state.airfieldAliasRewrites,
+airfieldAliasHistory: state.airfieldAliasHistory.slice(),
+airfieldSupervisorAssistAttempts: state.airfieldSupervisorAssistAttempts,
+airfieldSupervisorAssistHistory: state.airfieldSupervisorAssistHistory.slice(),
+rescueDogAssistAttempts: state.rescueDogAssistAttempts,
+rescueDogAssistHistory: state.rescueDogAssistHistory.slice(),
+massCasualtyThresholdAttempts: state.massCasualtyThresholdAttempts,
+massCasualtyThresholdHistory: state.massCasualtyThresholdHistory.slice(),
+prisonerReleaseSuccessRehooks: state.prisonerReleaseSuccessRehooks,
+prisonerReleaseSuccessHistory: state.prisonerReleaseSuccessHistory.slice(),
+transportServiceAttempts: state.transportServiceAttempts,
+transportServiceCleared: state.transportServiceCleared,
+transportServiceActive: state.transportServiceActive,
+transportHardRecoveries: state.transportHardRecoveries,
+transportRecoveryCircuitBreakers: state.transportRecoveryCircuitBreakers,
+transportRecoveryHistory: state.transportRecoveryHistory.slice(),
+priorityRedirects: state.priorityRedirects,
+queueFastReleases: state.queueFastReleases,
+queueFastReleaseHistory: state.queueFastReleaseHistory.slice(),
+postDispatchSoftRecoveries: state.postDispatchSoftRecoveries,
+postDispatchHardRecoveries: state.postDispatchHardRecoveries,
+postDispatchCircuitBreakers: state.postDispatchCircuitBreakers,
+postDispatchRecoveryHistory: state.postDispatchRecoveryHistory.slice(),
+postDispatchWatchdog: state.postDispatchWatchdog ? {
+...state.postDispatchWatchdog,
+effectiveElapsedMs: postDispatchEffectiveElapsed(state.postDispatchWatchdog),
+} : null,
+pipelinePreloadCreates: state.pipelinePreloadCreates,
+pipelinePreloadsReady: state.pipelinePreloadsReady,
+pipelineVehicleLoadClicks: state.pipelineVehicleLoadClicks,
+pipelinePromotions: state.pipelinePromotions,
+pipelineReadyPromotions: state.pipelineReadyPromotions,
+pipelineIsolationFailures: state.pipelineIsolationFailures,
+pipelinePromotionFallbacks: state.pipelinePromotionFallbacks,
+pipelineV2DormantReady: state.pipelineV2DormantReady,
+pipelineV2DormantPromotionFailures: state.pipelineV2DormantPromotionFailures,
+pipelineDuplicateClicksSuppressed: state.pipelineDuplicateClicksSuppressed,
+pipelineHandoffRetentions: state.pipelineHandoffRetentions,
+pipelineDormantInteractionsBlocked: state.pipelineDormantInteractionsBlocked,
+promotionWorkStallRecoveries: state.promotionWorkStallRecoveries,
+promotionRecoveryHistory: state.promotionRecoveryHistory.slice(),
+activeBootstrapRescues: state.activeBootstrapRescues,
+activeBootstrapRescueMissionId: state.activeBootstrapRescueMissionId,
+activeBootstrapRescueAttempts: state.activeBootstrapRescueAttempts,
+activeBootstrapHistory: state.activeBootstrapHistory.slice(),
+activeControlDropoutRescues: state.activeControlDropoutRescues,
+activeControlSoftRecoveries: state.activeControlSoftRecoveries,
+activeControlDropoutCircuitBreakers: state.activeControlDropoutCircuitBreakers,
+activeControlDropoutHistory: state.activeControlDropoutHistory.slice(),
+pipelineActiveOnly: state.pipelineActiveOnly,
+pipelineActiveOnlyReason: state.pipelineActiveOnlyReason,
+pipelineActiveOnlySince: state.pipelineActiveOnlySince
+? new Date(state.pipelineActiveOnlySince).toISOString()
+: '',
+pipelineOwnershipDemotions: state.pipelineOwnershipDemotions,
+activeOwnershipBootstrapInstalls: state.activeOwnershipBootstrapInstalls,
+activeOwnershipBootstrapFailures: state.activeOwnershipBootstrapFailures,
+activeOwnershipBootstrapHistory: state.activeOwnershipBootstrapHistory.slice(),
+sleepGapRecoveries: state.sleepGapRecoveries,
+sleepGapHistory: state.sleepGapHistory.slice(),
+autoStateDropoutRecoveries: state.autoStateDropoutRecoveries,
+autoStateDropoutReloads: state.autoStateDropoutReloads,
+autoStateActiveOnlyFailures: state.autoStateActiveOnlyFailures,
+autoStateDropoutHistory: state.autoStateDropoutHistory.slice(),
+skippedMissionPrestartRedirects: state.skippedMissionPrestartRedirects,
+pipelineSlots: state.pipelineSlots.map(compactPipelineSlot),
+pipelineHistory: state.pipelineHistory.slice(),
+transportAffinityCorrections: 0,
+postTransportRehooks: state.postTransportRehooks,
+postTransportGuardFastReleases: state.postTransportGuardFastReleases,
+nonMissionRedirectRecoveries: state.nonMissionRedirectRecoveries,
+nonMissionRedirectRecoveryHistory: state.nonMissionRedirectRecoveryHistory.slice(),
+topSyntheticMissionRehooksBlocked: state.topSyntheticMissionRehooksBlocked,
+transportEvents: state.runTransportEvents.map(event => ({ ...event })),
+ruleChangeHistory: state.ruleChangeHistory.slice(),
+radioRequestHistory: state.radioRequestHistory.slice(),
+allianceRadioIgnoredHistory: state.allianceRadioIgnoredHistory.slice(),
+patientAssistHistory: state.patientAssistHistory.slice(),
+prisonerAssistHistory: state.prisonerAssistHistory.slice(),
+transportServiceHistory: state.transportServiceHistory.slice(),
+transportAffinityHistory: state.transportAffinityHistory.slice(),
+statusHistory: state.statusHistory.slice(),
+missionTimingHistory: state.missionTimingHistory.slice(),
+missionTimingSummary: {
+dispatchClick: summariseMissionTimingSamples(
+state.missionDispatchTimingSamplesMs,
+state.missionDispatchTimingCount,
+state.missionDispatchTimingTotalMs
+),
+fullCycle: summariseMissionTimingSamples(
+state.missionCycleTimingSamplesMs,
+state.missionDispatchTimingCount,
+state.missionCycleTimingTotalMs
+),
+},
+staffingFailures,
+activeMissionTiming: state.activeMissionTiming ? JSON.parse(JSON.stringify(state.activeMissionTiming)) : null,
+},
+controller: {
+wanted: state.wanted,
+running: state.running,
+stopping: state.stopping,
+phase: state.phase,
+status: state.status,
+detail: state.detail,
+workerRole: state.workerRole || '',
+lowQueuePaused: state.lowQueuePaused,
+lowQueuePauseSince: state.lowQueuePauseSince
+? new Date(state.lowQueuePauseSince).toISOString()
+: '',
+lowQueueObservedCount: state.lowQueueObservedCount,
+lowQueueTriggerMissionId: state.lowQueueTriggerMissionId,
+lowQueueResumeCandidateSince: state.lowQueueResumeCandidateSince
+? new Date(state.lowQueueResumeCandidateSince).toISOString()
+: '',
+minimumActionableMissions: MINIMUM_ACTIONABLE_MISSIONS,
+runtimeRecycleLastAt: state.runtimeRecycleLastAt
+? new Date(state.runtimeRecycleLastAt).toISOString()
+: '',
+runtimeRecycleAdvanceBaseline: state.runtimeRecycleAdvanceBaseline,
+runtimeRecycles: state.runtimeRecycles,
+managedRuntimeDisposals: state.managedRuntimeDisposals,
+runtimeRecycleEveryAdvances: CONTROLLER_RUNTIME_RECYCLE_ADVANCES,
+runtimeRecycleMaximumAgeMs: CONTROLLER_RUNTIME_RECYCLE_MAX_AGE_MS,
+usedJSHeapSize: controllerUsedHeapBytes(),
+pipelinePreloadLimit: PIPELINE_PRELOAD_COUNT,
+pipelineMemoryPressureActive: state.pipelineMemoryPressureActive,
+pipelineMemoryPressureSince: state.pipelineMemoryPressureSince,
+pipelineMemoryPressureHeapBytes: state.pipelineMemoryPressureHeapBytes,
+pipelineMemoryPressureActivations: state.pipelineMemoryPressureActivations,
+pipelineMemoryPressureReleases: state.pipelineMemoryPressureReleases,
+pipelineMemoryPressureReason: state.pipelineMemoryPressureReason,
+pipelineMemoryBaselineBytes: state.pipelineMemoryBaselineBytes,
+pipelineMemoryLastBytes: state.pipelineMemoryLastBytes,
+pipelineMemoryPeakBytes: state.pipelineMemoryPeakBytes,
+pipelineMemoryCandidateSince: state.pipelineMemoryCandidateSince,
+pipelineMemoryPressureBelowSince: state.pipelineMemoryPressureBelowSince,
+pipelineMemoryHardCeilingBytes: CONTROLLER_MEMORY_PRESSURE_BYTES,
+pipelineMemoryReleaseCeilingBytes: CONTROLLER_MEMORY_RELEASE_CEILING_BYTES,
+pipelineMemoryReleaseLimitBytes: controllerMemoryPressureReleaseLimit(),
+pipelineMemoryReleaseSustainMs: CONTROLLER_MEMORY_RELEASE_SUSTAIN_MS,
+pipelineMemoryGrowthAllowanceBytes: CONTROLLER_MEMORY_GROWTH_BYTES,
+pipelineMemoryWarmupMs: CONTROLLER_MEMORY_WARMUP_MS,
+pipelineMemorySustainMs: CONTROLLER_MEMORY_SUSTAIN_MS,
+ephemeralCacheSizes: {
+missionNames: state.missionNames.size,
+missionRowSignatures: state.missionRowSignatures.size,
+allianceRadioIgnoredKeys: state.allianceRadioIgnoredKeys.size,
+prisonerReleaseHandledKeys: state.prisonerReleaseHandledKeys.size,
+recentlyNativeAdvanced: state.recentlyNativeAdvanced.size,
+radioRequestFirstSeenAt: state.radioRequestFirstSeenAt.size,
+airfieldObservers: state.airfieldObservers.size,
+},
+currentMissionId: state.currentMissionId,
+currentMissionName: state.currentMissionName || workerSnapshot.missionName || '',
+currentMissionDisplay: missionDisplay(
+state.currentMissionId,
+state.currentMissionName || workerSnapshot.missionName || ''
+),
+currentIsTopMission: Boolean(
+state.topMission?.missionId &&
+state.currentMissionId === state.topMission.missionId &&
+!state.transportServiceActive
+),
+currentMissionPath: href ? new URL(href).pathname : (workerSnapshot.path || ''),
+autoStartIssued: state.autoStartIssued,
+watcherActive: Boolean(state.watcherTimer),
+workerDocumentSerial: state.workerDocumentSerial,
+autoStartDocumentSerial: state.autoStartDocumentSerial,
+autoRunningConfirmedDocumentSerial: state.autoRunningConfirmedDocumentSerial,
+autoRunningConfirmedAt: state.autoRunningConfirmedAt
+? new Date(state.autoRunningConfirmedAt).toISOString()
+: '',
+autoStartAttempts: state.autoStartAttempts,
+promotedDocumentSerial: state.promotedDocumentSerial,
+promotedWorkStartedAt: state.promotedWorkStartedAt
+? new Date(state.promotedWorkStartedAt).toISOString()
+: '',
+promotedWorkEvidenceAt: state.promotedWorkEvidenceAt
+? new Date(state.promotedWorkEvidenceAt).toISOString()
+: '',
+promotedWorkEvidenceText: state.promotedWorkEvidenceText,
+promotedWorkAwaitingEvidence: promotedWorkAwaitingEvidence(),
+promotionWorkStallRecoveries: state.promotionWorkStallRecoveries,
+promotionRecoveryPendingMissionId: state.promotionRecoveryPendingMissionId,
+v2AutoStopRecord,
+autoControlFound: Boolean(autoControl) || Boolean(workerSnapshot.autoControlFound),
+autoControlText: autoControl ? elementLabel(autoControl) : (workerSnapshot.autoControlText || state.autoControlText),
+autoLooksRunning: autoControl ? autoControlLooksRunning(autoControl) : Boolean(workerSnapshot.autoLooksRunning),
+autoStopWarned: state.autoStopWarned,
+autoRecoverySkips: state.autoRecoverySkips,
+autoRecoveryWatchdog: state.autoRecoveryCandidateKey ? {
+missionId: state.autoRecoveryCandidateMissionId,
+category: state.autoRecoveryCandidateCategory,
+reason: state.autoRecoveryCandidateReason,
+elapsedMs: Math.max(0, Date.now() - state.autoRecoveryCandidateSince),
+waitMs: state.autoRecoveryCandidateWaitMs || AUTO_RECOVERY_WATCHDOG_MS,
+} : null,
+zeroSelectionRecoveries: state.zeroSelectionRecoveries,
+topPageResumes: state.topPageResumes,
+resumedFromTopNavigation: state.resumedFromTopNavigation,
+persistedBackgroundWanted: persistedBackgroundWanted(),
+storedResumeMissionUrl: storedResumeMissionUrl(),
+transportKind: state.transportKind,
+transportIdentity: state.transportIdentity,
+transportSeconds: state.transportSince ? Math.round((Date.now() - state.transportSince) / 1000) : 0,
+transportHardRecoveries: state.transportHardRecoveries,
+transportRecoveryCircuitBreakers: state.transportRecoveryCircuitBreakers,
+lastError: state.lastError,
+topMission: state.topMission ? { ...state.topMission } : null,
+visualTopMission: state.visualTopMission ? { ...state.visualTopMission } : null,
+activeMissionSkips: activeMissionSkipRecords(),
+recoverableMissionSkips: state.recoverableMissionSkips,
+airfieldAliasRewrites: state.airfieldAliasRewrites,
+airfieldSupervisorAssistAttempts: state.airfieldSupervisorAssistAttempts,
+rescueDogAssistAttempts: state.rescueDogAssistAttempts,
+massCasualtyThresholdAttempts: state.massCasualtyThresholdAttempts,
+massCasualtyThresholdLastMissionId: state.massCasualtyThresholdLastMissionId,
+massCasualtyThresholdLastAmbulanceCount: state.massCasualtyThresholdLastAmbulanceCount,
+prisonerReleaseSuccessRehooks: state.prisonerReleaseSuccessRehooks,
+queueFastReleases: state.queueFastReleases,
+postTransportGuardFastReleases: state.postTransportGuardFastReleases,
+postDispatchSoftRecoveries: state.postDispatchSoftRecoveries,
+postDispatchHardRecoveries: state.postDispatchHardRecoveries,
+postDispatchCircuitBreakers: state.postDispatchCircuitBreakers,
+postDispatchWatchdog: state.postDispatchWatchdog ? {
+missionId: state.postDispatchWatchdog.missionId,
+missionName: state.postDispatchWatchdog.missionName,
+effectiveElapsedMs: postDispatchEffectiveElapsed(state.postDispatchWatchdog),
+paused: Boolean(state.postDispatchWatchdog.pausedAt),
+pauseReason: state.postDispatchWatchdog.pauseReason,
+softRecovered: state.postDispatchWatchdog.softRecovered,
+} : null,
+pipelinePromotions: state.pipelinePromotions,
+pipelineReadyPromotions: state.pipelineReadyPromotions,
+pipelineVehicleLoadClicks: state.pipelineVehicleLoadClicks,
+pipelineIsolationFailures: state.pipelineIsolationFailures,
+pipelinePromotionFallbacks: state.pipelinePromotionFallbacks,
+pipelineV2DormantReady: state.pipelineV2DormantReady,
+pipelineV2DormantPromotionFailures: state.pipelineV2DormantPromotionFailures,
+pipelineDuplicateClicksSuppressed: state.pipelineDuplicateClicksSuppressed,
+pipelineHandoffRetentions: state.pipelineHandoffRetentions,
+pipelineDormantInteractionsBlocked: state.pipelineDormantInteractionsBlocked,
+activeBootstrapRescues: state.activeBootstrapRescues,
+activeBootstrapRescueMissionId: state.activeBootstrapRescueMissionId,
+activeBootstrapRescueAttempts: state.activeBootstrapRescueAttempts,
+activeBootstrapHistory: state.activeBootstrapHistory.slice(),
+activeControlDropoutRescues: state.activeControlDropoutRescues,
+activeControlSoftRecoveries: state.activeControlSoftRecoveries,
+activeControlDropoutCircuitBreakers: state.activeControlDropoutCircuitBreakers,
+activeControlRecentDropouts: state.activeControlDropoutTimes
+.filter(at => Date.now() - Number(at || 0) <= ACTIVE_CONTROL_DROPOUT_WINDOW_MS)
+.length,
+activeControlMissingSeconds: state.activeControlMissingSince
+? Math.round((Date.now() - state.activeControlMissingSince) / 1000)
+: 0,
+pipelineActiveOnly: state.pipelineActiveOnly,
+pipelineActiveOnlyReason: state.pipelineActiveOnlyReason,
+pipelineOwnershipDemotions: state.pipelineOwnershipDemotions,
+activeOwnershipBootstrapInstalls: state.activeOwnershipBootstrapInstalls,
+activeOwnershipBootstrapFailures: state.activeOwnershipBootstrapFailures,
+sleepGapRecoveries: state.sleepGapRecoveries,
+sleepGapHistory: state.sleepGapHistory.slice(),
+autoStateDropoutRecoveries: state.autoStateDropoutRecoveries,
+autoStateDropoutReloads: state.autoStateDropoutReloads,
+autoStateActiveOnlyFailures: state.autoStateActiveOnlyFailures,
+skippedMissionPrestartRedirects: state.skippedMissionPrestartRedirects,
+nonMissionRedirectRecoveries: state.nonMissionRedirectRecoveries,
+nonMissionRedirectRecoveryInFlight: state.nonMissionRedirectRecoveryInFlight,
+pendingRedirectMissionId: state.redirectTargetMissionId,
+pendingRedirectSeconds: state.redirectTargetMissionId && state.lastPriorityRedirectAt
+? Math.round((Date.now() - state.lastPriorityRedirectAt) / 1000)
+: 0,
+pipelineSlots: state.pipelineSlots.map(compactPipelineSlot),
+queueGuardState: readSharedV2QueueGuardState(),
+priorityPendingKey: state.priorityPendingKey,
+currentTransportVehicleId: vehicleIdFromUrl(href || workerSnapshot.href || ''),
+transportRequestMissionId: radioRequestForVehicle(
+vehicleIdFromUrl(href || workerSnapshot.href || ''),
+state.radioTransportRequests
+)?.missionId || '',
+transportAffinityCorrections: 0,
+patientAssistAttempts: state.patientAssistAttempts,
+prisonerAssistAttempts: state.prisonerAssistAttempts,
+transportServiceEligible: state.transportServiceEligible,
+transportServiceActive: state.transportServiceActive,
+transportServiceKey: state.transportServiceKey,
+transportServiceVehicleId: state.transportServiceVehicleId,
+transportServiceMissionId: state.transportServiceMissionId,
+transportServiceAttempts: state.transportServiceAttempts,
+transportServiceCleared: state.transportServiceCleared,
+nativeMissionAdvances: state.nativeMissionAdvances,
+topSyntheticMissionRehooksBlocked: state.topSyntheticMissionRehooksBlocked,
+radioTransportRequests: state.radioTransportRequests.map(request => ({ ...request })),
+radioRequestWarningKey: state.radioRequestWarningKey,
+},
+worker: {
+role: state.workerRole || '',
+present: Boolean(state.worker?.isConnected),
+storageOwnershipActive: frameOwnsOperationalState(state.worker),
+storageOwnershipSource: (() => {
+try { return normaliseText(frameOwnershipBridge(state.worker)?.source?.() || ''); } catch { return ''; }
+})(),
+frameName: String(state.worker?.name || ''),
+sameOriginReadable: Boolean(doc) || Boolean(workerSnapshot.sameOriginReadable),
+readyState: doc?.readyState || workerSnapshot.readyState || '',
+title: normaliseText(doc?.title || workerSnapshot.title || ''),
+lastCapturedAt: workerSnapshot.capturedAt || '',
+lastPath: workerSnapshot.path || '',
+lastMissionId: workerSnapshot.missionId || '',
+lastMissionName: workerSnapshot.missionName || '',
+nexusWrapperPresent: Boolean(doc?.querySelector('#mission-finder-wrapper')) || Boolean(workerSnapshot.nexusWrapperPresent),
+controlPanelPresent: Boolean(doc?.querySelector('#control-panel')) || Boolean(workerSnapshot.controlPanelPresent),
+patientTransportAnchorPresent: Boolean(workerSnapshot.transport?.patientAnchorCount),
+prisonerControlPresent: Boolean(
+workerSnapshot.transport?.structuredPrisonerRequests ||
+workerSnapshot.transport?.greenPrisonDestinations ||
+workerSnapshot.transport?.releaseLinks
+),
+transportEvidence: workerSnapshot.transport?.evidence || [],
+visibleMissionFrameOutsideWorker: Boolean(findVisibleForeignMissionFrame()) || Boolean(workerSnapshot.visibleMissionFrameOutsideWorker),
+},
+userAgent: navigator.userAgent,
+log: state.log.slice(-120),
+};
+}

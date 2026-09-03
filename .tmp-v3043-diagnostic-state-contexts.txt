@@ -1,0 +1,1217 @@
+===== CONTEXT 1 [246-303] =====
+000246: const ACTIVE_CONTROL_DROPOUT_HISTORY_LIMIT = 40;
+000247: const AUTO_STATE_DROPOUT_WINDOW_MS = 120000;
+000248: const AUTO_STATE_DROPOUT_CIRCUIT_BREAKER_COUNT = 2;
+000249: const AUTO_STATE_DROPOUT_HISTORY_LIMIT = 50;
+000250: const AUTO_STATE_DROPOUT_RELOAD_LIMIT_AFTER_ACTIVE_ONLY = 1;
+000251: const OWNERSHIP_BOOTSTRAP_HISTORY_LIMIT = 50;
+000252: const SLEEP_GAP_RECOVERY_THRESHOLD_MS = 90 * 1000;
+000253: const SLEEP_GAP_HIDDEN_RECOVERY_THRESHOLD_MS = 3 * 60 * 1000;
+000254: const SLEEP_GAP_HISTORY_LIMIT = 30;
+000255: const V2_QUEUE_WAIT_ACTIVE_FLAG = 'mf_queue_wait_active_v10';
+000256: const V2_FINAL_QUEUE_DISPATCH_FLAG = 'mf_final_queue_dispatch_clicked_v10';
+000257: const V2_QUEUE_OPENING_MISSION_FLAG = 'mf_queue_opening_mission_v10';
+000258: const V2_MAIN_MISSION_OPEN_LOCK_KEY = 'mf_main_mission_open_lock_until_v10_3_9v';
+000259: const V2_MAIN_MISSION_OPEN_REASON_KEY = 'mf_main_mission_open_reason_v10_3_9v';
+000260: const V2_MAIN_MISSION_PENDING_UNTIL_KEY = 'mf_main_mission_pending_until_v10_3_9zc';
+000261: const V2_MAIN_MISSION_PENDING_TARGET_KEY = 'mf_main_mission_pending_target_v10_3_9zc';
+000262: const V2_MAIN_MISSION_PENDING_REASON_KEY = 'mf_main_mission_pending_reason_v10_3_9zc';
+000263: const V2_AUTO_MODE_RUNNING_KEY = 'mf_auto_mode_running';
+000264: const V2_AUTO_STOP_RECORD_KEY = 'mf_auto_stop_record_v10_6_153';
+000265: const V2_SESSION_STATS_KEY = 'mf_session_stats_v1';
+000266: const V2_STAFFING_FAILURE_HISTORY_KEY = 'mf_staffing_failure_history_v1';
+000267: const V2_STAFFING_QUARANTINE_KEY = 'mf_staffing_vehicle_quarantine_v1';
+000268: const V2_UNIT_FINDER_DIAGNOSTICS_KEY = 'mf_unit_finder_diagnostics_v1';
+000269: const V2_FRAME_RUNTIME_RECONCILE_EVENT = 'missionchief-nexus-frame-runtime-reconcile-v1074';
+000270: const V2_DORMANT_PRELOAD_BRIDGE_KEY = '__MCN_V2_DORMANT_PRELOAD_BRIDGE__';
+000271: const MISSION_SKIP_HISTORY_LIMIT = 80;
+000272: const AIRFIELD_SUPERVISOR_REQUIRED_TEXT = 'Airfield Operations Supervisors';
+000273: const AIRFIELD_SUPERVISOR_VEHICLE_TEXT = 'Airfield Operations Supervisor';
+000274: const AIRFIELD_ALIAS_HISTORY_LIMIT = 30;
+000275: const AIRFIELD_SUPERVISOR_TYPE_ID = '80';
+000276: const AIRFIELD_SUPERVISOR_ASSIST_DELAY_MS = 900;
+000277: const SEARCH_DOG_UNIT_TYPE_ID = '102';
+000278: const RESCUE_DOG_ASSIST_DELAY_MS = 900;
+000279: const RESCUE_DOG_ASSIST_HISTORY_LIMIT = 40;
+000280: const MASS_CASUALTY_EQUIPMENT_TYPE_ID = '33';
+000281: const NORMAL_AMBULANCE_TYPE_ID = '5';
+000282: const MASS_CASUALTY_AMBULANCE_THRESHOLD = 20;
+000283: const VEHICLE_RULE_HISTORY_LIMIT = 40;
+000284: const PRISONER_RELEASE_SUCCESS_REHOOK_DELAY_MS = 650;
+000285: const PRISONER_RELEASE_HISTORY_LIMIT = 30;
+000286: const ZERO_SELECTION_HISTORY_LIMIT = 40;
+000287: const MISSION_TIMING_HISTORY_LIMIT = 160;
+000288: const MISSION_TIMING_SAMPLE_LIMIT = 5000;
+000289: const RUN_MISSION_ID_HISTORY_LIMIT = 5000;
+000290: const MINIMUM_ACTIONABLE_MISSIONS = 2;
+000291: const LOW_QUEUE_RESUME_STABLE_MS = 1500;
+000292: const LOW_QUEUE_REQUEST_MAX_AGE_MS = 10 * 60 * 1000;
+000293: const CONTROLLER_RUNTIME_RECYCLE_ADVANCES = 12;
+000294: const CONTROLLER_RUNTIME_RECYCLE_MAX_AGE_MS = 8 * 60 * 1000;
+000295: const CONTROLLER_PRESSURE_RECYCLE_ADVANCES = 8;
+000296: const CONTROLLER_PRESSURE_RECYCLE_MAX_AGE_MS = 4 * 60 * 1000;
+000297: const CONTROLLER_MEMORY_PRESSURE_BYTES = 768 * 1024 * 1024;
+000298: const CONTROLLER_MEMORY_GROWTH_BYTES = 192 * 1024 * 1024;
+000299: const CONTROLLER_MEMORY_WARMUP_MS = 60 * 1000;
+000300: const CONTROLLER_MEMORY_SUSTAIN_MS = 15 * 1000;
+000301: const CONTROLLER_MEMORY_SAMPLE_MS = 5 * 1000;
+000302: const CONTROLLER_MEMORY_RELEASE_SUSTAIN_MS = 60 * 1000;
+000303: const CONTROLLER_MEMORY_RELEASE_CEILING_BYTES = 640 * 1024 * 1024;
+
+===== CONTEXT 2 [19709-19782] =====
+019709:     }
+019710:     function pruneMissionFinderIphoneNativePickerDocuments() {
+019711:         mfIphoneNativePickerDocuments.forEach(candidateDocument => {
+019712:             if (!isCachedMissionDocumentUsable(candidateDocument)) {
+019713:                 mfIphoneNativePickerDocuments.delete(candidateDocument);
+019714:             }
+019715:         });
+019716:     }
+019717:     function compactMissionFinderPersistentStorage() {
+019718:         if (!MF_IS_TOP_WINDOW) return;
+019719:         let legacyRecorderRemoved = false;
+019720:         let diagnosticCharsBefore = 0;
+019721:         let diagnosticCharsAfter = 0;
+019722:         try {
+019723:             legacyRecorderRemoved =
+019724:                 localStorage.getItem(MF_RECORDER_KEY) !== null;
+019725:             localStorage.removeItem(MF_RECORDER_KEY);
+019726:         } catch (_error) {}
+019727:         try {
+019728:             const raw = localStorage.getItem(
+019729:                 MF_UNIT_FINDER_DIAGNOSTICS_KEY
+019730:             ) || '[]';
+019731:             diagnosticCharsBefore = raw.length;
+019732:             const parsed = JSON.parse(raw);
+019733:             const bounded =
+019734:                 mfBoundUnitFinderDiagnosticHistory(
+019735:                     Array.isArray(parsed) ? parsed : []
+019736:                 );
+019737:             diagnosticCharsAfter = bounded.encoded.length;
+019738:             if (bounded.encoded !== raw) {
+019739:                 localStorage.setItem(
+019740:                     MF_UNIT_FINDER_DIAGNOSTICS_KEY,
+019741:                     bounded.encoded
+019742:                 );
+019743:             }
+019744:         } catch (_error) {
+019745:             try {
+019746:                 localStorage.removeItem(
+019747:                     MF_UNIT_FINDER_DIAGNOSTICS_KEY
+019748:                 );
+019749:             } catch (_ignored) {}
+019750:         }
+019751:         mfRuntimeStorageMaintenanceState = {
+019752:             ranAt: Date.now(),
+019753:             legacyRecorderRemoved,
+019754:             diagnosticCharsBefore,
+019755:             diagnosticCharsAfter
+019756:         };
+019757:     }
+019758:     function isMissionFinderMemoryWorkActive() {
+019759:         return Boolean(
+019760:             mfRuntimeMemoryOperationDepth > 0 ||
+019761:             autoModeLoopActive ||
+019762:             mfSilentQueueOpening ||
+019763:             mfQueueRestartWaiting ||
+019764:             mfGlobalTransportClicking ||
+019765:             mfBruteApproachClicking ||
+019766:             mfTransportApproachClicking ||
+019767:             mfTransportSequenceActive ||
+019768:             mfTransportContinuationRunning ||
+019769:             mfPostTransportOpening ||
+019770:             mfAutoAdvanceResumeActive ||
+019771:             mfAutoUpgradeResumeActive ||
+019772:             sessionStorage.getItem(
+019773:                 MF_QUEUE_OPENING_MISSION_FLAG
+019774:             ) === 'true' ||
+019775:             sessionStorage.getItem(
+019776:                 MF_FINAL_QUEUE_DISPATCH_FLAG
+019777:             ) === 'true' ||
+019778:             readAutoAdvanceAfterDispatchState() ||
+019779:             readAllyStealPendingState() ||
+019780:             readAutoPostDispatchUpgradeState() ||
+019781:             isPostTransportRehookPending()
+019782:         );
+
+===== CONTEXT 3 [19789-19844] =====
+019789:         invalidatePatientCountCache();
+019790:         invalidateTransportCaches();
+019791:         mfVehicleMatchCandidateCache.clear();
+019792:         pruneLiveTrainingVerifyCache();
+019793:         pruneMissionFinderIphoneNativePickerDocuments();
+019794:         invalidateLiveTrainedPersonnelDisplayCache();
+019795:         if (
+019796:             mfTransportOwnerModal &&
+019797:             !mfTransportOwnerModal.isConnected
+019798:         ) {
+019799:             mfTransportOwnerModal = null;
+019800:         }
+019801:         mfRuntimeMemoryLastSoftFlushAt = Date.now();
+019802:         mfRuntimeMemorySoftFlushCount += 1;
+019803:         mfRuntimeMemoryLastReason = String(reason || '');
+019804:     }
+019805:     function releaseMissionFinderLargeEphemeralState(reason = '') {
+019806:         cancelTrainedPersonnelPanelRefresh();
+019807:         resetMissionRequirementPreloadCache(reason);
+019808:         resetVehicleLoadState();
+019809:         mfUnitFinderDiagnosticContext = {
+019810:             missionKey: '', mode: 'idle', sourceLabel: '',
+019811:             suppliedRows: [], processedRows: [], updatedAt: 0
+019812:         };
+019813:         mfLastMissionDefinitionRawRows = [];
+019814:         mfPatientSelectionLedgerCache = null;
+019815:         mfTransportOwnerModal = null;
+019816:     }
+019817:     function shouldRecycleIdleMissionMemory() {
+019818:         if (
+019819:             autoModeRunning ||
+019820:             sessionStorage.getItem(
+019821:                 'mf_auto_mode_running'
+019822:             ) === 'true' ||
+019823:             !isMissionPage() ||
+019824:             !isCurrentMissionExecutionOwner(
+019825:                 'idle memory maintenance'
+019826:             ) ||
+019827:             document.visibilityState === 'hidden' ||
+019828:             mfRuntimeSuspendedForPageHide ||
+019829:             mfRuntimeSuspendedForInactiveFrame ||
+019830:             vehicleLoadState.ready ||
+019831:             isMissionFinderMemoryWorkActive() ||
+019832:             hasSelectedMissionVehiclesForMemoryRecycle() ||
+019833:             mfMissionRequirementPreloadPromise ||
+019834:             mfMissionRequirementPreloadCache.status === 'loading'
+019835:         ) {
+019836:             return null;
+019837:         }
+019838:         const heap = getAutoMemoryHeapSnapshot();
+019839:         if (
+019840:             !heap ||
+019841:             heap.usedJSHeapSize <
+019842:                 MF_AUTO_MEMORY_RECYCLE_HEAP_THRESHOLD_BYTES
+019843:         ) {
+019844:             return null;
+
+===== CONTEXT 4 [20428-20503] =====
+020428:                 panel.remove();
+020429:             }
+020430:         });
+020431:     }
+020432:     const crossReference = { "Pumps": "Fire Engine R/PUMP x 1", "Pump": "Fire Engine R/PUMP x 1", "Fire engine": "Fire Engine R/PUMP x 1", "Fire engines": "Fire Engine R/PUMP x 1", "Fire Engine": "Fire Engine R/PUMP x 1", "Fire Engines": "Fire Engine R/PUMP x 1", "Aerial Appliance": "CARP", "Aerial Appliances": "CARP", "Aerial Appliance Truck": "CARP", "Aerial Appliance Trucks": "CARP", "Fire, rescue or aerial appliance": "Rescue Pump", "Road Rail Unit": "Road Rail Unit", "Road Rail Units": "Road Rail Unit", "Firefighter": "Rescue Pump", "Firefighters": "Rescue Pump", "Required Firefighter": "Rescue Pump", "Required Firefighters": "Rescue Pump", "Car Recovery": "Flatbed Recovery Vehicle", "Required Car Recovery": "Flatbed Recovery Vehicle", "ICCU or Ambulance Control Unit": "ICCU/ACU", "ICCU or Ambulance Control Units": "ICCU/ACU", "ICCUs or Ambulance Control Units": "ICCU/ACU", "Fire Officer": "Fire Officer", "Fire Officers": "Fire Officer", "Rescue Support Unit": "Fire Engine R/PUMP x 1", "Rescue Support Units": "Fire Engine R/PUMP x 1", "Rescue Support Vehicle": "Fire Engine R/PUMP x 1", "Rescue Support Vehicles": "Fire Engine R/PUMP x 1", "Rescue Support Unit or Rescue Pump": "Fire Engine R/PUMP x 1", "Rescue Support Units or Rescue Pumps": "Fire Engine R/PUMP x 1", "Fire Engines or Rescue Support Vehicles": "Fire Engine R/PUMP x 1", "Fire Engines, Rescue Support Vehicles or Aerial Appliance Trucks": "Fire Engine R/PUMP x 1", "Foam Unit": "RP CAFS", "Foam Units": "RP CAFS", "Water Carrier": "Water Carrier", "Water Carriers": "Water Carrier", "Welfare Vehicles x1": "Welfare Vehicle", "Police Car": "Police Car", "Police Cars": "Police Car", "Police car": "Police Car", "Police cars": "Police Car", "Police Officer": "Police Car", "Police Officers": "Police Car", "Traffic Car": "Police ATC", "Traffic Cars": "Police ATC", "Police Cars or Armed Response Vehicles (ARVs)": "Police ATC", "Armed Response Personnel (In Armed Vehicles)": "Police ATC", "Dog Support Unit (DSU)": "Police DSU", "Dog Support Units (DSU)": "Police DSU", "Dog Support Units (DSUs)": "Police DSU", "Mounted Unit": "Mounted Unit", "Mounted Units": "Mounted Unit", "Police Inspector": "Police Inspector", "Police Sergeant": "Police Sergeant", "Cell Van": "Cell Van", "Police Helicopter": "Police Helicopter", "Police Helicopters": "Police Helicopter", "Police Helicopter or Drone": "Police Helicopter", "Police Helicopter or Drones": "Police Helicopter", "Police Helicopters or Drone": "Police Helicopter", "Police Helicopters or Drones": "Police Helicopter", "Required Police Helicopter or Drone": "Police Helicopter", "Required Police Helicopter or Drones": "Police Helicopter", "Required Police Helicopters or Drone": "Police Helicopter", "Required Police Helicopters or Drones": "Police Helicopter", "Require Drone": "Drone", "Require Drones": "Drone", "Required Drone": "Drone", "Required Drones": "Drone", "Requires Drone": "Drone", "Requires Drones": "Drone", "Police Drone": "Police Helicopter", "Police Drones": "Police Helicopter", "Policehelicopter": "Police Helicopter", "Policehelicopters": "Police Helicopter", "modules.missionHelper.vehicles.captions.railway_police": "railway police", "modules.missionHelper.prerequisites.railway_police": "EIU", "modules.missionHelper.prerequisites.railway_police_command": "EIU", "Ambulance": "Ambulance", "Ambulances": "Ambulance", "Any vehicle": "Ambulance", "Any vehicles": "Ambulance", "Required Any vehicle": "Ambulance", "Required Any vehicles": "Ambulance", "Ambulance Officer": "Ambulance Officer", "Ambulance Officers": "Ambulance Officer", "Required Ambulance Officer": "Ambulance Officer", "Required Ambulance Officers": "Ambulance Officer", "Primary Response Vehicle": "PRV", "Primary Response Vehicles": "PRV", "PRVs": "PRV", "Secondary Response Vehicle": "SRV", "Secondary Response Vehicles": "SRV", "SRVs": "SRV", "Operational Team Leader": "OTL", "Operational Team Leaders": "OTL", "Mass Casualty Equipment": "Mass Casualty Equipment", "Mass Casualty Equipment Unit": "Mass Casualty Equipment", "Mass Casualty Equipment Units": "Mass Casualty Equipment", "Critical Care": "Critical Care", "Critical Care Team": "Critical Care", "Critical Care Teams": "Critical Care", "Required Critical Care": "Critical Care", "Required Critical Care Team": "Critical Care", "Required Critical Care Teams": "Critical Care", "ATV Carrier": "ATV Carrier", "ATV Carriers": "ATV Carrier", "ATC Carrier": "ATV Carrier", "ATC Carriers": "ATV Carrier", "RRV": "RRV", "RRVs": "RRV", "Required RRV": "RRV", "Required RRVs": "RRV", "Specialist Paramedic RRV": "RRV", "Specialist Paramedic RRVs": "RRV", "Required Specialist Paramedic RRV": "RRV", "Required Specialist Paramedic RRVs": "RRV", "RRV or Specialist Paramedic RRV": "RRV", "RRVs or Specialist Paramedic RRVs": "RRV", "Required RRV or Specialist Paramedic RRV": "RRV", "Required RRVs or Specialist Paramedic RRVs": "RRV", "Community Midwife": "Community Midwife", "Community Midwifes": "Community Midwife", "CRV": "CRV", "CRVs": "CRV", "Inland Rescue Boat (Trailer)": "Inland Rescue Boat (Trailer)", "Boat Trailer or Inland Rescue Boat": "Boat Trailer", "Seagoing Vessel": "ALB", "Seagoing Vessels": "ALB", "Coastguard Rescue Helicopter": "CG Rescue Helicopter", "Coastguard Rescue Helicopters": "CG Rescue Helicopter", "Coastguard Rescue Helicopter (20%)": "CG Rescue Helicopter", "ILBs or ALBs": "ALB", "ALBs": "ALB", "ALB": "ALB", "ILBs": "ILB", "ILB": "ILB", "Control Van": "Control Van", "Control Vans": "Control Van", "SAR Commander": "Control Van", "SAR Commanders": "Control Van", "Required SAR Commander": "Control Van", "Required SAR Commanders": "Control Van", "HEMS": "Air Ambulance", "HEMS Helicopter": "Air Ambulance", "HEMS Helicopters": "Air Ambulance", "Operational Support Van": "Operational Support Van", "Operational Support Vans": "Operational Support Van", "Operational Support or SAR Vehicle": "Operational Support Van", "Operational Support or SAR Vehicles": "Operational Support Van", "Operational Support or SAR Vehicle x1": "Operational Support Van", "Operational Support Van or SAR Vehicle": "Operational Support Van", "Operational Support Vans or SAR Vehicles": "Operational Support Van", "Operational Support Vehicle or SAR Vehicle": "Operational Support Van", "Operational Support Vehicles or SAR Vehicles": "Operational Support Van", "Operational Support or Personal SAR Vehicle": "Operational Support Van", "Operational Support or Personal SAR Vehicles": "Operational Support Van", "Required Operational Support or SAR Vehicle": "Operational Support Van", "Required Operational Support or SAR Vehicles": "Operational Support Van", "Operational Support Van, Trailer or Personal SAR Vehicle": "Operational Support Van", "Operational Support Vans, Trailers or Personal SAR Vehicles": "Operational Support Van", "Operational Support Van Trailer or Personal SAR Vehicle": "Operational Support Van", "Operational Support Vans Trailers or Personal SAR Vehicles": "Operational Support Van", "Operational Support Van or Personal SAR Vehicle": "Operational Support Van", "Operational Support Vans or Personal SAR Vehicles": "Operational Support Van", "OSV": "Operational Support Van", "OSVs": "Operational Support Van", "Hovercraft (trailer)": "Hovercraft (trailer)", "Coastguard Mud Rescue Unit": "Coastguard Mud Rescue Unit", "Coastguard Mud Rescue Units": "Coastguard Mud Rescue Unit", "Mud Decontamination Unit": "Mud Decontamination Unit", "Mud Decontamination Units": "Mud Decontamination Unit", "Coastguard Commander": "CG Commander", "Flood Rescue Units":"Flood Rescue", "Airfield Operations Vehicle": "Airfield Operations Vehicle", "Airfield Operations Vehicles": "Airfield Operations Vehicle", "Aerial Appliance Truck or Rescue Stairs": "Rescue Stairs", "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs", "Required Aerial Appliance Truck or Rescue Stairs": "Rescue Stairs", "Required Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs", "Fire Engines or RIVs": "RIV", "RIV": "RIV", "RIVs": "RIV", "Rapid Intervention Vehicle": "RIV", "Rapid Intervention Vehicles": "RIV", "Major Foam Tender": "Major Foam Tender", "Major Foam Tenders": "Major Foam Tender", "RIVs or Major Foam Tenders": "RIV", "RIV or Major Foam Tender": "RIV", "Required RIV or Major Foam Tender": "RIV", "Required RIVs or Major Foam Tenders": "RIV", "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender", "Fire Engines or Major Foam Tenders": "Major Foam Tender", "Airfield Operations Supervisor": "Airfield Operations Supervisor", "Airfield Operations Supervisors": "Airfield Operations Supervisor", "Required Airfield Operations Supervisor": "Airfield Operations Supervisor", "Required Airfield Operations Supervisors": "Airfield Operations Supervisor", "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle", "Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle", "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle", "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer", "Flood Rescue Unit": "Flood Rescue Unit (Trailer)", "4x4 Vehicle": "4x4 Units", "4x4 Vehicles": "4x4 Units", "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units", "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units", "Rescue Dog": "Search Dog Unit", "Rescue Dogs": "Search Dog Unit", "Required Rescue Dog": "Search Dog Unit", "Required Rescue Dogs": "Search Dog Unit", "Search Dog Unit": "Search Dog Unit", "Search Dog Units": "Search Dog Unit", "Required Search Dog Unit": "Search Dog Unit", "Required Search Dog Units": "Search Dog Unit", "SARTEC": "SARTEC", "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle", "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle", "1 car to tow": "Flatbed Recovery Vehicle", "Cars to tow": "Flatbed Recovery Vehicle", "Car to tow": "Flatbed Recovery Vehicle", "Maximum amount of cars to tow": "Flatbed Recovery Vehicle", "Minimum amount of cars to tow": "Flatbed Recovery Vehicle", "Tow Trucks Large": "Flatbed Recovery Vehicle", "Flatbed Recovery Vehicle": "Flatbed Recovery Vehicle", "Flatbed Recovery Vehicles": "Flatbed Recovery Vehicle", "Truck to tow": "HGV Recovery Vehicle", "Trucks to tow": "HGV Recovery Vehicle", "Maximum amount of trucks to tow": "HGV Recovery Vehicle", "Minimum amount of trucks to tow": "HGV Recovery Vehicle", "HGV Recovery Vehicle": "HGV Recovery Vehicle", "HGV Recovery Vehicles": "HGV Recovery Vehicle", "modules.missionHelper.vehicles.captions.bomb_disposal_crew": "Bomb Disposal crew x1", "Support Units": "Support Unit", "Breathing Apparatus Support Unit": "OSU", "Breathing Apparatus Support Units": "OSU", "Breathing Apparatus Support Vehicle": "OSU", "Breathing Apparatus Support Vehicles": "OSU", "BASU": "OSU", "BASUs": "OSU", "Welfare": "OSU", "Welfare Unit": "OSU", "Welfare Units": "OSU", "Welfare Vehicle": "OSU", "Welfare Vehicles": "OSU", "HazMat": "OSU", "Hazmat": "OSU", "HazMat Unit": "OSU", "HazMat Units": "OSU", "Hazmat Unit": "OSU", "Hazmat Units": "OSU", "Required HazMat": "OSU", "Required Hazmat": "OSU", "Required HazMat Unit": "OSU", "Required HazMat Units": "OSU", "Required Hazmat Unit": "OSU", "Required Hazmat Units": "OSU", "Required HazMat Unit x1": "OSU", "Required HazMat Units x1": "OSU", "Required Hazmat Unit x1": "OSU", "Required Hazmat Units x1": "OSU", "HazMat Unit or CBRN Vehicle": "OSU", "HazMat Units or CBRN Vehicles": "OSU", "Hazmat Unit or CBRN Vehicle": "OSU", "Hazmat Units or CBRN Vehicles": "OSU", "CBRN Vehicle": "OSU", "CBRN Vehicles": "OSU", "Operational Support Unit": "OSU", "Operational Support Units": "OSU", "Fire Operational Support Unit": "OSU", "Fire Operational Support Units": "OSU", "Breathing Apparatus Support Unit x1": "OSU", "Breathing Apparatus Support Units x1": "OSU", "BASU x1": "OSU", "BASUs x1": "OSU", "Welfare Vehicle x1": "OSU", "Welfare Vehicles x1": "OSU", "HazMat Unit or CBRN Vehicle x1": "OSU", "HazMat Units or CBRN Vehicles x1": "OSU", "Operational Support Unit x1": "OSU", "Operational Support Units x1": "OSU", };
+020433:     const crossReferenceNormalisedLookup = new Map(
+020434:         Object.entries(crossReference).map(([key, value]) => [
+020435:             String(key || '').replace(/\s+/g, ' ').trim().toLowerCase(),
+020436:             value
+020437:         ])
+020438:     );
+020439:     let vehicleLoadState = {
+020440:         rows: [],
+020441:         patients: 0,
+020442:         ambulances: 0,
+020443:         ambulanceOfficer: false,
+020444:         trainedPersonnelBlocked: false,
+020445:         trainedPersonnelBlockText: '',
+020446:         ready: false
+020447:     };
+020448:     const MF_UNIT_FINDER_DIAGNOSTICS_KEY =
+020449:         'mf_unit_finder_diagnostics_v1';
+020450:     const MF_UNIT_FINDER_DIAGNOSTICS_LIMIT = 120;
+020451:     const MF_UNIT_FINDER_DIAGNOSTICS_MAX_STORAGE_CHARS = 2500000;
+020452:     const MF_STAFFING_FAILURE_HISTORY_KEY =
+020453:         'mf_staffing_failure_history_v1';
+020454:     const MF_STAFFING_FAILURE_HISTORY_LIMIT = 600;
+020455:     const MF_STAFFING_FAILURE_MAX_STORAGE_CHARS = 900000;
+020456:     const MF_STAFFING_QUARANTINE_KEY =
+020457:         'mf_staffing_vehicle_quarantine_v1';
+020458:     const MF_STAFFING_QUARANTINE_LIMIT = 80;
+020459:     let mfUnitFinderDiagnosticContext = {
+020460:         missionKey: '',
+020461:         mode: 'idle',
+020462:         sourceLabel: '',
+020463:         suppliedRows: [],
+020464:         processedRows: [],
+020465:         updatedAt: 0
+020466:     };
+020467:     let mfLastMissionDefinitionRawRows = [];
+020468:     let mfLastUnitFinderDiagnosticSignature = '';
+020469:     let mfLastStaffingFailureSignature = '';
+020470:     let mfKnownUnstaffedAmbulanceExclusions = [];
+020471:     let processedSelectionKeys = new Set();
+020472:     function buildSelectionKey(source, originalName, mappedName, amount) {
+020473:         return `${String(source || 'UNKNOWN').toUpperCase()}|${normaliseVehicleText(originalName)}|${normaliseVehicleText(mappedName)}|${Math.max(0, parseInt(amount, 10) || 0)}`;
+020474:     }
+020475:     function clearSelectionGuards() {
+020476:         processedSelectionKeys = new Set();
+020477:     }
+020478:     function withTimeout(promise, timeoutMs, label) {
+020479:         return new Promise((resolve, reject) => {
+020480:             const timeoutId = setTimeout(() => {
+020481:                 reject(
+020482:                     new Error(
+020483:                         `${label || 'Operation'} timed out after ${timeoutMs}ms`
+020484:                     )
+020485:                 );
+020486:             }, timeoutMs);
+020487:             Promise.resolve(promise).then(
+020488:                 value => {
+020489:                     clearTimeout(timeoutId);
+020490:                     resolve(value);
+020491:                 },
+020492:                 error => {
+020493:                     clearTimeout(timeoutId);
+020494:                     reject(error);
+020495:                 }
+020496:             );
+020497:         });
+020498:     }
+020499:     function debugLog() {}
+020500:     function highDebugLog() {}
+020501:     function setDebugEnabled() {}
+020502:     function setHighDebugEnabled() {}
+020503:     function clearDebugLog() {}
+
+===== CONTEXT 5 [20548-20647] =====
+020548:                     .filter(Boolean)
+020549:                 : [],
+020550:             liveRequirementDetails: details
+020551:                 ? {
+020552:                     dispatchTargetMode: String(details.dispatchTargetMode || ''),
+020553:                     explicitMissingVehicles:
+020554:                         details.explicitMissingVehicles === true,
+020555:                     explicitMissingPersonnel:
+020556:                         details.explicitMissingPersonnel === true,
+020557:                     structuredMissingVehicles:
+020558:                         details.structuredMissingVehicles === true
+020559:                 }
+020560:                 : null
+020561:         };
+020562:     }
+020563:     function mfSerialiseDiagnosticRequirementRows(rows) {
+020564:         return (Array.isArray(rows) ? rows : [])
+020565:             .map(mfSerialiseDiagnosticRequirementRow)
+020566:             .filter(Boolean);
+020567:     }
+020568:     function mfSetUnitFinderDiagnosticContext(
+020569:         mode,
+020570:         sourceLabel,
+020571:         suppliedRows,
+020572:         processedRows
+020573:     ) {
+020574:         mfUnitFinderDiagnosticContext = {
+020575:             missionKey:
+020576:                 getLocalMissionInstanceKey() ||
+020577:                 getCurrentMissionIdForQueueRestart() ||
+020578:                 '',
+020579:             mode: String(mode || 'unit-finder'),
+020580:             sourceLabel: String(sourceLabel || ''),
+020581:             suppliedRows:
+020582:                 mfSerialiseDiagnosticRequirementRows(suppliedRows),
+020583:             processedRows:
+020584:                 mfSerialiseDiagnosticRequirementRows(processedRows),
+020585:             updatedAt: Date.now()
+020586:         };
+020587:     }
+020588:     function mfBoundUnitFinderDiagnosticHistory(history) {
+020589:         let bounded = (Array.isArray(history) ? history : [])
+020590:             .slice(-MF_UNIT_FINDER_DIAGNOSTICS_LIMIT);
+020591:         let encoded = JSON.stringify(bounded);
+020592:         while (
+020593:             encoded.length >
+020594:                 MF_UNIT_FINDER_DIAGNOSTICS_MAX_STORAGE_CHARS &&
+020595:             bounded.length > 0
+020596:         ) {
+020597:             bounded = bounded.slice(1);
+020598:             encoded = JSON.stringify(bounded);
+020599:         }
+020600:         return {
+020601:             history: bounded,
+020602:             encoded
+020603:         };
+020604:     }
+020605:     function mfReadUnitFinderDiagnosticHistory() {
+020606:         try {
+020607:             const parsed = JSON.parse(
+020608:                 localStorage.getItem(
+020609:                     MF_UNIT_FINDER_DIAGNOSTICS_KEY
+020610:                 ) || '[]'
+020611:             );
+020612:             return mfBoundUnitFinderDiagnosticHistory(
+020613:                 Array.isArray(parsed) ? parsed : []
+020614:             ).history;
+020615:         } catch (_error) {
+020616:             return [];
+020617:         }
+020618:     }
+020619:     function mfGetDiagnosticRegistryEvidence(input, registry) {
+020620:         let registryMatch = null;
+020621:         try {
+020622:             registryMatch = getRegistryEntryForMissionCheckbox(
+020623:                 input,
+020624:                 registry
+020625:             );
+020626:         } catch (_error) {}
+020627:         const entry = registryMatch?.entry || null;
+020628:         if (!entry) return null;
+020629:         return {
+020630:             vehicleId: String(entry.vehicleId || ''),
+020631:             vehicleName: String(entry.vehicleName || ''),
+020632:             vehicleTypeId: String(entry.vehicleTypeId || ''),
+020633:             stationName: String(entry.stationName || ''),
+020634:             stationHref: String(entry.stationHref || ''),
+020635:             source: String(entry.source || ''),
+020636:             updatedAt: Number(entry.updatedAt || 0),
+020637:             assignedPersonnelCount: Math.max(
+020638:                 0,
+020639:                 parseInt(entry.assignedPersonnelCount, 10) || 0
+020640:             ),
+020641:             assignmentScanComplete:
+020642:                 entry.assignmentScanComplete === true,
+020643:             trainingProfilesComplete:
+020644:                 entry.trainingProfilesComplete === true,
+020645:             trainingCounts:
+020646:                 entry.trainingCounts &&
+020647:                 typeof entry.trainingCounts === 'object'
+
+===== CONTEXT 6 [20907-21147] =====
+020907:                     0
+020908:                 ),
+020909:                 totalVehicleCheckboxes:
+020910:                     documentSnapshots.reduce(
+020911:                         (total, item) =>
+020912:                             total + item.vehicleCheckboxCount,
+020913:                         0
+020914:                     ),
+020915:                 hiddenOwnerFrames:
+020916:                     documentSnapshots.filter(item =>
+020917:                         !item.ownerFrameVisible
+020918:                     ).length,
+020919:                 detachedOwnerFrames:
+020920:                     documentSnapshots.filter(item =>
+020921:                         !item.ownerFrameConnected
+020922:                     ).length,
+020923:                 samples: documentSnapshots
+020924:             }
+020925:         };
+020926:     }
+020927:     function mfBuildUnitFinderDiagnosticSnapshot(reason) {
+020928:         let liveRows = [];
+020929:         try {
+020930:             liveRows = readMissionUpdateRows({ silent: true });
+020931:         } catch (_error) {}
+020932:         const selectedVehicles =
+020933:             mfGetDiagnosticSelectedVehicles();
+020934:         const diagnosticBoxes = getVehicleCheckboxSnapshot(true);
+020935:         return {
+020936:             schema: 'missionchief-unit-finder-diagnostics',
+020937:             schemaVersion: 1,
+020938:             capturedAt: new Date().toISOString(),
+020939:             capturedAtUnix: Date.now(),
+020940:             reason: String(reason || 'manual-export'),
+020941:             versions: {
+020942:                 commandNexus: '3.0.37',
+020943:                 missionFinder: 'V10.6.179',
+020944:                 personnelAssignment: '1.3.8'
+020945:             },
+020946:             mission: {
+020947:                 missionId:
+020948:                     getCurrentMissionIdForQueueRestart() || '',
+020949:                 missionKey:
+020950:                     getLocalMissionInstanceKey() || '',
+020951:                 missionName:
+020952:                     getCurrentMissionName() || '',
+020953:                 pageUrl: String(window.location.href || ''),
+020954:                 host: String(window.location.host || '')
+020955:             },
+020956:             execution: {
+020957:                 autoModeRunning:
+020958:                     autoModeRunning === true ||
+020959:                     sessionStorage.getItem(
+020960:                         'mf_auto_mode_running'
+020961:                     ) === 'true',
+020962:                 ready: vehicleLoadState.ready === true,
+020963:                 staffingBlockActive:
+020964:                     mfStaffingBlockActive === true,
+020965:                 staffingBlockText:
+020966:                     String(mfStaffingBlockText || ''),
+020967:                 ambulanceOfficerThresholdEnabled:
+020968:                     mfAmbulanceOfficerThresholdEnabled,
+020969:                 ambulanceOfficerThreshold:
+020970:                     mfAmbulanceOfficerThreshold,
+020971:                 alwaysSendAmbulanceToHighRiskMissingPerson:
+020972:                     mfAlwaysSendAmbulanceToHighRiskMissingPerson === true,
+020973:                 highRiskMissingPersonMission:
+020974:                     isConfiguredHighRiskMissingPersonMission(),
+020975:                 processedSelectionKeys:
+020976:                     Array.from(processedSelectionKeys || [])
+020977:             },
+020978:             requirementContext: {
+020979:                 ...mfUnitFinderDiagnosticContext,
+020980:                 missionDefinitionRawRows:
+020981:                     mfLastMissionDefinitionRawRows.map(row => ({
+020982:                         label: String(row.label || ''),
+020983:                         value: String(row.value || '')
+020984:                     })),
+020985:                 currentLiveRequirementRows:
+020986:                     mfSerialiseDiagnosticRequirementRows(liveRows),
+020987:                 visibleAlerts:
+020988:                     mfGetDiagnosticVisibleAlerts()
+020989:             },
+020990:             selectionSummary: {
+020991:                 vehicleInventory: {total: diagnosticBoxes.length,searchDogType102: diagnosticBoxes.filter(isSearchDogUnitVehicleCheckbox).length,availableSearchDogType102: diagnosticBoxes.filter(input => !input.disabled && !input.checked && isSearchDogUnitVehicleCheckbox(input)).length,loadControlVisible: isVehicleListLoadControlVisible(),loadingIndicatorVisible: isVehicleListLoadingIndicatorVisible()},
+020992:                 vehicleLoadState: {
+020993:                     rows: vehicleLoadState.rows.map(row => ({
+020994:                         originalName: String(row.originalName || ''),
+020995:                         mappedName: String(row.mappedName || ''),
+020996:                         required: Math.max(
+020997:                             0,
+020998:                             parseInt(row.required, 10) || 0
+020999:                         ),
+021000:                         selected: Math.max(
+021001:                             0,
+021002:                             parseInt(row.selected, 10) || 0
+021003:                         ),
+021004:                         status: String(row.status || '')
+021005:                     })),
+021006:                     patients: Math.max(
+021007:                         0,
+021008:                         parseInt(vehicleLoadState.patients, 10) || 0
+021009:                     ),
+021010:                     ambulances: Math.max(
+021011:                         0,
+021012:                         parseInt(vehicleLoadState.ambulances, 10) || 0
+021013:                     ),
+021014:                     ready: vehicleLoadState.ready === true
+021015:                 },
+021016:                 selectedVehicles,
+021017:                 knownUnstaffedAmbulanceExclusions:
+021018:                     mfKnownUnstaffedAmbulanceExclusions
+021019:                         .slice(0, 40)
+021020:                         .map(vehicle => ({ ...vehicle }))
+021021:             },
+021022:             environment: {
+021023:                 language: String(navigator.language || ''),
+021024:                 userAgent: String(navigator.userAgent || '')
+021025:             }
+021026:         };
+021027:     }
+021028:     function mfPersistUnitFinderDiagnostic(reason) {
+021029:         const snapshot =
+021030:             mfBuildUnitFinderDiagnosticSnapshot(reason);
+021031:         const hasUsefulData = !!(
+021032:             snapshot.requirementContext.updatedAt ||
+021033:             snapshot.requirementContext.suppliedRows.length ||
+021034:             snapshot.requirementContext.processedRows.length ||
+021035:             snapshot.requirementContext.currentLiveRequirementRows.length ||
+021036:             snapshot.requirementContext.visibleAlerts.length ||
+021037:             snapshot.selectionSummary.vehicleLoadState.rows.length ||
+021038:             snapshot.selectionSummary.selectedVehicles.length ||
+021039:             snapshot.selectionSummary.knownUnstaffedAmbulanceExclusions.length
+021040:         );
+021041:         if (!hasUsefulData) return snapshot;
+021042:         const emptyMissionUpdateSnapshot =
+021043:             reason === 'not-ready' &&
+021044:             snapshot.requirementContext.mode === 'mission-update' &&
+021045:             snapshot.requirementContext.suppliedRows.length === 0 &&
+021046:             snapshot.requirementContext.processedRows.length === 0 &&
+021047:             snapshot.requirementContext.currentLiveRequirementRows.length === 0 &&
+021048:             snapshot.requirementContext.visibleAlerts.length === 0 &&
+021049:             snapshot.selectionSummary.vehicleLoadState.rows.length === 0;
+021050:         if (emptyMissionUpdateSnapshot) return snapshot;
+021051:         const signature = JSON.stringify({
+021052:             mission: snapshot.mission.missionKey || snapshot.mission.missionId,
+021053:             reason: snapshot.reason,
+021054:             mode: snapshot.requirementContext.mode,
+021055:             source: snapshot.requirementContext.sourceLabel,
+021056:             ready: snapshot.execution.ready,
+021057:             rows: snapshot.selectionSummary.vehicleLoadState.rows,
+021058:             selected: snapshot.selectionSummary.selectedVehicles
+021059:                 .map(vehicle => vehicle.vehicleId || vehicle.vehicleName),
+021060:             knownUnstaffed:
+021061:                 snapshot.selectionSummary.knownUnstaffedAmbulanceExclusions
+021062:                     .map(vehicle => vehicle.vehicleId || vehicle.vehicleName)
+021063:         });
+021064:         if (
+021065:             signature === mfLastUnitFinderDiagnosticSignature &&
+021066:             reason !== 'manual-export'
+021067:         ) {
+021068:             return snapshot;
+021069:         }
+021070:         mfLastUnitFinderDiagnosticSignature = signature;
+021071:         const history = mfReadUnitFinderDiagnosticHistory();
+021072:         history.push(snapshot);
+021073:         const boundedHistory =
+021074:             mfBoundUnitFinderDiagnosticHistory(history);
+021075:         try {
+021076:             localStorage.setItem(
+021077:                 MF_UNIT_FINDER_DIAGNOSTICS_KEY,
+021078:                 boundedHistory.encoded
+021079:             );
+021080:         } catch (_error) {
+021081:             try {
+021082:                 const fallback =
+021083:                     mfBoundUnitFinderDiagnosticHistory(
+021084:                         boundedHistory.history.slice(-4)
+021085:                     );
+021086:                 localStorage.setItem(
+021087:                     MF_UNIT_FINDER_DIAGNOSTICS_KEY,
+021088:                     fallback.encoded
+021089:                 );
+021090:             } catch (_ignored) {}
+021091:         }
+021092:         return snapshot;
+021093:     }
+021094:     function mfBoundStaffingFailureHistory(history) {
+021095:         let bounded = (Array.isArray(history) ? history : [])
+021096:             .slice(-MF_STAFFING_FAILURE_HISTORY_LIMIT);
+021097:         let encoded = JSON.stringify(bounded);
+021098:         while (
+021099:             encoded.length >
+021100:                 MF_STAFFING_FAILURE_MAX_STORAGE_CHARS &&
+021101:             bounded.length > 0
+021102:         ) {
+021103:             bounded = bounded.slice(1);
+021104:             encoded = JSON.stringify(bounded);
+021105:         }
+021106:         return { history: bounded, encoded };
+021107:     }
+021108:     function mfReadStaffingFailureHistory() {
+021109:         try {
+021110:             const parsed = JSON.parse(
+021111:                 sessionStorage.getItem(
+021112:                     MF_STAFFING_FAILURE_HISTORY_KEY
+021113:                 ) || '[]'
+021114:             );
+021115:             return mfBoundStaffingFailureHistory(
+021116:                 Array.isArray(parsed) ? parsed : []
+021117:             ).history;
+021118:         } catch (_error) {
+021119:             return [];
+021120:         }
+021121:     }
+021122:     function mfReadStaffingQuarantine() {
+021123:         try {
+021124:             const parsed = JSON.parse(
+021125:                 sessionStorage.getItem(MF_STAFFING_QUARANTINE_KEY) || '[]'
+021126:             );
+021127:             return (Array.isArray(parsed) ? parsed : [])
+021128:                 .filter(record => record && record.vehicleId)
+021129:                 .slice(-MF_STAFFING_QUARANTINE_LIMIT);
+021130:         } catch (_error) {
+021131:             return [];
+021132:         }
+021133:     }
+021134:     function mfWriteStaffingQuarantine(records) {
+021135:         const bounded = (Array.isArray(records) ? records : [])
+021136:             .filter(record => record && record.vehicleId)
+021137:             .slice(-MF_STAFFING_QUARANTINE_LIMIT);
+021138:         try {
+021139:             sessionStorage.setItem(
+021140:                 MF_STAFFING_QUARANTINE_KEY,
+021141:                 JSON.stringify(bounded)
+021142:             );
+021143:         } catch (_error) {}
+021144:         return bounded;
+021145:     }
+021146:     function mfStaffingAlertVehicleLabel(text) {
+021147:         const cleaned = String(text || '')
+
+===== CONTEXT 7 [21351-21415] =====
+021351:             eventType: String(eventType || 'dispatch-block'),
+021352:             missionId,
+021353:             missionName: String(
+021354:                 snapshot?.mission?.missionName ||
+021355:                 getCurrentMissionName() ||
+021356:                 ''
+021357:             ).slice(0, 240),
+021358:             reason: String(reason || 'staffing-block').slice(0, 160),
+021359:             text: String(text || '').slice(0, 500),
+021360:             selectedVehicles,
+021361:             knownEmptyAmbulanceExclusions,
+021362:             runtimeQuarantine: runtimeQuarantine && typeof runtimeQuarantine === 'object'
+021363:                 ? { ...runtimeQuarantine }
+021364:                 : null
+021365:         };
+021366:         const history = mfReadStaffingFailureHistory();
+021367:         history.push(record);
+021368:         const bounded = mfBoundStaffingFailureHistory(history);
+021369:         try {
+021370:             sessionStorage.setItem(
+021371:                 MF_STAFFING_FAILURE_HISTORY_KEY,
+021372:                 bounded.encoded
+021373:             );
+021374:         } catch (_error) {}
+021375:         return record;
+021376:     }
+021377:     function exportUnitFinderDiagnostics() {
+021378:         const current =
+021379:             mfPersistUnitFinderDiagnostic('manual-export');
+021380:         const history = mfReadUnitFinderDiagnosticHistory();
+021381:         const payload = {
+021382:             format: 'missionchief-unit-finder-diagnostics',
+021383:             exportVersion: 2,
+021384:             exportedAt: new Date().toISOString(),
+021385:             privacyNote:
+021386:                 'Contains mission, vehicle, lifecycle, training and memory evidence; excludes cookies, passwords and personnel names.',
+021387:             memoryDiagnostics:
+021388:                 mfCollectMemoryDiagnostics(),
+021389:             lifecycleDiagnostics: {
+021390:                 localBootTrace: window.__MCN_BOOT_TRACE__ || null,
+021391:                 localOwnershipTrace: window.__MCN_V3_OWNERSHIP_TRACE__ || [],
+021392:                 controller: (() => {
+021393:                     try { return window.top.__MCN_V3_DIAGNOSTICS_SNAPSHOT__?.() || null; }
+021394:                     catch (_error) { return null; }
+021395:                 })()
+021396:             },
+021397:             current,
+021398:             history
+021399:         };
+021400:         const missionId =
+021401:             current?.mission?.missionId || 'mission';
+021402:         const timestamp = new Date()
+021403:             .toISOString()
+021404:             .replace(/[:.]/g, '-')
+021405:             .replace('T', '_')
+021406:             .replace('Z', '');
+021407:         const filename =
+021408:             `MissionChief-Unit-Finder-Diagnostics-${missionId}-${timestamp}.json`;
+021409:         const blob = new Blob(
+021410:             [JSON.stringify(payload, null, 2)],
+021411:             { type: 'application/json;charset=utf-8' }
+021412:         );
+021413:         const url = URL.createObjectURL(blob);
+021414:         const link = document.createElement('a');
+021415:         link.href = url;
+
+===== CONTEXT 8 [22648-22703] =====
+022648:                     .slice(0, 240)
+022649:             });
+022650:         });
+022651:         if (excluded.length) {
+022652:             const knownByKey = new Map(
+022653:                 mfKnownUnstaffedAmbulanceExclusions.map(vehicle => [
+022654:                     vehicle.vehicleId ||
+022655:                         `${vehicle.stationName}|${vehicle.vehicleName}`,
+022656:                     vehicle
+022657:                 ])
+022658:             );
+022659:             excluded.forEach(vehicle => {
+022660:                 knownByKey.set(
+022661:                     vehicle.vehicleId ||
+022662:                         `${vehicle.stationName}|${vehicle.vehicleName}`,
+022663:                     vehicle
+022664:                 );
+022665:             });
+022666:             mfKnownUnstaffedAmbulanceExclusions =
+022667:                 Array.from(knownByKey.values()).slice(-40);
+022668:             const snapshot = mfPersistUnitFinderDiagnostic(
+022669:                 'known-unstaffed-ambulance-filter'
+022670:             );
+022671:             mfRecordStaffingFailure(
+022672:                 sourceLabel || 'ambulance selection',
+022673:                 'Personnel register confirmed zero assigned staff; vehicle excluded before selection.',
+022674:                 snapshot,
+022675:                 'preflight-exclusion'
+022676:             );
+022677:         }
+022678:         return eligible;
+022679:     }
+022680:     function isCriticalCareTransferAmbulanceRequirement(originalName, mappedName) {
+022681:         const raw = normaliseVehicleText(originalName);
+022682:         const mapped = normaliseVehicleText(mappedName);
+022683:         const supported = new Set([
+022684:             'critical care transfer ambulance',
+022685:             'critical care transfer ambulances',
+022686:             'required critical care transfer ambulance',
+022687:             'required critical care transfer ambulances',
+022688:             'cct', 'ccts'
+022689:         ]);
+022690:         return supported.has(raw) || supported.has(mapped);
+022691:     }
+022692:     function isCriticalCareTransferAmbulanceCheckbox(input) {
+022693:         if (!input) return false;
+022694:         const typeIdentifiers = getVehicleTypeIdentifiers(input);
+022695:         if (typeIdentifiers.length > 0) return typeIdentifiers.includes('98');
+022696:         return getExtendedVehicleValues(input).some(value => {
+022697:             const cleaned = normaliseVehicleText(value);
+022698:             return (
+022699:                 cleaned === 'critical care transfer ambulance' ||
+022700:                 cleaned === 'critical care transfer ambulances' ||
+022701:                 cleaned === 'cct' ||
+022702:                 cleaned === 'ccts'
+022703:             );
+
+===== CONTEXT 9 [24780-24835] =====
+024780:             const required = Math.max(0, parseInt(row.required, 10) || 0);
+024781:             const selected = Math.min(required,
+024782:                 countSelectedMatchingVehicles(row.originalName, row.mappedName));
+024783:             row.selected = selected;
+024784:             row.status = selected >= required ? 'assigned' : selected ? 'retrying' : 'missing';
+024785:             return { row, missing: required - selected };
+024786:         }).filter(item => item.missing > 0);
+024787:         let shortfalls = inspect();
+024788:         for (const { row, missing } of shortfalls) {
+024789:             selectVehicleUnits(row.originalName, row.mappedName, missing,
+024790:                 `PRVSRV FINAL ${++mfPrvSrvFinalSelectionAttempt}`);
+024791:         }
+024792:         if (shortfalls.length) await wait(180);
+024793:         invalidateVehicleCheckboxCache();
+024794:         shortfalls = inspect();
+024795:         renderVehicleLoadList();
+024796:         if (shortfalls.length) {
+024797:             mfPrvSrvSelectionBlockText = `Confirmed PRV/SRV units still missing: ${shortfalls.map(({ row, missing }) => `${row.mappedName || row.originalName} x${missing}`).join(', ')}.`;
+024798:             changeDispatchBoxColor(false);
+024799:             updateStatusBox(`${mfPrvSrvSelectionBlockText} Dispatch blocked.`);
+024800:             try { mfPersistUnitFinderDiagnostic('prv-srv-final-verification-block'); } catch (_error) {}
+024801:             if (mfDebugEnabled) debugLog('PRV/SRV FINAL BLOCK', `${reason || 'dispatch'} | ${mfPrvSrvSelectionBlockText}`);
+024802:             return false;
+024803:         }
+024804:         mfPrvSrvSelectionBlockText = '';
+024805:         if (vehicleLoadState.rows.every(row => Number(row.selected || 0) >= Number(row.required || 0)) &&
+024806:             !mfStaffingBlockActive && vehicleLoadState.trainedPersonnelBlocked !== true) {
+024807:             changeDispatchBoxColor(true);
+024808:         }
+024809:         return true;
+024810:     }
+024811:     function findUnitButton(mappedName, originalName) {
+024812:         if (isFireOperationalSupportRequirement(originalName, mappedName)) {
+024813:             return sortVehicleCheckboxesByBestArrival(getVehicleCheckboxSnapshot().filter(input =>
+024814:                 !input.disabled && !input.checked && isFireOperationalSupportUnitCheckbox(input)))[0] || null;
+024815:         }
+024816:         if (isFireEngineRequirement(originalName, mappedName)) {
+024817:             return sortVehicleCheckboxesByBestArrival(
+024818:                 getVehicleCheckboxSnapshot().filter(input => (
+024819:                     !input.disabled &&
+024820:                     !input.checked &&
+024821:                     isFireEngineVehicleCheckbox(input)
+024822:                 ))
+024823:             )[0] || null;
+024824:         }
+024825:         const requestedName =
+024826:             originalName ||
+024827:             mappedName;
+024828:         if (
+024829:             isAmbulanceTransportRequest(
+024830:                 requestedName,
+024831:                 mappedName
+024832:             ) ||
+024833:             getCoastguardRescueHelicopterTypeId(requestedName, mappedName) ||
+024834:             getPrvSrvRequirementTypeId(requestedName, mappedName) ||
+024835:             isCrvRequirement(
+
+===== CONTEXT 10 [27761-27816] =====
+027761:             triggerDispatchShareClick();
+027762:         });
+027763:         const autoModeBtn = document.createElement('button');
+027764:         autoModeBtn.id = 'auto-mode-box';
+027765:         autoModeBtn.textContent = 'Auto Mode: Start';
+027766:         autoModeBtn.className = 'mf2026-button';
+027767:         autoModeBtn.style.backgroundColor = '#6f42c1';
+027768:         autoModeBtn.style.color = 'white';
+027769:         autoModeBtn.addEventListener('click', function() {
+027770:             toggleAutoMode();
+027771:         });
+027772:         const diagnosticsBtn = document.createElement('button');
+027773:         diagnosticsBtn.id = 'mf-export-unit-finder-diagnostics';
+027774:         diagnosticsBtn.textContent = 'Export Diagnostics';
+027775:         diagnosticsBtn.className = 'mf2026-button';
+027776:         diagnosticsBtn.style.backgroundColor = '#495057';
+027777:         diagnosticsBtn.style.color = 'white';
+027778:         diagnosticsBtn.title =
+027779:             'Download recent Unit Finder and Mission Update requirements, selected vehicles and Personnel Register training evidence.';
+027780:         diagnosticsBtn.addEventListener('click', function() {
+027781:             exportUnitFinderDiagnostics();
+027782:         });
+027783:         const primaryActions =
+027784:             document.createElement('div');
+027785:         primaryActions.className =
+027786:             'mf2026-primary-actions';
+027787:         primaryActions.appendChild(unitFinderBtn);
+027788:         primaryActions.appendChild(missionUpdateBtn);
+027789:         primaryActions.appendChild(allyStealBtn);
+027790:         primaryActions.appendChild(dispatchBtn);
+027791:         primaryActions.appendChild(dispatchShareBtn);
+027792:         primaryActions.appendChild(autoModeBtn);
+027793:         if (missionFinderIphoneSafari) {
+027794:             primaryActions.appendChild(diagnosticsBtn);
+027795:         } else {
+027796:             diagnosticsPane.appendChild(diagnosticsBtn);
+027797:         }
+027798:         controlBody.appendChild(primaryActions);
+027799:         function syncIphoneAdvancedToggle() {
+027800:             if (!missionFinderIphoneSafari) return;
+027801:             iphoneAdvancedToggle.textContent =
+027802:                 mfIphoneAdvancedExpanded
+027803:                     ? 'Settings  ▴'
+027804:                     : 'Settings  ▾';
+027805:             iphoneAdvancedToggle.setAttribute(
+027806:                 'aria-expanded',
+027807:                 String(mfIphoneAdvancedExpanded)
+027808:             );
+027809:             iphoneAdvancedToggle.setAttribute(
+027810:                 'aria-controls',
+027811:                 'mf-iphone-advanced-body'
+027812:             );
+027813:             advancedBody.id =
+027814:                 'mf-iphone-advanced-body';
+027815:             advancedBody.classList.toggle(
+027816:                 'mf2026-expanded',
+
+===== CONTEXT 11 [30137-30192] =====
+030137:             isComplete = false;
+030138:             if (mfDebugEnabled) {
+030139:                 debugLog('READY BLOCK', `Problem alert still visible, blocking ready: ${problemAlert.slice(0, 260)}`);
+030140:             }
+030141:             try {
+030142:                 recordIssueEvent('READY BLOCKED BY PROBLEM ALERT', {
+030143:                     problemAlert
+030144:                 }, true);
+030145:             } catch (error) {}
+030146:         }
+030147:         const dispatchBox = document.getElementById('dispatch-box');
+030148:         if (dispatchBox) {
+030149:             dispatchBox.style.backgroundColor = isComplete ? 'green' : 'grey';
+030150:             if (isComplete) {
+030151:                 updateStatusBox('Units ready for dispatch.');
+030152:             }
+030153:         }
+030154:         vehicleLoadState.ready = !!isComplete;
+030155:         renderVehicleLoadList();
+030156:         try {
+030157:             mfPersistUnitFinderDiagnostic(
+030158:                 isComplete
+030159:                     ? 'ready-for-dispatch'
+030160:                     : 'not-ready'
+030161:             );
+030162:         } catch (_error) {}
+030163:     }
+030164:     function resetVehicleLoadState() {
+030165:         clearSelectionGuards();
+030166:         invalidateVehicleCheckboxCache();
+030167:         vehicleLoadState = {
+030168:             rows: [],
+030169:             patients: 0,
+030170:             ambulances: 0,
+030171:             ambulanceOfficer: false,
+030172:             trainedPersonnelBlocked: false,
+030173:             trainedPersonnelBlockText: '',
+030174:             ready: false
+030175:         };
+030176:     }
+030177:     function blockTrainedPersonnelDispatch(
+030178:         shortfalls,
+030179:         source = 'Trained-personnel selection'
+030180:     ) {
+030181:         const detail = (Array.isArray(shortfalls) ? shortfalls : [shortfalls])
+030182:             .map(value => String(value || '').trim())
+030183:             .filter(Boolean)
+030184:             .join(' | ') ||
+030185:             'Verified trained personnel are still missing.';
+030186:         vehicleLoadState.trainedPersonnelBlocked = true;
+030187:         vehicleLoadState.trainedPersonnelBlockText = detail;
+030188:         changeDispatchBoxColor(false);
+030189:         updateStatusBox(
+030190:             `${source}: verified trained personnel are still missing. Dispatch blocked.`
+030191:         );
+030192:         if (mfDebugEnabled) {
+
+===== CONTEXT 12 [38629-38717] =====
+038629:         resetStaffingBlockForCurrentMission(reason);
+038630:         if (mfStaffingBlockActive) {
+038631:             return true;
+038632:         }
+038633:         const text =
+038634:             getVisibleStaffingShortageText() ||
+038635:             getInlinePersonnelQualificationAlertText();
+038636:         if (!text) return false;
+038637:         const runtimeQuarantine =
+038638:             mfQuarantineExactStaffingVehicle(text, reason);
+038639:         if (runtimeQuarantine) {
+038640:             mfStaffingBlockActive = false;
+038641:             mfStaffingBlockText = '';
+038642:             mfStaffingQuarantineRetryRequested = true;
+038643:             vehicleLoadState.ready = false;
+038644:             changeDispatchBoxColor(false);
+038645:             updateStatusBox(
+038646:                 `Staffing guard excluded ${runtimeQuarantine.vehicleName}. Retrying this mission with another eligible vehicle...`
+038647:             );
+038648:             const quarantineSnapshot =
+038649:                 mfPersistUnitFinderDiagnostic(
+038650:                     'runtime-staffing-quarantine'
+038651:                 );
+038652:             mfRecordStaffingFailure(
+038653:                 reason || 'runtime-staffing-quarantine',
+038654:                 text,
+038655:                 quarantineSnapshot,
+038656:                 'runtime-quarantine',
+038657:                 runtimeQuarantine
+038658:             );
+038659:             try {
+038660:                 recordIssueEvent(
+038661:                     'STAFFING VEHICLE QUARANTINED',
+038662:                     runtimeQuarantine,
+038663:                     true
+038664:                 );
+038665:             } catch (_error) {}
+038666:             return false;
+038667:         }
+038668:         mfStaffingBlockActive = true;
+038669:         mfStaffingBlockText = text;
+038670:         vehicleLoadState.ready = false;
+038671:         changeDispatchBoxColor(false);
+038672:         updateStatusBox(
+038673:             'Staffing/qualification shortage detected. No more vehicles will be selected.'
+038674:         );
+038675:         if (mfDebugEnabled) {
+038676:             debugLog(
+038677:                 'STAFFING GUARD',
+038678:                 `BLOCKED | reason=${reason || 'unknown'} | ${text.slice(0, 350)}`
+038679:             );
+038680:         }
+038681:         const staffingSnapshot =
+038682:             mfPersistUnitFinderDiagnostic(
+038683:                 'staffing-block'
+038684:             );
+038685:         mfRecordStaffingFailure(
+038686:             reason || 'staffing-block',
+038687:             text,
+038688:             staffingSnapshot,
+038689:             'dispatch-block'
+038690:         );
+038691:         try {
+038692:             recordIssueEvent(
+038693:                 'STAFFING GUARD BLOCKED',
+038694:                 {
+038695:                     reason: reason || 'unknown',
+038696:                     text: text.slice(0, 500)
+038697:                 },
+038698:                 true
+038699:             );
+038700:         } catch (error) {}
+038701:         return true;
+038702:     }
+038703:     function selectVehicleUnits(
+038704:         originalName,
+038705:         mappedName,
+038706:         amount,
+038707:         source,
+038708:         options = null
+038709:     ) {
+038710:         if (!isCurrentMissionExecutionOwner('vehicle selection')) {
+038711:             const blockedRequired = Math.max(
+038712:                 0,
+038713:                 parseInt(amount, 10) || 0
+038714:             );
+038715:             return {
+038716:                 assigned: 0,
+038717:                 required: blockedRequired,
+
+===== CONTEXT 13 [39266-39331] =====
+039266:                     );
+039267:                 }
+039268:             }
+039269:             if (
+039270:                 includeConfiguredAmbulanceOfficerThreshold
+039271:             ) {
+039272:                 if (
+039273:                     requirementRows.some(
+039274:                         row =>
+039275:                             row?.configuredAmbulanceOfficerThreshold ===
+039276:                             true
+039277:                     )
+039278:                 ) {
+039279:                     debugLog(
+039280:                         'AMBULANCE OFFICER THRESHOLD',
+039281:                         `Settings rule added Ambulance Officer x1 because ordinary Ambulance demand exceeded ${normaliseConfiguredAmbulanceOfficerThreshold(mfAmbulanceOfficerThreshold)}.`
+039282:                     );
+039283:                 }
+039284:             }
+039285:         }
+039286:         mfSetUnitFinderDiagnosticContext(
+039287:             'unit-finder',
+039288:             sourceLabel,
+039289:             diagnosticSuppliedRows,
+039290:             requirementRows
+039291:         );
+039292:         if (
+039293:             diagnosticSourceLabel !== sourceLabel &&
+039294:             mfUnitFinderDiagnosticContext
+039295:         ) {
+039296:             mfUnitFinderDiagnosticContext.replacedSourceLabel =
+039297:                 diagnosticSourceLabel;
+039298:         }
+039299:         updateStatusBox(`Processing ${sourceLabel} requirements...`);
+039300:         await preparePoliceVehicleSafetyForRows(
+039301:             requirementRows,
+039302:             sourceLabel
+039303:         );
+039304:         for (const item of requirementRows) {
+039305:             if (
+039306:                 detectAndLatchStaffingBlock(
+039307:                     `process-${sourceLabel}`
+039308:                 )
+039309:             ) {
+039310:                 break;
+039311:             }
+039312:             const unitText = item.unitName;
+039313:             if (
+039314:                 item
+039315:                     .isTrainedPersonnelRequirement
+039316:             ) {
+039317:                 const requirements =
+039318:                     item
+039319:                         .personnelTrainingRequirements ||
+039320:                     [];
+039321:                 const trainedVehicleTarget =
+039322:                     getTrainedPersonnelVehicleTarget(
+039323:                         requirements
+039324:                     );
+039325:                 addOrUpdateVehicleRow(
+039326:                     unitText,
+039327:                     'Assigned trained vehicles',
+039328:                     trainedVehicleTarget,
+039329:                     'pending',
+039330:                     0
+039331:                 );
+
+===== CONTEXT 14 [41776-41858] =====
+041776:                     advancePending:
+041777:                         !!advanceState
+041778:                 };
+041779:             }
+041780:             clearAutoAdvanceAfterDispatchState(
+041781:                 'Auto Mode Dispatch & Share unavailable'
+041782:             );
+041783:         }
+041784:         clearAutoAdvanceAfterDispatchState(
+041785:             'normal Auto Mode Dispatch & Next'
+041786:         );
+041787:         const clicked = clickDispatchOnly();
+041788:         return {
+041789:             clicked,
+041790:             shared: false,
+041791:             advancePending: false
+041792:         };
+041793:     }
+041794:     async function triggerDispatchClick() {
+041795:         try {
+041796:             mfPersistUnitFinderDiagnostic('before-dispatch');
+041797:         } catch (_error) {}
+041798:         if (
+041799:             !await confirmPrvSrvSelectionBeforeDispatch(
+041800:                 'manual Dispatch'
+041801:             )
+041802:         ) {
+041803:             return;
+041804:         }
+041805:         clearAutoAdvanceAfterDispatchState(
+041806:             'manual normal Dispatch uses native Dispatch-and-next'
+041807:         );
+041808:         if (clickDispatchOnly()) {
+041809:             updateStatusBox(
+041810:                 'Dispatch & Next clicked. MissionChief is opening the next mission...'
+041811:             );
+041812:         } else {
+041813:             updateStatusBox(
+041814:                 'Dispatch & Next button not found.'
+041815:             );
+041816:             console.error(
+041817:                 'Dispatch & Next button not found.'
+041818:             );
+041819:         }
+041820:     }
+041821:     async function triggerDispatchShareClick() {
+041822:         try {
+041823:             mfPersistUnitFinderDiagnostic('before-dispatch-share');
+041824:         } catch (_error) {}
+041825:         if (
+041826:             !await confirmPrvSrvSelectionBeforeDispatch(
+041827:                 'manual Dispatch & Share'
+041828:             )
+041829:         ) {
+041830:             return;
+041831:         }
+041832:         const advanceState =
+041833:             createAutoAdvanceAfterDispatchState(
+041834:                 'manual Dispatch & Share',
+041835:                 'manual'
+041836:             );
+041837:         writeAutoAdvanceAfterDispatchState(
+041838:             advanceState
+041839:         );
+041840:         if (clickDispatchAndShareOnly()) {
+041841:             updateStatusBox(
+041842:                 advanceState
+041843:                     ? 'Dispatch & Share clicked. Waiting for refresh, then opening Next Mission...'
+041844:                     : 'Dispatch & Share clicked. No next mission is available.'
+041845:             );
+041846:             if (advanceState) {
+041847:                 setTimeout(
+041848:                     function() {
+041849:                         resumeAutoAdvanceAfterDispatch(
+041850:                             'same-document manual Dispatch & Share'
+041851:                         );
+041852:                     },
+041853:                     800
+041854:                 );
+041855:             }
+041856:         } else {
+041857:             clearAutoAdvanceAfterDispatchState(
+041858:                 'manual Dispatch & Share button not found'
+
+===== CONTEXT 15 [45025-45080] =====
+045025:             );
+045026:             changeDispatchBoxColor(false);
+045027:             return false;
+045028:         }
+045029:         const rawMissingRows =
+045030:             Array.isArray(
+045031:                 suppliedRows
+045032:             )
+045033:                 ? suppliedRows
+045034:                 : readMissionUpdateRows();
+045035:         const normalisedMissingRows =
+045036:             collapseSharedFireOperationalSupportRequirements(
+045037:                 normaliseOperationalRequirementRows(
+045038:                     rawMissingRows
+045039:                 )
+045040:             );
+045041:         const missingRows =
+045042:             addConfiguredAmbulanceOfficerThresholdRequirement(
+045043:                 normalisedMissingRows
+045044:             );
+045045:         mfSetUnitFinderDiagnosticContext(
+045046:             'mission-update',
+045047:             'MISSION UPDATE',
+045048:             rawMissingRows,
+045049:             missingRows
+045050:         );
+045051:         if (mfDebugEnabled) {
+045052:             debugLog(
+045053:                 'UPDATE ONLY',
+045054:                 missingRows.length
+045055:                     ? `Active mission rows only: ${missingRows.map(row => `${row.unitName} x${row.stillNeeded}`).join(', ')}`
+045056:                     : 'No visible active-mission update rows found. Hidden and previous mission requirements were ignored.'
+045057:             );
+045058:         }
+045059:         if (missingRows.length === 0) {
+045060:             updateStatusBox("No mission update units needed.");
+045061:             return false;
+045062:         }
+045063:         const missingAfterAttempt = [];
+045064:         const trainedPersonnelWarnings = [];
+045065:         missingRows.forEach(item => {
+045066:             if (
+045067:                 isPublicOrderPersonnelRequirementName(
+045068:                     item?.unitName
+045069:                 )
+045070:             ) {
+045071:                 if (
+045072:                     mfDebugEnabled
+045073:                 ) {
+045074:                     debugLog(
+045075:                         'PUBLIC ORDER UPDATE GUARD',
+045076:                         `${item.unitName} skipped as a standalone row; the independent trained IRV requirements own it.`
+045077:                     );
+045078:                 }
+045079:                 return;
+045080:             }

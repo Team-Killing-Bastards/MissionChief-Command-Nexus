@@ -1,0 +1,441 @@
+===== FUNCTION mfSerialiseDiagnosticTrainingRequirement =====
+    function mfSerialiseDiagnosticTrainingRequirement(requirement) {
+        if (!requirement || typeof requirement !== 'object') return null;
+        return {
+            code: String(requirement.code || ''),
+            label: String(requirement.label || ''),
+            required: Math.max(0, parseInt(requirement.required, 10) || 0),
+            personnelRequired: Math.max(
+                0,
+                parseInt(requirement.personnelRequired, 10) || 0
+            ),
+            requirementType: String(requirement.requirementType || ''),
+            requiredTrainingCodes: Array.isArray(requirement.requiredTrainingCodes)
+                ? requirement.requiredTrainingCodes.map(String)
+                : [],
+            eligibleVehicleTypeIds: Array.isArray(requirement.eligibleVehicleTypeIds)
+                ? requirement.eligibleVehicleTypeIds.map(String)
+                : []
+        };
+    }
+
+
+===== FUNCTION mfSerialiseDiagnosticRequirementRow =====
+    function mfSerialiseDiagnosticRequirementRow(row) {
+        if (!row || typeof row !== 'object') return null;
+        const details = row.liveRequirementDetails || null;
+        return {
+            unitName: String(row.unitName || ''),
+            mappedName: resolveUnitName(row.unitName || ''),
+            stillNeeded: Math.max(0, parseInt(row.stillNeeded, 10) || 0),
+            requiredTotal: Math.max(0, parseInt(row.requiredTotal, 10) || 0),
+            source: String(row.source || row.updateSource || ''),
+            isTrainedPersonnelRequirement:
+                row.isTrainedPersonnelRequirement === true,
+            missionDefinitionRequiredPersonnel:
+                row.missionDefinitionRequiredPersonnel === true,
+            convertedFromPersonnelRequirement:
+                row.convertedFromPersonnelRequirement === true,
+            patientRequirementType: String(row.patientRequirementType || ''),
+            personnelRequirement: String(row.personnelRequirement || ''),
+            personnelTrainingRequirements: Array.isArray(
+                row.personnelTrainingRequirements
+            )
+                ? row.personnelTrainingRequirements
+                    .map(mfSerialiseDiagnosticTrainingRequirement)
+                    .filter(Boolean)
+                : [],
+            liveRequirementDetails: details
+                ? {
+                    dispatchTargetMode: String(details.dispatchTargetMode || ''),
+                    explicitMissingVehicles:
+                        details.explicitMissingVehicles === true,
+                    explicitMissingPersonnel:
+                        details.explicitMissingPersonnel === true,
+                    structuredMissingVehicles:
+                        details.structuredMissingVehicles === true
+                }
+                : null
+        };
+    }
+
+
+===== FUNCTION mfSerialiseDiagnosticRequirementRows =====
+    function mfSerialiseDiagnosticRequirementRows(rows) {
+        return (Array.isArray(rows) ? rows : [])
+            .map(mfSerialiseDiagnosticRequirementRow)
+            .filter(Boolean);
+    }
+
+
+===== FUNCTION mfSetUnitFinderDiagnosticContext =====
+    function mfSetUnitFinderDiagnosticContext(
+        mode,
+        sourceLabel,
+        suppliedRows,
+        processedRows
+    ) {
+        mfUnitFinderDiagnosticContext = {
+            missionKey:
+                getLocalMissionInstanceKey() ||
+                getCurrentMissionIdForQueueRestart() ||
+                '',
+            mode: String(mode || 'unit-finder'),
+            sourceLabel: String(sourceLabel || ''),
+            suppliedRows:
+                mfSerialiseDiagnosticRequirementRows(suppliedRows),
+            processedRows:
+                mfSerialiseDiagnosticRequirementRows(processedRows),
+            updatedAt: Date.now()
+        };
+    }
+
+
+===== FUNCTION mfGetDiagnosticRegistryEvidence =====
+    function mfGetDiagnosticRegistryEvidence(input, registry) {
+        let registryMatch = null;
+        try {
+            registryMatch = getRegistryEntryForMissionCheckbox(
+                input,
+                registry
+            );
+        } catch (_error) {}
+        const entry = registryMatch?.entry || null;
+        if (!entry) return null;
+        return {
+            vehicleId: String(entry.vehicleId || ''),
+            vehicleName: String(entry.vehicleName || ''),
+            vehicleTypeId: String(entry.vehicleTypeId || ''),
+            stationName: String(entry.stationName || ''),
+            stationHref: String(entry.stationHref || ''),
+            source: String(entry.source || ''),
+            updatedAt: Number(entry.updatedAt || 0),
+            assignedPersonnelCount: Math.max(
+                0,
+                parseInt(entry.assignedPersonnelCount, 10) || 0
+            ),
+            assignmentScanComplete:
+                entry.assignmentScanComplete === true,
+            trainingProfilesComplete:
+                entry.trainingProfilesComplete === true,
+            trainingCounts:
+                entry.trainingCounts &&
+                typeof entry.trainingCounts === 'object'
+                    ? { ...entry.trainingCounts }
+                    : {},
+            assignedTrainingProfiles:
+                Array.isArray(entry.assignedTrainingProfiles)
+                    ? entry.assignedTrainingProfiles
+                        .slice(0, 40)
+                        .map(profile => {
+                            return Array.isArray(profile)
+                                ? profile.slice(0, 40).map(String)
+                                : [];
+                        })
+                    : [],
+            matchType: String(
+                registryMatch?.matchMode ||
+                registryMatch?.matchType ||
+                registryMatch?.matchedBy ||
+                ''
+            )
+        };
+    }
+
+
+===== FUNCTION mfGetDiagnosticSelectedVehicles =====
+    function mfGetDiagnosticSelectedVehicles() {
+        let registry = { vehicles: {} };
+        try {
+            registry = readPersonnelTrainingRegistry();
+        } catch (_error) {}
+        return getVehicleCheckboxSnapshot(true)
+            .filter(input => input?.checked)
+            .map(input => {
+                const row = input.closest?.('tr') || null;
+                return {
+                    vehicleId: getMissionVehicleId(input),
+                    vehicleName: getVehicleDebugName(input),
+                    vehicleTypeId: String(
+                        input.getAttribute?.('vehicle_type_id') ||
+                        row?.getAttribute?.('vehicle_type_id') ||
+                        input.getAttribute?.('vehicle_type') ||
+                        row?.getAttribute?.('vehicle_type') ||
+                        ''
+                    ),
+                    vehicleTypeCaption: String(
+                        input.getAttribute?.('vehicle_type_caption') ||
+                        row?.getAttribute?.('vehicle_type_caption') ||
+                        ''
+                    ),
+                    disabled: input.disabled === true,
+                    rowText: String(
+                        row?.innerText ||
+                        row?.textContent ||
+                        ''
+                    )
+                        .replace(/\s+/g, ' ')
+                        .trim()
+                        .slice(0, 600),
+                    registryEvidence:
+                        mfGetDiagnosticRegistryEvidence(
+                            input,
+                            registry
+                        )
+                };
+            });
+    }
+
+
+===== FUNCTION mfGetDiagnosticVisibleAlerts =====
+    function mfGetDiagnosticVisibleAlerts() {
+        const values = [];
+        try {
+            getCurrentMissionAlertScopes().forEach(scope => {
+                Array.from(
+                    scope.querySelectorAll(
+                        '.alert-danger, .alert-warning, ' +
+                        'div[id^="alert_danger_"], #missing_text'
+                    )
+                ).forEach(alert => {
+                    try {
+                        if (!isElementVisible(alert)) return;
+                    } catch (_error) {}
+                    const text = String(
+                        alert.innerText ||
+                        alert.textContent ||
+                        ''
+                    )
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                    if (text) values.push(text.slice(0, 1500));
+                });
+            });
+        } catch (_error) {}
+        return Array.from(new Set(values));
+    }
+
+
+===== FUNCTION mfBuildUnitFinderDiagnosticSnapshot =====
+    function mfBuildUnitFinderDiagnosticSnapshot(reason) {
+        let liveRows = [];
+        try {
+            liveRows = readMissionUpdateRows({ silent: true });
+        } catch (_error) {}
+        const selectedVehicles =
+            mfGetDiagnosticSelectedVehicles();
+        const diagnosticBoxes = getVehicleCheckboxSnapshot(true);
+        return {
+            schema: 'missionchief-unit-finder-diagnostics',
+            schemaVersion: 1,
+            capturedAt: new Date().toISOString(),
+            capturedAtUnix: Date.now(),
+            reason: String(reason || 'manual-export'),
+            versions: {
+                commandNexus: '3.0.37',
+                missionFinder: 'V10.6.179',
+                personnelAssignment: '1.3.8'
+            },
+            mission: {
+                missionId:
+                    getCurrentMissionIdForQueueRestart() || '',
+                missionKey:
+                    getLocalMissionInstanceKey() || '',
+                missionName:
+                    getCurrentMissionName() || '',
+                pageUrl: String(window.location.href || ''),
+                host: String(window.location.host || '')
+            },
+            execution: {
+                autoModeRunning:
+                    autoModeRunning === true ||
+                    sessionStorage.getItem(
+                        'mf_auto_mode_running'
+                    ) === 'true',
+                ready: vehicleLoadState.ready === true,
+                staffingBlockActive:
+                    mfStaffingBlockActive === true,
+                staffingBlockText:
+                    String(mfStaffingBlockText || ''),
+                ambulanceOfficerThresholdEnabled:
+                    mfAmbulanceOfficerThresholdEnabled,
+                ambulanceOfficerThreshold:
+                    mfAmbulanceOfficerThreshold,
+                alwaysSendAmbulanceToHighRiskMissingPerson:
+                    mfAlwaysSendAmbulanceToHighRiskMissingPerson === true,
+                highRiskMissingPersonMission:
+                    isConfiguredHighRiskMissingPersonMission(),
+                processedSelectionKeys:
+                    Array.from(processedSelectionKeys || [])
+            },
+            requirementContext: {
+                ...mfUnitFinderDiagnosticContext,
+                missionDefinitionRawRows:
+                    mfLastMissionDefinitionRawRows.map(row => ({
+                        label: String(row.label || ''),
+                        value: String(row.value || '')
+                    })),
+                currentLiveRequirementRows:
+                    mfSerialiseDiagnosticRequirementRows(liveRows),
+                visibleAlerts:
+                    mfGetDiagnosticVisibleAlerts()
+            },
+            selectionSummary: {
+                vehicleInventory: {total: diagnosticBoxes.length,searchDogType102: diagnosticBoxes.filter(isSearchDogUnitVehicleCheckbox).length,availableSearchDogType102: diagnosticBoxes.filter(input => !input.disabled && !input.checked && isSearchDogUnitVehicleCheckbox(input)).length,loadControlVisible: isVehicleListLoadControlVisible(),loadingIndicatorVisible: isVehicleListLoadingIndicatorVisible()},
+                vehicleLoadState: {
+                    rows: vehicleLoadState.rows.map(row => ({
+                        originalName: String(row.originalName || ''),
+                        mappedName: String(row.mappedName || ''),
+                        required: Math.max(
+                            0,
+                            parseInt(row.required, 10) || 0
+                        ),
+                        selected: Math.max(
+                            0,
+                            parseInt(row.selected, 10) || 0
+                        ),
+                        status: String(row.status || '')
+                    })),
+                    patients: Math.max(
+                        0,
+                        parseInt(vehicleLoadState.patients, 10) || 0
+                    ),
+                    ambulances: Math.max(
+                        0,
+                        parseInt(vehicleLoadState.ambulances, 10) || 0
+                    ),
+                    ready: vehicleLoadState.ready === true
+                },
+                selectedVehicles,
+                knownUnstaffedAmbulanceExclusions:
+                    mfKnownUnstaffedAmbulanceExclusions
+                        .slice(0, 40)
+                        .map(vehicle => ({ ...vehicle }))
+            },
+            environment: {
+                language: String(navigator.language || ''),
+                userAgent: String(navigator.userAgent || '')
+            }
+        };
+    }
+
+
+===== FUNCTION mfPersistUnitFinderDiagnostic =====
+    function mfPersistUnitFinderDiagnostic(reason) {
+        const snapshot =
+            mfBuildUnitFinderDiagnosticSnapshot(reason);
+        const hasUsefulData = !!(
+            snapshot.requirementContext.updatedAt ||
+            snapshot.requirementContext.suppliedRows.length ||
+            snapshot.requirementContext.processedRows.length ||
+            snapshot.requirementContext.currentLiveRequirementRows.length ||
+            snapshot.requirementContext.visibleAlerts.length ||
+            snapshot.selectionSummary.vehicleLoadState.rows.length ||
+            snapshot.selectionSummary.selectedVehicles.length ||
+            snapshot.selectionSummary.knownUnstaffedAmbulanceExclusions.length
+        );
+        if (!hasUsefulData) return snapshot;
+        const emptyMissionUpdateSnapshot =
+            reason === 'not-ready' &&
+            snapshot.requirementContext.mode === 'mission-update' &&
+            snapshot.requirementContext.suppliedRows.length === 0 &&
+            snapshot.requirementContext.processedRows.length === 0 &&
+            snapshot.requirementContext.currentLiveRequirementRows.length === 0 &&
+            snapshot.requirementContext.visibleAlerts.length === 0 &&
+            snapshot.selectionSummary.vehicleLoadState.rows.length === 0;
+        if (emptyMissionUpdateSnapshot) return snapshot;
+        const signature = JSON.stringify({
+            mission: snapshot.mission.missionKey || snapshot.mission.missionId,
+            reason: snapshot.reason,
+            mode: snapshot.requirementContext.mode,
+            source: snapshot.requirementContext.sourceLabel,
+            ready: snapshot.execution.ready,
+            rows: snapshot.selectionSummary.vehicleLoadState.rows,
+            selected: snapshot.selectionSummary.selectedVehicles
+                .map(vehicle => vehicle.vehicleId || vehicle.vehicleName),
+            knownUnstaffed:
+                snapshot.selectionSummary.knownUnstaffedAmbulanceExclusions
+                    .map(vehicle => vehicle.vehicleId || vehicle.vehicleName)
+        });
+        if (
+            signature === mfLastUnitFinderDiagnosticSignature &&
+            reason !== 'manual-export'
+        ) {
+            return snapshot;
+        }
+        mfLastUnitFinderDiagnosticSignature = signature;
+        const history = mfReadUnitFinderDiagnosticHistory();
+        history.push(snapshot);
+        const boundedHistory =
+            mfBoundUnitFinderDiagnosticHistory(history);
+        try {
+            localStorage.setItem(
+                MF_UNIT_FINDER_DIAGNOSTICS_KEY,
+                boundedHistory.encoded
+            );
+        } catch (_error) {
+            try {
+                const fallback =
+                    mfBoundUnitFinderDiagnosticHistory(
+                        boundedHistory.history.slice(-4)
+                    );
+                localStorage.setItem(
+                    MF_UNIT_FINDER_DIAGNOSTICS_KEY,
+                    fallback.encoded
+                );
+            } catch (_ignored) {}
+        }
+        return snapshot;
+    }
+
+
+===== FUNCTION exportUnitFinderDiagnostics =====
+    function exportUnitFinderDiagnostics() {
+        const current =
+            mfPersistUnitFinderDiagnostic('manual-export');
+        const history = mfReadUnitFinderDiagnosticHistory();
+        const payload = {
+            format: 'missionchief-unit-finder-diagnostics',
+            exportVersion: 2,
+            exportedAt: new Date().toISOString(),
+            privacyNote:
+                'Contains mission, vehicle, lifecycle, training and memory evidence; excludes cookies, passwords and personnel names.',
+            memoryDiagnostics:
+                mfCollectMemoryDiagnostics(),
+            lifecycleDiagnostics: {
+                localBootTrace: window.__MCN_BOOT_TRACE__ || null,
+                localOwnershipTrace: window.__MCN_V3_OWNERSHIP_TRACE__ || [],
+                controller: (() => {
+                    try { return window.top.__MCN_V3_DIAGNOSTICS_SNAPSHOT__?.() || null; }
+                    catch (_error) { return null; }
+                })()
+            },
+            current,
+            history
+        };
+        const missionId =
+            current?.mission?.missionId || 'mission';
+        const timestamp = new Date()
+            .toISOString()
+            .replace(/[:.]/g, '-')
+            .replace('T', '_')
+            .replace('Z', '');
+        const filename =
+            `MissionChief-Unit-Finder-Diagnostics-${missionId}-${timestamp}.json`;
+        const blob = new Blob(
+            [JSON.stringify(payload, null, 2)],
+            { type: 'application/json;charset=utf-8' }
+        );
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+        updateStatusBox(
+            `Diagnostics exported: ${history.length} captured attempt(s).`
+        );
+    }
