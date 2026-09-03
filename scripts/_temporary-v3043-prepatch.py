@@ -125,3 +125,12 @@ if old_contract not in text:
     raise SystemExit('Fail-closed fallback formatting marker not found.')
 text = text.replace(old_contract, new_contract, 1)
 path.write_text(text, encoding='utf-8')
+
+# Live-verification pool test: allow compacted trained refresh functions while preserving semantics.
+path = Path('scripts/check-trained-personnel-live-verification-pool.mjs')
+text = path.read_text(encoding='utf-8')
+old_regex = "const signature = new RegExp(`^    (?:async\\\\s+)?function ${name}\\\\(`, 'm');"
+new_regex = "const signature = new RegExp(`^\\\\s*(?:async\\\\s+)?function ${name}\\\\(`, 'm');"
+if old_regex not in text:
+    raise SystemExit('Live-verification extractor regex marker not found.')
+path.write_text(text.replace(old_regex, new_regex, 1), encoding='utf-8')
