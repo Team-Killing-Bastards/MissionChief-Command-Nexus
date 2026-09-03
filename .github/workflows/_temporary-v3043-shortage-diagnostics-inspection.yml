@@ -53,19 +53,64 @@ jobs:
 
           path = Path('scripts/check-hazmat-osu-issue-215.mjs')
           text = path.read_text(encoding='utf-8')
-          old = "'    function getAllMatchingVehicleCheckboxes(originalName, mappedName, includeChecked) {'"
-          new = "'function getAllMatchingVehicleCheckboxes(originalName, mappedName, includeChecked, includeDisabled = false) {'"
+          old = """const allMatching = sliceBetween(
+            '    function getAllMatchingVehicleCheckboxes(originalName, mappedName, includeChecked) {',
+            '\\n    function getMatchingVehicleCheckboxes(originalName, mappedName) {',
+            'all-matching vehicle selector'
+          );"""
+          new = "const allMatching = extractFunction('getAllMatchingVehicleCheckboxes');"
           if old not in text:
-              raise SystemExit('HazMat matcher signature regression marker not found.')
+              raise SystemExit('HazMat matcher extraction regression marker not found.')
           path.write_text(text.replace(old, new, 1), encoding='utf-8')
 
           path = Path('scripts/check-open-issues-batch.mjs')
           text = path.read_text(encoding='utf-8')
-          old = "'    function getAllMatchingVehicleCheckboxes('"
-          new = "'function getAllMatchingVehicleCheckboxes('"
-          if old not in text:
-              raise SystemExit('Open-issues matcher start regression marker not found.')
-          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          helper_marker = """function extractBetween(startText, endText, label) {
+            const start = source.indexOf(startText);
+            if (start < 0) fail(`Unable to find ${label} start`);
+            const end = source.indexOf(endText, start + startText.length);
+            if (end < 0) fail(`Unable to find ${label} end`);
+            return source.slice(start, end);
+          }
+"""
+          helper_addition = helper_marker + """
+          function extractFunction(name) {
+            const start = source.indexOf(`function ${name}(`);
+            if (start < 0) fail(`Unable to find function ${name}`);
+            const brace = source.indexOf('{', start);
+            let depth = 0;
+            let quote = '';
+            let escaped = false;
+            for (let index = brace; index < source.length; index += 1) {
+              const character = source[index];
+              if (quote) {
+                if (escaped) escaped = false;
+                else if (character === '\\\\') escaped = true;
+                else if (character === quote) quote = '';
+                continue;
+              }
+              if (character === '"' || character === "'" || character === '`') {
+                quote = character;
+                continue;
+              }
+              if (character === '{') depth += 1;
+              if (character === '}' && --depth === 0) return source.slice(start, index + 1);
+            }
+            fail(`Unterminated function ${name}`);
+          }
+"""
+          if helper_marker not in text:
+              raise SystemExit('Open-issues helper insertion marker not found.')
+          text = text.replace(helper_marker, helper_addition, 1)
+          old_block = """const allMatching = extractBetween(
+            '    function getAllMatchingVehicleCheckboxes(',
+            '    function getMatchingVehicleCheckboxes(',
+            'shared candidate selector'
+          );"""
+          new_block = "const allMatching = extractFunction('getAllMatchingVehicleCheckboxes');"
+          if old_block not in text:
+              raise SystemExit('Open-issues matcher extraction regression marker not found.')
+          path.write_text(text.replace(old_block, new_block, 1), encoding='utf-8')
           PY
 
       - name: Validate exact clean candidate
