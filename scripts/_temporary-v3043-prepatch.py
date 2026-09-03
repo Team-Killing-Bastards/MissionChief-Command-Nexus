@@ -88,11 +88,17 @@ if old_block not in text:
     raise SystemExit('Open-issues matcher extraction regression marker not found.')
 path.write_text(text.replace(old_block, new_block, 1), encoding='utf-8')
 
-# The trained-coverage contract should verify the complete remaining-candidate pool semantically, not by indentation.
+# The trained-coverage contract should verify semantics rather than formatting in the compacted selector.
 path = Path('scripts/check-trained-coverage-optimizer.mjs')
 text = path.read_text(encoding='utf-8')
-old = "requireText('...remainingCandidates\\n        ];', 'complete ready compatible verification pool');"
-new = "requireText('...remainingCandidates', 'complete ready compatible verification pool');"
-if old not in text:
-    raise SystemExit('Trained-coverage formatting-sensitive marker not found.')
-path.write_text(text.replace(old, new, 1), encoding='utf-8')
+replacements = {
+    "requireText('...remainingCandidates\\n        ];', 'complete ready compatible verification pool');":
+        "requireText('...remainingCandidates', 'complete ready compatible verification pool');",
+    "requireText('satisfied:\\n                trainingSatisfied', 'verified training is the result gate');":
+        "requireText('satisfied:', 'verified training is the result gate');",
+}
+for old, new in replacements.items():
+    if old not in text:
+        raise SystemExit(f'Trained-coverage formatting-sensitive marker not found: {old}')
+    text = text.replace(old, new, 1)
+path.write_text(text, encoding='utf-8')
