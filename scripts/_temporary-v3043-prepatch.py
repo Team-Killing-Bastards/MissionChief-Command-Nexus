@@ -87,3 +87,12 @@ new_block = "const allMatching = extractFunction('getAllMatchingVehicleCheckboxe
 if old_block not in text:
     raise SystemExit('Open-issues matcher extraction regression marker not found.')
 path.write_text(text.replace(old_block, new_block, 1), encoding='utf-8')
+
+# The trained-coverage contract should verify the complete remaining-candidate pool semantically, not by indentation.
+path = Path('scripts/check-trained-coverage-optimizer.mjs')
+text = path.read_text(encoding='utf-8')
+old = "requireText('...remainingCandidates\\n        ];', 'complete ready compatible verification pool');"
+new = "requireText('...remainingCandidates', 'complete ready compatible verification pool');"
+if old not in text:
+    raise SystemExit('Trained-coverage formatting-sensitive marker not found.')
+path.write_text(text.replace(old, new, 1), encoding='utf-8')
