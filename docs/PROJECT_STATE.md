@@ -10,17 +10,17 @@ Last updated: **2026-09-03**
 
 | Item | Current state |
 |---|---|
-| Canonical source status | `candidate` |
+| Canonical source status | `published` |
 | Canonical source version | `3.0.43` |
-| Public production release | `3.0.42` |
-| Production tag | `v3.0.42` |
-| Production commit | `cae34b09c37a941624c18492d95e8519e2cffc4c` |
-| Production asset | `MissionChief-Command-Nexus-3.0.42.user.js` (2,096,471 bytes) |
+| Public production release | `3.0.43` |
+| Production tag | `v3.0.43` |
+| Production commit | `b8e5e46fe4b4acd7c028ee615416a048a853aac6` |
+| Production asset | `MissionChief-Command-Nexus-3.0.43.user.js` (2,080,437 bytes) |
 | Source SHA-256 | `00473770dcad063edd9596fd855bb6bc2bb1dc72ca41ddae4460e459943e261b` |
 | Release status | `published` |
-| Live validation | `failed` |
+| Live validation | `pending` |
 
-Release: [https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v3.0.42](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v3.0.42)
+Release: [https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v3.0.43](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v3.0.43)
 
 ### Component versions
 
@@ -34,7 +34,7 @@ Release: [https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/re
 
 ### Live-validation note
 
-3.0.42 prevented known partial dispatches, but the 3 September exports exposed a diagnostics gap: shortage paths did not retain enough station/candidate rejection evidence.
+Repository, release-asset, deployment and Discord verification passed. Live validation now requires a normal Auto Mode run with resource or trained-personnel shortages, followed by an export proving stationIssueSummary, vehicleIssueSummary and per-mission candidate evidence identify the responsible stations/vehicles/rejection reasons before any selection rules are changed.
 
 ## Authority order
 

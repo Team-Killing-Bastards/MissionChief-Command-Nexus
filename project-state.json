@@ -52,7 +52,7 @@
     ]
   },
   "canonical": {
-    "status": "candidate",
+    "status": "published",
     "version": "3.0.43",
     "sourceBytes": 2080437,
     "sourceSha256": "00473770dcad063edd9596fd855bb6bc2bb1dc72ca41ddae4460e459943e261b",
@@ -65,19 +65,19 @@
     }
   },
   "production": {
-    "version": "3.0.42",
-    "tag": "v3.0.42",
-    "releaseCommit": "cae34b09c37a941624c18492d95e8519e2cffc4c",
-    "releaseUrl": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v3.0.42",
-    "publishedAt": "2026-09-02T18:24:59Z",
+    "version": "3.0.43",
+    "tag": "v3.0.43",
+    "releaseCommit": "b8e5e46fe4b4acd7c028ee615416a048a853aac6",
+    "releaseUrl": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v3.0.43",
+    "publishedAt": "2026-09-03T19:35:44Z",
     "asset": {
-      "name": "MissionChief-Command-Nexus-3.0.42.user.js",
-      "bytes": 2096471,
-      "sha256": "5e4d83e0004e4e07bb88a56c1448dd2c54124cc3a3a0d45ea760b29b423a4eb0"
+      "name": "MissionChief-Command-Nexus-3.0.43.user.js",
+      "bytes": 2080437,
+      "sha256": "00473770dcad063edd9596fd855bb6bc2bb1dc72ca41ddae4460e459943e261b"
     },
     "releaseStatus": "published",
-    "liveValidationStatus": "failed",
-    "liveValidationNote": "3.0.42 prevented known partial dispatches, but the 3 September exports exposed a diagnostics gap: shortage paths did not retain enough station/candidate rejection evidence."
+    "liveValidationStatus": "pending",
+    "liveValidationNote": "Repository, release-asset, deployment and Discord verification passed. Live validation now requires a normal Auto Mode run with resource or trained-personnel shortages, followed by an export proving stationIssueSummary, vehicleIssueSummary and per-mission candidate evidence identify the responsible stations/vehicles/rejection reasons before any selection rules are changed."
   },
   "architecture": {
     "summary": "One lightweight parent controller owns exactly one heavy managed worker realm at a time. Mission Worker A handles mission selection and dispatch; on-demand Transport Worker B handles one exact personal patient or prisoner transport. No dormant mission preload exists.",
