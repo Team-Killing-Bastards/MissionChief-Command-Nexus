@@ -48,6 +48,18 @@ jobs:
           PY
           python3 scripts/_temporary-build-v3043-shortage-diagnostics.py
 
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/check-hazmat-osu-issue-215.mjs')
+          text = path.read_text(encoding='utf-8')
+          old = "'    function getAllMatchingVehicleCheckboxes(originalName, mappedName, includeChecked) {'"
+          new = "'function getAllMatchingVehicleCheckboxes(originalName, mappedName, includeChecked, includeDisabled = false) {'"
+          if old not in text:
+              raise SystemExit('HazMat matcher signature regression marker not found.')
+          text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+
       - name: Validate exact clean candidate
         shell: bash
         run: |
