@@ -39,7 +39,12 @@ jobs:
               raise SystemExit('Unreviewed raw input.disabled matcher patterns remain: ' + ', '.join(leftovers))"""
           if old not in text:
               raise SystemExit('Builder includeDisabled assertion marker not found.')
-          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          text = text.replace(old, new, 1)
+          old_status = "'liveValidationStatus':'partial'"
+          if old_status not in text:
+              raise SystemExit('Builder live validation status marker not found.')
+          text = text.replace(old_status, "'liveValidationStatus':'failed'", 1)
+          path.write_text(text, encoding='utf-8')
           PY
           python3 scripts/_temporary-build-v3043-shortage-diagnostics.py
 
