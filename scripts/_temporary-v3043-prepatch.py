@@ -102,3 +102,26 @@ for old, new in replacements.items():
         raise SystemExit(f'Trained-coverage formatting-sensitive marker not found: {old}')
     text = text.replace(old, new, 1)
 path.write_text(text, encoding='utf-8')
+
+# The fail-closed trained-personnel test must also survive formatting-only compaction.
+path = Path('scripts/check-trained-personnel-fail-closed.mjs')
+text = path.read_text(encoding='utf-8')
+old_helper = """function extractFunction(name) {
+  const signature = `    function ${name}(`;
+  const start = source.indexOf(signature);
+  if (start < 0) fail(`Unable to find ${name}`);"""
+new_helper = """function extractFunction(name) {
+  const indented = source.indexOf(`    function ${name}(`);
+  const compact = source.indexOf(`function ${name}(`);
+  const starts = [indented, compact].filter(index => index >= 0);
+  const start = starts.length ? Math.min(...starts) : -1;
+  if (start < 0) fail(`Unable to find ${name}`);"""
+if old_helper not in text:
+    raise SystemExit('Fail-closed extractor marker not found.')
+text = text.replace(old_helper, new_helper, 1)
+old_contract = "requireText('fallbackVehicles:\\n                0', 'zero fallback vehicle result');"
+new_contract = "requireText('fallbackVehicles:', 'zero fallback vehicle result');"
+if old_contract not in text:
+    raise SystemExit('Fail-closed fallback formatting marker not found.')
+text = text.replace(old_contract, new_contract, 1)
+path.write_text(text, encoding='utf-8')
