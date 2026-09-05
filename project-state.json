@@ -1,7 +1,7 @@
 {
   "$schema": "./docs/project-state.schema.json",
   "schemaVersion": 1,
-  "lastUpdated": "2026-09-03",
+  "lastUpdated": "2026-09-05",
   "project": {
     "name": "MissionChief Command Nexus",
     "repository": "Team-Killing-Bastards/MissionChief-Command-Nexus",
@@ -164,6 +164,13 @@
       "file": "docs/decisions/0006-managed-worker-admission-and-wake-recovery.md",
       "status": "accepted",
       "introducedIn": "3.0.40"
+    },
+    {
+      "id": "ADR-0007",
+      "title": "Independent verified Edge Store delivery",
+      "file": "docs/decisions/0007-edge-store-release.md",
+      "status": "accepted",
+      "introducedIn": "Edge extension 3.0.43.15"
     }
   ],
   "evidence": [
@@ -281,6 +288,7 @@
       "project-state.json",
       "docs/PROJECT_STATE.md",
       "docs/decisions/README.md",
+      "browser-extension/README.md",
       "docs/DEVELOPER_HANDOFF.md",
       "docs/evidence/live-run-v3.0.39-2026-08-30.md",
       "docs/evidence/hot-brakes-airfield-command-v3.0.40-2026-09-01.md",

@@ -1,0 +1,80 @@
+{
+  "manifest_version": 3,
+  "name": "MissionChief Command Nexus",
+  "description": "MissionChief UK mission controls, vehicle selection, transport, naming and personnel tools, with optional gameplay reporting.",
+  "version": "3.0.43.15",
+  "version_name": "3.0.43 / extension 15 (personnel scanner update)",
+  "minimum_chrome_version": "111",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://script.google.com/*",
+    "https://script.googleusercontent.com/*"
+  ],
+  "background": {
+    "service_worker": "analytics-worker.mjs",
+    "type": "module"
+  },
+  "options_page": "analytics.html",
+  "action": {
+    "default_title": "MissionChief Command Nexus",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/nexus-16.png",
+      "32": "icons/nexus-32.png",
+      "48": "icons/nexus-48.png",
+      "128": "icons/nexus-128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-runtime.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "analytics-bridge.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": false,
+      "world": "ISOLATED"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "rules-bridge.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "ISOLATED"
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'"
+  },
+  "icons": {
+    "16": "icons/nexus-16.png",
+    "32": "icons/nexus-32.png",
+    "48": "icons/nexus-48.png",
+    "128": "icons/nexus-128.png"
+  }
+}

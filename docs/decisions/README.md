@@ -22,3 +22,5 @@ Do not rewrite an accepted ADR to pretend a later design was always present. Add
 ## Adding a decision
 
 Use the next four-digit number and include: status, date, context, decision, locked consequences, acceptable exceptions, regression/evidence references and supersession details where relevant. Update `project-state.json`, regenerate `docs/PROJECT_STATE.md`, and run `node scripts/check-project-state.mjs`.
+
+7. [ADR-0007: Independent verified Edge Store delivery](0007-edge-store-release.md)

@@ -1,0 +1,10 @@
+node_modules/
+audit/
+release/
+upstream/
+reference/original-extension/
+extension/nexus-runtime.js
+extension/BUILD-INFO.json
+extension/README.md
+extension/VERIFICATION.md
+extension/verification/
