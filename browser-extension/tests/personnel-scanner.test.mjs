@@ -19,11 +19,15 @@ function fixture(fetchImpl,ios=false){
   vm.runInContext(readerSource,c);return {reader:c.createPersonnelRegisterReader(),state,starts,get max(){return maxActive;}};
 }
 const response=(url,extra={})=>({ok:true,status:200,url:origin+url,text:async()=>'<html></html>',...extra});
-test('register reads share a global launch gap and concurrency limit, including station prefetch',async()=>{
+test('register reads share a global launch gap and concurrency limit, including station prefetch',async t=>{
+  // A virtual clock checks the scheduler independently of Windows timer granularity.
+  t.mock.timers.enable({apis:['Date','setTimeout'],now:100000});
   const h=fixture(async url=>{await delay(45);return response(url);});
-  await Promise.all(Array.from({length:9},(_,i)=>h.reader.read('/buildings/'+i)));
+  const completed=Promise.all(Array.from({length:9},(_,i)=>h.reader.read('/buildings/'+i)));
+  for(let ms=0;ms<1000;ms++) {for(let turn=0;turn<20;turn++)await Promise.resolve();t.mock.timers.tick(1);}
+  await completed;
   assert.equal(h.max,3);assert.equal(h.reader.stats.requests,9);
-  for(let i=1;i<h.starts.length;i++)assert.ok(h.starts[i].at-h.starts[i-1].at>=8);
+  for(let i=1;i<h.starts.length;i++)assert.ok(h.starts[i].at-h.starts[i-1].at>=10);
   assert.ok(h.starts.every(s=>s.options.method==='GET'&&s.options.cache==='no-store'));
 });
 test('iOS keeps its two-request cap',async()=>{
