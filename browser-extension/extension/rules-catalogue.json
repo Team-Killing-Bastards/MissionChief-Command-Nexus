@@ -1,0 +1,1598 @@
+{
+  "schema": 1,
+  "vehicles": [
+    {
+      "id": "66",
+      "name": "4x4 Vehicle",
+      "service": "Coastguard & lifeboats"
+    },
+    {
+      "id": "9",
+      "name": "Air Ambulance",
+      "service": "Ambulance"
+    },
+    {
+      "id": "77",
+      "name": "Airfield Command",
+      "service": "Fire"
+    },
+    {
+      "id": "80",
+      "name": "Airfield Operations Supervisor",
+      "service": "Fire"
+    },
+    {
+      "id": "79",
+      "name": "Airfield Operations Vehicle",
+      "service": "Fire"
+    },
+    {
+      "id": "69",
+      "name": "ALB",
+      "service": "Coastguard & lifeboats"
+    },
+    {
+      "id": "5",
+      "name": "Ambulance",
+      "service": "Ambulance"
+    },
+    {
+      "id": "31",
+      "name": "Ambulance Control Unit",
+      "service": "Ambulance"
+    },
+    {
+      "id": "34",
+      "name": "Ambulance Officer",
+      "service": "Ambulance"
+    },
+    {
+      "id": "13",
+      "name": "Armed Response Vehicle",
+      "service": "Police"
+    },
+    {
+      "id": "25",
+      "name": "Armed Traffic Car",
+      "service": "Police"
+    },
+    {
+      "id": "30",
+      "name": "ATV",
+      "service": "Ambulance"
+    },
+    {
+      "id": "35",
+      "name": "BFU",
+      "service": "Fire"
+    },
+    {
+      "id": "74",
+      "name": "Boat Trailer",
+      "service": "Fire"
+    },
+    {
+      "id": "32",
+      "name": "CBRN Vehicle",
+      "service": "Ambulance"
+    },
+    {
+      "id": "116",
+      "name": "Cell Van",
+      "service": "Police"
+    },
+    {
+      "id": "18",
+      "name": "Co-Responder Vehicle",
+      "service": "Fire"
+    },
+    {
+      "id": "60",
+      "name": "Coastguard Commander",
+      "service": "Coastguard & lifeboats"
+    },
+    {
+      "id": "64",
+      "name": "Coastguard Rescue Helicopter",
+      "service": "Coastguard & lifeboats"
+    },
+    {
+      "id": "65",
+      "name": "Coastguard Rescue Helicopter Large",
+      "service": "Coastguard & lifeboats"
+    },
+    {
+      "id": "57",
+      "name": "Coastguard Rescue Vehicle",
+      "service": "Coastguard & lifeboats"
+    },
+    {
+      "id": "59",
+      "name": "Coastguard Rope Rescue Unit",
+      "service": "Coastguard & lifeboats"
+    },
+    {
+      "id": "17",
+      "name": "Combined Aerial Rescue Pump",
+      "service": "Fire"
+    },
+    {
+      "id": "95",
+      "name": "Community Midwife",
+      "service": "Ambulance"
+    },
+    {
+      "id": "100",
+      "name": "Control Van (Mountain Rescue)",
+      "service": "Search & rescue"
+    },
+    {
+      "id": "85",
+      "name": "Control Van SAR",
+      "service": "Search & rescue"
+    },
+    {
+      "id": "98",
+      "name": "Critical Care Transfer Ambulance",
+      "service": "Ambulance"
+    },
+    {
+      "id": "54",
+      "name": "Detention Van",
+      "service": "Police"
+    },
+    {
+      "id": "90",
+      "name": "Drone Vehicle (Fire Station)",
+      "service": "Fire"
+    },
+    {
+      "id": "89",
+      "name": "Drone Vehicle SAR HQ",
+      "service": "Search & rescue"
+    },
+    {
+      "id": "12",
+      "name": "DSU",
+      "service": "Police"
+    },
+    {
+      "id": "108",
+      "name": "EIU",
+      "service": "Police"
+    },
+    {
+      "id": "109",
+      "name": "EOD Commander",
+      "service": "Police"
+    },
+    {
+      "id": "112",
+      "name": "EOD Heavy Equipment Vehicle",
+      "service": "Police"
+    },
+    {
+      "id": "111",
+      "name": "EOD Medium Equipment Van",
+      "service": "Police"
+    },
+    {
+      "id": "110",
+      "name": "EOD Response Vehicle",
+      "service": "Police"
+    },
+    {
+      "id": "36",
+      "name": "F/WrC",
+      "service": "Fire"
+    },
+    {
+      "id": "0",
+      "name": "Fire Engine",
+      "service": "Fire"
+    },
+    {
+      "id": "3",
+      "name": "Fire Officer",
+      "service": "Fire"
+    },
+    {
+      "id": "52",
+      "name": "Firearms Personnel Carrier",
+      "service": "Police"
+    },
+    {
+      "id": "62",
+      "name": "Flood Rescue Unit",
+      "service": "Coastguard & lifeboats"
+    },
+    {
+      "id": "61",
+      "name": "Flood Rescue Unit Trailer",
+      "service": "Coastguard & lifeboats"
+    },
+    {
+      "id": "7",
+      "name": "HazMat Unit",
+      "service": "Fire"
+    },
+    {
+      "id": "26",
+      "name": "Heavy 4x4 Tanker",
+      "service": "Fire"
+    },
+    {
+      "id": "106",
+      "name": "HGV Recovery Vehicle",
+      "service": "Recovery"
+    },
+    {
+      "id": "71",
+      "name": "Hovercraft Trailer",
+      "service": "Coastguard & lifeboats"
+    },
+    {
+      "id": "72",
+      "name": "Hovercraft Transporter",
+      "service": "Coastguard & lifeboats"
+    },
+    {
+      "id": "50",
+      "name": "HVP",
+      "service": "Fire"
+    },
+    {
+      "id": "68",
+      "name": "ILB",
+      "service": "Coastguard & lifeboats"
+    },
+    {
+      "id": "15",
+      "name": "Incident Command and Control Unit",
+      "service": "Fire"
+    },
+    {
+      "id": "67",
+      "name": "Inland Rescue Boat (Trailer)",
+      "service": "Coastguard & lifeboats"
+    },
+    {
+      "id": "19",
+      "name": "Joint Response Unit",
+      "service": "Ambulance"
+    },
+    {
+      "id": "73",
+      "name": "Light 4x4",
+      "service": "Fire"
+    },
+    {
+      "id": "75",
+      "name": "Major Foam Tender",
+      "service": "Fire"
+    },
+    {
+      "id": "114",
+      "name": "Marine EOD Equipment Van",
+      "service": "Police"
+    },
+    {
+      "id": "113",
+      "name": "Marine EOD Response Vehicle",
+      "service": "Police"
+    },
+    {
+      "id": "33",
+      "name": "Mass Casualty Equipment",
+      "service": "Ambulance"
+    },
+    {
+      "id": "81",
+      "name": "Medical Equipment Trailer",
+      "service": "Ambulance"
+    },
+    {
+      "id": "99",
+      "name": "Mountain Rescue 4x4",
+      "service": "Search & rescue"
+    },
+    {
+      "id": "55",
+      "name": "Mounted Unit",
+      "service": "Police"
+    },
+    {
+      "id": "56",
+      "name": "MRAV",
+      "service": "Police"
+    },
+    {
+      "id": "58",
+      "name": "Mud Rescue Unit",
+      "service": "Coastguard & lifeboats"
+    },
+    {
+      "id": "87",
+      "name": "Operational Support Trailer",
+      "service": "Search & rescue"
+    },
+    {
+      "id": "39",
+      "name": "Operational Support Unit",
+      "service": "Fire"
+    },
+    {
+      "id": "86",
+      "name": "Operational Support Van",
+      "service": "Search & rescue"
+    },
+    {
+      "id": "20",
+      "name": "OTL",
+      "service": "Ambulance"
+    },
+    {
+      "id": "97",
+      "name": "Patient Transport Service Ambulance",
+      "service": "Ambulance"
+    },
+    {
+      "id": "92",
+      "name": "Personal SAR Vehicle",
+      "service": "Search & rescue"
+    },
+    {
+      "id": "40",
+      "name": "PM",
+      "service": "Fire"
+    },
+    {
+      "id": "8",
+      "name": "Police Car",
+      "service": "Police"
+    },
+    {
+      "id": "91",
+      "name": "Police Drone Vehicle",
+      "service": "Police"
+    },
+    {
+      "id": "11",
+      "name": "Police Helicopter",
+      "service": "Police"
+    },
+    {
+      "id": "27",
+      "name": "PRV",
+      "service": "Ambulance"
+    },
+    {
+      "id": "51",
+      "name": "PSU Carrier",
+      "service": "Police"
+    },
+    {
+      "id": "105",
+      "name": "Recovery Vehicle",
+      "service": "Recovery"
+    },
+    {
+      "id": "16",
+      "name": "Rescue Pump",
+      "service": "Fire"
+    },
+    {
+      "id": "78",
+      "name": "Rescue Stairs",
+      "service": "Fire"
+    },
+    {
+      "id": "4",
+      "name": "Rescue Support Unit (RSU)",
+      "service": "Fire"
+    },
+    {
+      "id": "70",
+      "name": "Rescue Watercraft Trailer",
+      "service": "Coastguard & lifeboats"
+    },
+    {
+      "id": "76",
+      "name": "RIV",
+      "service": "Fire"
+    },
+    {
+      "id": "107",
+      "name": "Road Rail Unit",
+      "service": "Fire"
+    },
+    {
+      "id": "38",
+      "name": "RPF",
+      "service": "Fire"
+    },
+    {
+      "id": "10",
+      "name": "RRV",
+      "service": "Ambulance"
+    },
+    {
+      "id": "94",
+      "name": "RRV",
+      "service": "Ambulance"
+    },
+    {
+      "id": "93",
+      "name": "SAR 4x4",
+      "service": "Search & rescue"
+    },
+    {
+      "id": "88",
+      "name": "SAR Flood Rescue Trailer",
+      "service": "Search & rescue"
+    },
+    {
+      "id": "101",
+      "name": "Search Dog Unit",
+      "service": "Search & rescue"
+    },
+    {
+      "id": "102",
+      "name": "Search Dog Unit SAR",
+      "service": "Search & rescue"
+    },
+    {
+      "id": "96",
+      "name": "Specialist Paramedic RRV",
+      "service": "Ambulance"
+    },
+    {
+      "id": "28",
+      "name": "SRV",
+      "service": "Ambulance"
+    },
+    {
+      "id": "63",
+      "name": "Support Unit",
+      "service": "Coastguard & lifeboats"
+    },
+    {
+      "id": "24",
+      "name": "Traffic Car",
+      "service": "Police"
+    },
+    {
+      "id": "6",
+      "name": "Water Carrier",
+      "service": "Fire"
+    },
+    {
+      "id": "29",
+      "name": "Welfare Vehicle",
+      "service": "Ambulance"
+    },
+    {
+      "id": "115",
+      "name": "Welfare Vehicle",
+      "service": "Ambulance"
+    }
+  ],
+  "builtIn": [
+    {
+      "requirement": "Pumps",
+      "vehicleName": "Fire Engine R/PUMP x 1"
+    },
+    {
+      "requirement": "Pump",
+      "vehicleName": "Fire Engine R/PUMP x 1"
+    },
+    {
+      "requirement": "Fire engine",
+      "vehicleName": "Fire Engine R/PUMP x 1"
+    },
+    {
+      "requirement": "Fire engines",
+      "vehicleName": "Fire Engine R/PUMP x 1"
+    },
+    {
+      "requirement": "Fire Engine",
+      "vehicleName": "Fire Engine R/PUMP x 1"
+    },
+    {
+      "requirement": "Fire Engines",
+      "vehicleName": "Fire Engine R/PUMP x 1"
+    },
+    {
+      "requirement": "Aerial Appliance",
+      "vehicleName": "CARP"
+    },
+    {
+      "requirement": "Aerial Appliances",
+      "vehicleName": "CARP"
+    },
+    {
+      "requirement": "Aerial Appliance Truck",
+      "vehicleName": "CARP"
+    },
+    {
+      "requirement": "Aerial Appliance Trucks",
+      "vehicleName": "CARP"
+    },
+    {
+      "requirement": "Fire, rescue or aerial appliance",
+      "vehicleName": "Rescue Pump"
+    },
+    {
+      "requirement": "Road Rail Unit",
+      "vehicleName": "Road Rail Unit"
+    },
+    {
+      "requirement": "Road Rail Units",
+      "vehicleName": "Road Rail Unit"
+    },
+    {
+      "requirement": "Firefighter",
+      "vehicleName": "Rescue Pump"
+    },
+    {
+      "requirement": "Firefighters",
+      "vehicleName": "Rescue Pump"
+    },
+    {
+      "requirement": "Required Firefighter",
+      "vehicleName": "Rescue Pump"
+    },
+    {
+      "requirement": "Required Firefighters",
+      "vehicleName": "Rescue Pump"
+    },
+    {
+      "requirement": "Car Recovery",
+      "vehicleName": "Flatbed Recovery Vehicle"
+    },
+    {
+      "requirement": "Required Car Recovery",
+      "vehicleName": "Flatbed Recovery Vehicle"
+    },
+    {
+      "requirement": "ICCU or Ambulance Control Unit",
+      "vehicleName": "ICCU/ACU"
+    },
+    {
+      "requirement": "ICCU or Ambulance Control Units",
+      "vehicleName": "ICCU/ACU"
+    },
+    {
+      "requirement": "ICCUs or Ambulance Control Units",
+      "vehicleName": "ICCU/ACU"
+    },
+    {
+      "requirement": "Fire Officer",
+      "vehicleName": "Fire Officer"
+    },
+    {
+      "requirement": "Fire Officers",
+      "vehicleName": "Fire Officer"
+    },
+    {
+      "requirement": "Rescue Support Unit",
+      "vehicleName": "Fire Engine R/PUMP x 1"
+    },
+    {
+      "requirement": "Rescue Support Units",
+      "vehicleName": "Fire Engine R/PUMP x 1"
+    },
+    {
+      "requirement": "Rescue Support Vehicle",
+      "vehicleName": "Fire Engine R/PUMP x 1"
+    },
+    {
+      "requirement": "Rescue Support Vehicles",
+      "vehicleName": "Fire Engine R/PUMP x 1"
+    },
+    {
+      "requirement": "Rescue Support Unit or Rescue Pump",
+      "vehicleName": "Fire Engine R/PUMP x 1"
+    },
+    {
+      "requirement": "Rescue Support Units or Rescue Pumps",
+      "vehicleName": "Fire Engine R/PUMP x 1"
+    },
+    {
+      "requirement": "Fire Engines or Rescue Support Vehicles",
+      "vehicleName": "Fire Engine R/PUMP x 1"
+    },
+    {
+      "requirement": "Fire Engines, Rescue Support Vehicles or Aerial Appliance Trucks",
+      "vehicleName": "Fire Engine R/PUMP x 1"
+    },
+    {
+      "requirement": "Foam Unit",
+      "vehicleName": "RP CAFS"
+    },
+    {
+      "requirement": "Foam Units",
+      "vehicleName": "RP CAFS"
+    },
+    {
+      "requirement": "Water Carrier",
+      "vehicleName": "Water Carrier"
+    },
+    {
+      "requirement": "Water Carriers",
+      "vehicleName": "Water Carrier"
+    },
+    {
+      "requirement": "Welfare Vehicles x1",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Police Car",
+      "vehicleName": "Police Car"
+    },
+    {
+      "requirement": "Police Cars",
+      "vehicleName": "Police Car"
+    },
+    {
+      "requirement": "Police car",
+      "vehicleName": "Police Car"
+    },
+    {
+      "requirement": "Police cars",
+      "vehicleName": "Police Car"
+    },
+    {
+      "requirement": "Police Officer",
+      "vehicleName": "Police Car"
+    },
+    {
+      "requirement": "Police Officers",
+      "vehicleName": "Police Car"
+    },
+    {
+      "requirement": "Traffic Car",
+      "vehicleName": "Police ATC"
+    },
+    {
+      "requirement": "Traffic Cars",
+      "vehicleName": "Police ATC"
+    },
+    {
+      "requirement": "Police Cars or Armed Response Vehicles (ARVs)",
+      "vehicleName": "Police ATC"
+    },
+    {
+      "requirement": "Armed Response Personnel (In Armed Vehicles)",
+      "vehicleName": "Police ATC"
+    },
+    {
+      "requirement": "Dog Support Unit (DSU)",
+      "vehicleName": "Police DSU"
+    },
+    {
+      "requirement": "Dog Support Units (DSU)",
+      "vehicleName": "Police DSU"
+    },
+    {
+      "requirement": "Dog Support Units (DSUs)",
+      "vehicleName": "Police DSU"
+    },
+    {
+      "requirement": "Mounted Unit",
+      "vehicleName": "Mounted Unit"
+    },
+    {
+      "requirement": "Mounted Units",
+      "vehicleName": "Mounted Unit"
+    },
+    {
+      "requirement": "Police Inspector",
+      "vehicleName": "Police Inspector"
+    },
+    {
+      "requirement": "Police Sergeant",
+      "vehicleName": "Police Sergeant"
+    },
+    {
+      "requirement": "Cell Van",
+      "vehicleName": "Cell Van"
+    },
+    {
+      "requirement": "Police Helicopter",
+      "vehicleName": "Police Helicopter"
+    },
+    {
+      "requirement": "Police Helicopters",
+      "vehicleName": "Police Helicopter"
+    },
+    {
+      "requirement": "Police Helicopter or Drone",
+      "vehicleName": "Police Helicopter"
+    },
+    {
+      "requirement": "Police Helicopter or Drones",
+      "vehicleName": "Police Helicopter"
+    },
+    {
+      "requirement": "Police Helicopters or Drone",
+      "vehicleName": "Police Helicopter"
+    },
+    {
+      "requirement": "Police Helicopters or Drones",
+      "vehicleName": "Police Helicopter"
+    },
+    {
+      "requirement": "Required Police Helicopter or Drone",
+      "vehicleName": "Police Helicopter"
+    },
+    {
+      "requirement": "Required Police Helicopter or Drones",
+      "vehicleName": "Police Helicopter"
+    },
+    {
+      "requirement": "Required Police Helicopters or Drone",
+      "vehicleName": "Police Helicopter"
+    },
+    {
+      "requirement": "Required Police Helicopters or Drones",
+      "vehicleName": "Police Helicopter"
+    },
+    {
+      "requirement": "Require Drone",
+      "vehicleName": "Drone"
+    },
+    {
+      "requirement": "Require Drones",
+      "vehicleName": "Drone"
+    },
+    {
+      "requirement": "Required Drone",
+      "vehicleName": "Drone"
+    },
+    {
+      "requirement": "Required Drones",
+      "vehicleName": "Drone"
+    },
+    {
+      "requirement": "Requires Drone",
+      "vehicleName": "Drone"
+    },
+    {
+      "requirement": "Requires Drones",
+      "vehicleName": "Drone"
+    },
+    {
+      "requirement": "Police Drone",
+      "vehicleName": "Police Helicopter"
+    },
+    {
+      "requirement": "Police Drones",
+      "vehicleName": "Police Helicopter"
+    },
+    {
+      "requirement": "Policehelicopter",
+      "vehicleName": "Police Helicopter"
+    },
+    {
+      "requirement": "Policehelicopters",
+      "vehicleName": "Police Helicopter"
+    },
+    {
+      "requirement": "modules.missionHelper.vehicles.captions.railway_police",
+      "vehicleName": "railway police"
+    },
+    {
+      "requirement": "modules.missionHelper.prerequisites.railway_police",
+      "vehicleName": "EIU"
+    },
+    {
+      "requirement": "modules.missionHelper.prerequisites.railway_police_command",
+      "vehicleName": "EIU"
+    },
+    {
+      "requirement": "Ambulance",
+      "vehicleName": "Ambulance"
+    },
+    {
+      "requirement": "Ambulances",
+      "vehicleName": "Ambulance"
+    },
+    {
+      "requirement": "Any vehicle",
+      "vehicleName": "Ambulance"
+    },
+    {
+      "requirement": "Any vehicles",
+      "vehicleName": "Ambulance"
+    },
+    {
+      "requirement": "Required Any vehicle",
+      "vehicleName": "Ambulance"
+    },
+    {
+      "requirement": "Required Any vehicles",
+      "vehicleName": "Ambulance"
+    },
+    {
+      "requirement": "Ambulance Officer",
+      "vehicleName": "Ambulance Officer"
+    },
+    {
+      "requirement": "Ambulance Officers",
+      "vehicleName": "Ambulance Officer"
+    },
+    {
+      "requirement": "Required Ambulance Officer",
+      "vehicleName": "Ambulance Officer"
+    },
+    {
+      "requirement": "Required Ambulance Officers",
+      "vehicleName": "Ambulance Officer"
+    },
+    {
+      "requirement": "Primary Response Vehicle",
+      "vehicleName": "PRV"
+    },
+    {
+      "requirement": "Primary Response Vehicles",
+      "vehicleName": "PRV"
+    },
+    {
+      "requirement": "PRVs",
+      "vehicleName": "PRV"
+    },
+    {
+      "requirement": "Secondary Response Vehicle",
+      "vehicleName": "SRV"
+    },
+    {
+      "requirement": "Secondary Response Vehicles",
+      "vehicleName": "SRV"
+    },
+    {
+      "requirement": "SRVs",
+      "vehicleName": "SRV"
+    },
+    {
+      "requirement": "Operational Team Leader",
+      "vehicleName": "OTL"
+    },
+    {
+      "requirement": "Operational Team Leaders",
+      "vehicleName": "OTL"
+    },
+    {
+      "requirement": "Mass Casualty Equipment",
+      "vehicleName": "Mass Casualty Equipment"
+    },
+    {
+      "requirement": "Mass Casualty Equipment Unit",
+      "vehicleName": "Mass Casualty Equipment"
+    },
+    {
+      "requirement": "Mass Casualty Equipment Units",
+      "vehicleName": "Mass Casualty Equipment"
+    },
+    {
+      "requirement": "Critical Care",
+      "vehicleName": "Critical Care"
+    },
+    {
+      "requirement": "Critical Care Team",
+      "vehicleName": "Critical Care"
+    },
+    {
+      "requirement": "Critical Care Teams",
+      "vehicleName": "Critical Care"
+    },
+    {
+      "requirement": "Required Critical Care",
+      "vehicleName": "Critical Care"
+    },
+    {
+      "requirement": "Required Critical Care Team",
+      "vehicleName": "Critical Care"
+    },
+    {
+      "requirement": "Required Critical Care Teams",
+      "vehicleName": "Critical Care"
+    },
+    {
+      "requirement": "ATV Carrier",
+      "vehicleName": "ATV Carrier"
+    },
+    {
+      "requirement": "ATV Carriers",
+      "vehicleName": "ATV Carrier"
+    },
+    {
+      "requirement": "ATC Carrier",
+      "vehicleName": "ATV Carrier"
+    },
+    {
+      "requirement": "ATC Carriers",
+      "vehicleName": "ATV Carrier"
+    },
+    {
+      "requirement": "RRV",
+      "vehicleName": "RRV"
+    },
+    {
+      "requirement": "RRVs",
+      "vehicleName": "RRV"
+    },
+    {
+      "requirement": "Required RRV",
+      "vehicleName": "RRV"
+    },
+    {
+      "requirement": "Required RRVs",
+      "vehicleName": "RRV"
+    },
+    {
+      "requirement": "Specialist Paramedic RRV",
+      "vehicleName": "RRV"
+    },
+    {
+      "requirement": "Specialist Paramedic RRVs",
+      "vehicleName": "RRV"
+    },
+    {
+      "requirement": "Required Specialist Paramedic RRV",
+      "vehicleName": "RRV"
+    },
+    {
+      "requirement": "Required Specialist Paramedic RRVs",
+      "vehicleName": "RRV"
+    },
+    {
+      "requirement": "RRV or Specialist Paramedic RRV",
+      "vehicleName": "RRV"
+    },
+    {
+      "requirement": "RRVs or Specialist Paramedic RRVs",
+      "vehicleName": "RRV"
+    },
+    {
+      "requirement": "Required RRV or Specialist Paramedic RRV",
+      "vehicleName": "RRV"
+    },
+    {
+      "requirement": "Required RRVs or Specialist Paramedic RRVs",
+      "vehicleName": "RRV"
+    },
+    {
+      "requirement": "Community Midwife",
+      "vehicleName": "Community Midwife"
+    },
+    {
+      "requirement": "Community Midwifes",
+      "vehicleName": "Community Midwife"
+    },
+    {
+      "requirement": "CRV",
+      "vehicleName": "CRV"
+    },
+    {
+      "requirement": "CRVs",
+      "vehicleName": "CRV"
+    },
+    {
+      "requirement": "Inland Rescue Boat (Trailer)",
+      "vehicleName": "Inland Rescue Boat (Trailer)"
+    },
+    {
+      "requirement": "Boat Trailer or Inland Rescue Boat",
+      "vehicleName": "Boat Trailer"
+    },
+    {
+      "requirement": "Seagoing Vessel",
+      "vehicleName": "ALB"
+    },
+    {
+      "requirement": "Seagoing Vessels",
+      "vehicleName": "ALB"
+    },
+    {
+      "requirement": "Coastguard Rescue Helicopter",
+      "vehicleName": "CG Rescue Helicopter"
+    },
+    {
+      "requirement": "Coastguard Rescue Helicopters",
+      "vehicleName": "CG Rescue Helicopter"
+    },
+    {
+      "requirement": "Coastguard Rescue Helicopter (20%)",
+      "vehicleName": "CG Rescue Helicopter"
+    },
+    {
+      "requirement": "ILBs or ALBs",
+      "vehicleName": "ALB"
+    },
+    {
+      "requirement": "ALBs",
+      "vehicleName": "ALB"
+    },
+    {
+      "requirement": "ALB",
+      "vehicleName": "ALB"
+    },
+    {
+      "requirement": "ILBs",
+      "vehicleName": "ILB"
+    },
+    {
+      "requirement": "ILB",
+      "vehicleName": "ILB"
+    },
+    {
+      "requirement": "Control Van",
+      "vehicleName": "Control Van"
+    },
+    {
+      "requirement": "Control Vans",
+      "vehicleName": "Control Van"
+    },
+    {
+      "requirement": "SAR Commander",
+      "vehicleName": "Control Van"
+    },
+    {
+      "requirement": "SAR Commanders",
+      "vehicleName": "Control Van"
+    },
+    {
+      "requirement": "Required SAR Commander",
+      "vehicleName": "Control Van"
+    },
+    {
+      "requirement": "Required SAR Commanders",
+      "vehicleName": "Control Van"
+    },
+    {
+      "requirement": "HEMS",
+      "vehicleName": "Air Ambulance"
+    },
+    {
+      "requirement": "HEMS Helicopter",
+      "vehicleName": "Air Ambulance"
+    },
+    {
+      "requirement": "HEMS Helicopters",
+      "vehicleName": "Air Ambulance"
+    },
+    {
+      "requirement": "Operational Support Van",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "Operational Support Vans",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "Operational Support or SAR Vehicle",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "Operational Support or SAR Vehicles",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "Operational Support or SAR Vehicle x1",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "Operational Support Van or SAR Vehicle",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "Operational Support Vans or SAR Vehicles",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "Operational Support Vehicle or SAR Vehicle",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "Operational Support Vehicles or SAR Vehicles",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "Operational Support or Personal SAR Vehicle",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "Operational Support or Personal SAR Vehicles",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "Required Operational Support or SAR Vehicle",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "Required Operational Support or SAR Vehicles",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "Operational Support Van, Trailer or Personal SAR Vehicle",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "Operational Support Vans, Trailers or Personal SAR Vehicles",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "Operational Support Van Trailer or Personal SAR Vehicle",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "Operational Support Vans Trailers or Personal SAR Vehicles",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "Operational Support Van or Personal SAR Vehicle",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "Operational Support Vans or Personal SAR Vehicles",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "OSV",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "OSVs",
+      "vehicleName": "Operational Support Van"
+    },
+    {
+      "requirement": "Hovercraft (trailer)",
+      "vehicleName": "Hovercraft (trailer)"
+    },
+    {
+      "requirement": "Coastguard Mud Rescue Unit",
+      "vehicleName": "Coastguard Mud Rescue Unit"
+    },
+    {
+      "requirement": "Coastguard Mud Rescue Units",
+      "vehicleName": "Coastguard Mud Rescue Unit"
+    },
+    {
+      "requirement": "Mud Decontamination Unit",
+      "vehicleName": "Mud Decontamination Unit"
+    },
+    {
+      "requirement": "Mud Decontamination Units",
+      "vehicleName": "Mud Decontamination Unit"
+    },
+    {
+      "requirement": "Coastguard Commander",
+      "vehicleName": "CG Commander"
+    },
+    {
+      "requirement": "Flood Rescue Units",
+      "vehicleName": "Flood Rescue"
+    },
+    {
+      "requirement": "Airfield Operations Vehicle",
+      "vehicleName": "Airfield Operations Vehicle"
+    },
+    {
+      "requirement": "Airfield Operations Vehicles",
+      "vehicleName": "Airfield Operations Vehicle"
+    },
+    {
+      "requirement": "Aerial Appliance Truck or Rescue Stairs",
+      "vehicleName": "Rescue Stairs"
+    },
+    {
+      "requirement": "Aerial Appliance Trucks or Rescue Stairs",
+      "vehicleName": "Rescue Stairs"
+    },
+    {
+      "requirement": "Required Aerial Appliance Truck or Rescue Stairs",
+      "vehicleName": "Rescue Stairs"
+    },
+    {
+      "requirement": "Required Aerial Appliance Trucks or Rescue Stairs",
+      "vehicleName": "Rescue Stairs"
+    },
+    {
+      "requirement": "Fire Engines or RIVs",
+      "vehicleName": "RIV"
+    },
+    {
+      "requirement": "RIV",
+      "vehicleName": "RIV"
+    },
+    {
+      "requirement": "RIVs",
+      "vehicleName": "RIV"
+    },
+    {
+      "requirement": "Rapid Intervention Vehicle",
+      "vehicleName": "RIV"
+    },
+    {
+      "requirement": "Rapid Intervention Vehicles",
+      "vehicleName": "RIV"
+    },
+    {
+      "requirement": "Major Foam Tender",
+      "vehicleName": "Major Foam Tender"
+    },
+    {
+      "requirement": "Major Foam Tenders",
+      "vehicleName": "Major Foam Tender"
+    },
+    {
+      "requirement": "RIVs or Major Foam Tenders",
+      "vehicleName": "RIV"
+    },
+    {
+      "requirement": "RIV or Major Foam Tender",
+      "vehicleName": "RIV"
+    },
+    {
+      "requirement": "Required RIV or Major Foam Tender",
+      "vehicleName": "RIV"
+    },
+    {
+      "requirement": "Required RIVs or Major Foam Tenders",
+      "vehicleName": "RIV"
+    },
+    {
+      "requirement": "Fire Engines, RIVs or Major Foam Tenders",
+      "vehicleName": "Major Foam Tender"
+    },
+    {
+      "requirement": "Fire Engines or Major Foam Tenders",
+      "vehicleName": "Major Foam Tender"
+    },
+    {
+      "requirement": "Airfield Operations Supervisor",
+      "vehicleName": "Airfield Operations Supervisor"
+    },
+    {
+      "requirement": "Airfield Operations Supervisors",
+      "vehicleName": "Airfield Operations Supervisor"
+    },
+    {
+      "requirement": "Required Airfield Operations Supervisor",
+      "vehicleName": "Airfield Operations Supervisor"
+    },
+    {
+      "requirement": "Required Airfield Operations Supervisors",
+      "vehicleName": "Airfield Operations Supervisor"
+    },
+    {
+      "requirement": "Airfield Firefighting Command Vehicle",
+      "vehicleName": "Airfield FF Command Vehicle"
+    },
+    {
+      "requirement": "Airfield Firefighting Command Vehicles",
+      "vehicleName": "Airfield FF Command Vehicle"
+    },
+    {
+      "requirement": "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles",
+      "vehicleName": "Airfield FF Command Vehicle"
+    },
+    {
+      "requirement": "Fire Officers or Airfield Firefighting Command Vehicles",
+      "vehicleName": "Fire Officer"
+    },
+    {
+      "requirement": "Flood Rescue Unit",
+      "vehicleName": "Flood Rescue Unit (Trailer)"
+    },
+    {
+      "requirement": "4x4 Vehicle",
+      "vehicleName": "4x4 Units"
+    },
+    {
+      "requirement": "4x4 Vehicles",
+      "vehicleName": "4x4 Units"
+    },
+    {
+      "requirement": "Mountain Rescue 4x4 or SAR 4x4",
+      "vehicleName": "4x4 Units"
+    },
+    {
+      "requirement": "Mountain Rescue 4x4s or SAR 4x4s",
+      "vehicleName": "4x4 Units"
+    },
+    {
+      "requirement": "Rescue Dog",
+      "vehicleName": "Search Dog Unit"
+    },
+    {
+      "requirement": "Rescue Dogs",
+      "vehicleName": "Search Dog Unit"
+    },
+    {
+      "requirement": "Required Rescue Dog",
+      "vehicleName": "Search Dog Unit"
+    },
+    {
+      "requirement": "Required Rescue Dogs",
+      "vehicleName": "Search Dog Unit"
+    },
+    {
+      "requirement": "Search Dog Unit",
+      "vehicleName": "Search Dog Unit"
+    },
+    {
+      "requirement": "Search Dog Units",
+      "vehicleName": "Search Dog Unit"
+    },
+    {
+      "requirement": "Required Search Dog Unit",
+      "vehicleName": "Search Dog Unit"
+    },
+    {
+      "requirement": "Required Search Dog Units",
+      "vehicleName": "Search Dog Unit"
+    },
+    {
+      "requirement": "SARTEC",
+      "vehicleName": "SARTEC"
+    },
+    {
+      "requirement": "modules.missionHelper.prerequisites.tow_trucks_large",
+      "vehicleName": "Flatbed Recovery Vehicle"
+    },
+    {
+      "requirement": "modules.missionHelper.prerequisites.tow_trucks",
+      "vehicleName": "Flatbed Recovery Vehicle"
+    },
+    {
+      "requirement": "1 car to tow",
+      "vehicleName": "Flatbed Recovery Vehicle"
+    },
+    {
+      "requirement": "Cars to tow",
+      "vehicleName": "Flatbed Recovery Vehicle"
+    },
+    {
+      "requirement": "Car to tow",
+      "vehicleName": "Flatbed Recovery Vehicle"
+    },
+    {
+      "requirement": "Maximum amount of cars to tow",
+      "vehicleName": "Flatbed Recovery Vehicle"
+    },
+    {
+      "requirement": "Minimum amount of cars to tow",
+      "vehicleName": "Flatbed Recovery Vehicle"
+    },
+    {
+      "requirement": "Tow Trucks Large",
+      "vehicleName": "Flatbed Recovery Vehicle"
+    },
+    {
+      "requirement": "Flatbed Recovery Vehicle",
+      "vehicleName": "Flatbed Recovery Vehicle"
+    },
+    {
+      "requirement": "Flatbed Recovery Vehicles",
+      "vehicleName": "Flatbed Recovery Vehicle"
+    },
+    {
+      "requirement": "Truck to tow",
+      "vehicleName": "HGV Recovery Vehicle"
+    },
+    {
+      "requirement": "Trucks to tow",
+      "vehicleName": "HGV Recovery Vehicle"
+    },
+    {
+      "requirement": "Maximum amount of trucks to tow",
+      "vehicleName": "HGV Recovery Vehicle"
+    },
+    {
+      "requirement": "Minimum amount of trucks to tow",
+      "vehicleName": "HGV Recovery Vehicle"
+    },
+    {
+      "requirement": "HGV Recovery Vehicle",
+      "vehicleName": "HGV Recovery Vehicle"
+    },
+    {
+      "requirement": "HGV Recovery Vehicles",
+      "vehicleName": "HGV Recovery Vehicle"
+    },
+    {
+      "requirement": "modules.missionHelper.vehicles.captions.bomb_disposal_crew",
+      "vehicleName": "Bomb Disposal crew x1"
+    },
+    {
+      "requirement": "Support Units",
+      "vehicleName": "Support Unit"
+    },
+    {
+      "requirement": "Breathing Apparatus Support Unit",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Breathing Apparatus Support Units",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Breathing Apparatus Support Vehicle",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Breathing Apparatus Support Vehicles",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "BASU",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "BASUs",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Welfare",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Welfare Unit",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Welfare Units",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Welfare Vehicle",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Welfare Vehicles",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "HazMat",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Hazmat",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "HazMat Unit",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "HazMat Units",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Hazmat Unit",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Hazmat Units",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Required HazMat",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Required Hazmat",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Required HazMat Unit",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Required HazMat Units",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Required Hazmat Unit",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Required Hazmat Units",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Required HazMat Unit x1",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Required HazMat Units x1",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Required Hazmat Unit x1",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Required Hazmat Units x1",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "HazMat Unit or CBRN Vehicle",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "HazMat Units or CBRN Vehicles",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Hazmat Unit or CBRN Vehicle",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Hazmat Units or CBRN Vehicles",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "CBRN Vehicle",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "CBRN Vehicles",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Operational Support Unit",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Operational Support Units",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Fire Operational Support Unit",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Fire Operational Support Units",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Breathing Apparatus Support Unit x1",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Breathing Apparatus Support Units x1",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "BASU x1",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "BASUs x1",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Welfare Vehicle x1",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "HazMat Unit or CBRN Vehicle x1",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "HazMat Units or CBRN Vehicles x1",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Operational Support Unit x1",
+      "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Operational Support Units x1",
+      "vehicleName": "OSU"
+    }
+  ]
+}

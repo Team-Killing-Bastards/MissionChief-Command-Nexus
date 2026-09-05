@@ -1,0 +1,13 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nexus — Sharing & Sync</title><link rel="stylesheet" href="popup.css"></head>
+<body style="width:auto;max-width:640px;margin:40px auto;padding:20px">
+<header><img src="icons/nexus-48.png" width="36" height="36" alt=""><h1>Sharing & Sync</h1></header>
+<p>Sharing is optional and starts off on a new installation. If you enable it, Nexus sends mission details, selected units, journeys, transport actions, session activity, recovery events and performance data to the project owner's Google Sheet, labelled with your MissionChief username, player ID and a device ID. No Google login or password is needed. Mission controls work with sharing off, and dispatch continues if Google is unavailable.</p>
+<form id="settings"><p><label><input type="checkbox" id="enabled"> Automatically share mission data</label></p>
+<button type="submit">Save settings</button></form>
+<button id="retry" type="button" disabled>Retry upload now</button><p id="retry-status"></p>
+<p id="sync-status" role="status">Loading…</p><p id="queue"></p>
+<p>Turning sharing off stops new capture and uploads; queued records remain. Local history is limited to 10,000 events / 8 MiB / 7 days. Your device ID identifies this browser installation; it is not a hardware fingerprint.</p>
+<p>Uploads contain up to <strong>500 events</strong>, with a 550,000-character payload limit. Larger records produce smaller batches.</p>
+<p><a href="rules.html" style="color:#9ecbff">Requirement rules</a></p>
+<p><a href="privacy.html" style="color:#9ecbff">What Nexus stores and shares</a></p>
+<script src="analytics-settings.js"></script></body></html>

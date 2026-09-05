@@ -1,0 +1,77 @@
+name: Build and publish Edge extension
+on:
+  push:
+    branches: [main]
+    paths: ['browser-extension/**', '.github/workflows/edge-extension.yml']
+  pull_request:
+    paths: ['browser-extension/**', '.github/workflows/edge-extension.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: edge-extension-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: browser-extension
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v6
+        with:
+          ref: 015044a3627f34769907bc6f77b7d3edeadc71aa
+          path: browser-extension/upstream
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm install --global pnpm@11.19.0 --ignore-scripts
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Configure the production logger destination
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: node scripts/configure-production.mjs
+        env:
+          EDGE_LOGGER_ENDPOINT: ${{ secrets.EDGE_LOGGER_ENDPOINT }}
+      - run: node scripts/verify-all.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-edge-${{ github.sha }}
+          path: |
+            browser-extension/release/*.zip
+            browser-extension/audit/package.json
+            browser-extension/audit/verification-summary.json
+          if-no-files-found: error
+  publish:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: browser-extension
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-edge-${{ github.sha }}
+          path: browser-extension
+      - name: Submit the verified package to Microsoft
+        run: node scripts/publish-edge.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
