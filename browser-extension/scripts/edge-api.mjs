@@ -35,7 +35,10 @@ export function edgeClient({key,clientId,productId,fetchImpl=fetch,sleep=ms=>new
     if(state[kind+'Attempted']) throw Error(`Uncertain ${kind} request: inspect Partner Center before explicitly repairing the receipt. Automatic retry stopped.`);
     state[kind+'Attempted']=true; await checkpoint(state);
     const response=await request(kind==='upload'?`${base}/draft/package`:base,{method:'POST',headers:{'Content-Type':kind==='upload'?'application/zip':'application/json'},body:kind==='upload'?bytes:JSON.stringify({notes})});
-    if(response.status!==202) throw Error(`Edge ${kind} HTTP ${response.status}; inspect Partner Center before retrying`);
+    if(response.status!==202) {
+     const detail=(await response.text()).split(key).join('[redacted]').split(clientId).join('[redacted]').slice(0,2000);
+     throw Error(`Edge ${kind} HTTP ${response.status}: ${detail}; inspect Partner Center before retrying`);
+    }
     state[kind+'Operation']=operation(response.headers.get('location'),kind); await checkpoint(state);
    }
    // Revalidate persisted paths before attaching credentials.
