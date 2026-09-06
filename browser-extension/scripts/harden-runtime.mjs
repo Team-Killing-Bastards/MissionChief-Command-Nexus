@@ -31,6 +31,13 @@ replace("  const alreadyRunning = Boolean(window.__MCN_V3_CONTROLLER__ || window
 // Both the map logger and heavy mission runtime contain this installation body.
 replace("  listen(window,'pagehide',dispose);", "  listen(window,'pagehide',event => { if (!event.persisted) dispose(); });", 2);
 patchPersonnelScanner(replace);
+replace("const dispatchNext = /dispatch\\s*&\\s*next clicked/i.test(text);", `// A revisited mission can retain its dispatch claim after navigation cleared
+// the controller watchdog. Preserve that claim and recover the queue instead
+// of leaving the worker indefinitely waiting behind the duplicate guard.
+if (/^auto mode:\\s*duplicate dispatch blocked for this mission\\./i.test(text)) {
+armPostDispatchWatchdog(record, 'duplicate-dispatch-guard', text, now);
+}
+const dispatchNext = /dispatch\\s*&\\s*next clicked/i.test(text);`);
 runtime = runtime.replaceAll('3.0.43.13',version).replaceAll('3.0.43.14',version);
 fs.writeFileSync('extension/nexus-runtime.js',runtime);
 console.log(`Built ${version} runtime from supplied .13 with guarded hardening and scanner patches.`);

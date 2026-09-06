@@ -19,7 +19,7 @@ const build={extensionVersion:manifest.version,sourceVersion:original.sourceVers
   suppliedLegacySha256:sha(fs.readFileSync('reference/legacy-runtime.txt')),
   curatedBaselineSha256:sha(fs.readFileSync('reference/build-baseline.zip')),
   originalRuntimeSha256:original.runtimeSha256,runtimeSha256:sha(fs.readFileSync('extension/nexus-runtime.js')),
-  status:'Local Edge personnel scanner update. This package is not submitted to the store; no live scanner timing certification.',
+  status:'Build-time verification receipt. Store submission state is recorded separately in the GitHub release; overnight live performance is not certified.',
   personnelScannerChanges:['One shared read scheduler: 3 desktop requests, 250ms minimum start gap; iOS retains 2 requests and 350ms','Prefetch one station with 10-second freshness limit','Cancel all active scanner reads; timeout includes response body','Respect Retry-After on 429/503; preserve exact record reuse rules and assignment-write pacing'],
   changes:['Reject mixed parent/worker extension builds before startup','Preserve logger across BFCache navigation','Fail closed on unavailable sharing settings','Explicit sharing opt-in, preserving saved boolean choices','Cancel pre-send uploads after a sharing-setting change','Cross-context lock for rule migration/editor','Linear priority trimming with UTF-8/UTF-16 storage budget','Persist queue expiry even while sharing is paused','Reject corrupt pending batch identities','Reject credentials in endpoint URLs'],
   files:Object.fromEntries(files.map(file=>[file,sha(fs.readFileSync(path.join('extension',file)))]))
