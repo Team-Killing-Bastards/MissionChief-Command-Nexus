@@ -660,6 +660,14 @@ function nexusRefreshReports(){
     // One maintenance lease serializes raw imports, historical repair and reports.
     // Uploads hold only their short Drive save lock, never a spreadsheet lock.
     const deadline=Date.now()+210000;
+    if(props.getProperty('NEXUS_INCOME_REPAIR_PENDING')==='1'){
+      const book=SpreadsheetApp.openById(NX_SHEET),ledgerEvents=[];
+      nxEach(nxTable(book,'activity'),32,r=>{if(r[9]==='CREDIT_TRANSACTION')ledgerEvents.push({player:String(r[3]),record:nxJsonObject(r[27])});},deadline);
+      nxRefreshIncome(book,ledgerEvents,new Date(),deadline);
+      props.deleteProperty('NEXUS_INCOME_REPAIR_PENDING');
+      props.setProperty('NEXUS_INCOME_REPAIRED_AT',new Date().toISOString());
+      console.log('Income repair completed');return;
+    }
     if(props.getProperty('NEXUS_ASYNC_ENABLED')!==null){
       nexusProcessSavedBatches(Math.min(deadline,Date.now()+90000));
       if(Date.now()>deadline-30000)return;
@@ -778,3 +786,5 @@ function nexusRepairIncomeNow(){
  console.log(JSON.stringify({status:'REPAIRED',incomeRows:book.getSheetByName('Captured Income').getLastRow()-1,timeZone:'Europe/London'}));
  }finally{if(lock.tryLock(1000)){props.deleteProperty('NEXUS_REPORT_LEASE');lock.releaseLock();}}
 }
+
+function nexusQueueIncomeRepair(){PropertiesService.getScriptProperties().setProperty('NEXUS_INCOME_REPAIR_PENDING','1');console.log('Income repair queued for the next free reporting cycle');nexusRefreshReports();}
