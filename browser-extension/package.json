@@ -1,9 +1,11 @@
 {
   "name": "missionchief-nexus-extension-audit",
   "private": true,
-  "version": "3.0.43.15",
+  "version": "3.0.43.16",
   "type": "module",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "test": "node --expose-internals --test tests/*.test.mjs",
     "parity": "node --expose-internals scripts/parity.mjs",
@@ -12,5 +14,8 @@
     "test:edge": "node scripts/edge-smoke.mjs",
     "verify": "node scripts/verify-all.mjs"
   },
-  "devDependencies": { "jszip": "3.10.1", "playwright": "1.62.1" }
+  "devDependencies": {
+    "jszip": "3.10.1",
+    "playwright": "1.62.1"
+  }
 }
