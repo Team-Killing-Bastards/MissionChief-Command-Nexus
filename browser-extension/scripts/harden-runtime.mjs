@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import { patchPersonnelScanner } from './personnel-scanner-patch.mjs';
+import { patchMemoryRecovery } from './memory-recovery-patch.mjs';
 const source = 'reference/original-extension/nexus-runtime.js';
 const version=JSON.parse(fs.readFileSync('extension/manifest.json','utf8')).version;
 let runtime = fs.readFileSync(source,'utf8').replaceAll('\r\n','\n');
@@ -31,6 +32,7 @@ replace("  const alreadyRunning = Boolean(window.__MCN_V3_CONTROLLER__ || window
 // Both the map logger and heavy mission runtime contain this installation body.
 replace("  listen(window,'pagehide',dispose);", "  listen(window,'pagehide',event => { if (!event.persisted) dispose(); });", 2);
 patchPersonnelScanner(replace);
+patchMemoryRecovery(replace);
 replace("const dispatchNext = /dispatch\\s*&\\s*next clicked/i.test(text);", `// A revisited mission can retain its dispatch claim after navigation cleared
 // the controller watchdog. Preserve that claim and recover the queue instead
 // of leaving the worker indefinitely waiting behind the duplicate guard.

@@ -30,6 +30,6 @@ Runtime edits belong in the guarded patches under `scripts`, not generated `exte
 
 Version 3.0.43.15 adds the shared personnel register read scheduler, bounded station prefetch and cancellation/backoff improvements. Quick Refresh still reuses eligible complete records; Full Verify still reads every vehicle's assignment page. Tests do not establish live game scan timings.
 
-Version 3.0.43.16 reconnects the exact duplicate-dispatch status to the existing recovery watchdog after mission re-entry. The dispatch claim stays protected, repeated observations do not reset the deadline, and no new dispatch is counted. This addresses a reproduced overnight stall; it is not a verified memory-retention fix.
+Version 3.0.43.16 reconnects the exact duplicate-dispatch status to the existing recovery watchdog after mission re-entry. The dispatch claim stays protected, repeated observations do not reset the deadline, and no new dispatch is counted. Persistent heap above 1 GiB after a worker recycle can escalate to a controller refresh at a verified mission transition. Refreshes have a ten-minute cooldown, recheck saved resume state and respect a user Stop. This contains high memory; it does not identify retained objects or establish overnight live performance. Publication was authorized on 6 September 2026. The separate Google Sheets income-capture discrepancy is not fixed by this release.
 
 API reference: [Microsoft automated extension updates](https://learn.microsoft.com/en-us/microsoft-edge/extensions/update/api/using-addons-api).
