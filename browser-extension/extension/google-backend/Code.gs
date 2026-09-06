@@ -576,7 +576,7 @@ function nxWriteStructured(body) {
       r.action||r.eventType||e.stage||e.kind,r.phase||e.phase||'',r.outcome||e.outcome||'',r.route||r.missionUrl||'',r.missionId||e.missionId||'',
       r.vehicleId||'',r.patientId||'',r.stationId||'',r.dispatchCentreId||'',r.targetTag||'',r.targetId||'',r.targetLabel||'',r.targetHref||'',r.inputType||'',r.correlationId||'',
       r.durationMs??e.elapsedMs??'',r.attempt??'',r.message||e.reason||'',JSON.stringify(payload),r.clientVersion||'extension-pre-3.0.43.6',2,'operational-metadata',body.id]);
-    scope.sessions.push(e.session);scope.days.push([e.player,iso.slice(0,10)]);scope.weeks.push([e.player,nxWeek(at).key]);scope.players.push(e.player);
+    scope.sessions.push(e.session);scope.days.push([e.player,nxDay(at)]);scope.weeks.push([e.player,nxWeek(at).key]);scope.players.push(e.player);
   }
   nxStore(nxTable(book,'events'),events);
   nxStore(nxTable(book,'units'),units,[0,6]);
@@ -588,7 +588,8 @@ function nxWriteStructured(body) {
   nxStore(nxTable(book,'uploads'),[[body.id,Array.from(new Set(body.events.map(e=>e.player))).join(','),body.events[0].device,now,body.events.length,units.length,body.events.find(e=>e.record?.clientVersion)?.record.clientVersion||'extension',false,'RAW_SAVED','']]);
   nxStore(nxTable(book,'batchLedger'),[[body.id,body.events[0].player,body.events[0].device,now,body.events.length,units.length,'3.0.43.8',nxHash(JSON.stringify(body)), 'RAW_SAVED',new Date(body.createdAt+NX_WEEK)]]);
 }
-function nxDay(value){const t=new Date(value);return Number.isFinite(t.getTime())?t.toISOString().slice(0,10):'';}
+const NX_INCOME_DAY_CACHE={};
+function nxDay(value){if(value===''||value==null)return '';const t=new Date(value),ms=t.getTime();if(!Number.isFinite(ms))return '';const hour=Math.floor(ms/3600000);return NX_INCOME_DAY_CACHE[hour]||(NX_INCOME_DAY_CACHE[hour]=Utilities.formatDate(t,'Europe/London','yyyy-MM-dd'));}
 function nxTime(value){if(value==='' || value==null)return null;const n=new Date(value).getTime();return Number.isFinite(n)?n:null;}
 function nxWeek(value){const d=new Date(value);d.setUTCHours(0,0,0,0);d.setUTCDate(d.getUTCDate()+3-(d.getUTCDay()+6)%7);const year=d.getUTCFullYear();const week=1+Math.round(((d-new Date(Date.UTC(year,0,4)))/86400000-3+(new Date(Date.UTC(year,0,4)).getUTCDay()+6)%7)/7);const mon=new Date(d);mon.setUTCDate(d.getUTCDate()-3);return {key:year+'-W'+String(week).padStart(2,'0'),start:mon,end:new Date(+mon+7*86400000-1)};}
 function nxJsonObject(value){try{return JSON.parse(String(value||'{}'));}catch{return {};}}
@@ -616,9 +617,10 @@ function nxReports(book,scope,deadline){
   nxStore(summary,newRows,[0],true);
   const days=new Set(scope.days.map(x=>x.join('|'))),weeks=new Set(scope.weeks.map(x=>x.join('|')));
   for(const r of [...old,...newRows]){const date=r[8]||r[7]||r[22];if(date)days.add(r[1]+'|'+nxDay(date));}
-  const sessions=new Map(),actions=new Map(),players=new Map(),devices=new Map();const sessionIds=new Set(scope.sessions),playerIds=new Set(scope.players);
+  const ledgerEvents=[];const sessions=new Map(),actions=new Map(),players=new Map(),devices=new Map();const sessionIds=new Set(scope.sessions),playerIds=new Set(scope.players);
   nxEach(nxTable(book,'activity'),32,r=>{
     const p=String(r[3]),at=nxTime(r[1]),day=nxDay(r[1]),payload=nxJsonObject(r[27]);if(at===null)return;
+    if(r[9]==='CREDIT_TRANSACTION')ledgerEvents.push({player:p,record:payload});
     if(playerIds.has(p)){
       const previous=players.get(p);if(!previous||at>previous.at)players.set(p,{at,name:r[4]});
       const key=p+'|'+r[5],d=devices.get(key)||{first:at,last:at,name:r[4],version:r[28],device:r[5],player:p};d.first=Math.min(d.first,at);if(at>=d.last){d.last=at;d.name=r[4];d.version=r[28];}devices.set(key,d);
@@ -641,17 +643,7 @@ function nxReports(book,scope,deadline){
   nxStore(nxTable(book,'actionSummary'),Array.from(actions.values(),a=>{a.row[11]=a.row[10]/a.row[7];a.row[13]=a.sessions.size;return a.row;}),[0,1,3,4,5,6],true);
   nxStore(nxTable(book,'devices'),Array.from(devices.values(),d=>[d.device,d.player,d.name+' / '+String(d.device).slice(0,8),'','ACTIVE',new Date(d.first),new Date(d.last),now,d.version]),[0,1],true);
   nxStore(nxTable(book,'players'),Array.from(players,([p,v])=>[p,v.name,'ACTIVE',new Date(Math.min(...Array.from(devices.values()).filter(d=>d.player===p).map(d=>d.first))),new Date(v.at),Array.from(devices.values()).filter(d=>d.player===p).length,'Automatic username + device; no login']),[0],true);
-  const dashboard=new Map();
-  nxEach(summary,24,r=>{
-    const date=r[8]||r[7]||r[22],day=nxDay(date),key=r[1]+'|'+day;if(!date||!days.has(key))return;
-    const d=dashboard.get(key)||[day,nxWeek(date).key,r[1],0,0,0,0,0,0,0,0,0,0,0,0,0,0,now];
-    if(r[7])d[3]++;if(r[8])d[4]++;if(r[9])d[5]++;d[6]+=Number(r[12])||0;d[7]+=Number(r[13])||0;d[8]+=Number(r[15])||0;d[9]+=Number(r[16])||0;
-    if(r[10]!==''&&r[10]!=null){d[10]+=Number(r[10]);d[11]++;}if(r[11]!==''&&r[11]!=null){d[12]+=Number(r[11]);d[13]++;}if(r[14]==='PENDING_TRANSACTION')d[16]++;dashboard.set(key,d);
-  },deadline);
-  // A mission can change attribution from observed day to dispatch day: explicitly
-  // zero an old affected day with no remaining contribution.
-  for(const key of days)if(!dashboard.has(key)){const [p,day]=key.split('|');dashboard.set(key,[day,nxWeek(day).key,p,0,0,0,0,0,0,0,0,0,0,0,0,0,0,now]);}
-  nxStore(nxTable(book,'dashboard'),Array.from(dashboard.values(),d=>{d[14]=d[11]?d[10]/d[11]:0;d[15]=d[13]?d[12]/d[13]:0;return d;}),[0,2],true);
+  nxRefreshIncome(book,ledgerEvents,now,deadline);
   const journeys=new Map();
   nxEach(nxTable(book,'units'),16,r=>{const week=nxWeek(r[5]);if(!weeks.has(r[2]+'|'+week.key))return;const station=r[10]||r[11]||'unknown',key=r[2]+'|'+week.key+'|'+station;
     const j=journeys.get(key)||[week.key,week.start,week.end,r[2],station,r[10],r[11],0,0,0,0,0,0,0,0,0,now];j[7]++;
@@ -669,6 +661,14 @@ function nexusRefreshReports(){
     // One maintenance lease serializes raw imports, historical repair and reports.
     // Uploads hold only their short Drive save lock, never a spreadsheet lock.
     const deadline=Date.now()+210000;
+    if(props.getProperty('NEXUS_INCOME_REPAIR_PENDING')==='1'){
+      const book=SpreadsheetApp.openById(NX_SHEET),ledgerEvents=[];
+      for(const {row:r} of nxFindRows(nxTable(book,'activity'),10,['CREDIT_TRANSACTION'],32))ledgerEvents.push({player:String(r[3]),record:nxJsonObject(r[27])});
+      nxRefreshIncome(book,ledgerEvents,new Date(),deadline);
+      props.deleteProperty('NEXUS_INCOME_REPAIR_PENDING');
+      props.setProperty('NEXUS_INCOME_REPAIRED_AT',new Date().toISOString());
+      console.log('Income repair completed');return;
+    }
     if(props.getProperty('NEXUS_ASYNC_ENABLED')!==null){
       nexusProcessSavedBatches(Math.min(deadline,Date.now()+90000));
       if(Date.now()>deadline-30000)return;
@@ -719,3 +719,73 @@ function nxArchiveSnapshot(){
     archive.getSheets().reduce((sum,s)=>sum+s.getLastRow()*s.getLastColumn(),0),'Cumulative daily snapshot; raw batches retained separately; no source deletion',count('activity'),count('sessions'),count('actionSummary')]];
   nxStore(nxTable(SpreadsheetApp.openById(NX_SHEET),'archives'),rows,[0,3],true);
 }
+
+// Income is a ledger measure; mission activity uses each event's own London day.
+function nxIncomeRows(summaries, missionEvents, ledgerEvents, unitRows, previousDays, now) {
+  const transactions = new Map(), matched = new Set();
+  const add = (player, r, source) => {
+    if (!r.transactionId || nxTime(r.transactionAt) === null || r.actualCredits == null || r.actualCredits === '' || !Number.isFinite(Number(r.actualCredits)) || Number(r.actualCredits) < 0) return;
+    const key = String(player) + '|' + r.transactionId;
+    const row = [key,String(player),r.transactionId,new Date(r.transactionAt),Number(r.actualCredits),r.missionId||'',source,'TRANSACTION_TIME'];
+    const old = transactions.get(key);
+    if (old && (+old[3] !== +row[3] || old[4] !== row[4])) throw Error('Conflicting credit transaction: ' + key);
+    if (!old || (!old[5] && row[5])) transactions.set(key,row);
+    if (row[5]) matched.add(String(player)+'|'+row[5]);
+  };
+  for (const e of ledgerEvents) add(e.player,e.record,'CREDIT_LEDGER');
+  for (const e of missionEvents) {
+    const r = nxJsonObject(e[21]);
+    if (e[4] === 'mission-credit') add(e[2],{...r,actualCredits:e[16],missionId:e[6]},'MATCHED_MISSION');
+  }
+  // Older native completion payloads have no transaction identity/time. Keep
+  // their captured amount, explicitly attributed to completion, without also
+  // counting it when a genuine ledger transaction is available for the mission.
+  for (const r of summaries) if (!matched.has(String(r[1])+'|'+r[2]) && r[13] !== '' && r[13] != null && nxTime(r[9]) !== null) {
+    const key=String(r[1])+'|native-mission-'+r[2];
+    transactions.set(key,[key,String(r[1]),'native-mission-'+r[2],new Date(r[9]),Number(r[13]),r[2],'NATIVE_COMPLETION','COMPLETION_TIME_FALLBACK']);
+  }
+  const days=new Map();
+  const dayRow=(player,date)=>{
+    const day=nxDay(date);if(!day)return null;
+    const key=String(player)+'|'+day;
+    if(!days.has(key))days.set(key,[day,nxWeek(day).key,String(player),0,0,0,0,0,0,0,0,0,0,0,0,0,0,now]);
+    return days.get(key);
+  };
+  for(const r of previousDays)dayRow(r[2],r[0]);
+  for(const r of summaries){
+    let d=dayRow(r[1],r[7]);if(d){d[3]++;d[6]+=Number(r[12])||0;}
+    d=dayRow(r[1],r[8]);if(d){d[4]++;if(r[10]!==''&&r[10]!=null){d[10]+=Number(r[10]);d[11]++;}}
+    d=dayRow(r[1],r[9]);if(d){d[5]++;if(r[14]==='PENDING_TRANSACTION')d[16]++;if(r[11]!==''&&r[11]!=null){d[12]+=Number(r[11]);d[13]++;}}
+  }
+  const seenDispatch=new Set(),seenUnits=new Set();
+  for(const e of missionEvents)if(e[4]==='dispatch'&&!seenDispatch.has(e[0])){seenDispatch.add(e[0]);const d=dayRow(e[2],e[5]);if(d)d[8]++;}
+  for(const u of unitRows){const k=u[0]+'|'+u[6];if(seenUnits.has(k))continue;seenUnits.add(k);const d=dayRow(u[2],u[5]);if(d)d[9]++;}
+  for(const t of transactions.values()){const d=dayRow(t[1],t[3]);if(d)d[7]+=t[4];}
+  return {transactions:Array.from(transactions.values()),days:Array.from(days.values(),d=>{d[14]=d[11]?d[10]/d[11]:0;d[15]=d[13]?d[12]/d[13]:0;return d;})};
+}
+function nxRefreshIncome(book, ledgerEvents, now, deadline) {
+  const read=(sheet,width)=>{const rows=[];nxEach(sheet,width,r=>rows.push(r),deadline);return rows;};
+  const result=nxIncomeRows(read(nxTable(book,'summaries'),24),read(nxTable(book,'events'),23),ledgerEvents,read(nxTable(book,'units'),16),read(nxTable(book,'dashboard'),18),now);
+  nxStore(nxTable(book,'dashboard'),result.days,[0,2],true);
+  const ledger=nxSheet(book,'Captured Income',['credit_key','player_id','transaction_id','paid_at','credits','mission_id','source','time_basis']);
+  // The derived table is rebuilt to remove native fallbacks superseded by real transactions.
+  const oldLast=ledger.getLastRow();
+  nxSetRows(ledger,2,result.transactions,[0]);
+  if(oldLast>result.transactions.length+1)ledger.getRange(result.transactions.length+2,1,oldLast-result.transactions.length-1,8).clearContent();
+  ledger.getRange(2,4,Math.max(1,result.transactions.length),1).setNumberFormat('dd/MM/yyyy HH:mm:ss');
+  ledger.getRange(2,5,Math.max(1,result.transactions.length),1).setNumberFormat('#,##0');
+}
+
+function nexusRepairIncomeNow(){
+ const lock=LockService.getScriptLock();if(!lock.tryLock(30000))throw Error('Logger busy; retry later');
+ const props=PropertiesService.getScriptProperties();
+ if(Number(props.getProperty('NEXUS_REPORT_LEASE')||0)>Date.now()){lock.releaseLock();throw Error('Reports busy; retry later');}
+ props.setProperty('NEXUS_REPORT_LEASE',String(Date.now()+360000));lock.releaseLock();
+ try{const book=SpreadsheetApp.openById(NX_SHEET),ledgerEvents=[],deadline=Date.now()+210000;
+ for(const {row:r} of nxFindRows(nxTable(book,'activity'),10,['CREDIT_TRANSACTION'],32))ledgerEvents.push({player:String(r[3]),record:nxJsonObject(r[27])});
+ nxRefreshIncome(book,ledgerEvents,new Date(),deadline);
+ console.log(JSON.stringify({status:'REPAIRED',incomeRows:book.getSheetByName('Captured Income').getLastRow()-1,timeZone:'Europe/London'}));
+ }finally{if(lock.tryLock(1000)){props.deleteProperty('NEXUS_REPORT_LEASE');lock.releaseLock();}}
+}
+
+function nexusQueueIncomeRepair(){PropertiesService.getScriptProperties().setProperty('NEXUS_INCOME_REPAIR_PENDING','1');console.log('Income repair queued for the next free reporting cycle');nexusRefreshReports();}

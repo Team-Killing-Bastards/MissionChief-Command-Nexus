@@ -1,0 +1,14 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const context=vm.createContext({Date,Map,Set,Number,String,Array,Error,JSON,Utilities:{formatDate:d=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'}).format(d)}});
+const source=fs.readFileSync('extension/google-backend/Code.gs','utf8');
+vm.runInContext(source,context);
+const run=(s=[],e=[],l=[],u=[],old=[])=>context.nxIncomeRows(s,e,l,u,old,new Date());
+const summary=()=>{const r=Array(24).fill('');r[1]='1';r[2]='42';r[7]='2026-09-05T21:00:00Z';r[8]='2026-09-05T22:00:00Z';r[9]='2026-09-05T23:30:00Z';r[13]=100;r[14]='CAPTURED';return r;};
+test('London midnight and missing dates',()=>{assert.equal(context.nxDay('2026-09-05T23:30:00Z'),'2026-09-06');assert.equal(context.nxDay(null),'');assert.equal(context.nxDay(''),'');assert.equal(context.nxDay('2026-12-01T23:30:00Z'),'2026-12-01');});
+test('completion income is separate from first observation and dispatch days',()=>{const r=run([summary()]);const today=r.days.find(d=>d[0]==='2026-09-06');assert.equal(today[3],0);assert.equal(today[5],1);assert.equal(today[7],100);assert.equal(r.transactions[0][7],'COMPLETION_TIME_FALLBACK');});
+test('ledger captures unmatched income and deduplicates device repeats without native double counting',()=>{const tx={player:'1',record:{transactionId:'tx1',transactionAt:'2026-09-06T09:00:00Z',actualCredits:100,missionId:'42'}};const other={player:'1',record:{transactionId:'tx2',transactionAt:'2026-09-06T09:01:00Z',actualCredits:200}};const r=run([summary()],[],[tx,tx,other]);assert.equal(r.transactions.length,2);assert.equal(r.days.find(d=>d[0]==='2026-09-06')[7],300);});
+test('different accounts retain identical transaction IDs; conflicts fail instead of changing totals',()=>{const tx={player:'1',record:{transactionId:'x',transactionAt:'2026-09-06T09:00:00Z',actualCredits:50}};assert.equal(run([],[],[tx,{...tx,player:'2'}]).transactions.length,2);assert.throws(()=>run([],[],[tx,{...tx,record:{...tx.record,actualCredits:60}}]),/Conflicting/);});
+test('pending payouts stay unknown and old wrong-day totals become zero',()=>{const s=summary();s[13]='';s[14]='PENDING_TRANSACTION';const r=run([s],[],[],[],[['2026-09-04','','1']]);assert.equal(r.transactions.length,0);assert.equal(r.days.find(d=>d[0]==='2026-09-06')[16],1);assert.equal(r.days.find(d=>d[0]==='2026-09-04')[7],0);});
