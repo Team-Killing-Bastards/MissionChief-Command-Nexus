@@ -588,7 +588,8 @@ function nxWriteStructured(body) {
   nxStore(nxTable(book,'uploads'),[[body.id,Array.from(new Set(body.events.map(e=>e.player))).join(','),body.events[0].device,now,body.events.length,units.length,body.events.find(e=>e.record?.clientVersion)?.record.clientVersion||'extension',false,'RAW_SAVED','']]);
   nxStore(nxTable(book,'batchLedger'),[[body.id,body.events[0].player,body.events[0].device,now,body.events.length,units.length,'3.0.43.8',nxHash(JSON.stringify(body)), 'RAW_SAVED',new Date(body.createdAt+NX_WEEK)]]);
 }
-function nxDay(value){if(value===''||value==null)return '';const t=new Date(value);return Number.isFinite(t.getTime())?Utilities.formatDate(t,'Europe/London','yyyy-MM-dd'):'';}
+const NX_INCOME_DAY_CACHE={};
+function nxDay(value){if(value===''||value==null)return '';const t=new Date(value),ms=t.getTime();if(!Number.isFinite(ms))return '';const hour=Math.floor(ms/3600000);return NX_INCOME_DAY_CACHE[hour]||(NX_INCOME_DAY_CACHE[hour]=Utilities.formatDate(t,'Europe/London','yyyy-MM-dd'));}
 function nxTime(value){if(value==='' || value==null)return null;const n=new Date(value).getTime();return Number.isFinite(n)?n:null;}
 function nxWeek(value){const d=new Date(value);d.setUTCHours(0,0,0,0);d.setUTCDate(d.getUTCDate()+3-(d.getUTCDay()+6)%7);const year=d.getUTCFullYear();const week=1+Math.round(((d-new Date(Date.UTC(year,0,4)))/86400000-3+(new Date(Date.UTC(year,0,4)).getUTCDay()+6)%7)/7);const mon=new Date(d);mon.setUTCDate(d.getUTCDate()-3);return {key:year+'-W'+String(week).padStart(2,'0'),start:mon,end:new Date(+mon+7*86400000-1)};}
 function nxJsonObject(value){try{return JSON.parse(String(value||'{}'));}catch{return {};}}
@@ -662,7 +663,7 @@ function nexusRefreshReports(){
     const deadline=Date.now()+210000;
     if(props.getProperty('NEXUS_INCOME_REPAIR_PENDING')==='1'){
       const book=SpreadsheetApp.openById(NX_SHEET),ledgerEvents=[];
-      nxEach(nxTable(book,'activity'),32,r=>{if(r[9]==='CREDIT_TRANSACTION')ledgerEvents.push({player:String(r[3]),record:nxJsonObject(r[27])});},deadline);
+      for(const {row:r} of nxFindRows(nxTable(book,'activity'),10,['CREDIT_TRANSACTION'],32))ledgerEvents.push({player:String(r[3]),record:nxJsonObject(r[27])});
       nxRefreshIncome(book,ledgerEvents,new Date(),deadline);
       props.deleteProperty('NEXUS_INCOME_REPAIR_PENDING');
       props.setProperty('NEXUS_INCOME_REPAIRED_AT',new Date().toISOString());
@@ -781,7 +782,7 @@ function nexusRepairIncomeNow(){
  if(Number(props.getProperty('NEXUS_REPORT_LEASE')||0)>Date.now()){lock.releaseLock();throw Error('Reports busy; retry later');}
  props.setProperty('NEXUS_REPORT_LEASE',String(Date.now()+360000));lock.releaseLock();
  try{const book=SpreadsheetApp.openById(NX_SHEET),ledgerEvents=[],deadline=Date.now()+210000;
- nxEach(nxTable(book,'activity'),32,r=>{if(r[9]==='CREDIT_TRANSACTION')ledgerEvents.push({player:String(r[3]),record:nxJsonObject(r[27])});},deadline);
+ for(const {row:r} of nxFindRows(nxTable(book,'activity'),10,['CREDIT_TRANSACTION'],32))ledgerEvents.push({player:String(r[3]),record:nxJsonObject(r[27])});
  nxRefreshIncome(book,ledgerEvents,new Date(),deadline);
  console.log(JSON.stringify({status:'REPAIRED',incomeRows:book.getSheetByName('Captured Income').getLastRow()-1,timeZone:'Europe/London'}));
  }finally{if(lock.tryLock(1000)){props.deleteProperty('NEXUS_REPORT_LEASE');lock.releaseLock();}}
