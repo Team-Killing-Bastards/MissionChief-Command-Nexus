@@ -1,4 +1,4 @@
-name: Build and publish Edge extension
+name: Build and publish Edge and Chrome extensions
 on:
   push:
     branches: [main]
@@ -75,3 +75,30 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
           EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+  publish-chrome:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.CHROME_PUBLISH_ENABLED == 'true'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: browser-extension
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-edge-${{ github.sha }}
+          path: browser-extension
+      - name: Submit the verified package to Google
+        run: node scripts/publish-chrome.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CHROME_SERVICE_ACCOUNT_JSON: ${{ secrets.CHROME_SERVICE_ACCOUNT_JSON }}
