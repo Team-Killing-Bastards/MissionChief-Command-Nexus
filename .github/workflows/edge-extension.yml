@@ -1,4 +1,4 @@
-name: Build and publish Edge extension
+name: Build and publish Edge and Chrome extensions
 on:
   push:
     branches: [main]
@@ -75,3 +75,47 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
           EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+  publish-chrome:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      id-token: write
+    defaults:
+      run:
+        working-directory: browser-extension
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-edge-${{ github.sha }}
+          path: browser-extension
+      - name: Authenticate to Google with short-lived GitHub identity
+        id: chrome-auth
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: trans-falcon-507919-f8
+          workload_identity_provider: projects/809679386301/locations/global/workloadIdentityPools/nexus-github/providers/github-main
+          service_account: nexus-chrome-publisher@trans-falcon-507919-f8.iam.gserviceaccount.com
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+          create_credentials_file: false
+          export_environment_variables: false
+      - name: Verify Chrome publishing access
+        run: node scripts/publish-chrome.mjs --check
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CHROME_ACCESS_TOKEN: ${{ steps.chrome-auth.outputs.access_token }}
+      - name: Submit the verified package to Google
+        run: node scripts/publish-chrome.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CHROME_ACCESS_TOKEN: ${{ steps.chrome-auth.outputs.access_token }}
