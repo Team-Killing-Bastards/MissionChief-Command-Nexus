@@ -59,7 +59,9 @@ test('lost response and worker restart retry the exact durable batch',async()=>{
   await first.send({type:'NEXUS_ANALYTICS_CAPTURE',events:[raw()]});await settle();
   assert.equal(data[KEY].events.length,1);assert.equal(data[KEY].failures,1);
   const second=worker(data);await second.send({type:'NEXUS_ANALYTICS_RETRY'},settingsPage);await settle();
-  assert.deepEqual(second.requests[0],first.requests[0]);assert.equal(data[KEY].events.length,0);
+  const core=({schema,id,createdAt,events})=>({schema,id,createdAt,events});
+  assert.deepEqual(core(second.requests[0]),core(first.requests[0]));assert.equal(data[KEY].events.length,0);
+  for(const e of first.requests[0].events)assert.ok(second.requests[0].telemetry[e.id].uploadedAt>=first.requests[0].telemetry[e.id].uploadedAt);
 });
 test('pause during an asynchronous permission check prevents the pending upload',async()=>{
   let resume,started;const waiting=new Promise(resolve=>started=resolve);

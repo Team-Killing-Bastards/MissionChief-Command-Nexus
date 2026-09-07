@@ -7,6 +7,36 @@ const NX_WEEK = 7 * 86400000;
 function nxJson(value) { return ContentService.createTextOutput(JSON.stringify(value)).setMimeType(ContentService.MimeType.JSON); }
 function nxHash(text) { return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, text).map(b => ('0' + ((b + 256) % 256).toString(16)).slice(-2)).join(''); }
 function nxFolder(parent, name) { const files = parent.getFoldersByName(name); return files.hasNext() ? files.next() : parent.createFolder(name); }
+// Capture time is immutable. Receipt time belongs to the server and is excluded
+// from retry identity. Optional envelope fields do not change the v1 event schema.
+function nxCaptureEnvelope(body) {
+  const result={schema:1,id:body.id,createdAt:body.createdAt,events:body.events};
+  if(body.telemetry) {
+    result.telemetry={};
+    for(const event of body.events) {
+      const m=body.telemetry[event.id];
+      if(!m || typeof m.isReplay!=='boolean' || !Number.isFinite(m.queuedAt) || !Number.isFinite(m.uploadedAt) ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(m.activityDate))throw Error('Invalid telemetry envelope');
+      result.telemetry[event.id]={isReplay:m.isReplay,queuedAt:m.queuedAt,uploadedAt:m.uploadedAt,activityDate:m.activityDate};
+    }
+  }
+  if(body.loggerHealth) {
+    const h=body.loggerHealth;
+    for(const k of ['newestEventAt','oldestQueuedEventAt','freshEventCount','backlogEventCount','queueDepth'])
+      if(!Number.isFinite(h[k]) || h[k]<0)throw Error('Invalid logger health');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(h.activityDate))throw Error('Invalid activity date');
+    result.loggerHealth={newestEventAt:h.newestEventAt,oldestQueuedEventAt:h.oldestQueuedEventAt,
+      freshEventCount:h.freshEventCount,backlogEventCount:h.backlogEventCount,queueDepth:h.queueDepth,activityDate:h.activityDate};
+  }
+  return result;
+}
+function nxCaptureMatches(saved, incoming) {
+  const a=nxCaptureEnvelope(saved),b=nxCaptureEnvelope(incoming);
+  // Delivery classification and upload time legitimately change on a retry.
+  // Compare all captured fields strictly, never receipt/transport metadata.
+  delete a.telemetry;delete b.telemetry;delete a.loggerHealth;delete b.loggerHealth;
+  return nxSameRecord(a,b);
+}
 // JSON object member order is not schema. Extension storage may reconstruct
 // dictionaries in a different order. Keep values, keys and array order strict.
 function nxSameRecord(a, b) {
@@ -80,14 +110,16 @@ function doPost(request) {
       !Array.isArray(body.events)||!body.events.length||body.events.length>500||!body.events.every(nxValidEvent)||
       new Set(body.events.map(e=>e.id)).size!==body.events.length)return nxJson({ok:false,error:'SCHEMA'});
     lock=LockService.getScriptLock();if(!lock.tryLock(1000))return nxJson({ok:false,error:'BUSY'});
-    const root=DriveApp.getFolderById(NX_FOLDER),payload={schema:1,id:body.id,createdAt:body.createdAt,events:body.events};
+    const root=DriveApp.getFolderById(NX_FOLDER),payload=nxCaptureEnvelope(body);
     const day=Utilities.formatDate(new Date(body.createdAt),'UTC','yyyy-MM-dd');
     const folder=nxFolder(nxFolder(root,'Extension Batches'),day),name=body.id+'.json';
     const matches=folder.getFilesByName(name);
-    const file=matches.hasNext()?matches.next():folder.createFile(name,JSON.stringify(payload),MimeType.PLAIN_TEXT);
+    const file=matches.hasNext()?matches.next():folder.createFile(name,JSON.stringify({...payload,received_at:new Date().toISOString()}),MimeType.PLAIN_TEXT);
     // Semantic equality tolerates dictionary ordering, never different values.
-    if(!nxSameRecord(JSON.parse(file.getBlob().getDataAsString()),payload))return nxJson({ok:false,error:'CONFLICT'});
-    const pending=nxFolder(root,'Extension Pending Imports'),done=nxFolder(root,'Extension Imported Batches');
+    const stored=JSON.parse(file.getBlob().getDataAsString());
+    if(!nxCaptureMatches(stored,payload))return nxJson({ok:false,error:'CONFLICT'});
+    const live=stored.telemetry && Object.values(stored.telemetry).some(m=>m.isReplay===false);
+    const pending=nxFolder(root,live?'Extension Pending Live Imports':'Extension Pending Imports'),done=nxFolder(root,'Extension Imported Batches');
     const marker={schema:1,id:body.id,fileId:file.getId(),createdAt:body.createdAt};
     const finished=done.getFilesByName(name),waiting=pending.getFilesByName(name);
     const receipt=finished.hasNext()?finished.next():waiting.hasNext()?waiting.next():pending.createFile(name,JSON.stringify(marker),MimeType.PLAIN_TEXT);
@@ -102,13 +134,17 @@ function doPost(request) {
 // Called only while nexusRefreshReports owns the maintenance lease. No age
 // check here: accepted raw data must still import after an extended outage.
 function nexusProcessSavedBatches(deadline){
+  const live=nexusProcessSavedQueue(deadline,'Extension Pending Live Imports','NEXUS_LIVE_IMPORT_CURSOR',4);
+  return live+nexusProcessSavedQueue(deadline,'Extension Pending Imports','NEXUS_IMPORT_CURSOR',8);
+}
+function nexusProcessSavedQueue(deadline,folderName,cursorKey,limit){
   const props=PropertiesService.getScriptProperties(),root=DriveApp.getFolderById(NX_FOLDER);
-  const pending=nxFolder(root,'Extension Pending Imports'),done=nxFolder(root,'Extension Imported Batches');
+  const pending=nxFolder(root,folderName),done=nxFolder(root,'Extension Imported Batches');
   let files;
-  try{const token=props.getProperty('NEXUS_IMPORT_CURSOR');files=token?DriveApp.continueFileIterator(token):pending.getFiles();}
-  catch(_error){props.deleteProperty('NEXUS_IMPORT_CURSOR');files=pending.getFiles();}
+  try{const token=props.getProperty(cursorKey);files=token?DriveApp.continueFileIterator(token):pending.getFiles();}
+  catch(_error){props.deleteProperty(cursorKey);files=pending.getFiles();}
   let count=0,failed=false;
-  while(count<8&&Date.now()<deadline-30000&&files.hasNext()){
+  while(count<limit&&Date.now()<deadline-30000&&files.hasNext()){
     const markerFile=files.next();count++;
     try{
       const marker=JSON.parse(markerFile.getBlob().getDataAsString());
@@ -121,10 +157,10 @@ function nexusProcessSavedBatches(deadline){
     }catch(_error){failed=true;props.setProperty('NEXUS_IMPORT_ERROR','An import failed; raw data and its queue entry are retained for retry.');}
     // Failed jobs remain in Pending and are retried on the next full traversal;
     // one bad batch cannot starve all later jobs.
-    props.setProperty('NEXUS_IMPORT_CURSOR',files.getContinuationToken());
+    props.setProperty(cursorKey,files.getContinuationToken());
   }
-  if(!files.hasNext())props.deleteProperty('NEXUS_IMPORT_CURSOR');
-  if(!failed&&!pending.getFiles().hasNext())props.deleteProperty('NEXUS_IMPORT_ERROR');
+  if(!files.hasNext())props.deleteProperty(cursorKey);
+  if(!failed && !nxFolder(root,'Extension Pending Imports').getFiles().hasNext() && !nxFolder(root,'Extension Pending Live Imports').getFiles().hasNext())props.deleteProperty('NEXUS_IMPORT_ERROR');
   return count;
 }
 
@@ -155,10 +191,10 @@ function nxLegacyPost(request) {
     const folder = nxFolder(batches, date);
     const name = body.id + '.json';
     // Stable batch ID and creation day make retries deterministic after timeouts/restarts.
-    const payload = JSON.stringify({ schema: 1, id: body.id, createdAt: body.createdAt, events: body.events });
+    const payload = JSON.stringify(nxCaptureEnvelope(body));
     const matching = folder.getFilesByName(name);
     if (matching.hasNext()) {
-      if (nxHash(matching.next().getBlob().getDataAsString()) !== nxHash(payload)) return nxJson({ ok: false, error: 'CONFLICT' });
+      if (!nxCaptureMatches(JSON.parse(matching.next().getBlob().getDataAsString()),JSON.parse(payload))) return nxJson({ ok: false, error: 'CONFLICT' });
     } else {
       const file = folder.createFile(name, payload, MimeType.PLAIN_TEXT);
       if (nxHash(file.getBlob().getDataAsString()) !== nxHash(payload)) return nxJson({ ok: false, error: 'VERIFY' });
@@ -556,11 +592,17 @@ function nxStore(sheet,rows,cols=[0],replace=false) {
     if(JSON.stringify(saved.map(r=>nxKey(r,cols)))!==JSON.stringify(fresh.map(r=>nxKey(r,cols))))throw Error('Row verification: '+sheet.getName());}
 }
 function nxWriteStructured(body) {
-  const book=SpreadsheetApp.openById(NX_SHEET),now=new Date(),events=[],units=[],activity=[],requirements=[];
+  const book=SpreadsheetApp.openById(NX_SHEET),now=new Date(body.received_at || Date.now()),events=[],units=[],activity=[],requirements=[];
+  const missionIds=Array.from(new Set(body.events.filter(e=>e.kind==='mission').map(e=>e.record.missionId)));
+  const lifecycleKeys=new Set(missionIds.length ? nxFindRows(nxTable(book,'events'),7,missionIds,23).map(x=>
+    nxLifecycleIdentity(x.row[2],x.row[6],x.row[4],x.row[5],nxJsonObject(x.row[21]))).filter(Boolean) : []);
   const scope={missions:[],sessions:[],days:[],weeks:[],players:[]};
   for(const e of body.events){const r=e.record||{},at=new Date(e.at),iso=at.toISOString();
     if(e.kind==='mission'){
-      const metadata={...r};delete metadata.units;delete metadata.requirements;
+      const key=nxLifecycleIdentity(e.player,r.missionId,r.eventType,at,r);
+      if(key && lifecycleKeys.has(key))continue;
+      if(key)lifecycleKeys.add(key);
+      const metadata={...r,...(body.telemetry?.[e.id]||{})};delete metadata.units;delete metadata.requirements;
       metadata.unitCount=(r.units||[]).length;
       const requirementJson=JSON.stringify(r.requirements||[]);
       if(requirementJson.length>45000)for(const [index,item]of (r.requirements||[]).entries())requirements.push([e.id,index,e.player,r.missionId,item.kind,item.name,item.required,item.stillNeeded,item.source]);
@@ -571,7 +613,7 @@ function nxWriteStructured(body) {
       scope.missions.push([e.player,r.missionId]);
     }
     const source=['USER','NEXUS','MISSIONCHIEF','SYSTEM'].includes(r.source)?r.source:(e.kind==='session'?'SYSTEM':'NEXUS');
-    const payload=e.record ? {...e.record,units:undefined,requirements:undefined} : {selected:e.selected,remaining:e.remaining,usedHeapBytes:e.usedHeapBytes};
+    const payload=e.record ? {...e.record,...(body.telemetry?.[e.id]||{}),units:undefined,requirements:undefined} : {selected:e.selected,remaining:e.remaining,usedHeapBytes:e.usedHeapBytes,...(body.telemetry?.[e.id]||{})};
     activity.push([e.id,at,now,e.player,e.username||'',e.device,e.session,source,r.category||e.category||e.kind,
       r.action||r.eventType||e.stage||e.kind,r.phase||e.phase||'',r.outcome||e.outcome||'',r.route||r.missionUrl||'',r.missionId||e.missionId||'',
       r.vehicleId||'',r.patientId||'',r.stationId||'',r.dispatchCentreId||'',r.targetTag||'',r.targetId||'',r.targetLabel||'',r.targetHref||'',r.inputType||'',r.correlationId||'',
@@ -582,11 +624,22 @@ function nxWriteStructured(body) {
   nxStore(nxTable(book,'units'),units,[0,6]);
   if(requirements.length)nxStore(nxSheet(book,'Mission Requirements',['event_id','requirement_index','player_id','mission_id','kind','name','required','still_needed','source']),requirements,[0,1]);
   nxStore(nxTable(book,'activity'),activity);
+  if(body.loggerHealth) {
+    const h=body.loggerHealth;
+    nxStore(nxSheet(book,'Logger Health',['batch_id','received_at','newest_event_time','oldest_queued_event_time','fresh_event_count','backlog_event_count','queue_depth','activity_date']),
+      [[body.id,now,h.newestEventAt?new Date(h.newestEventAt):'',h.oldestQueuedEventAt?new Date(h.oldestQueuedEventAt):'',h.freshEventCount,h.backlogEventCount,h.queueDepth,h.activityDate]]);
+  }
   for(const k of Object.keys(scope))scope[k]=Array.from(new Map(scope[k].map(v=>[JSON.stringify(v),v])).values());
   const queue=nxSheet(book,'Report Queue',NX_REPORT_COLUMNS);
-  nxStore(queue,[[body.id,now,JSON.stringify(scope),'PENDING',now,'']]);
+  nxStore(queue,[[body.id,now,JSON.stringify(scope),body.telemetry && Object.values(body.telemetry).some(m=>!m.isReplay)?'PENDING_LIVE':'PENDING',now,'']]);
   nxStore(nxTable(book,'uploads'),[[body.id,Array.from(new Set(body.events.map(e=>e.player))).join(','),body.events[0].device,now,body.events.length,units.length,body.events.find(e=>e.record?.clientVersion)?.record.clientVersion||'extension',false,'RAW_SAVED','']]);
   nxStore(nxTable(book,'batchLedger'),[[body.id,body.events[0].player,body.events[0].device,now,body.events.length,units.length,'3.0.43.8',nxHash(JSON.stringify(body)), 'RAW_SAVED',new Date(body.createdAt+NX_WEEK)]]);
+}
+function nxLifecycleIdentity(player,missionId,type,at,record) {
+  if(type==='mission-observed')return JSON.stringify([String(player),String(missionId),type,nxDay(at)]);
+  if(type==='mission-completed')return JSON.stringify([String(player),String(missionId),type]);
+  if(type==='mission-credit' && record.transactionId)return JSON.stringify([String(player),String(missionId),type,record.transactionId]);
+  return '';
 }
 const NX_INCOME_DAY_CACHE={};
 function nxDay(value){if(value===''||value==null)return '';const t=new Date(value),ms=t.getTime();if(!Number.isFinite(ms))return '';const hour=Math.floor(ms/3600000);return NX_INCOME_DAY_CACHE[hour]||(NX_INCOME_DAY_CACHE[hour]=Utilities.formatDate(t,'Europe/London','yyyy-MM-dd'));}
@@ -674,7 +727,7 @@ function nexusRefreshReports(){
       if(Date.now()>deadline-30000)return;
     }
     const book=SpreadsheetApp.openById(NX_SHEET),queue=nxSheet(book,'Report Queue',NX_REPORT_COLUMNS);
-    const pending=nxFindRows(queue,4,['PENDING'],6).slice(0,8);
+    const pending=nxFindRows(queue,4,['PENDING','PENDING_LIVE'],6).sort((a,b)=>Number(b.row[3]==='PENDING_LIVE')-Number(a.row[3]==='PENDING_LIVE')).slice(0,8);
     if(!pending.length){nexusBackfillDiagnostics();return;}
     const scope={missions:[],sessions:[],days:[],weeks:[],players:[]};for(const item of pending){const part=nxJsonObject(item.row[2]);for(const k of Object.keys(scope))scope[k].push(...(part[k]||[]));}
     for(const k of Object.keys(scope))scope[k]=Array.from(new Map(scope[k].map(v=>[JSON.stringify(v),v])).values());

@@ -52,6 +52,19 @@ test('ack requires durable raw data plus queue entry, without any spreadsheet wr
   assert.equal(h.folder('Extension Pending Imports').files.length,0);
   assert.equal(h.folder('Extension Imported Batches').files.length,1);
 });
+
+test('fresh reports import before backlog and raw receipts never replace captured time',()=>{
+  const h=harness();for(let i=0;i<12;i++)assert.equal(h.post(h.batch()).ok,true);
+  const b=h.batch(),id=b.events[0].id;
+  b.telemetry={[id]:{isReplay:false,queuedAt:b.events[0].at,uploadedAt:Date.now(),activityDate:'2026-09-07'}};
+  assert.equal(h.post(b).ok,true);
+  const marker=JSON.parse(h.folder('Extension Pending Live Imports').files[0].text);
+  const raw=JSON.parse(h.byId.get(marker.fileId).text);
+  assert.equal(raw.events[0].at,b.events[0].at);assert.ok(Date.parse(raw.received_at));assert.equal(raw.telemetry[id].isReplay,false);
+  h.work();assert.equal([...h.structuredRows][0],id);
+  assert.equal(h.folder('Extension Pending Imports').files.length,4);
+  assert.equal(h.post(b).ok,true);assert.equal(h.folder('Extension Pending Live Imports').files.length,0);
+});
 test('failure after raw save cannot acknowledge; retry repairs missing queue entry',()=>{
   const h=harness(),b=h.batch();h.failMarker(true);assert.equal(h.post(b).ok,false);
   h.failMarker(false);assert.equal(h.post(b).ok,true);assert.equal(h.folder('Extension Pending Imports').files.length,1);
