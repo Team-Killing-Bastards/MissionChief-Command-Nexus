@@ -2,9 +2,13 @@
 
 The Chrome job depends on the shared verification job, not the Edge submission job. Both consume the same verified ZIP. Chrome uses the existing item `pheccockibcappcdgonjjfcmlkemmaln` and preserves its visibility. Approved updates publish automatically through `DEFAULT_PUBLISH`; store review is not skipped.
 
-Activation requires a Google Cloud service account linked in the Chrome publisher settings, the Chrome Web Store API enabled in its project, the JSON credential saved as the GitHub Actions secret `CHROME_SERVICE_ACCOUNT_JSON`, and the repository variable `CHROME_PUBLISH_ENABLED=true`. Do not commit the credential. The service account needs no Google Cloud project roles for Chrome publishing. Linking it grants access to the publisher's items.
+Authentication uses GitHub OIDC through Google's Workload Identity Federation. No JSON private key or GitHub Google credential secret is used: the organisation blocks service-account key creation. The Chrome API is enabled in `trans-falcon-507919-f8`; the service account `nexus-chrome-publisher@trans-falcon-507919-f8.iam.gserviceaccount.com` is linked to the Chrome publisher.
 
-Before activation, validate access with `node scripts/publish-chrome.mjs --check` in the trusted main workflow environment. This only reads store status. A green skipped job is not proof of configured credentials. Activation is not complete until the authenticated status check and main workflow succeed.
+The proposed provider is `projects/809679386301/locations/global/workloadIdentityPools/nexus-github/providers/github-main`. It maps `google.subject=assertion.sub`. Its condition requires repository ID `1305627141`, repository `Team-Killing-Bastards/MissionChief-Command-Nexus`, ref `refs/heads/main`, workflow `Team-Killing-Bastards/MissionChief-Command-Nexus/.github/workflows/edge-extension.yml@refs/heads/main`, and excludes `pull_request` and `pull_request_target` events.
+
+Only the principal `principal://iam.googleapis.com/projects/809679386301/locations/global/workloadIdentityPools/nexus-github/subject/repo:Team-Killing-Bastards/MissionChief-Command-Nexus:ref:refs/heads/main` should receive `roles/iam.workloadIdentityUser` on that one service account. It needs no project-wide roles. Linking the account to Chrome grants access to the publisher's items. The provider and IAM binding still require completion; do not merge until that setup is finished.
+
+The main workflow first validates access with `node scripts/publish-chrome.mjs --check`. This only reads store status using the short-lived token. A green PR run is not proof of configured credentials. Activation is not complete until the authenticated status check and main workflow succeed.
 
 Every new release must increase the extension manifest version. Existing published versions are skipped; an existing different submission, policy warning or uncertain upload stops the job without cancelling review. Durable draft GitHub releases named `Chrome VERSION` record package hashes and operation phases. Never reset an uncertain receipt without checking the Chrome dashboard. Failed HTTP messages omit credentials.
 

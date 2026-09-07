@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 
 export const publisherId = '389c3692-e117-46cd-9cdb-7a18313c2852';
 export const itemId = 'pheccockibcappcdgonjjfcmlkemmaln';
@@ -21,17 +20,6 @@ export function decide(status,version) {
   if(!published||published.state!=='PUBLISHED')throw Error('Initial Chrome listing must be published manually first');
   if(['IN_PROGRESS','UPLOAD_IN_PROGRESS'].includes(status.lastAsyncUploadState))throw Error('Another Chrome upload is in progress');
   return 'upload';
-}
-export async function serviceToken(credentials,request=fetch) {
-  if(credentials.type!=='service_account'||!credentials.client_email?.endsWith('.gserviceaccount.com')||!credentials.private_key)throw Error('Invalid Chrome service account credential');
-  const now=Math.floor(Date.now()/1000),encode=v=>Buffer.from(JSON.stringify(v)).toString('base64url');
-  const unsigned=encode({alg:'RS256',typ:'JWT'})+'.'+encode({iss:credentials.client_email,scope:'https://www.googleapis.com/auth/chromewebstore',aud:'https://oauth2.googleapis.com/token',iat:now,exp:now+3600});
-  const assertion=unsigned+'.'+crypto.sign('RSA-SHA256',Buffer.from(unsigned),credentials.private_key).toString('base64url');
-  const response=await request('https://oauth2.googleapis.com/token',{method:'POST',body:new URLSearchParams({grant_type:'urn:ietf:params:oauth:grant-type:jwt-bearer',assertion}),redirect:'error',signal:AbortSignal.timeout(30000)});
-  if(!response.ok)throw Error(`Chrome authentication failed: HTTP ${response.status}`);
-  const token=(await response.json()).access_token;
-  if(!token)throw Error('Chrome authentication returned no token');
-  return token;
 }
 export function chromeClient(token,{request=fetch,sleep=ms=>new Promise(r=>setTimeout(r,ms))}={}) {
   async function call(action,body,media=false) {

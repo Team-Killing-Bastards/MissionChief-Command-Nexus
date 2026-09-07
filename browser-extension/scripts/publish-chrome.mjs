@@ -1,10 +1,10 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
-import {serviceToken,chromeClient,decide,itemId} from './chrome-api.mjs';
+import {chromeClient,decide,itemId} from './chrome-api.mjs';
 const env=process.env;
 if(env.GITHUB_REF!=='refs/heads/main'||env.GITHUB_EVENT_NAME==='pull_request')throw Error('Chrome publishing is restricted to trusted main');
-for(const key of ['CHROME_SERVICE_ACCOUNT_JSON','GITHUB_TOKEN','GITHUB_REPOSITORY','GITHUB_SHA'])if(!env[key])throw Error(`Missing ${key}`);
-const token=await serviceToken(JSON.parse(env.CHROME_SERVICE_ACCOUNT_JSON));
+for(const key of ['CHROME_ACCESS_TOKEN','GITHUB_TOKEN','GITHUB_REPOSITORY','GITHUB_SHA'])if(!env[key])throw Error(`Missing ${key}`);
+const token=env.CHROME_ACCESS_TOKEN;
 const client=chromeClient(token);
 if(process.argv.includes('--check')) {
   const status=await client.status();
