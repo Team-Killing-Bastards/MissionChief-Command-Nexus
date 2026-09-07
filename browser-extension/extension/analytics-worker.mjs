@@ -1,5 +1,5 @@
 import { RULES_KEY, validateRules, DOG_RULE_MIGRATION_KEY, repairLegacySearchDogRule } from './rules-core.mjs';
-import { cleanEvent, boundState, storedBytes, prepareBatch, acceptAck, retryDelay, validEndpoint } from './analytics-core.mjs';
+import { cleanEvent, boundState, storedBytes, prepareBatch, acceptAck, retryDelay, validEndpoint, loggerHealth, describeDelivery } from './analytics-core.mjs';
 import { GOOGLE_ENDPOINT } from './deployment-config.mjs';
 const KEY = 'nexusAnalyticsV1', SETTINGS = 'nexusAnalyticsSettingsV1';
 let serial = Promise.resolve(), uploading = false, abortUpload = null, sharingRevision = 0;
@@ -40,7 +40,6 @@ async function uploadOne() {
     if (!await chrome.permissions.contains({ origins })) throw Error('Google connection permission is missing');
     batch = await locked(async () => {
       const state = await readState();
-      if (Date.now() < state.nextAttempt) return null;
       const next = prepareBatch(state, () => crypto.randomUUID());
       await writeState(state); return next;
     });
@@ -48,12 +47,14 @@ async function uploadOne() {
     // A pause can arrive while storage/permission checks are awaiting. Recheck
     // immediately before sending, even if the user has since re-enabled sharing.
     if (!(await settings()).enabled || startedSharingRevision !== sharingRevision) return;
+    const delivery = await locked(async () => describeDelivery(batch,await readState()));
+    if (startedSharingRevision !== sharingRevision) return;
     abortUpload = new AbortController();
     const timer = setTimeout(() => { timedOut = true; abortUpload?.abort(); }, 20000);
     let reply;
     try {
       const response = await fetch(config.endpoint, { method: 'POST', redirect: 'follow', credentials: 'omit',
-        headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(batch), signal: abortUpload.signal });
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(delivery), signal: abortUpload.signal });
       if (!response.ok) throw Error(`Google returned HTTP ${response.status}`);
       const text = await response.text();
       if (text.length > 40000) throw Error('Unexpected Google response');
@@ -70,6 +71,10 @@ async function uploadOne() {
       const state = await readState();
       state.failures = (Number(state.failures) || 0) + 1;
       state.nextAttempt = Date.now() + (timedOut ? 60000 : retryDelay(state.failures));
+      for (const pending of [state.pending,state.priorityPending,...(state.deferredPending || [])]) if (pending?.id === batch?.id) {
+        // Fresh traffic retries within one alarm cycle, separately from backlog.
+        pending.nextAttempt = Date.now() + (pending === state.priorityPending ? 30000 : timedOut ? 60000 : retryDelay(state.failures));
+      }
       // Do not persist request URLs, tokens or provider HTML.
       state.error = String(timedOut ? 'Google response timed out after 20 seconds; batch retained for retry' : (error?.message || 'Upload failed')).replace(/https?:\/\/\S+/g, '[url]').slice(0, 160);
       await writeState(state);
@@ -109,7 +114,8 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
       await chrome.storage.local.set({ nexusDevice: meta });
       for (const raw of (Array.isArray(message.events) ? message.events : []).slice(0, 30)) {
         const event = cleanEvent(raw);
-        if (event && /^[a-f0-9-]{36}$/i.test(String(raw.id)) && /^[a-f0-9-]{36}$/i.test(String(raw.session))) state.events.push({ ...event, id: raw.id, session: raw.session, device: meta });
+        if (event && /^[a-f0-9-]{36}$/i.test(String(raw.id)) && /^[a-f0-9-]{36}$/i.test(String(raw.session))) state.events.push({ ...event, id: raw.id, session: raw.session, device: meta,
+          queuedAt: Number.isFinite(raw.queuedAt) && raw.queuedAt >= event.at && raw.queuedAt <= Date.now() ? raw.queuedAt : Date.now() });
       }
       await writeState(boundState(state)); return { ok: true };
     }).then(result => { reply(result); if (!result.disabled) void upload(); }, () => reply({ ok: false, error: 'Local queue could not be saved' }));
@@ -122,6 +128,7 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
       if (!config.enabled) return { ok: false, error: 'Enable sharing before retrying' };
       const state = await readState();
       state.nextAttempt = 0; state.failures = 0;
+      for (const pending of [state.pending,state.priorityPending,...(state.deferredPending || [])]) if (pending) pending.nextAttempt = 0;
       await writeState(state); return { ok: true };
     }).then(result => { reply(result); if (result.ok) void upload(); }, () => reply({ ok: false, error: 'Could not schedule retry' }));
     return true;
@@ -131,7 +138,7 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
       const state = await readState(), config = await settings();
       return { ok: true, enabled: config.enabled, configured: validEndpoint(config.endpoint),
         queued: state.events.length, bytes: storedBytes(state.events), dropped: state.dropped,
-        oldestQueuedAt: state.events[0]?.at || 0, lastSync: state.lastSync, nextAttempt: state.nextAttempt, error: state.error };
+        ...loggerHealth(state), oldestQueuedAt: loggerHealth(state).oldestQueuedEventAt, lastSync: state.lastSync, nextAttempt: state.nextAttempt, error: state.error };
     }).then(reply, () => reply({ ok: false, error: 'Local settings unavailable' })); return true;
   }
   if (message?.type === 'NEXUS_ANALYTICS_SETTINGS') {

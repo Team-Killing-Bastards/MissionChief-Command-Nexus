@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { patchPersonnelScanner } from './personnel-scanner-patch.mjs';
 import { patchMemoryRecovery } from './memory-recovery-patch.mjs';
 import { patchIncomeCapture } from './income-capture-patch.mjs';
+import { patchLoggerSession } from './logger-session-patch.mjs';
 const source = 'reference/original-extension/nexus-runtime.js';
 const version=JSON.parse(fs.readFileSync('extension/manifest.json','utf8')).version;
 let runtime = fs.readFileSync(source,'utf8').replaceAll('\r\n','\n');
@@ -35,6 +36,7 @@ replace("  listen(window,'pagehide',dispose);", "  listen(window,'pagehide',even
 patchPersonnelScanner(replace);
 patchMemoryRecovery(replace);
 patchIncomeCapture(replace);
+patchLoggerSession(replace);
 replace("const dispatchNext = /dispatch\\s*&\\s*next clicked/i.test(text);", `// A revisited mission can retain its dispatch claim after navigation cleared
 // the controller watchdog. Preserve that claim and recover the queue instead
 // of leaving the worker indefinitely waiting behind the duplicate guard.

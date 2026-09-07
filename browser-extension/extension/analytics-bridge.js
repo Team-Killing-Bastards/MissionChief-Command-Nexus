@@ -33,14 +33,20 @@
       if (queue.length) timer = setTimeout(flush, accepted ? 250 : 5000);
     }
   }
-  window.addEventListener('nexus-analytics-event-v1', event => {
+  window.addEventListener('nexus-analytics-event-v1', async event => {
     if (typeof event.detail !== 'string' || event.detail.length > 501000) return;
     const current = Math.floor(Date.now() / 60000);
     if (current !== minute) { minute = current; captured = 0; }
     try {
       const parsed = JSON.parse(event.detail);
       if (!['mission','session'].includes(parsed.kind) && ++captured > 600) return;
-      queue.push({ ...parsed, id: crypto.randomUUID(), session });
+      let id = crypto.randomUUID();
+      if (parsed.kind === 'mission' && typeof parsed.eventKey === 'string' && parsed.eventKey.length < 100000) {
+        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(parsed.eventKey));
+        const hex = Array.from(new Uint8Array(digest).slice(0,16), b=>b.toString(16).padStart(2,'0')).join('');
+        id = `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+      }
+      queue.push({ ...parsed, id, session: parsed.activitySession || session, queuedAt: Date.now() });
       if (queue.length > 120 || JSON.stringify(queue).length > 2000000) {
         const index = queue.findIndex(e => !['mission','session'].includes(e.kind));
         queue.splice(index < 0 ? 0 : index, 1);
