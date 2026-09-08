@@ -150,11 +150,15 @@ function nexusProcessSavedQueue(deadline,folderName,cursorKey,limit){
       const marker=JSON.parse(markerFile.getBlob().getDataAsString());
       const body=JSON.parse(DriveApp.getFileById(marker.fileId).getBlob().getDataAsString());
       if(marker.schema!==1||body.schema!==1||body.id!==marker.id||body.createdAt!==marker.createdAt||!Array.isArray(body.events))throw Error('Saved batch identity mismatch');
-      nxWriteSheet(body);nxWriteStructured(body);
+      props.setProperty('NEXUS_IMPORT_STAGE',folderName+': raw rows');
+      nxWriteSheet(body);
+      props.setProperty('NEXUS_IMPORT_STAGE',folderName+': structured rows');
+      nxWriteStructured(body);
       // Move only after all verified, idempotent writes and report scheduling.
       markerFile.moveTo(done);
       props.setProperty('NEXUS_LAST_IMPORT',new Date().toISOString());
-    }catch(_error){failed=true;props.setProperty('NEXUS_IMPORT_ERROR','An import failed; raw data and its queue entry are retained for retry.');}
+      props.setProperty('NEXUS_IMPORT_STAGE',folderName+': complete');
+    }catch(_error){failed=true;props.setProperty('NEXUS_IMPORT_ERROR',String(_error.message).slice(0,500));console.error('Import failure: '+String(_error.message).slice(0,500));}
     // Failed jobs remain in Pending and are retried on the next full traversal;
     // one bad batch cannot starve all later jobs.
     props.setProperty(cursorKey,files.getContinuationToken());
@@ -558,10 +562,15 @@ function nxFindRows(sheet,col,values,width) {
   if(sheet.getLastRow()<2 || !values.length)return [];
   const pattern='^(?:'+Array.from(new Set(values.map(String))).map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+')$';
   const matches=sheet.getRange(2,col,sheet.getLastRow()-1,1).createTextFinder(pattern).useRegularExpression(true).matchEntireCell(true).matchCase(true).findAll();
+  const indices=matches.map(cell=>cell.getRow());
+  // Dense historical matches must not cause thousands of separate remote
+  // reads of 100 rows. Sparse lookups keep small blocks; dense lookups coalesce.
+  const blockSize=new Set(indices.map(i=>Math.floor((i-2)/100))).size>20?2000:100;
   const blocks=new Map();
-  for(const cell of matches){const index=cell.getRow();const base=2+Math.floor((index-2)/100)*100;if(!blocks.has(base))blocks.set(base,[]);blocks.get(base).push(index);}
+  for(const index of indices){const base=2+Math.floor((index-2)/blockSize)*blockSize;if(!blocks.has(base))blocks.set(base,[]);blocks.get(base).push(index);}
   const out=[];
-  for(const [base,indices] of blocks){const rows=sheet.getRange(base,1,Math.min(100,sheet.getLastRow()-base+1),width).getValues();for(const i of indices)out.push({index:i,row:rows[i-base]});}
+  const last=sheet.getLastRow();
+  for(const [base,indices] of blocks){const rows=sheet.getRange(base,1,Math.min(blockSize,last-base+1),width).getValues();for(const i of indices)out.push({index:i,row:rows[i-base]});}
   return out;
 }
 function nxSetRows(sheet,first,rows,keyColumns=[]){
@@ -670,10 +679,14 @@ function nxReports(book,scope,deadline){
   nxStore(summary,newRows,[0],true);
   const days=new Set(scope.days.map(x=>x.join('|'))),weeks=new Set(scope.weeks.map(x=>x.join('|')));
   for(const r of [...old,...newRows]){const date=r[8]||r[7]||r[22];if(date)days.add(r[1]+'|'+nxDay(date));}
-  const ledgerEvents=[];const sessions=new Map(),actions=new Map(),players=new Map(),devices=new Map();const sessionIds=new Set(scope.sessions),playerIds=new Set(scope.players);
+  // Publish mission/income totals before the much larger optional activity rollup.
+  // Read only credit records for income; a slow activity scan must not hide
+  // already imported current-day missions behind yesterday's totals.
+  const ledgerEvents=nxFindRows(nxTable(book,'activity'),10,['CREDIT_TRANSACTION'],32).map(({row:r})=>({player:String(r[3]),record:nxJsonObject(r[27])}));
+  nxRefreshIncome(book,ledgerEvents,now,deadline);
+  const sessions=new Map(),actions=new Map(),players=new Map(),devices=new Map();const sessionIds=new Set(scope.sessions),playerIds=new Set(scope.players);
   nxEach(nxTable(book,'activity'),32,r=>{
     const p=String(r[3]),at=nxTime(r[1]),day=nxDay(r[1]),payload=nxJsonObject(r[27]);if(at===null)return;
-    if(r[9]==='CREDIT_TRANSACTION')ledgerEvents.push({player:p,record:payload});
     if(playerIds.has(p)){
       const previous=players.get(p);if(!previous||at>previous.at)players.set(p,{at,name:r[4]});
       const key=p+'|'+r[5],d=devices.get(key)||{first:at,last:at,name:r[4],version:r[28],device:r[5],player:p};d.first=Math.min(d.first,at);if(at>=d.last){d.last=at;d.name=r[4];d.version=r[28];}devices.set(key,d);
@@ -696,7 +709,6 @@ function nxReports(book,scope,deadline){
   nxStore(nxTable(book,'actionSummary'),Array.from(actions.values(),a=>{a.row[11]=a.row[10]/a.row[7];a.row[13]=a.sessions.size;return a.row;}),[0,1,3,4,5,6],true);
   nxStore(nxTable(book,'devices'),Array.from(devices.values(),d=>[d.device,d.player,d.name+' / '+String(d.device).slice(0,8),'','ACTIVE',new Date(d.first),new Date(d.last),now,d.version]),[0,1],true);
   nxStore(nxTable(book,'players'),Array.from(players,([p,v])=>[p,v.name,'ACTIVE',new Date(Math.min(...Array.from(devices.values()).filter(d=>d.player===p).map(d=>d.first))),new Date(v.at),Array.from(devices.values()).filter(d=>d.player===p).length,'Automatic username + device; no login']),[0],true);
-  nxRefreshIncome(book,ledgerEvents,now,deadline);
   const journeys=new Map();
   nxEach(nxTable(book,'units'),16,r=>{const week=nxWeek(r[5]);if(!weeks.has(r[2]+'|'+week.key))return;const station=r[10]||r[11]||'unknown',key=r[2]+'|'+week.key+'|'+station;
     const j=journeys.get(key)||[week.key,week.start,week.end,r[2],station,r[10],r[11],0,0,0,0,0,0,0,0,0,now];j[7]++;

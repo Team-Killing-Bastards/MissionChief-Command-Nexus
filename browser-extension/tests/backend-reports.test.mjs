@@ -3,6 +3,26 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import fs from 'node:fs';
 const source=fs.readFileSync('extension/google-backend/Code.gs','utf8');
+test('dense historical matches use bounded bulk reads while returning only matching rows',()=>{
+ const c=vm.createContext({Date,console});vm.runInContext(source,c);
+ const ids=Array.from({length:1200},(_,i)=>2+i*100),reads=[];
+ const finder={useRegularExpression(){return this;},matchEntireCell(){return this;},matchCase(){return this;},findAll:()=>ids.map(i=>({getRow:()=>i}))};
+ const sheet={getLastRow:()=>120001,getRange(first,col,count,width){return {createTextFinder:()=>finder,getValues(){reads.push(count);return Array.from({length:count},(_,i)=>[first+i]);}};}};
+ const rows=c.nxFindRows(sheet,1,['credit'],1);
+ assert.equal(rows.length,1200);assert.equal(reads.length,60);assert.ok(reads.every(n=>n<=2000));
+ assert.deepEqual(Array.from(rows,x=>x.row[0]),ids);
+});
+test('mission and income totals are refreshed before a timed-out activity rollup',()=>{
+  const c=vm.createContext({Date,console});vm.runInContext(source,c);
+  const order=[];c.nxTable=(_,key)=>key;c.nxFindRows=(sheet,col,values)=>{
+    if(sheet==='activity'){assert.equal(col,10);assert.equal(values[0],'CREDIT_TRANSACTION');return [{row:Array.from({length:32},(_,i)=>i===3?'123':i===27?'{}':'')}];}
+    return [];
+  };
+  c.nxStore=()=>{};c.nxRefreshIncome=(_,records)=>{assert.equal(records.length,1);order.push('income');};
+  c.nxEach=()=>{order.push('activity');throw Error('Report time budget; pending rows retained');};
+  assert.throws(()=>c.nxReports({}, {missions:[],days:[],weeks:[],sessions:[],players:[]},Date.now()+1000),/time budget/);
+  assert.deepEqual(order,['income','activity']);
+});
 function setup(existing=[]){
   const calls=[],c=vm.createContext({Date,console,SpreadsheetApp:{flush(){}}});vm.runInContext(source,c);
   c.nxFindRows=()=>existing;c.nxSetRows=(_,first,rows)=>calls.push({first,rows});
