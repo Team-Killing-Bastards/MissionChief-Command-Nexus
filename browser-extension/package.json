@@ -1,7 +1,7 @@
 {
   "name": "missionchief-nexus-extension-audit",
   "private": true,
-  "version": "3.0.43.19",
+  "version": "3.0.43.20",
   "type": "module",
   "engines": {
     "node": ">=24"
