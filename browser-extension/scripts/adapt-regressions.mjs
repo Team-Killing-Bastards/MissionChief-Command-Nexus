@@ -21,6 +21,12 @@ expect(JSON.stringify(context.result) === '[true,true,false,false]', 'Search Dog
   edit('check-search-dog-vehicle-type-consistency.mjs',"'Mission Finder Search Dog selector must not retain type 101'","'Mission Finder must retain native type 101'");
   edit('check-rescue-dog-paginated-load-barrier.mjs',"'searchDogType102:'","'searchDogCount:'");
   edit('check-rescue-dog-paginated-load-barrier.mjs',"'availableSearchDogType102:'","'availableSearchDogCount:'");
+  // The extension now exits early only when a next control is present and
+  // rows are quiet. The full 1.2s fallback for delayed controls is retained;
+  // executable vehicle-readiness tests cover both branches.
+  edit('check-rescue-dog-paginated-load-barrier.mjs',
+    "loader.indexOf('await wait(MF_VEHICLE_NEXT_PAGE_SETTLE_MS);', pageComplete)",
+    "loader.indexOf('await waitForVehicleNextPageReady(', pageComplete)");
   edit('check-missing-on-mission-authority.mjs','  ${selectorFunction}',`  function normaliseVehicleText(value) { return String(value || '').toLowerCase(); }
   \${extractFunction('nexusIsFlexibleSarSupportRequirement')}
   \${selectorFunction}`);

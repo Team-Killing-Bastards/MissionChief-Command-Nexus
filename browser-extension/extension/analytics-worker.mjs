@@ -55,10 +55,17 @@ async function uploadOne() {
     try {
       const response = await fetch(config.endpoint, { method: 'POST', redirect: 'follow', credentials: 'omit',
         headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(delivery), signal: abortUpload.signal });
-      if (!response.ok) throw Error(`Google returned HTTP ${response.status}`);
+      if (!response.ok) throw Error(`Google returned HTTP ${response.status}; batch retained for retry`);
       const text = await response.text();
-      if (text.length > 40000) throw Error('Unexpected Google response');
-      reply = JSON.parse(text);
+      // Google can return an HTML error/login page with HTTP 200, including
+      // after saving the POST. Never acknowledge it or expose provider HTML.
+      if (text.length > 40000) throw Error('Google response exceeded acknowledgement limit; batch retained for retry');
+      if (/^\s*</.test(text)) {
+        const login = /accounts\.google\.com|ServiceLogin|sign in to continue/i.test(text);
+        throw Error(`Google returned ${login ? 'a sign-in page' : 'an HTML page'} (HTTP ${response.status || 200}); batch retained for retry`);
+      }
+      try { reply = JSON.parse(text); }
+      catch { throw Error('Google returned invalid JSON; batch retained for retry'); }
     } finally { clearTimeout(timer); abortUpload = null; }
     await locked(async () => {
       const state = await readState();

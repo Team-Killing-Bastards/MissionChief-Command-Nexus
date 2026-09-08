@@ -63,6 +63,32 @@ test('lost response and worker restart retry the exact durable batch',async()=>{
   assert.deepEqual(core(second.requests[0]),core(first.requests[0]));assert.equal(data[KEY].events.length,0);
   for(const e of first.requests[0].events)assert.ok(second.requests[0].telemetry[e.id].uploadedAt>=first.requests[0].telemetry[e.id].uploadedAt);
 });
+
+test('HTTP 200 HTML never acknowledges or leaks content and restart retries original batch',async()=>{
+  const data={[SETTINGS]:{enabled:true}};
+  const first=worker(data,{fetch:async()=>({ok:true,status:200,text:async()=>'< !DOCTYPE html><p>private-provider-detail</p>'.replace('< !','<!')})});
+  await first.send({type:'NEXUS_ANALYTICS_CAPTURE',events:[raw()]});await settle();
+  assert.equal(data[KEY].events.length,1);
+  assert.equal(data[KEY].lastSync,0);
+  assert.match(data[KEY].error,/HTML page.*batch retained/);
+  assert.doesNotMatch(data[KEY].error,/private-provider-detail|DOCTYPE/);
+  const second=worker(data);await second.send({type:'NEXUS_ANALYTICS_RETRY'},settingsPage);await settle();
+  assert.equal(second.requests[0].id,first.requests[0].id);
+  assert.equal(second.requests[0].createdAt,first.requests[0].createdAt);
+  assert.deepEqual(second.requests[0].events,first.requests[0].events);
+  assert.equal(data[KEY].events.length,0);
+  assert.equal(data[KEY].error,'');
+});
+
+test('invalid JSON and login responses preserve queued events with safe diagnostics',async()=>{
+  for(const [body,expected] of [['not-json secret-value',/invalid JSON/],['<!DOCTYPE html>ServiceLogin secret-value',/sign-in page/]]) {
+    const data={[SETTINGS]:{enabled:true}};
+    const w=worker(data,{fetch:async()=>({ok:true,status:200,text:async()=>body})});
+    await w.send({type:'NEXUS_ANALYTICS_CAPTURE',events:[raw()]});await settle();
+    assert.equal(data[KEY].events.length,1);assert.equal(data[KEY].lastSync,0);
+    assert.match(data[KEY].error,expected);assert.doesNotMatch(data[KEY].error,/secret-value/);
+  }
+});
 test('pause during an asynchronous permission check prevents the pending upload',async()=>{
   let resume,started;const waiting=new Promise(resolve=>started=resolve);
   const permission=()=>new Promise(resolve=>{resume=resolve;started()});
