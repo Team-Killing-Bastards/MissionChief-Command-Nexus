@@ -148,6 +148,9 @@ function nx2Publish(ctx){
   const totals=nx2Combine(rows,now);if(!totals.length)return;
   nxStore(nxTable(ctx.book,'dashboard'),totals,[0,2],true);
   const props=PropertiesService.getScriptProperties();props.setProperty('NEXUS_LAST_REPORT',now.toISOString());props.deleteProperty('NEXUS_REPORT_ERROR');
+  const ready=props.getProperty('NX2_HISTORY_READY')==='1';
+  nxSetRows(nxSheet(ctx.book,'Pipeline Health',['metric','value']),2,[['coverage',ready?'Accepted raw-file history processed; live updates continue.':'Historical recovery in progress. Processed totals are partial; captured credits are recorded transactions, not estimated rewards.'],['updated_at',now],['reporting_book',ctx.book.getUrl()]]);
+  nxTable(ctx.book,'dashboard').getRange(2,18,Math.max(1,totals.length),1).setNumberFormat('dd/MM/yyyy HH:mm:ss');
 }
 function nx2Queue(ctx,folderName,cursorKey,deadline){
   const props=PropertiesService.getScriptProperties(),root=DriveApp.getFolderById(NX_FOLDER),pending=nxFolder(root,folderName),done=nxFolder(root,'Extension Imported Batches');
@@ -175,6 +178,7 @@ function nx2Backfill(ctx,deadline){
   const today=Utilities.formatDate(new Date(),'UTC','yyyy-MM-dd'),folders=batches.getFolders(),days=[];
   while(folders.hasNext()){const f=folders.next();if(/^\d{4}-\d{2}-\d{2}$/.test(f.getName()))days.push({id:f.getId(),day:f.getName()});}
   days.sort((a,b)=>b.day.localeCompare(a.day));
+  props.setProperty('NX2_HISTORY_READY',days.every(item=>props.getProperty('NX2_DAY_DONE_'+item.day)==='1')?'1':'0');
   for(const item of days){if(Date.now()>deadline-25000)break;if(props.getProperty('NX2_DAY_DONE_'+item.day)==='1')continue;
     const key='NX2_DAY_CURSOR_'+item.day;let files;try{const token=props.getProperty(key);files=token?DriveApp.continueFileIterator(token):DriveApp.getFolderById(item.id).getFiles();}catch{files=DriveApp.getFolderById(item.id).getFiles();}
     while(files.hasNext()&&Date.now()<deadline-25000){
@@ -193,6 +197,7 @@ function nx2Backfill(ctx,deadline){
     props.setProperty(key,files.getContinuationToken());
     if(!files.hasNext()){props.deleteProperty(key);props.setProperty('NX2_DAY_DONE_'+item.day,'1');}else break;
   }
+  props.setProperty('NX2_HISTORY_READY',days.every(item=>props.getProperty('NX2_DAY_DONE_'+item.day)==='1')?'1':'0');
 }
 function nexusRollingTick(){
   const lock=LockService.getScriptLock();if(!lock.tryLock(1000))return;const props=PropertiesService.getScriptProperties();
