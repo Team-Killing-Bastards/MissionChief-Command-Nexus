@@ -7,6 +7,7 @@ import { devLibrary } from './dev-library.mjs';
 const require=createRequire(import.meta.url),acorn=require('internal/deps/acorn/acorn/dist/acorn'),JSZip=devLibrary('jszip');
 const manifest=JSON.parse(fs.readFileSync('extension/manifest.json','utf8'));
 assert.equal(manifest.manifest_version,3);assert.match(manifest.version,/^\d+\.\d+\.\d+\.\d+$/);
+assert.ok(!manifest.version_name || manifest.version_name === manifest.version, 'Display version must match the package version');
 assert.ok(manifest.description.length<=132);
 assert.deepEqual([...manifest.permissions].sort(),['activeTab','alarms','scripting','storage']);
 assert.deepEqual(manifest.host_permissions,['https://script.google.com/*','https://script.googleusercontent.com/*']);

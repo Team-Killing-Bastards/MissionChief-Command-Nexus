@@ -718,6 +718,7 @@ function nxReports(book,scope,deadline){
   nxStore(nxTable(book,'journeys'),Array.from(journeys.values()),[0,3,4],true);
 }
 function nexusRefreshReports(){
+  if(PropertiesService.getScriptProperties().getProperty('NX2_ENABLED')==='1')return nexusRollingTick();
   const lock=LockService.getScriptLock();if(!lock.tryLock(1000))return;
   const props=PropertiesService.getScriptProperties();
   if(Number(props.getProperty('NEXUS_REPORT_LEASE')||0)>Date.now()){lock.releaseLock();return;}

@@ -5,6 +5,12 @@ import vm from 'node:vm';
 const source=fs.readFileSync('extension/nexus-runtime.js','utf8');
 const start=source.indexOf('  async function credits() {');
 const code=source.slice(start,source.indexOf('  function session(action)',start));
+test('advertised reward uses the current mission snapshot when page reward labels are absent',()=>{
+ const begin=source.indexOf('    function getMissionCredits() {'),fn=source.slice(begin,source.indexOf('    function formatRuntime(',begin));
+ const c=vm.createContext({getMissionLoggerMissionSnapshot:()=>({advertisedCredits:15000}),getMissionValueDocuments:()=>[],mfLastMissionCreditCapture:null});vm.runInContext(fn,c);
+ assert.equal(c.getMissionCredits(),15000);assert.equal(c.mfLastMissionCreditCapture.source,'mission-snapshot');
+ c.getMissionLoggerMissionSnapshot=()=>({advertisedCredits:null});assert.equal(c.getMissionCredits(),0);assert.equal(c.mfLastMissionCreditCapture.source,'not-found');
+});
 async function capture(registry,transactions){
  const events=[],pages=[];
  const ctx=vm.createContext({creditBusy:false,creditAbort:null,lastCredit:0,creditPage:2,Date,AbortController,

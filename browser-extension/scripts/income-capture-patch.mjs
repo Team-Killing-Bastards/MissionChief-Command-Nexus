@@ -1,4 +1,17 @@
 export function patchIncomeCapture(replace) {
+  replace("    function getMissionCredits() {\n        const documents = getMissionValueDocuments();", `    function getMissionCredits() {
+        // Native mission markers retain the advertised reward even when the
+        // mission page no longer renders a reward label. Use the existing
+        // mission-ID-scoped snapshot; never scrape the player's bank balance.
+        try {
+            const snapshot = getMissionLoggerMissionSnapshot();
+            const value = Number(snapshot?.advertisedCredits);
+            if (Number.isFinite(value) && value > 0) {
+                mfLastMissionCreditCapture = { value, source: 'mission-snapshot', documentsScanned: 0 };
+                return value;
+            }
+        } catch {}
+        const documents = getMissionValueDocuments();`);
   replace("    if (!Object.values(registry).some(pending)) return;", "    // Income capture must not depend on missions already present in the register.", 2);
   replace("          if(tx.amount<0) continue;", `          if(tx.amount<0) continue;
           // Emit ledger income before attempting a mission match. Backend keys
