@@ -72,7 +72,10 @@ test('bridge hashes stable mission identities and retains them across repeated c
   const raw={kind:'mission',player:'419938',at:today,eventKey:'419938:42:mission-completed',record:{eventType:'mission-completed',missionId:'42'}};
   win.dispatchEvent({type:'nexus-analytics-event-v1',detail:JSON.stringify(raw)});
   win.dispatchEvent({type:'nexus-analytics-event-v1',detail:JSON.stringify(raw)});
-  await new Promise(r=>setTimeout(r,30));for(const fn of timers.splice(0))await fn();
+  // WebCrypto completion is asynchronous and can exceed 30ms on CI. Drain the
+  // bridge's scheduled sends until the expected captures arrive or fail bounded.
+  const deadline=Date.now()+5000;
+  while(sent.length<2&&Date.now()<deadline){await new Promise(r=>setTimeout(r,10));for(const fn of timers.splice(0))await fn();}
   assert.equal(sent.length,2);assert.equal(sent[0].id,sent[1].id);
 });
 test('a former fresh batch that becomes backlog cannot trap newer live events',()=>{
