@@ -2,14 +2,29 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { functionText } from './helpers.mjs';
 const source=fs.readFileSync('extension/nexus-runtime.js','utf8');
 const start=source.indexOf('  async function credits() {');
 const code=source.slice(start,source.indexOf('  function session(action)',start));
-test('advertised reward uses the current mission snapshot when page reward labels are absent',()=>{
+test('logger marker rewards cannot change the native dispatch decision',()=>{
  const begin=source.indexOf('    function getMissionCredits() {'),fn=source.slice(begin,source.indexOf('    function formatRuntime(',begin));
- const c=vm.createContext({getMissionLoggerMissionSnapshot:()=>({advertisedCredits:15000}),getMissionValueDocuments:()=>[],mfLastMissionCreditCapture:null});vm.runInContext(fn,c);
- assert.equal(c.getMissionCredits(),15000);assert.equal(c.mfLastMissionCreditCapture.source,'mission-snapshot');
- c.getMissionLoggerMissionSnapshot=()=>({advertisedCredits:null});assert.equal(c.getMissionCredits(),0);assert.equal(c.mfLastMissionCreditCapture.source,'not-found');
+ let snapshots=0,dispatches=0,shares=0;
+ const c=vm.createContext({getMissionLoggerMissionSnapshot:()=>{snapshots++;return {advertisedCredits:15000};},getMissionValueDocuments:()=>[],mfLastMissionCreditCapture:null,
+ MF_SHARE_CREDIT_THRESHOLD:10000,clearAutoAdvanceAfterDispatchState(){},clickDispatchOnly(){dispatches++;return true;},clickDispatchAndShareOnly(){shares++;return true;}});
+ vm.runInContext(fn+'\n'+functionText('clickMissionDispatchByValue'),c);
+ const result=c.clickMissionDispatchByValue(c.getMissionCredits(),'test');
+ assert.equal(result.clicked,true);assert.equal(result.shared,false);
+ assert.equal(dispatches,1);assert.equal(shares,0);assert.equal(snapshots,0);
+ assert.equal(c.mfLastMissionCreditCapture.source,'not-found');
+});
+
+test('explicit page reward still drives the established high-value share path',()=>{
+ const begin=source.indexOf('    function getMissionCredits() {'),fn=source.slice(begin,source.indexOf('    function formatRuntime(',begin));
+ let shares=0;
+ const c=vm.createContext({getMissionValueDocuments:()=>[{querySelectorAll:()=>[{getAttribute:()=> '15000'}]}],mfLastMissionCreditCapture:null,
+ MF_SHARE_CREDIT_THRESHOLD:10000,createAutoAdvanceAfterDispatchState:()=>null,clearAutoAdvanceAfterDispatchState(){},updateStatusBox(){},clickDispatchAndShareOnly(){shares++;return true;}});
+ vm.runInContext(fn+'\n'+functionText('clickMissionDispatchByValue'),c);
+ assert.equal(c.clickMissionDispatchByValue(c.getMissionCredits(),'test').shared,true);assert.equal(shares,1);
 });
 async function capture(registry,transactions){
  const events=[],pages=[];
