@@ -1,0 +1,17 @@
+{
+  "version": "3.0.43.47",
+  "baseVersion": "3.0.43.46",
+  "sourceRuntimeSha256": "16166aacca6305b02692a0da9b7eacbd71818cf95edb32a61672637c27aa0d96",
+  "changes": [
+    "Local-only dispatch-centre and station-name filters on native course personnel lists, preserving selected staff and native enrolment",
+    "One on-open building metadata read, manual refresh, scoped list observer, and cleanup; no fleet or personnel fetches and no Auto changes beyond version"
+  ],
+  "files": {
+    "manifest.json": "dca9777828cf80cd205748e12e29ae1d813dc920e2b870e127357843e1fd09e2",
+    "nexus-runtime.js": "16166aacca6305b02692a0da9b7eacbd71818cf95edb32a61672637c27aa0d96",
+    "nexus-tools.js": "452a64a9ebc2171bbde6988b65dceeb43778512f1a4c72e1135f005866f1f039",
+    "nexus-settings.js": "a3ff6014d2585e55551265aba0a000a3b981eef339fb89d4c8bf1aa120eecd5d",
+    "nexus-settings-main.js": "a3ff6014d2585e55551265aba0a000a3b981eef339fb89d4c8bf1aa120eecd5d",
+    "nexus-schooling-filters.js": "774266d8a1cebf458546bd7b87500c0e3ad2c4fc4042626a30e2f503cec58d82"
+  }
+}

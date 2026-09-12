@@ -19,8 +19,14 @@ export function releaseProvenance() {
   const promoted={...reviewed,testedLocalVersion:store.version,testedZipSha256:store.testedZipSha256,testedRuntimeSha256:store.testedRuntimeSha256,changes:[...reviewed.changes,...store.changes]};
   if(version===responsive.version)return promoted;
   const buttons=JSON.parse(fs.readFileSync('reference/requirement-buttons-46.json'));
-  if(version!==buttons.version||buttons.baseVersion!==promoted.version)throw Error('Unreviewed requirement buttons release');
+  if(buttons.baseVersion!==promoted.version)throw Error('Unreviewed requirement buttons release');
   const permitted=['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-settings.js','nexus-settings-main.js','nexus-requirement-ticks.js','nexus-comfort.js'];
   if(Object.keys(buttons.files).some(file=>!permitted.includes(file)))throw Error('Unexpected manual selection change');
-  return {...promoted,version,sourceRuntimeSha256:buttons.sourceRuntimeSha256,changes:[...promoted.changes,...buttons.changes],files:{...promoted.files,...buttons.files}};
+  const manual={...promoted,version:buttons.version,sourceRuntimeSha256:buttons.sourceRuntimeSha256,changes:[...promoted.changes,...buttons.changes],files:{...promoted.files,...buttons.files}};
+  if(version===buttons.version)return manual;
+  const schooling=JSON.parse(fs.readFileSync('reference/schooling-filters-47.json'));
+  if(version!==schooling.version||schooling.baseVersion!==manual.version)throw Error('Unreviewed schooling filters release');
+  const schoolAllowed=['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-settings.js','nexus-settings-main.js','nexus-schooling-filters.js'];
+  if(Object.keys(schooling.files).some(file=>!schoolAllowed.includes(file)))throw Error('Unexpected schooling filters change');
+  return {...manual,version,sourceRuntimeSha256:schooling.sourceRuntimeSha256,changes:[...manual.changes,...schooling.changes],files:{...manual.files,...schooling.files}};
 }
