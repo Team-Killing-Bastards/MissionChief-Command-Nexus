@@ -63,6 +63,13 @@ for(const token of ['MF_HIGH_RISK_MISSING_PERSON_AMBULANCE_KEY','MF_AMBULANCE_OF
   replaceBlock('check-mission-dashboard-v1069.mjs', 'for (const token of [', "expect(startScanner.includes", `for(const token of ["dashboardRail.id = 'mf-dashboard-rail'", 'data-mf-dashboard-tab="mission"', 'MF_EVENT_SCANNER_ENABLED_KEY', 'nexus:export-mission-diagnostics'])expect(source.includes(token), 'Mission/Settings ownership missing '+token);
 for(const token of ['data-mf-dashboard-tab="settings"','data-mf-dashboard-tab="diagnostics"'])expect(!panel.includes(token), 'Removed utility tab was restored');`);
   edit('check-mission-dashboard-v1069.mjs',"expect(panel.indexOf('settingsPane.appendChild(advancedBody)') < panel.indexOf('const unitFinderBtn'), 'Settings ownership must be established before action creation');", "expect(!panel.includes('settingsPane.appendChild'), 'Settings must be owned by Nexus Tools');");
+  // .56 keeps the real skip extraction helper in this isolated quarantine test.
+  edit('check-v3-dispatch-quarantine-fail-closed.mjs',"const registerSkip = extractFunction('registerRecoverableMissionSkip');","const registerSkip = extractFunction('missionSkipIssueDetails') + '\\n' + extractFunction('registerRecoverableMissionSkip');");
+  // Focus replaces the nested scroll boxes with one viewport-bounded body and
+  // sticky Start/Stop. Preserve overflow/action contracts; browser tests verify
+  // actual 320px and desktop-site phone geometry and accessible actions.
+  fs.copyFileSync('tests/ui/auto-focus-scroll-contract.mjs',path.join(fixture,'scripts/check-v3-panel-scroll-safety.mjs'));
+  changes.push({file:'check-v3-panel-scroll-safety.mjs',reason:'Focus panel scroll contract plus required browser geometry checks'});
   fs.writeFileSync(path.join(fixture,'ADAPTERS.json'),JSON.stringify(changes,null,2)+'\n');
   return changes;
 }

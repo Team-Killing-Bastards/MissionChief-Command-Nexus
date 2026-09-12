@@ -1,5 +1,8 @@
 (() => {
   'use strict';
+  // BEGIN ALLIANCE FRAME ISOLATION 57
+  if (window.frameElement?.hasAttribute('data-nx-alliance-worker')) return;
+  // END ALLIANCE FRAME ISOLATION 57
   if (window.__NEXUS_EXTENSION__) return;
   // Store updates do not replace code already running in an open game tab.
   // Refuse a new child realm under a different parent build before any hooks,
@@ -10,8 +13,8 @@
       parentBuild = window.top.__NEXUS_EXTENSION__?.build || '';
     }
   } catch {}
-  if (parentBuild && parentBuild !== '3.0.43.55') {
-    window.__NEXUS_EXTENSION__ = Object.freeze({ build: '3.0.43.55', sourceVersion: '3.0.43',
+  if (parentBuild && parentBuild !== '3.0.43.59') {
+    window.__NEXUS_EXTENSION__ = Object.freeze({ build: '3.0.43.59', sourceVersion: '3.0.43',
       status: 'parent-build-mismatch', parentBuild, startedAt: Date.now() });
     try {
       window.top.dispatchEvent(new window.top.CustomEvent('nexus-extension-update-required-v1', {
@@ -22,7 +25,7 @@
   }
   const alreadyRunning = Boolean(window.__MCN_V3_CONTROLLER__ || window.__MCN_BOOT_TRACE__);
   window.__NEXUS_EXTENSION__ = Object.freeze({
-    build: '3.0.43.55',
+    build: '3.0.43.59',
     sourceVersion: '3.0.43',
     status: alreadyRunning ? 'existing-runtime' : 'loaded',
     startedAt: Date.now()
@@ -265,7 +268,7 @@ function createNexusPerformance(env) {
     readRegistry, vehicleSignature, getRequirements, putRequirements, record, count, dispose,
     receiveCount(key, amount) { counters[key] = (counters[key] || 0) + amount; },
     receiveTiming(item) { timings.push({ ...item }); if (timings.length > 100) timings.shift(); },
-    snapshot() { return { build: '3.0.43.55', counters: { ...counters }, longTasks: { ...longTasks }, timings: timings.map(item => ({ ...item })), retainedDocuments: documents.size, registryRetained: !!registryValue, requirementTtlMs: REQUIREMENT_TTL, maxRequirementRecords: MAX_RECORDS }; }
+    snapshot() { return { build: '3.0.43.59', counters: { ...counters }, longTasks: { ...longTasks }, timings: timings.map(item => ({ ...item })), retainedDocuments: documents.size, registryRetained: !!registryValue, requirementTtlMs: REQUIREMENT_TTL, maxRequirementRecords: MAX_RECORDS }; }
   });
 }
 
@@ -2714,6 +2717,9 @@ missionName: cleanMissionCaption(missionName) || missionNameForId(id),
 category: String(category || 'RECOVERABLE_AUTO_STOP'),
 reason: String(reason || 'Recoverable resource shortage'),
 evidence: normaliseText(evidence).slice(0, 420),
+// Keep the specific shortages before the diagnostic summary is shortened.
+// This only reads evidence already collected at the existing skip boundary.
+issues: missionSkipIssueDetails({ evidence }),
 ruleSignature: String(ruleSignature || ''),
 skipCount: Number(previous?.skipCount || 0) + 1,
 skipAdvances: advances,
@@ -2727,6 +2733,22 @@ trimOldestMapEntries(state.missionSkipRecords, MISSION_SKIP_HISTORY_LIMIT);
 state.recoverableMissionSkips += 1;
 recordMissionSkipEvent({ event: 'skipped', ...record, remaining: advances });
 return record;
+}
+function missionSkipIssueDetails(record) {
+const compact = value => String(value || '').replace(/\s+/g, ' ').trim().slice(0, 240);
+if (Array.isArray(record?.issues)) return [...new Set(record.issues.filter(value => typeof value === 'string').map(compact).filter(Boolean))].slice(0, 8);
+const evidence = String(record?.evidence || '').replace(/\s+/g, ' ').slice(0, 1800);
+const issues = [];
+for (const part of evidence.split(' | ')) {
+const match = part.match(/(?:Confirmed (?:requirements|PRV\/SRV units) still missing|Missing(?: vehicles?| personnel)?|It lacks?):\s*(.+)/i);
+if (match) {
+const detail = match[1].split(/\.\s+(?:No vehicles|Dispatch|Start auto|The mission|Unit Finder)/i)[0].replace(/\.$/, '');
+issues.push(compact(detail));
+} else if (/\b(?:\d+\s+trained personnel short|(?:trained|qualified)\s+(?:personnel|crew|staff).{0,70}(?:short|missing)|(?:short|missing).{0,70}(?:trained|qualified)\s+(?:personnel|crew|staff))\b/i.test(part)) {
+issues.push(compact(part.replace(/^(?:Auto stopped:\s*)+/i, '').split(/\bDispatch was not clicked\b/i)[0]));
+}
+}
+return [...new Set(issues.filter(Boolean))].slice(0, 8);
 }
 function quarantinePostDispatchMission(watchdog, candidate = null) {
 const missionId = String(watchdog?.missionId || '');
@@ -8065,7 +8087,18 @@ createWorker(mission.url);
 }
 }, MISSION_RESCAN_MS);
 }
+// BEGIN ALLIANCE CONTROLLER BRIDGE 57
+window.__NEXUS_AUTO_DISPATCH_BUSY__ = () => Boolean(state.wanted || state.running || state.stopping);
+function nexusAllianceSupportBusy() {
+  if (window.__NEXUS_ALLIANCE_SUPPORT__?.busy) return true;
+  try { return Number(JSON.parse(localStorage.getItem('nexusAllianceSupportLeaseV1') || 'null')?.until) > Date.now(); } catch { return false; }
+}
+// END ALLIANCE CONTROLLER BRIDGE 57
 function startController() {
+// BEGIN ALLIANCE START GUARD 57
+if (nexusAllianceSupportBusy()) { log('Alliance support is sending; wait for its queue to finish before starting Auto Mode.'); return; }
+// END ALLIANCE START GUARD 57
+
 if (state.wanted || state.stopping) return;
 pausePipelineController('new-run-active-bootstrap', true);
 resetRunStats();
@@ -8089,6 +8122,10 @@ if (request && startTransportOnlyWorker(request, 'run-start')) return;
 createWorker(supply.candidates[0].url);
 }
 function retryCurrent() {
+// BEGIN ALLIANCE START GUARD 57
+if (nexusAllianceSupportBusy()) { log('Alliance support is sending; wait for its queue to finish before starting Auto Mode.'); return; }
+// END ALLIANCE START GUARD 57
+
 if (state.stopping) return;
 if (!state.runStartedAt) resetRunStats();
 sessionSet(SESSION_RESUME_HANDOFF_AT, '');
@@ -9000,79 +9037,65 @@ box-shadow: 0 0 0 1px rgba(255,255,255,.1);
 #${ROOT_ID}[data-phase="MISSION_SKIPPED"] .mcn-dot,
 #${ROOT_ID}[data-phase="BACKGROUND_ESCAPE_WARN"] .mcn-dot { background: var(--mcn-warn); }
 #${ROOT_ID}[data-phase="ERROR"] .mcn-dot { background: var(--mcn-bad); }
-#${ROOT_ID} .mcn-panel {
-position: fixed;
-top: 58px;
-left: 150px;
-width: min(320px, calc(100vw - 24px));
-margin: 0;
-border: 1px solid var(--mcn-border);
-border-radius: 14px;
-background: linear-gradient(160deg, var(--mcn-bg2), var(--mcn-bg));
-box-shadow: 0 18px 54px rgba(0,0,0,.46);
-overflow: hidden;
-max-height: calc(100vh - 70px);
-max-height: calc(100dvh - 70px);
-display: flex;
-flex-direction: column;
-transform-origin: top left;
-z-index: 2147483001;
-}
-#${ROOT_ID}[data-collapsed="true"] .mcn-panel { display: none; }
-#${ROOT_ID} .mcn-head {
-padding: 11px 12px 9px;
-display: flex;
-align-items: center;
-justify-content: space-between;
-gap: 10px;
-border-bottom: 1px solid rgba(255,255,255,.07);
-flex: 0 0 auto;
-}
-#${ROOT_ID} .mcn-title { font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
-#${ROOT_ID} .mcn-version { font-size: 10px; color: var(--mcn-muted); font-weight: 600; }
-#${ROOT_ID} .mcn-body { min-height: 0; display: flex; flex: 1 1 auto; flex-direction: column; overflow: hidden; }
-#${ROOT_ID} .mcn-scroll { min-height: 0; padding: 12px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(102,183,255,.55) transparent; }
-#${ROOT_ID} .mcn-scroll::-webkit-scrollbar { width: 8px; }
-#${ROOT_ID} .mcn-scroll::-webkit-scrollbar-thumb { border-radius: 8px; background: rgba(102,183,255,.42); }
-#${ROOT_ID} .mcn-status {
-padding: 10px;
-border-radius: 10px;
-background: rgba(255,255,255,.045);
-border: 1px solid rgba(255,255,255,.06);
-}
-#${ROOT_ID} .mcn-status-main { font-size: 13px; font-weight: 760; line-height: 1.25; }
-#${ROOT_ID} .mcn-status-detail { margin-top: 5px; color: var(--mcn-muted); font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
-#${ROOT_ID} .mcn-meta { margin-top: 9px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-#${ROOT_ID} .mcn-meta-card { padding: 7px 8px; border-radius: 8px; background: rgba(255,255,255,.035); }
-#${ROOT_ID} .mcn-meta-card.wide { grid-column: 1 / -1; }
-#${ROOT_ID} .mcn-meta-label { font-size: 9px; color: var(--mcn-muted); text-transform: uppercase; letter-spacing: .07em; }
-#${ROOT_ID} .mcn-meta-value { margin-top: 2px; font-size: 11px; font-weight: 700; overflow-wrap: anywhere; }
-#${ROOT_ID} [data-mcn-skips] { max-height: 96px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
-#${ROOT_ID} .mcn-actions { display: grid; flex: 0 0 auto; grid-template-columns: 1fr 1fr; gap: 7px; margin: 0; padding: 10px 12px 12px; border-top: 1px solid rgba(255,255,255,.07); background: rgba(8,16,30,.96); }
-#${ROOT_ID} button.mcn-action {
-min-height: 34px;
-padding: 7px 8px;
-border-radius: 9px;
-border: 1px solid rgba(122,181,234,.25);
-background: rgba(67,130,189,.13);
-color: var(--mcn-text);
-font: inherit;
-font-size: 11px;
-font-weight: 720;
-cursor: pointer;
-}
-#${ROOT_ID} button.mcn-action:hover { background: rgba(82,151,214,.22); }
-#${ROOT_ID} button.mcn-action.primary { background: rgba(63,150,217,.28); border-color: rgba(100,185,250,.45); }
-#${ROOT_ID} button.mcn-action.stop { background: rgba(190,72,82,.18); border-color: rgba(255,118,126,.32); }
-#${ROOT_ID} button.mcn-action:disabled { opacity: .45; cursor: default; }
-#${ROOT_ID} .mcn-note { margin-top: 9px; color: var(--mcn-muted); font-size: 10px; line-height: 1.35; }
-#${ROOT_ID} .mcn-note strong { color: #d8e9f8; }
-@media (max-width: 767px) {
-#${ROOT_ID} { display: none !important; }
-}
-@media (min-width: 768px) and (max-width: 900px) {
-#${ROOT_ID} .mcn-panel { left: 12px; width: min(310px, calc(100vw - 24px)); }
-}
+#${ROOT_ID} { --mcn-bg: #101d2d; --mcn-bg2: #17283b; --mcn-border: #2a3e55; --mcn-text: #edf5ff; --mcn-muted: #a4b5ca; font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+#${ROOT_ID} [hidden] { display: none !important; }
+#${ROOT_ID} .mcn-panel { position:fixed;top:58px;left:clamp(12px,calc(100vw - 380px),150px);width:min(368px,calc(100vw - 24px));max-height:calc(100vh - 70px);max-height:calc(100dvh - 70px);margin:0;border:1px solid var(--mcn-border);border-radius:16px;background:var(--mcn-bg);box-shadow:0 12px 32px #00000040;overflow:hidden;display:flex;flex-direction:column;transform-origin:top left;z-index:2147483001;color-scheme:dark;font-size:14px;line-height:1.45; }
+#${ROOT_ID}[data-collapsed="true"] .mcn-panel { display:none; }
+#${ROOT_ID} .mcn-head { display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid var(--mcn-border);flex:none; }
+#${ROOT_ID} .mcn-brand-mark { display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:9px;background:#203c57;color:var(--mcn-accent); }
+#${ROOT_ID} .mcn-title { font-size:12px;letter-spacing:.12em;font-weight:600; }
+#${ROOT_ID} .mcn-subtitle,#${ROOT_ID} .mcn-version { font-size:11px;color:var(--mcn-muted); }
+#${ROOT_ID} .mcn-fold { margin-left:auto;padding:6px 0 6px 8px;border:0;background:transparent;color:var(--mcn-muted);font:inherit;font-size:12px;cursor:pointer; }
+#${ROOT_ID} .mcn-body { min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#4c7093 transparent;-webkit-overflow-scrolling:touch; }
+#${ROOT_ID} .mcn-status { padding:17px 18px 14px; }
+#${ROOT_ID} .mcn-status-row { display:flex;align-items:baseline;justify-content:space-between;gap:10px; }
+#${ROOT_ID} .mcn-status-main { min-width:0;font-size:17px;font-weight:600;overflow-wrap:anywhere; }
+#${ROOT_ID} .mcn-state-label { color:var(--mcn-muted);font-size:11px;letter-spacing:.05em;text-transform:uppercase;flex:none; }
+#${ROOT_ID} .mcn-status-detail { margin-top:5px;color:var(--mcn-muted);font-size:12px;overflow-wrap:anywhere; }
+#${ROOT_ID} .mcn-mission { margin:0 18px;padding:13px 14px;border-radius:10px;background:var(--mcn-bg2);border-left:2px solid #4c91c4; }
+#${ROOT_ID} .mcn-eyebrow { font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mcn-muted); }
+#${ROOT_ID} .mcn-mission-name { margin:7px 0 6px;font-size:15px;font-weight:600;overflow-wrap:anywhere; }
+#${ROOT_ID} .mcn-mission-id { font-size:11px;color:var(--mcn-muted); }
+#${ROOT_ID} .mcn-totals { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:17px 18px;margin:0; }
+#${ROOT_ID} .mcn-totals>div { display:flex;flex-direction:column;min-width:0; }
+#${ROOT_ID} .mcn-totals dt { font-size:11px;color:var(--mcn-muted);margin-top:2px;font-weight:400; }
+#${ROOT_ID} .mcn-totals dd { order:-1;margin:0;font-size:22px;line-height:1.15;font-weight:500;font-variant-numeric:tabular-nums;overflow-wrap:anywhere; }
+#${ROOT_ID} .mcn-actions { position:sticky;top:0;z-index:1;display:flex;gap:9px;padding:0 18px 16px;background:var(--mcn-bg); }
+#${ROOT_ID} button.mcn-action { min-height:44px;padding:10px;border:1px solid var(--mcn-border);border-radius:9px;background:transparent;color:var(--mcn-text);font:inherit;font-size:12px;cursor:pointer;touch-action:manipulation; }
+#${ROOT_ID} button.mcn-action.primary,#${ROOT_ID} button.mcn-action.stop { flex:1;font-size:14px;font-weight:600; }
+#${ROOT_ID} button.mcn-action.primary { background:#328bd0;border-color:#70b6e7;color:white; }
+#${ROOT_ID} button.mcn-action.stop { background:#392633;border-color:#815363;color:#ffdae2; }
+#${ROOT_ID} button.mcn-action:disabled { opacity:.4;cursor:default; }
+#${ROOT_ID} .mcn-disclosure { border-top:1px solid var(--mcn-border); }
+#${ROOT_ID} .mcn-disclosure>summary { display:flex;align-items:center;gap:8px;min-height:46px;padding:12px 18px;list-style:none;font-size:12px;cursor:pointer;touch-action:manipulation; }
+#${ROOT_ID} .mcn-disclosure>summary::-webkit-details-marker { display:none; }
+#${ROOT_ID} .mcn-summary-tail { margin-left:auto;color:var(--mcn-muted);font-size:11px; }
+#${ROOT_ID} .mcn-disclosure>summary::after { content:'▾';color:var(--mcn-muted); }
+#${ROOT_ID} .mcn-disclosure[open]>summary::after { content:'▴'; }
+#${ROOT_ID} .mcn-skips-title { color:var(--mcn-warn); }
+#${ROOT_ID} .mcn-skip-count { min-width:22px;min-height:22px;display:inline-flex;justify-content:center;align-items:center;border-radius:6px;background:#423629;color:var(--mcn-warn);font-variant-numeric:tabular-nums; }
+#${ROOT_ID} .mcn-skip-list { list-style:none;margin:0;padding:0 18px 4px;user-select:text; }
+#${ROOT_ID} .mcn-skip-list>li { padding:12px 0;border-top:1px solid var(--mcn-border);overflow-wrap:anywhere; }
+#${ROOT_ID} .mcn-skip-name { display:block;margin:0 0 7px;font-size:13px;font-weight:600;color:var(--mcn-text); }
+#${ROOT_ID} a.mcn-skip-name { text-decoration:underline;text-underline-offset:3px; }
+#${ROOT_ID} .mcn-skip-issues { list-style:none;margin:0 0 6px;padding:0;font-size:12px;color:var(--mcn-warn); }
+#${ROOT_ID} .mcn-skip-issues>li { margin:3px 0; }
+#${ROOT_ID} .mcn-skip-reason { margin:0 0 5px;font-size:12px;color:var(--mcn-muted); }
+#${ROOT_ID} .mcn-skip-retry { margin:0;font-size:11px;color:var(--mcn-muted); }
+#${ROOT_ID} .mcn-skip-empty { margin:0;padding:0 18px 16px;font-size:12px;color:var(--mcn-muted); }
+#${ROOT_ID} .mcn-system-content { padding:0 18px 16px;user-select:text; }
+#${ROOT_ID} .mcn-system-list { margin:0 0 12px; }
+#${ROOT_ID} .mcn-system-list>div { display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-bottom:1px solid var(--mcn-border);font-size:12px; }
+#${ROOT_ID} .mcn-system-list dt { flex:0 0 32%;color:var(--mcn-muted);font-weight:400; }
+#${ROOT_ID} .mcn-system-list dd { margin:0;text-align:right;overflow-wrap:anywhere;min-width:0; }
+#${ROOT_ID} .mcn-export { width:100%; }
+#${ROOT_ID} .mcn-version { margin-top:12px; }
+#${ROOT_ID}[data-minimised="true"] .mcn-summary { display:none; }
+#${ROOT_ID}[data-minimised="true"] .mcn-actions { padding-top:14px; }
+#${ROOT_ID} button:focus-visible,#${ROOT_ID} summary:focus-visible,#${ROOT_ID} a:focus-visible { outline:2px solid var(--mcn-accent);outline-offset:-3px; }
+html[data-nexus-layout="phone"] #${ROOT_ID} .mcn-panel { transform:scale(var(--nx-ui-scale,1));left:var(--nx-visible-left,12px);top:var(--nx-visible-top,12px);width:var(--nx-visible-width,calc(100vw - 24px));max-width:var(--nx-visible-width,calc(100vw - 24px));max-height:var(--nx-visible-height,calc(100dvh - 24px)); }
+@media(max-width:600px) { #${ROOT_ID} .mcn-panel { top:12px;left:12px;max-height:calc(100dvh - 24px); } }
+@media(pointer:coarse) { #${ROOT_ID} .mcn-fold { min-height:44px; } #${ROOT_ID} .mcn-head { padding-block:8px; } }
 @media (prefers-reduced-motion: reduce) {
 #${ROOT_ID} *, #${ROOT_ID} *::before, #${ROOT_ID} *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; }
 }
@@ -9087,114 +9110,60 @@ root.id = ROOT_ID;
 root.dataset.phase = state.phase;
 root.dataset.collapsed = localStorage.getItem(STORAGE_COLLAPSED) === 'false' ? 'false' : 'true';
 root.innerHTML = `
-<div class="mcn-panel" role="region" aria-label="Command Nexus V3 controls">
-<div class="mcn-head">
-<div>
-<div class="mcn-title">Command Nexus V3</div>
-<div class="mcn-version">Master ${MASTER_VERSION} | Mission Finder ${MISSION_FINDER_VERSION}</div>
-</div>
-<div aria-hidden="true" style="font-size:18px;color:#7fa6c8;">+</div>
-</div>
+<div class="mcn-panel" id="mcn-auto-focus-panel" role="region" aria-label="Command Nexus V3 controls">
+<div class="mcn-head"><span class="mcn-brand-mark" aria-hidden="true">N</span><div><div class="mcn-title">NEXUS</div><div class="mcn-subtitle">Auto Mode</div></div><button type="button" class="mcn-fold" aria-controls="mcn-auto-focus-summary" aria-expanded="true">Minimise</button></div>
 <div class="mcn-body">
-<div class="mcn-scroll">
-<div class="mcn-status">
-<div class="mcn-status-main"></div>
-<div class="mcn-status-detail"></div>
+<div class="mcn-summary" id="mcn-auto-focus-summary">
+<div class="mcn-status"><div class="mcn-status-row"><div class="mcn-status-main" aria-live="polite"></div><span class="mcn-state-label" data-mcn-state></span></div><div class="mcn-status-detail"></div></div>
+<div class="mcn-mission"><div class="mcn-eyebrow" data-mcn-hero-label>Next mission</div><div class="mcn-mission-name" data-mcn-hero-name></div><div class="mcn-mission-id" data-mcn-hero-id></div></div>
+<dl class="mcn-totals"><div><dt>Sent this run</dt><dd data-mcn-sent>0</dd></div><div><dt>Missions seen</dt><dd data-mcn-seen>0</dd></div><div><dt>Advances</dt><dd data-mcn-advances>0</dd></div></dl>
 </div>
-<div class="mcn-meta">
-<div class="mcn-meta-card">
-<div class="mcn-meta-label">Phase</div>
-<div class="mcn-meta-value" data-mcn-phase></div>
-</div>
-<div class="mcn-meta-card">
-<div class="mcn-meta-label">Working mission</div>
-<div class="mcn-meta-value" data-mcn-mission>-</div>
-</div>
-<div class="mcn-meta-card">
-<div class="mcn-meta-label">Missions this run</div>
-<div class="mcn-meta-value" data-mcn-mission-count>0</div>
-</div>
-<div class="mcn-meta-card">
-<div class="mcn-meta-label">Transport seen</div>
-<div class="mcn-meta-value" data-mcn-transport-count>P0 | R0 | cleared 0</div>
-</div>
-<div class="mcn-meta-card">
-<div class="mcn-meta-label">Top queue</div>
-<div class="mcn-meta-value" data-mcn-top-mission>-</div>
-</div>
-<div class="mcn-meta-card wide">
-<div class="mcn-meta-label">Workers: A active, B warms next</div>
-<div class="mcn-meta-value" data-mcn-pipeline>A: waiting | B: waiting</div>
-</div>
-<div class="mcn-meta-card">
-<div class="mcn-meta-label">Radio transport</div>
-<div class="mcn-meta-value" data-mcn-radio>0</div>
-</div>
-<div class="mcn-meta-card">
-<div class="mcn-meta-label">Temporary skips</div>
-<div class="mcn-meta-value" data-mcn-skips>0</div>
-</div>
-<div class="mcn-meta-card wide">
-<div class="mcn-meta-label">Live health</div>
-<div class="mcn-meta-value" data-mcn-rule-assists>Pipeline 0/0 ready | handoff restarts 0 | transport 0/0</div>
-</div>
-</div>
-<div class="mcn-note"><strong>Command Nexus V3.</strong> Only A can dispatch and load the complete vehicle list; B only warms the immediate next page. Sustained heap growth or the 768 MiB ceiling releases B and restarts A at a verified boundary. Below two missions all workers are released. Cleanup never clears station, unit, personnel, training or durable settings. The watchdog, personal transport clearing and exact banked vehicle rules remain enabled; Alliance requests stay ignored.</div>
-</div>
-<div class="mcn-actions">
-<button type="button" class="mcn-action primary" data-mcn-start>Start Auto Mode</button>
-<button type="button" class="mcn-action stop" data-mcn-stop>Stop</button>
-<button type="button" class="mcn-action" data-mcn-retry>Retry current</button>
-<button type="button" class="mcn-action" data-mcn-export>Export diagnostics</button>
-</div>
-</div>
-</div>
-<button type="button" class="mcn-launcher" aria-label="Open Command Nexus V3" title="Command Nexus V3">
-<span class="mcn-core-n" aria-hidden="true">N</span>
-<span class="mcn-dot" aria-hidden="true"></span>
-</button>
-`;
+<div class="mcn-actions"><button type="button" class="mcn-action primary" data-mcn-start>Start Auto Mode</button><button type="button" class="mcn-action stop" data-mcn-stop hidden>Stop Auto Mode</button><button type="button" class="mcn-action" data-mcn-retry>Retry</button></div>
+<details class="mcn-disclosure" data-mcn-skip-details><summary><span class="mcn-skips-title">Temporary skips</span><span class="mcn-skip-count" data-mcn-skip-count>0</span><span class="mcn-summary-tail">Reasons</span></summary><ol class="mcn-skip-list" data-mcn-skips></ol><p class="mcn-skip-empty" data-mcn-skips-empty>No temporarily skipped missions.</p></details>
+<details class="mcn-disclosure" data-mcn-system-details><summary><span>System details</span><span class="mcn-summary-tail" data-mcn-memory>Memory normal</span></summary><div class="mcn-system-content">
+<dl class="mcn-system-list"><div><dt>Phase</dt><dd data-mcn-phase></dd></div><div><dt>Working mission</dt><dd data-mcn-mission></dd></div><div><dt>Top queue</dt><dd data-mcn-top-mission></dd></div><div><dt>Workers</dt><dd data-mcn-pipeline></dd></div><div><dt>Radio transport</dt><dd data-mcn-radio></dd></div><div><dt>Transport seen</dt><dd data-mcn-transport-count></dd></div><div><dt>Live health</dt><dd data-mcn-rule-assists></dd></div></dl>
+<button type="button" class="mcn-action mcn-export" data-mcn-export>Export diagnostics</button><div class="mcn-version">Local ${window.__NEXUS_EXTENSION__?.build || MASTER_VERSION} · Master ${MASTER_VERSION} · Mission Finder ${MISSION_FINDER_VERSION}</div>
+</div></details>
+</div></div>
+<button type="button" class="mcn-launcher" aria-label="Open Command Nexus V3" aria-controls="mcn-auto-focus-panel" title="Command Nexus V3"><span class="mcn-core-n" aria-hidden="true">N</span><span class="mcn-dot" aria-hidden="true"></span></button>`;
 const navbarHeader = document.querySelector('.navbar-header');
 const navbarBrand = navbarHeader?.querySelector('a.navbar-brand.hidden-xs, a.navbar-brand');
-if (!navbarHeader || !navbarBrand) {
-log('Navbar brand not available yet; Nexus launcher mount deferred.');
-return;
-}
+if (!navbarHeader || !navbarBrand) { log('Navbar brand not available yet; Nexus launcher mount deferred.'); return; }
 navbarBrand.insertAdjacentElement('afterend', root);
 const launcher = root.querySelector('.mcn-launcher');
 const startButton = root.querySelector('[data-mcn-start]');
 const stopButton = root.querySelector('[data-mcn-stop]');
 const retryButton = root.querySelector('[data-mcn-retry]');
-const exportButton = root.querySelector('[data-mcn-export]');
-launcher.addEventListener('click', () => {
-const collapsed = root.dataset.collapsed !== 'false';
-root.dataset.collapsed = collapsed ? 'false' : 'true';
+const setCollapsed = collapsed => {
+root.dataset.collapsed = String(collapsed);
 localStorage.setItem(STORAGE_COLLAPSED, root.dataset.collapsed);
-launcher.setAttribute('aria-label', collapsed ? 'Close Command Nexus V3' : 'Open Command Nexus V3');
+launcher.setAttribute('aria-expanded', String(!collapsed));
+launcher.setAttribute('aria-label', collapsed ? 'Open Command Nexus V3' : 'Close Command Nexus V3');
+};
+launcher.setAttribute('aria-expanded', String(root.dataset.collapsed === 'false'));
+launcher.setAttribute('aria-label', root.dataset.collapsed === 'false' ? 'Close Command Nexus V3' : 'Open Command Nexus V3');
+launcher.addEventListener('click', () => setCollapsed(root.dataset.collapsed === 'false'));
+root.addEventListener('keydown', event => {
+if (event.key === 'Escape' && root.dataset.collapsed === 'false') { event.preventDefault();event.stopPropagation();setCollapsed(true);launcher.focus(); }
 });
+const fold = root.querySelector('.mcn-fold');
+fold.addEventListener('click', () => { const minimised = root.dataset.minimised !== 'true';root.dataset.minimised = String(minimised);fold.textContent = minimised ? 'Expand' : 'Minimise';fold.setAttribute('aria-expanded', String(!minimised)); });
 startButton.addEventListener('click', startController);
 stopButton.addEventListener('click', gracefulStop);
 retryButton.addEventListener('click', retryCurrent);
-exportButton.addEventListener('click', exportDiagnostics);
+root.querySelector('[data-mcn-export]').addEventListener('click', exportDiagnostics);
 chooseTopMission();
 refreshRadioTransportRequests();
 state.ui = {
-root,
-statusMain: root.querySelector('.mcn-status-main'),
-statusDetail: root.querySelector('.mcn-status-detail'),
-phase: root.querySelector('[data-mcn-phase]'),
-mission: root.querySelector('[data-mcn-mission]'),
-missionCount: root.querySelector('[data-mcn-mission-count]'),
-transportCount: root.querySelector('[data-mcn-transport-count]'),
-topMission: root.querySelector('[data-mcn-top-mission]'),
-pipeline: root.querySelector('[data-mcn-pipeline]'),
-radio: root.querySelector('[data-mcn-radio]'),
-skips: root.querySelector('[data-mcn-skips]'),
-ruleAssists: root.querySelector('[data-mcn-rule-assists]'),
-startButton,
-stopButton,
-retryButton,
+root, statusMain: root.querySelector('.mcn-status-main'),statusDetail: root.querySelector('.mcn-status-detail'),
+stateLabel: root.querySelector('[data-mcn-state]'),heroLabel: root.querySelector('[data-mcn-hero-label]'),heroName: root.querySelector('[data-mcn-hero-name]'),heroId: root.querySelector('[data-mcn-hero-id]'),
+phase: root.querySelector('[data-mcn-phase]'),mission: root.querySelector('[data-mcn-mission]'),
+sent: root.querySelector('[data-mcn-sent]'),seen: root.querySelector('[data-mcn-seen]'),advances: root.querySelector('[data-mcn-advances]'),
+transportCount: root.querySelector('[data-mcn-transport-count]'),topMission: root.querySelector('[data-mcn-top-mission]'),pipeline: root.querySelector('[data-mcn-pipeline]'),radio: root.querySelector('[data-mcn-radio]'),
+skips: root.querySelector('[data-mcn-skips]'),skipCount: root.querySelector('[data-mcn-skip-count]'),skipDetails: root.querySelector('[data-mcn-skip-details]'),skipEmpty: root.querySelector('[data-mcn-skips-empty]'),skipSignature: '',
+ruleAssists: root.querySelector('[data-mcn-rule-assists]'),memory: root.querySelector('[data-mcn-memory]'),startButton,stopButton,retryButton
 };
+state.ui.skipDetails.addEventListener('toggle', () => renderControllerSkips(activeMissionSkipRecords()));
 render();
 }
 function readablePhaseLabel(phase) {
@@ -9232,64 +9201,87 @@ if (slot.status === 'STABILISING') return 'checking vehicles';
 if (slot.status === 'ERROR' || slot.status === 'ISOLATION_FAIL') return 'failed';
 return 'loading page';
 }
+function renderControllerSkips(records) {
+const ui = state.ui;
+ui.skipCount.textContent = String(records.length);
+ui.skipEmpty.hidden = records.length > 0;
+// Closed disclosures do not construct or retain a potentially long mission list.
+if (!ui.skipDetails.open) { if (ui.skips.childElementCount) ui.skips.replaceChildren();ui.skipSignature = '';return; }
+const signature = JSON.stringify(records.map(record => [record.missionId,record.missionName,record.reason,record.evidence,record.issues,record.remaining]));
+if (signature === ui.skipSignature) return;
+ui.skipSignature = signature;
+const fragment = document.createDocumentFragment();
+for (const record of records) {
+const item = document.createElement('li');
+const id = String(record.missionId || '');
+const name = document.createElement(/^\d+$/.test(id) ? 'a' : 'span');
+name.className = 'mcn-skip-name';
+name.textContent = missionDisplay(id, record.missionName);
+if (name.tagName === 'A') { name.href = '/missions/' + id;name.classList.add('lightbox-open'); }
+item.append(name);
+const issues = missionSkipIssueDetails(record);
+if (issues.length) {
+const list = document.createElement('ul');list.className = 'mcn-skip-issues';
+for (const issue of issues) { const row = document.createElement('li');row.textContent = 'Missing / blocked: ' + issue;list.append(row); }
+item.append(list);
+} else {
+const unknown = document.createElement('p');unknown.className = 'mcn-skip-reason';unknown.textContent = 'No specific unit details were recorded.';item.append(unknown);
+}
+const reason = document.createElement('p');reason.className = 'mcn-skip-reason';reason.textContent = 'Reason: ' + (globalThis.__NEXUS_RECOVERY__?.failureText(record) || record.reason || 'Not recorded');item.append(reason);
+const retry = document.createElement('p');retry.className = 'mcn-skip-retry';retry.textContent = `Eligible to retry after ${record.remaining} more mission advance${record.remaining === 1 ? '' : 's'}.`;item.append(retry);
+fragment.append(item);
+}
+ui.skips.replaceChildren(fragment);
+}
 function render() {
 if (!state.ui) return;
-state.ui.root.dataset.phase = state.phase;
-state.ui.statusMain.textContent = state.status;
-state.ui.statusDetail.textContent = state.detail || '';
-state.ui.phase.textContent = readablePhaseLabel(state.phase);
+const ui = state.ui;
+ui.root.dataset.phase = state.phase;
+ui.statusMain.textContent = state.phase === 'IDLE' && state.status === 'Ready' ? 'Ready to start' : state.status;
+ui.statusDetail.textContent = state.detail || '';
+ui.phase.textContent = readablePhaseLabel(state.phase);
+const canStop = Boolean(state.wanted || state.worker || state.stopping);
+ui.stateLabel.textContent = state.stopping ? 'Stopping' : state.running ? 'Running' : canStop ? 'Waiting' : 'Stopped';
 updateCurrentMissionName(getWorkerDocument());
 const top = state.topMission || compactMissionCandidate(chooseTopMission());
-const workingTopMatch = Boolean(
-top?.missionId &&
-state.currentMissionId &&
-top.missionId === state.currentMissionId &&
-!state.transportServiceActive
-);
-state.ui.mission.textContent = state.transportServiceActive
+const workingTopMatch = Boolean(top?.missionId && state.currentMissionId && top.missionId === state.currentMissionId && !state.transportServiceActive);
+ui.mission.textContent = state.transportServiceActive
 ? `TRANSPORT | ${missionDisplay(state.transportServiceMissionId, missionNameForId(state.transportServiceMissionId))}`
-: state.lowQueuePaused
-? `PAUSED | ${state.lowQueueObservedCount}/${MINIMUM_ACTIONABLE_MISSIONS} available`
+: state.lowQueuePaused ? `PAUSED | ${state.lowQueueObservedCount}/${MINIMUM_ACTIONABLE_MISSIONS} available`
 : `${missionDisplay(state.currentMissionId, state.currentMissionName)}${workingTopMatch ? ' | TOP' : ''}`;
-state.ui.missionCount.textContent =
-`${missionFinderRunValueSnapshot(
-state.runStartedAt ? Math.max(0, (Date.now() - Date.parse(state.runStartedAt)) / 1000) : 0
-).completedDispatches} sent | ${state.runUniqueMissionCount} seen | ${state.nativeMissionAdvances} advances`;
-state.ui.transportCount.textContent =
-`P${state.runPatientTransports} | R${state.runPrisonerTransports} | cleared ${state.transportServiceCleared}`;
+const heroId = state.transportServiceActive ? state.transportServiceMissionId : canStop && state.currentMissionId ? state.currentMissionId : top?.missionId;
+const heroName = state.transportServiceActive ? missionNameForId(heroId) : canStop && state.currentMissionId ? state.currentMissionName : top?.caption;
+ui.heroLabel.textContent = state.transportServiceActive ? 'Transport mission' : canStop && state.currentMissionId ? 'Working mission' : 'Next mission';
+ui.heroName.textContent = heroId ? heroName || missionNameForId(heroId) || 'Mission' : 'No mission available';
+ui.heroId.textContent = heroId ? compactMissionIdLabel(heroId) : '';
+ui.sent.textContent = String(missionFinderRunValueSnapshot(state.runStartedAt ? Math.max(0, (Date.now() - Date.parse(state.runStartedAt)) / 1000) : 0).completedDispatches);
+ui.seen.textContent = String(state.runUniqueMissionCount);
+ui.advances.textContent = String(state.nativeMissionAdvances);
+ui.transportCount.textContent = `P${state.runPatientTransports} | R${state.runPrisonerTransports} | cleared ${state.transportServiceCleared}`;
 const visualTop = state.visualTopMission;
 const visualTopSkipRemaining = visualTop?.missionId ? missionSkipRemaining(visualTop.missionId) : 0;
-state.ui.topMission.textContent = visualTopSkipRemaining > 0
+ui.topMission.textContent = visualTopSkipRemaining > 0
 ? `${missionDisplay(visualTop.missionId, visualTop.caption)} | SKIP ${visualTopSkipRemaining} -> ${top ? missionDisplay(top.missionId, top.caption) : 'waiting'}`
-: (top
-? `${missionDisplay(top.missionId, top.caption)}${top.actionKind && top.actionKind !== 'OTHER' ? ` | ${top.actionKind}` : ''}`
-: '-');
+: top ? `${missionDisplay(top.missionId, top.caption)}${top.actionKind && top.actionKind !== 'OTHER' ? ' | ' + top.actionKind : ''}` : '-';
 const failedTop = state.missionSkipRecords.get(String(visualTop?.missionId || top?.missionId || ''));
 if (failedTop) {
-  const explanation = globalThis.__NEXUS_RECOVERY__?.failureText(failedTop) || failedTop.reason;
-  state.ui.topMission.textContent += ' | Last failure: ' + explanation;
-  state.ui.topMission.title = 'Recorded ' + failedTop.lastSkippedAt + ': ' + explanation;
-} else state.ui.topMission.title = '';
-if (state.ui.pipeline) {
-state.ui.pipeline.textContent = state.workerRole === 'TRANSPORT_B'
+const explanation = globalThis.__NEXUS_RECOVERY__?.failureText(failedTop) || failedTop.reason;
+ui.topMission.textContent += ' | Last failure: ' + explanation;
+ui.topMission.title = 'Recorded ' + failedTop.lastSkippedAt + ': ' + explanation;
+} else ui.topMission.title = '';
+ui.pipeline.textContent = state.workerRole === 'TRANSPORT_B'
 ? `A: paused | B: transport ${compactMissionIdLabel(state.transportServiceMissionId)}`
-: `${state.lowQueuePaused ? 'A: released' : `A: ${state.running ? 'dispatching' : 'starting'} ${compactMissionIdLabel(state.currentMissionId)}`} | B: transport standby`;
-}
+: `${state.lowQueuePaused ? 'A: released' : canStop ? 'A: ' + (state.running ? 'dispatching' : 'starting') + ' ' + compactMissionIdLabel(state.currentMissionId) : 'A: standby'} | B: transport standby`;
 const nextRadio = state.radioTransportRequests[0] || null;
-state.ui.radio.textContent = nextRadio
-? `${state.radioTransportRequests.length} pending | next ${compactMissionIdLabel(nextRadio.missionId)}`
-: (state.runAllianceRadioIgnored ? `0 personal | ${state.runAllianceRadioIgnored} alliance ignored` : '0');
-const skips = activeMissionSkipRecords();
-state.ui.skips.textContent = skips.length
-? skips.map(record => `${missionDisplay(record.missionId, record.missionName)} | retry in ${record.remaining}`).join(' | ')
-: '0';
-if (state.ui.ruleAssists) {
-state.ui.ruleAssists.textContent =
-`A mission-only | B transport ${state.transportServiceCleared}/${state.transportServiceAttempts} | RAM ${state.pipelineMemoryPressureActive ? 'guard' : 'normal'} | cycles ${state.runtimeRecycles} | recovery ${state.postDispatchSoftRecoveries}/${state.postDispatchHardRecoveries}`;
-}
-state.ui.startButton.disabled = state.wanted || state.stopping;
-state.ui.stopButton.disabled = (!state.wanted && !state.worker) || state.stopping;
-state.ui.retryButton.disabled = state.stopping || (!state.currentMissionUrl && !collectMissionCandidates().length);
+ui.radio.textContent = nextRadio ? `${state.radioTransportRequests.length} pending | next ${compactMissionIdLabel(nextRadio.missionId)}` : state.runAllianceRadioIgnored ? `0 personal | ${state.runAllianceRadioIgnored} alliance ignored` : '0';
+renderControllerSkips(activeMissionSkipRecords());
+ui.ruleAssists.textContent = `A mission-only | B transport ${state.transportServiceCleared}/${state.transportServiceAttempts} | RAM ${state.pipelineMemoryPressureActive ? 'guard' : 'normal'} | cycles ${state.runtimeRecycles} | recovery ${state.postDispatchSoftRecoveries}/${state.postDispatchHardRecoveries}`;
+ui.memory.textContent = state.pipelineMemoryPressureActive ? 'Memory guard active' : 'Memory normal';
+ui.startButton.hidden = canStop;ui.stopButton.hidden = !canStop;
+ui.startButton.disabled = state.wanted || state.stopping;
+ui.stopButton.disabled = (!state.wanted && !state.worker) || state.stopping;
+ui.stopButton.textContent = state.stopping ? 'Stopping…' : 'Stop Auto Mode';
+ui.retryButton.disabled = state.stopping || (!state.currentMissionUrl && !collectMissionCandidates().length);
 }
 function resumePersistedBackground() {
 if (!persistedBackgroundWanted() || state.stopping || state.worker?.isConnected) return false;
@@ -10617,7 +10609,7 @@ function installNexusFullLogger() {
     const who = identity(); if (!who.player) return false; switchPlayer(who.player);
     const record = cleanRecord(raw); if (!record) return false;
     const capturedAt = Date.now();
-    record.clientVersion = '3.0.43.55';
+    record.clientVersion = '3.0.43.59';
     if (kind === 'mission') {
       if (!/^\d+$/.test(record.missionId || '')) return false;
       const old = registry[record.missionId] || {};
@@ -10649,7 +10641,7 @@ function installNexusFullLogger() {
     return true;
   }
   function activity(action, extra = {}) {
-    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.55', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
+    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.59', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
   }
   function current(eventType, options = {}) {
     const snapshot = getMissionLoggerMissionSnapshot();
@@ -10823,7 +10815,7 @@ function installNexusFullLogger() {
     finally {clearTimeout(timeout);timers.delete(timeout);creditAbort=null;creditBusy=false;}
   }
   function session(action) {
-    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.55',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
+    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.59',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
   }
   function tick() {
     try {
@@ -32681,7 +32673,7 @@ function installNexusFullLogger() {
     const who = identity(); if (!who.player) return false; switchPlayer(who.player);
     const record = cleanRecord(raw); if (!record) return false;
     const capturedAt = Date.now();
-    record.clientVersion = '3.0.43.55';
+    record.clientVersion = '3.0.43.59';
     if (kind === 'mission') {
       if (!/^\d+$/.test(record.missionId || '')) return false;
       const old = registry[record.missionId] || {};
@@ -32713,7 +32705,7 @@ function installNexusFullLogger() {
     return true;
   }
   function activity(action, extra = {}) {
-    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.55', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
+    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.59', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
   }
   function current(eventType, options = {}) {
     const snapshot = getMissionLoggerMissionSnapshot();
@@ -32887,7 +32879,7 @@ function installNexusFullLogger() {
     finally {clearTimeout(timeout);timers.delete(timeout);creditAbort=null;creditBusy=false;}
   }
   function session(action) {
-    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.55',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
+    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.59',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
   }
   function tick() {
     try {

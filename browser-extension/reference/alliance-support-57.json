@@ -1,0 +1,21 @@
+{
+  "version": "3.0.43.57",
+  "baseVersion": "3.0.43.56",
+  "sourceRuntimeSha256": "6b737ac0aa2b76778678b90a46e96389e7b1e1aa02dd3374e7708f84fd8f270d",
+  "localOnly": true,
+  "changes": [
+    "Alliance missions button beside Nexus; joined visibility toggle, estimated credit bands, individual and selected support",
+    "User-triggered serialized native dispatch of one closest available Fire Officer, with pagination, confirmed-result filtering and persistent uncertain-send protection",
+    "One sandboxed mission frame released after each job; heavy Nexus runtime excluded from that frame; no top navigation",
+    "Lightweight Auto Mode busy bridge and start/retry guard; no changes to Auto mission selection or dispatch logic"
+  ],
+  "files": {
+    "manifest.json": "361cb0f03934bffa0b45610a6bdef2920b7eb1dab358367e4e97326f033185f5",
+    "nexus-runtime.js": "6b737ac0aa2b76778678b90a46e96389e7b1e1aa02dd3374e7708f84fd8f270d",
+    "nexus-tools.js": "9f552b03d4a470f3e49e6ee22eec35b12f60aa83746222538fab7dfe4fd270dd",
+    "nexus-alliance-core.js": "8865f410d5d1a8e08661fce3e24b99243afa2fcaaded1d9bd21cb3b824b44f94",
+    "nexus-alliance-support.js": "c6c12de47d05f9b193639ecbfaf24dca364f3fc1c57dbc74fa72bae9b9378ceb",
+    "nexus-settings.js": "0cbc32fa1f672be74dc59de52e0a194e282af9262947e2aa3107075048c95a97",
+    "nexus-settings-main.js": "0cbc32fa1f672be74dc59de52e0a194e282af9262947e2aa3107075048c95a97"
+  }
+}

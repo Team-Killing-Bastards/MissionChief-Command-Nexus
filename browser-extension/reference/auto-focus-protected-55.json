@@ -1,0 +1,6 @@
+{
+  "baseVersion": "3.0.43.55",
+  "baseCommit": "458ef16ef682e287513937d1f7f4df815502eaaa",
+  "protectedRuntimeSha256": "98cae585f3638c82780aa0a209ebc38c74cc54c05d413334de74cd5bb17b4284",
+  "manualBridgeSha256": "e986c7bc9890a8e74890c3b0d081d3406b5d646cd09fbf60f2caadcbaa0d43de"
+}

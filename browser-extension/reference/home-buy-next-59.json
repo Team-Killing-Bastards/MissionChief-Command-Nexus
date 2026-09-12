@@ -1,0 +1,17 @@
+{
+  "version": "3.0.43.59",
+  "baseVersion": "3.0.43.58",
+  "sourceRuntimeSha256": "bc4c2d0f914e7c9fed38c725bfc845b3877ef7e9d48eaad381fffd802c413ea0",
+  "localOnly": true,
+  "changes": [
+    "Home Response quick-buy strip includes a persistent Buy and next building toggle, off by default",
+    "Capture the native next-building link with the purchase intent; navigate the current frame once only after game success, preserving its query",
+    "Failed, cancelled, expired or unconfirmed purchases do not advance; unavailable next links retain the existing return-to-building behavior"
+  ],
+  "files": {
+    "manifest.json": "768dff213ea906212b4115304eb3ae05f46355cf0c2a00f9b1bc92ab78af24dc",
+    "nexus-runtime.js": "bc4c2d0f914e7c9fed38c725bfc845b3877ef7e9d48eaad381fffd802c413ea0",
+    "nexus-tools.js": "7f621914a22be941ae7844fee7bbec7aa0293d8d5e5935d6285fc8888152a96b",
+    "nexus-home-market.js": "27aa1b794f33aa16de458c8e0a9be85b37d3a5c7275e39333edeb380ffe6e219"
+  }
+}

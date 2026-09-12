@@ -39,8 +39,9 @@ try{
  assert.equal(await page.evaluate(()=>window.__NEXUS_EXTENSION__.build),JSON.parse(fs.readFileSync(base+'/manifest.json')).version);
  assert.deepEqual(await tools.locator('#tabs button').allTextContents(),['Overview','Buildings','Vehicles','Schooling','Settings']);
  assert.equal(await tools.locator('#toggle').isVisible(),false,'Standalone launcher must not cover the dialog close button');
- await tools.locator('[data-view=settings]').click();assert.equal(await tools.locator('input[role=switch]').count(),41);
- pass('Packaged extension loads with five Tools tabs, top-right launcher and 41 on/off switches under actual extension CSP');
+ await tools.locator('[data-view=settings]').click();assert.equal(await tools.locator('input[role=switch]').count(),42);
+ assert.equal(await tools.locator('[data-setting-id="allianceSupport"]').count(),1);
+ pass('Packaged extension loads with five Tools tabs and 42 on/off switches, including Alliance support, under actual extension CSP');
  await page.screenshot({path:'audit/settings-43-wide.png'});
  const setting=id=>tools.locator(`[data-setting-id="${id}"]`);
  const scannerPage=await context.newPage();scannerPage.on('pageerror',e=>report.errors.push(e.message));scannerPage.setDefaultTimeout(12000);await scannerPage.goto('https://www.missionchief.co.uk/missions/10');await scannerPage.locator('#mission-finder-wrapper').waitFor();

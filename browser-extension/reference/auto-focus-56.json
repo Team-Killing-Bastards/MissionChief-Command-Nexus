@@ -1,0 +1,17 @@
+{
+  "version": "3.0.43.56",
+  "baseVersion": "3.0.43.55",
+  "sourceRuntimeSha256": "0f80884395338a81cbc22d8576df8e1e39401d6cc0d6429e46b0a199f40058b1",
+  "localOnly": true,
+  "changes": [
+    "Design A: current mission and session counts, one Start/Stop action, minimisation and collapsed system diagnostics",
+    "Separate Temporary skips disclosure with recorded shortage evidence, mission links and retry eligibility measured in mission advances",
+    "Capture bounded specific shortage text from already-collected evidence before truncation; no new requests or timers",
+    "Phone and desktop-mode phone sizing uses existing viewport variables; dispatch and worker scheduling are unchanged"
+  ],
+  "files": {
+    "manifest.json": "d9e2d2276f17d9278b47ea2c9230efc92ad61686d9145afd4e28dcea1d804961",
+    "nexus-runtime.js": "0f80884395338a81cbc22d8576df8e1e39401d6cc0d6429e46b0a199f40058b1",
+    "nexus-tools.js": "098c646a8553bbcb340fb6fc58ec8b1d3e0eec430777be222f58485b5f61c508"
+  }
+}

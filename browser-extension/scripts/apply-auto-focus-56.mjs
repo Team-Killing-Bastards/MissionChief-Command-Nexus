@@ -1,0 +1,16 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const file='runtime/nexus-runtime.js';
+let source=fs.readFileSync(file,'utf8');
+assert.ok(!source.includes('function renderControllerSkips('),'Focus panel is already installed; edit the canonical runtime for subsequent changes.');
+const panel=fs.readFileSync('scripts/runtime/auto-focus-panel.js','utf8');
+const css=fs.readFileSync('scripts/runtime/auto-focus-panel.css','utf8');
+const replace=(start,end,replacement)=>{const a=source.indexOf(start),b=source.indexOf(end,a);assert.ok(a>=0&&b>a,start);source=source.slice(0,a)+replacement+source.slice(b);};
+replace('#${ROOT_ID} .mcn-panel {','@media (prefers-reduced-motion: reduce)',css);
+replace('function buildUi() {','function readablePhaseLabel(',panel.slice(0,panel.indexOf('function renderControllerSkips(')));
+const controllerStart=source.indexOf('function render() {',source.indexOf('function readablePhaseLabel('));
+const controllerEnd=source.indexOf('function resumePersistedBackground()',controllerStart);
+assert.ok(controllerStart>=0&&controllerEnd>controllerStart);
+source=source.slice(0,controllerStart)+panel.slice(panel.indexOf('function renderControllerSkips('))+source.slice(controllerEnd);
+fs.writeFileSync(file,source);
+console.log('Installed Focus panel in canonical runtime; scheduling and dispatch functions retained.');

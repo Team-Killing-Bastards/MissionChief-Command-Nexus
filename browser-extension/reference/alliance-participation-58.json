@@ -1,0 +1,19 @@
+{
+  "version": "3.0.43.58",
+  "baseVersion": "3.0.43.57",
+  "sourceRuntimeSha256": "bdebc0b12ccfefc72caaaff0957a6b2cd5ec99779c3601ea5d2d81f4fc52df6c",
+  "localOnly": true,
+  "changes": [
+    "Recognise existing alliance participation using own vehicle mission targets, including all services travelling or on scene, even when the native mission card says new",
+    "Refresh participation on open, explicit refresh, toggle and before each user-started batch; coalesce reads and retain only mission IDs",
+    "Show unverified participation when the fleet read fails; retain previously known support and block unverified new sends",
+    "Use explicit Sent: 1 Fire Officer confirmation instead of a vehicle status badge mistaken for its name; native one-officer dispatch unchanged"
+  ],
+  "files": {
+    "manifest.json": "403f33d37b14dab443d0d0990f0c091c8737fc1f81614353335a8e35e0b3ebcd",
+    "nexus-runtime.js": "bdebc0b12ccfefc72caaaff0957a6b2cd5ec99779c3601ea5d2d81f4fc52df6c",
+    "nexus-tools.js": "6b7bbfd4e56efac81de05904daf562ab6e61a0d58b1dbd6dfd8ce23fd6846e8e",
+    "nexus-alliance-core.js": "3ff34f271ec864c15a2cc3c6ee982159f57cf84cac62962936689ba629919aa2",
+    "nexus-alliance-support.js": "6e21981bcbc71f78ece29edaca496138ced1cd7c4d8d3f53c09fecc78f7ae3a8"
+  }
+}
