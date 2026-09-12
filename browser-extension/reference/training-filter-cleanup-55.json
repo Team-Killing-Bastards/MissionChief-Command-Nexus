@@ -1,0 +1,15 @@
+{
+  "version": "3.0.43.55",
+  "baseVersion": "3.0.43.54",
+  "sourceRuntimeSha256": "e9ecf881bfd734b09238862d93b06300c328d1e28ab25e957633fb0fd04904c0",
+  "changes": [
+    "Hide duplicate native station filters once Nexus personnel filters are ready, retaining course setup and native enrolment",
+    "Restore original controls when disabled or suspended; keep them available on metadata failure; no new API reads"
+  ],
+  "files": {
+    "manifest.json": "21beaf501a2db306d38bfb935a3800892367534207ab81ff129a36df077934cd",
+    "nexus-runtime.js": "e9ecf881bfd734b09238862d93b06300c328d1e28ab25e957633fb0fd04904c0",
+    "nexus-tools.js": "5154870c50dbc16dabe1a68d4b9d88039f3d4fef8f24003506bb4dfe7c086228",
+    "nexus-schooling-filters.js": "b2138dd8acd43823d89b715534024cddbf35323a7c950e7754c3be6aa930d170"
+  }
+}

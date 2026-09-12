@@ -1,0 +1,77 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import assert from 'node:assert/strict';
+import {devLibrary} from '../../scripts/dev-library.mjs';
+const {chromium}=devLibrary('playwright'), base=path.resolve('extension');
+const report={version:JSON.parse(fs.readFileSync(base+'/manifest.json')).version,realGame:false,checks:[],requests:[],errors:[]};
+const pass=s=>{report.checks.push(s);console.log('PASS '+s);};
+const wrap=body=>`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{background:#505050;color:white;font:14px Arial;margin:18px}table{width:100%;border-collapse:collapse}td,th{padding:10px;border-bottom:1px solid #888;text-align:left}a{color:#aae0ff}dt{float:left;clear:left;width:145px;text-align:right;padding:3px}dd{margin-left:160px;padding:3px}dl{min-height:100px}button{padding:6px}h1{font-weight:normal}</style></head><body>${body}</body></html>`;
+const unit=(id,type=8,assigned=2)=>({id,caption:'IRV '+id,building_id:1,vehicle_type:type,assigned_personnel_count:assigned,max_personnel_override:null,fms_real:2});
+const row=id=>`<tr data-unit="${id}"><td><a href="/vehicles/${id}">IRV ${id}</a></td><td><span class="label">2</span></td><td><span class="timeleft">No mission</span></td><td>2</td></tr>`;
+const station=ids=>wrap(`<h1>WHITEHILL LIMAVADY-PS1</h1><dl class="dl-horizontal"><dt>Level:</dt><dd>5</dd><dt>Vehicles:</dt><dd id="native-count">${ids.length} of 20 <a href="/buildings/1/vehicles/new">Vehicle Market</a></dd><dt>Personnel:</dt><dd>6 Employees, Target: 100 Personnel</dd></dl><table id="vehicle_table"><thead><tr><th>Name</th><th>Status</th><th>Current mission</th><th>Crew (Max)</th></tr></thead><tbody>${ids.map(row).join('')}</tbody></table>`);
+const personal=bound=>wrap(`<h1>Personnel</h1><table id="personal_table"><thead><tr><th>Name</th><th>Education</th><th>Assigned vehicle</th></tr></thead><tbody>${Array.from({length:6},(_,i)=>`<tr id="person_${i}"><td>Person ${i}</td><td>HazMat Unit</td><td>${i<bound?'<a href="/vehicles/39">OSU</a>':''}</td></tr>`).join('')}</tbody></table>`);
+const assignment=()=>wrap('<h1>Assign personnel</h1><table id="personal_table"><thead><tr><th>Name</th><th>Education</th><th>Assigned vehicle</th></tr></thead><tbody><tr id="person_1"><td>Person 1</td><td>HazMat Unit</td><td><button id="bind" class="btn-assigned">Remove binding</button></td></tr></tbody></table>');
+let fleet=Array.from({length:6},(_,i)=>unit(i+1)), ids=fleet.map(v=>v.id), apiMode='ok', delay=0, staffBound=6;
+const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
+const ctx=await browser.newContext({viewport:{width:1300,height:900}});
+await ctx.addInitScript(()=>{window.fixtureFetches=[];const original=fetch;window.fetch=(url,options)=>{fixtureFetches.push({url:String(url),cache:options?.cache});return original(url,options);};});
+await ctx.route('https://**/*',async route=>{
+ const u=new URL(route.request().url());report.requests.push({path:u.pathname,method:route.request().method()});assert.equal(route.request().method(),'GET');
+ if(u.origin!=='https://www.missionchief.co.uk')return route.abort();
+ if(u.pathname==='/api/vehicles')return route.fulfill({json:[unit(1)]}); // Old account snapshot intentionally stale.
+ if(u.pathname==='/api/buildings/1/vehicles'||/^\/api\/vehicles\/\d+$/.test(u.pathname)){
+  const snapshot=structuredClone(fleet);if(delay)await new Promise(r=>setTimeout(r,delay));
+  if(apiMode==='error')return route.fulfill({status:503,body:'Unavailable'});
+  if(apiMode==='invalid')return route.fulfill({json:{login:true}});
+  return route.fulfill({json:u.pathname.includes('/buildings/')?(apiMode==='stale'?snapshot.slice(0,1):snapshot):snapshot.find(v=>String(v.id)===u.pathname.split('/').at(-1))||{}});
+ }
+ if(u.pathname==='/buildings/1/personals')return route.fulfill({contentType:'text/html',body:personal(staffBound)});
+ if(u.pathname==='/vehicles/39/zuweisung')return route.fulfill({contentType:'text/html',body:assignment()});
+ if(u.pathname==='/buildings/1')return route.fulfill({contentType:'text/html',body:station(ids)});
+ return route.fulfill({contentType:'text/html',body:wrap('<h1>Mission fixture</h1>')});
+});
+const page=await ctx.newPage();page.setDefaultTimeout(10000);page.on('pageerror',e=>report.errors.push(e.message));
+const scripts=['nexus-comfort-data.js','nexus-building-data.js','nexus-building-core.js','nexus-personnel-reader.js','nexus-building-overview.js','nexus-comfort.js'];
+const oldComfort=fs.readFileSync('reference/crew-refresh-baseline-50.js');
+assert.equal(crypto.createHash('sha256').update(oldComfort).digest('hex'),'816650c0d04d8c0aa647eff063719fd0843a8b39843601417b0f5813fb0e3de2');
+const inject=async(folder=base,target=page,legacy=false)=>{for(const name of scripts)await target.addScriptTag({content:legacy&&name==='nexus-comfort.js'?oldComfort.toString():fs.readFileSync(path.join(folder,name),'utf8')});};
+const open=async()=>{await page.goto('https://www.missionchief.co.uk/buildings/1');await inject();};
+const count=()=>report.requests.filter(r=>r.path==='/api/buildings/1/vehicles').length;
+try{
+ await page.goto('https://www.missionchief.co.uk/buildings/1');await inject(base,page,true);
+ await page.waitForFunction(()=>__NEXUS_BUILDING_OVERVIEW__?.model?.total.vehicles===1);
+ assert.equal(await page.locator('[data-nx-assignment]').count(),1);pass('Reproduced .50: six native vehicles but one cached register entry gives one-vehicle totals and only one Assign crew link');
+ delay=700;await open();await page.waitForFunction(()=>document.querySelectorAll('[data-nx-assignment]').length===6);assert.equal(await page.locator('[data-nx-crew]').count(),0);
+ await page.waitForFunction(()=>__NEXUS_BUILDING_OVERVIEW__?.model?.total.vehicles===6);assert.equal(await page.locator('[data-nx-crew]').count(),6);assert.equal(await page.locator('[data-nx-assignment]').count(),6);
+ assert.match(await page.locator('#nx-required-personnel').innerText(),/min: 6 \(6\) \/ max: 12 \(12\)/);
+ assert.deepEqual(await page.evaluate(()=>fixtureFetches.filter(r=>r.url.includes('/api/'))),[{url:'/api/buildings/1/vehicles',cache:'no-store'}]);delay=0;
+ await page.screenshot({path:'audit/crew-freshness-51.png',fullPage:true});
+ pass('Station-specific no-store read corrects all six vehicles; Assign crew links appear before the response, without depending on register entries');
+ let before=count();fleet.push(unit(7),unit(8));ids.push(7,8);
+ await page.evaluate(rows=>{document.querySelector('#vehicle_table tbody').insertAdjacentHTML('beforeend',rows);document.querySelector('#native-count').firstChild.textContent='8 of 20 ';},row(7)+row(8));
+ await page.waitForFunction(()=>__NEXUS_BUILDING_OVERVIEW__.model.total.vehicles===8);assert.equal(count(),before+1);assert.equal(await page.locator('[data-nx-assignment]').count(),8);
+ before=count();fleet=fleet.filter(v=>v.id!==2);ids=ids.filter(id=>id!==2);await page.evaluate(()=>{document.querySelector('[data-unit="2"]').remove();document.querySelector('#native-count').firstChild.textContent='7 of 20 ';});await page.waitForFunction(()=>__NEXUS_BUILDING_OVERVIEW__.model.total.vehicles===7);assert.equal(count(),before+1);
+ pass('Purchase bursts and removals refresh once per changed station list and update crew totals and new-row links');
+ before=count();await page.evaluate(()=>{const body=document.querySelector('#vehicle_table tbody');for(let i=0;i<50;i++){body.prepend(body.lastElementChild);document.querySelector('.timeleft').textContent='Timer '+i;body.style.color=i%2?'red':'white';}});await page.waitForTimeout(1300);assert.equal(count(),before);assert.equal(await page.locator('[data-nx-assignment]').count(),7);
+ pass('Sorting, countdown text, colour changes and Nexus decorations do not trigger fleet refetches or duplicate links');
+ apiMode='stale';fleet=Array.from({length:6},(_,i)=>unit(i+1));ids=fleet.map(v=>v.id);before=count();await open();await page.waitForFunction(()=>__NEXUS_BUILDING_OVERVIEW__?.model?.total.partial);assert.match(await page.locator('#nx-required-personnel').innerText(),/Known totals/);await page.waitForTimeout(2300);assert.equal(count(),before+2);await page.waitForTimeout(1600);assert.equal(count(),before+2);assert.equal(await page.locator('[data-nx-assignment]').count(),6);
+ apiMode='ok';await page.getByRole('button',{name:'Refresh crew & training'}).click();await page.waitForFunction(()=>__NEXUS_BUILDING_OVERVIEW__.model.total.vehicles===6&&!__NEXUS_BUILDING_OVERVIEW__.model.total.partial);
+ pass('A lagging API is labelled partial, receives only one follow-up read and never prevents assignment links; manual refresh recovers');
+ delay=900;fleet=[unit(1)];ids=[1];await open();fleet.push(unit(2));ids.push(2);await page.evaluate(r=>{document.querySelector('#vehicle_table tbody').insertAdjacentHTML('beforeend',r);document.querySelector('#native-count').firstChild.textContent='2 of 20 ';},row(2));await page.waitForTimeout(1000);assert.notEqual(await page.evaluate(()=>__NEXUS_BUILDING_OVERVIEW__?.model?.total.vehicles),1);await page.waitForFunction(()=>__NEXUS_BUILDING_OVERVIEW__.model?.total.vehicles===2);delay=0;
+ pass('A purchase during an in-flight read invalidates its old result and queues one fresh read');
+ fleet=[unit(39,39,6)];ids=[39];staffBound=6;await open();await page.waitForFunction(()=>__NEXUS_BUILDING_OVERVIEW__?.model?.training[0]?.full===1);fleet[0].assigned_personnel_count=3;staffBound=3;await page.getByRole('button',{name:'Refresh crew & training'}).click();await page.waitForFunction(()=>__NEXUS_BUILDING_OVERVIEW__.model.training[0]?.qualifiedAssigned===3);assert.match(await page.locator('#nx-specialist-table').innerText(),/!/);
+ assert.ok((await page.evaluate(()=>fixtureFetches.filter(r=>r.url.includes('/personals')))).every(r=>r.cache==='no-store'));
+ pass('Refreshing specialist crew updates both assigned totals and training coverage from uncached personnel data');
+ fleet[0].assigned_personnel_count=1;await page.goto('https://www.missionchief.co.uk/vehicles/39/zuweisung');await inject();await page.waitForFunction(()=>document.querySelector('#nx-personnel-demand')?.textContent.includes('Assigned crew: 1'));
+ fleet[0].assigned_personnel_count=0;await page.evaluate(()=>{const b=document.querySelector('#bind');b.classList.remove('btn-assigned');b.textContent='Assign';});await page.waitForFunction(()=>document.querySelector('#nx-personnel-demand')?.textContent.includes('Assigned crew: 0'));assert.ok((await page.evaluate(()=>fixtureFetches)).some(r=>r.url==='/api/vehicles/39'&&r.cache==='no-store'));
+ pass('Native binding changes refresh the single vehicle and its assigned count without fetching the account-wide register');
+ apiMode='error';fleet=[unit(1)];ids=[1];await open();await page.getByRole('button',{name:'Refresh crew & training'}).waitFor();assert.match(await page.locator('#nx-required-personnel').innerText(),/unavailable/);assert.equal(await page.locator('[data-nx-assignment]').count(),1);apiMode='ok';await page.getByRole('button',{name:'Refresh crew & training'}).click();await page.waitForFunction(()=>__NEXUS_BUILDING_OVERVIEW__?.model?.total.vehicles===1);
+ pass('Failed reads leave native controls and immediate assignment links usable, with an available retry');
+ before=count();await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));fleet.push(unit(2));await page.evaluate(r=>document.querySelector('#vehicle_table tbody').insertAdjacentHTML('beforeend',r),row(2));await page.waitForTimeout(1200);assert.equal(count(),before);ids=[1,2];await page.evaluate(()=>{document.querySelector('#native-count').firstChild.textContent='2 of 20 ';window.dispatchEvent(new Event('pageshow'));});await page.waitForFunction(()=>__NEXUS_BUILDING_OVERVIEW__.model?.total.vehicles===2);
+ pass('Suspension releases row observers, pending refreshes and registries; returning reads current station data');
+ before=report.requests.filter(r=>r.path.startsWith('/api/')).length;await page.goto('https://www.missionchief.co.uk/missions/123');await inject();await page.waitForTimeout(400);assert.equal(report.requests.filter(r=>r.path.startsWith('/api/')).length,before);
+ await page.goto('https://www.missionchief.co.uk/buildings/1');await page.evaluate(()=>window.name='mcn-v3-active-worker-test');await inject();await page.waitForTimeout(300);assert.equal(report.requests.filter(r=>r.path.startsWith('/api/')).length,before);
+ pass('Mission and Auto worker pages do not activate the new station refresh path');
+ assert.deepEqual(report.errors,[]);report.passed=true;
+}catch(error){report.failure=String(error);throw error;}finally{await browser.close();fs.writeFileSync('audit/crew-freshness-51.json',JSON.stringify(report,null,2)+'\n');}

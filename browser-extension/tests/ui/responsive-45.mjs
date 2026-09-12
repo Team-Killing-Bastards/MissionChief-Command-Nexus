@@ -22,7 +22,7 @@ for(const [name,viewport,touch] of profiles){
    else if(u.pathname==='/leitstellenansicht')body=`<!doctype html><html><head>${meta}</head><body style="background:#505050"><a class="lightbox-open list-group-item active" href="/buildings/1">Fixture Fire Station</a></body></html>`;
    else if(u.pathname==='/buildings/1')body=html(buildingOverviewFixture());
    else if(u.pathname==='/buildings/1/personals')body=html(buildingPersonnel());
-   else if(u.pathname.startsWith('/api/')||u.pathname==='/einsaetze.json'){type='application/json';body=u.pathname==='/api/vehicles'?JSON.stringify(buildingFleet):'[]';}
+   else if(u.pathname.startsWith('/api/')||u.pathname==='/einsaetze.json'){type='application/json';body=u.pathname==='/api/buildings/1/vehicles'?JSON.stringify(buildingFleet.filter(v=>v.building_id===1)):'[]';}
    if(name==='orion-desktop'&&type==='text/html')body=body.replace('width=device-width,initial-scale=1','width=980');
    return route.fulfill({contentType:type,body});
   });

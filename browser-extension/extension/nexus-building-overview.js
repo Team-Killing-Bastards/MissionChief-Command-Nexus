@@ -15,7 +15,7 @@
   function visible(){if(!active||document.hidden||worker())return false;try{let w=window;while(w!==w.top){const f=w.frameElement;if(!f||f.hidden||f.getAttribute('aria-hidden')==='true')return false;const css=w.parent.getComputedStyle(f);if(css.display==='none'||css.visibility==='hidden'||!f.getClientRects().length)return false;w=w.parent;}return true;}catch{return false;}}
   const style=el('style');style.textContent=`
   #nx-building-overview{display:grid;grid-template-columns:minmax(380px,.9fr) minmax(390px,1.1fr);align-items:start;gap:16px;margin:12px 0;font:12px system-ui,sans-serif;color:#e8f0fb}#nx-building-overview *{box-sizing:border-box}
-  #nx-building-overview .nx-building-left>dl{float:none;width:100%;padding:0;margin:0 0 10px}#nx-building-overview .nx-building-left>dl:after{content:'';display:block;clear:both}#nx-building-overview dt{color:inherit}#nx-building-overview #nx-required-label{clear:left}#nx-building-overview #nx-required-personnel{color:#9ed9ff;font-weight:600}#nx-building-overview #nx-required-personnel small{display:block;font-weight:normal;color:#cad7e5}
+  #nx-building-overview .nx-building-right{min-width:0;display:grid;gap:12px}#nx-building-overview .nx-building-left>dl{float:none;width:100%;padding:0;margin:0 0 10px}#nx-building-overview .nx-building-left>dl:after{content:'';display:block;clear:both}#nx-building-overview dt{color:inherit}#nx-building-overview #nx-required-label{clear:left}#nx-building-overview #nx-required-personnel{color:#9ed9ff;font-weight:600}#nx-building-overview #nx-required-personnel small{display:block;font-weight:normal;color:#cad7e5}
   #nx-building-overview .nx-building-panel{min-width:0;background:#102338;border:1px solid #7891aa;border-left:4px solid #579cc5;border-radius:5px;padding:10px 12px}#nx-building-overview h3{font:600 13px system-ui,sans-serif;margin:0 0 8px;color:#b9e1fc}#nx-building-overview p{margin:6px 0;color:#cad7e5;font-size:11px}#nx-building-overview button,#nx-building-overview .nx-building-link{font:inherit;background:#1d415d;border:1px solid #7193ac;color:#e8f0fb;border-radius:4px;padding:4px 7px;margin-top:6px;cursor:pointer}#nx-building-overview button:disabled{opacity:.5}#nx-building-overview a{color:#a1dbff}
   #nx-specialist-table{border-collapse:collapse;width:100%;font:11px system-ui,sans-serif}#nx-specialist-table th,#nx-specialist-table td{padding:7px 5px;border-bottom:1px solid #6685a14d;text-align:right;vertical-align:middle}#nx-specialist-table th:first-child,#nx-specialist-table td:first-child{text-align:left}#nx-specialist-table th{color:#b9e1fc;font-weight:600}#nx-specialist-table .nx-covered{color:#8de0ad}#nx-specialist-table .nx-gap{color:#ffca83}#nx-specialist-table .nx-unverified{color:#ccd6e4}
   #nx-extension-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#nx-extension-grid .nx-extension-item{background:#17354b;border-radius:4px;padding:7px;min-width:0}#nx-extension-grid .nx-extension-name{display:block;font-size:11px;margin-bottom:5px;color:#d5eafb}#nx-extension-grid .nx-extension-slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:3px}#nx-extension-grid .nx-extension-state{display:block;border-radius:3px;padding:4px;text-align:center;font-size:10px;line-height:1.25;font-weight:600;color:white;background:#486077;overflow-wrap:anywhere}#nx-extension-grid .nx-ext-ready{background:#247047}#nx-extension-grid .nx-ext-unbuilt{background:#286895}#nx-extension-grid .nx-ext-inactive{background:#9b433d}#nx-extension-grid .nx-ext-building{background:#8c641b}#nx-extension-grid .nx-ext-pending{background:#366a7b}
@@ -25,13 +25,13 @@
     if(root?.isConnected)return true;sourceList=document.querySelector('dl.dl-horizontal');if(!sourceList)return false;
     root=el('div');root.id='nx-building-overview';sourceList.before(root);left=el('div',undefined,'nx-building-left');root.append(left);left.append(sourceList);
     if(flags.personnelDemands){const dt=el('dt','Required personnel');dt.id='nx-required-label';const dd=el('dd','Loading crew…');dd.id='nx-required-personnel';sourceList.append(dt,dd);crew=el('section',undefined,'nx-building-panel');crew.id='nx-personnel-demand';left.append(crew);renderCrew();}
-    if(flags.expansions){right=el('section',undefined,'nx-building-panel');right.id='nx-expansions';root.append(right);right.append(el('h3','Nexus · Building extensions'));const grid=el('div');grid.id='nx-extension-grid';right.append(grid);const link=el('a','Manage extensions','nx-building-link');link.href='#ausbauten';link.addEventListener('click',()=>document.querySelector('a[href="#extension"],a[href="#extensions"],a[href="#ausbauten"]:not([data-nexus-building])')?.click());right.append(link);}
+    if(flags.expansions){right=el('section',undefined,'nx-building-panel');right.id='nx-expansions';const column=el('div',undefined,'nx-building-right');root.append(column);column.append(right);right.append(el('h3','Nexus · Building extensions'));const grid=el('div');grid.id='nx-extension-grid';right.append(grid);const link=el('a','Manage extensions','nx-building-link');link.href='#ausbauten';link.addEventListener('click',()=>document.querySelector('a[href="#extension"],a[href="#extensions"],a[href="#ausbauten"]:not([data-nexus-building])')?.click());right.append(link);}
     return true;
   }
   function renderCrew(){
     if(!crew)return;crew.replaceChildren(el('h3','Nexus · Specialist crew coverage'));
     const value=document.getElementById('nx-required-personnel');
-    if(!fleet){if(value)value.textContent=staffError?'Crew data unavailable':'Loading crew…';crew.append(el('p',staffError||'Loading vehicle crew requirements…'));return;}
+    if(!fleet){if(value)value.textContent=staffError?'Crew data unavailable':'Loading crew…';crew.append(el('p',staffError||'Loading vehicle crew requirements…'));if(staffError&&refreshFleet){const retry=el('button','Refresh crew & training');retry.type='button';retry.addEventListener('click',refreshFleet);crew.append(retry);}return;}
     const model=C.calculate(fleet,D,staff,partial);state.model=model;const t=model.total,uncertain=t.partial||t.unknown>0,prefix=uncertain?'Known totals: ':'';
     value.replaceChildren(document.createTextNode(`${prefix}min: ${nf(t.min)} (${nf(t.activeMin)}) / max: ${nf(t.max)} (${nf(t.activeMax)})`),el('small','Figures in brackets exclude status 6 vehicles.'));
     if(uncertain)crew.append(el('p',`Partial vehicle data: ${t.unknown} unknown definitions${t.partial?' or incomplete register':''}.`));
@@ -54,6 +54,12 @@
     }else crew.append(el('p',t.unknown?'Specialist requirements unavailable for unknown vehicle types.':'No specialist training required by the active vehicles in this register.'));
     const foot=el('p',`${t.vehicles} station vehicles · ${t.paused} in status 6${readAt?` · Read ${new Date(readAt).toLocaleTimeString('en-GB')}`:''}`);foot.title='Assigned crew is not the current crew aboard.';crew.append(foot);
     const refresh=el('button','Refresh crew & training');refresh.type='button';refresh.disabled=!!controller;refresh.addEventListener('click',()=>{if(!visible()||controller)return;staff=null;staffTried=false;staffError='';renderCrew();refreshFleet?.();});crew.append(refresh);
+    if(model.training.length&&globalThis.NexusSettings?.enabled('courseListFilters')!==false){
+      // Transfer only the displayed training names and their known course aliases.
+      // A fragment stays in the browser; no station, player or personnel data is sent.
+      const groups=model.training.slice(0,40).map(g=>({name:g.name,aliases:[...new Set([g.name,...Object.values(D).flatMap(v=>v.training.filter(r=>r.name===g.name).flatMap(r=>r.aliases))])].slice(0,8)}));
+      const link=el('a','Open courses','nx-building-link');link.id='nx-crew-courses';link.href='/schoolings#'+new URLSearchParams({'nexus-training':JSON.stringify(groups)});link.title='Show active courses matching the training in this crew table';link.style.cssText='display:inline-block;margin-left:8px;text-decoration:none';crew.append(link);
+    }
   }
   async function readPersonnel(){
     if(!flags.personnelDemands)return;
@@ -61,7 +67,7 @@
     staffTried=true;const ticket=generation;controller=new AbortController();const current=controller,timeout=setTimeout(()=>current.abort(),15000);
     try{
       let doc=document,table=document.getElementById('personal_table');
-      if(!table){state.staffFetches++;const response=await fetch(`/buildings/${id}/personals`,{credentials:'same-origin',redirect:'error',signal:current.signal});if(!response.ok)throw Error(`HTTP ${response.status}`);
+      if(!table){state.staffFetches++;const response=await fetch(`/buildings/${id}/personals`,{credentials:'same-origin',redirect:'error',cache:'no-store',signal:current.signal});if(!response.ok)throw Error(`HTTP ${response.status}`);
         const reader=response.body.getReader(),decoder=new TextDecoder();let raw='',bytes=0;
         try{while(true){const {value,done}=await reader.read();if(done)break;bytes+=value.byteLength;if(bytes>4*1024*1024){await reader.cancel();throw Error('Personnel response too large');}raw+=decoder.decode(value,{stream:true});}raw+=decoder.decode();}finally{reader.releaseLock();}
         doc=new DOMParser().parseFromString(raw,'text/html');raw='';table=doc.getElementById('personal_table');
@@ -81,7 +87,7 @@
     }catch(err){if(ticket===generation&&visible())staffError=`Personnel unavailable (${txt(err.message,100)}). Coverage is not verified.`;}
     finally{clearTimeout(timeout);if(controller===current)controller=null;if(ticket===generation&&visible())renderCrew();}
   }
-  function setFleet(entries,isPartial,time,refresh){if(!visible()||!mount())return;const station=entries.filter(v=>String(v.building)===id);fleet=station.slice(0,5000);partial=isPartial||station.length>5000;readAt=time;refreshFleet=refresh;renderCrew();void readPersonnel();}
+  function setFleet(entries,isPartial,time,refresh){if(!visible()||!mount())return;if(time!==readAt){generation++;controller?.abort();controller=null;staff=null;staffTried=false;staffError='';}const station=entries.filter(v=>String(v.building)===id);fleet=station.slice(0,5000);partial=isPartial||station.length>5000;readAt=time;refreshFleet=refresh;renderCrew();void readPersonnel();}
   function failFleet(message){staffError=`Crew data unavailable (${txt(message,100)}).`;fleet=null;state.model=null;renderCrew();}
   function extensionStatus(row){
     const timer=row.querySelector('[data-end-time]'),raw=Number(timer?.getAttribute('data-end-time')),end=Number.isFinite(raw)&&raw>0?(raw<1e12?raw*1000:raw):null;
@@ -103,6 +109,6 @@
     for(const [name,states]of groups){const item=el('div',undefined,'nx-extension-item');item.append(el('strong',name,'nx-extension-name'));const slots=el('div',undefined,'nx-extension-slots');states.forEach((status,i)=>{const bar=el('span',status.text,`nx-extension-state nx-ext-${status.kind}`);bar.title=`${name}${states.length>1?` · slot ${i+1}/${states.length}`:''}${status.title?` · ${status.title}`:''}`;slots.append(bar);});item.append(slots);grid.append(item);}
     if(!groups.size)grid.append(el('p','No extension rows available.'));
   }
-  function activate(){active=true;if(visible()){mount();expansions();}}
+  function activate(refresh){active=true;if(refresh)refreshFleet=refresh;if(visible()){mount();expansions();}}
   function suspend(){active=false;generation++;controller?.abort();controller=null;staffTried=false;staff=null;fleet=null;state.model=null;refreshFleet=null;extensionObserver?.disconnect();extensionObserver=null;extensionSource=null;clearTimeout(extensionTimer);extensionTimer=null;}
 })();

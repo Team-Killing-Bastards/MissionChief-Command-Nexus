@@ -18,7 +18,7 @@ assert.deepEqual(manifest.web_accessible_resources,[{resources:['icons/nexus-48.
 assert.deepEqual(manifest.content_scripts[0],{matches:gameMatches,js:['nexus-settings.js'],run_at:'document_start',all_frames:true,world:'ISOLATED'});
 assert.deepEqual(manifest.content_scripts[1],{matches:gameMatches,js:['nexus-settings-main.js','nexus-runtime.js'],run_at:'document_start',all_frames:true,world:'MAIN'});
 for(const script of manifest.content_scripts) {
-  const route=script.js.includes('nexus-daily.js')?'credits/daily*':script.js.includes('nexus-overview.js')?'credits/overview*':'*';
+  const route=script.js.includes('nexus-course-list-filters.js')?'schoolings*':script.js.includes('nexus-daily.js')?'credits/daily*':script.js.includes('nexus-overview.js')?'credits/overview*':'*';
   assert.deepEqual(script.matches,gameMatches.map(s=>s.replace(/\*$/,route)));
 }
 const zip=await JSZip.loadAsync(fs.readFileSync(`release/Nexus-Extension-${manifest.version}.zip`));

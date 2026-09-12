@@ -1,0 +1,18 @@
+{
+  "version": "3.0.43.46",
+  "baseVersion": "3.0.43.45",
+  "sourceRuntimeSha256": "ba08d5772d35710fd714a00822d967122b162632000afade936a16f6b00d6c91",
+  "changes": [
+    "Local-only manual requirement buttons: existing matching and arrival order, incoming/selected deduplication, shortage feedback, no dispatch or automatic paging",
+    "Manual selector is excluded from Auto workers and adds no background timer; existing Auto routines unchanged"
+  ],
+  "files": {
+    "manifest.json": "fb2ae0d9d1c1f5fdd4aaa6975c6805b6a8c400dcb975ef0eaa2ebaa411abbe81",
+    "nexus-runtime.js": "ba08d5772d35710fd714a00822d967122b162632000afade936a16f6b00d6c91",
+    "nexus-tools.js": "5c2471a82ebe02207a99940b442c9b35301670f2d439b2ac0ae6295983c9f521",
+    "nexus-settings.js": "6f410d737f2a9eed6e399998870aac5072c1e8619d8ae7ee145827f858ccfcfc",
+    "nexus-settings-main.js": "6f410d737f2a9eed6e399998870aac5072c1e8619d8ae7ee145827f858ccfcfc",
+    "nexus-requirement-ticks.js": "dc473b3e446711254dccf8e522b165b8c8a111627ec5877e64ce25ebcde29eee",
+    "nexus-comfort.js": "816650c0d04d8c0aa647eff063719fd0843a8b39843601417b0f5813fb0e3de2"
+  }
+}

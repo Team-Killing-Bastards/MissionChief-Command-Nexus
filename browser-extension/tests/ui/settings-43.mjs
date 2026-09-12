@@ -29,7 +29,7 @@ try{
  if(u.pathname.startsWith('/missions/'))return route.fulfill({contentType:'text/html',body:mission});
  if(u.pathname==='/buildings/1')return route.fulfill({contentType:'text/html',body:buildingOverviewFixture()});
  if(u.pathname==='/buildings/1/personals')return route.fulfill({contentType:'text/html',body:buildingPersonnel()});
- if(u.pathname==='/api/vehicles')return route.fulfill({contentType:'application/json',body:JSON.stringify(buildingFleet)});
+ if(u.pathname==='/api/buildings/1/vehicles')return route.fulfill({contentType:'application/json',body:JSON.stringify(buildingFleet.filter(v=>v.building_id===1))});
  if(u.pathname==='/api/userinfo')return route.fulfill({contentType:'application/json',body:'{"credits_user_total":655760580}'});
  if(u.pathname==='/api/buildings')return route.fulfill({contentType:'application/json',body:'[]'});
  report.requests.push(u.pathname);return route.fulfill({contentType:'application/json',body:'[]'});
@@ -39,8 +39,8 @@ try{
  assert.equal(await page.evaluate(()=>window.__NEXUS_EXTENSION__.build),JSON.parse(fs.readFileSync(base+'/manifest.json')).version);
  assert.deepEqual(await tools.locator('#tabs button').allTextContents(),['Overview','Buildings','Vehicles','Schooling','Settings']);
  assert.equal(await tools.locator('#toggle').isVisible(),false,'Standalone launcher must not cover the dialog close button');
- await tools.locator('[data-view=settings]').click();assert.equal(await tools.locator('input[role=switch]').count(),36);
- pass('Packaged extension loads with five Tools tabs, top-right launcher and 36 on/off switches under actual extension CSP');
+ await tools.locator('[data-view=settings]').click();assert.equal(await tools.locator('input[role=switch]').count(),41);
+ pass('Packaged extension loads with five Tools tabs, top-right launcher and 41 on/off switches under actual extension CSP');
  await page.screenshot({path:'audit/settings-43-wide.png'});
  const setting=id=>tools.locator(`[data-setting-id="${id}"]`);
  const scannerPage=await context.newPage();scannerPage.on('pageerror',e=>report.errors.push(e.message));scannerPage.setDefaultTimeout(12000);await scannerPage.goto('https://www.missionchief.co.uk/missions/10');await scannerPage.locator('#mission-finder-wrapper').waitFor();

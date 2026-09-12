@@ -1,0 +1,15 @@
+{
+  "version": "3.0.43.54",
+  "baseVersion": "3.0.43.53",
+  "sourceRuntimeSha256": "b11127361ecb4ee31e8d81361187dea3a6b8b0d95520b5064841cf5be7a193ac",
+  "changes": [
+    "Full-width Home Response button strip below both building overview columns",
+    "Vehicle name on each purchase button and smaller price beneath; wrap on narrow screens; preserve native submit values"
+  ],
+  "files": {
+    "manifest.json": "599220207ed0bc0b11aad8f4093050c1bca0362196a75d4c9d306e85b9c37df0",
+    "nexus-runtime.js": "b11127361ecb4ee31e8d81361187dea3a6b8b0d95520b5064841cf5be7a193ac",
+    "nexus-tools.js": "8f0a5529504c67a84c5fb583c40e0869ffd58b1e9f6fad7618d9583b955087cd",
+    "nexus-home-market.js": "3d93447c899e9f1528cefb8555e8dfc28fccb75860e33ec3ca71087c343de1d7"
+  }
+}

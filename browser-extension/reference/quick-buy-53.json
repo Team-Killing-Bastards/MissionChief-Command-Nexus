@@ -1,0 +1,15 @@
+{
+  "version": "3.0.43.53",
+  "baseVersion": "3.0.43.52",
+  "sourceRuntimeSha256": "c8b67deedf42c47fffe5102c560913bf4e59fcb8213e70003c172211d335d11d",
+  "changes": [
+    "Read native vehicle_type market cards and icon-labelled buy links, use exact supplied purchase actions",
+    "Compact category, vehicle and Quick buy rows; remove filters and repeated market notices; prefer credits without coin fallback"
+  ],
+  "files": {
+    "manifest.json": "6fe6c625ea8e6bfebb22d5601f5664e3b2d3957cc62f88c432c5d044f0ab4006",
+    "nexus-runtime.js": "c8b67deedf42c47fffe5102c560913bf4e59fcb8213e70003c172211d335d11d",
+    "nexus-tools.js": "c9d95d9e0d81c338f43cd963f4914bbf83775dba7710369e1fee0e2c895acf95",
+    "nexus-home-market.js": "19dffbce53854467d2593586ecacb5c3ea37d85d6c71ce18e9030ab9fcdfd75d"
+  }
+}

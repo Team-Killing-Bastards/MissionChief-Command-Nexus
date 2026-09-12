@@ -1,0 +1,17 @@
+# Nexus 3.0.43.47 — local schooling filters
+
+Adds a Nexus filter panel above the native course's Select Personnel station accordion. It combines dispatch-centre membership with case-insensitive station-name search and offers Clear filters and Refresh centres. Centre membership comes from each station's `leitstelle_building_id` in `/api/buildings`, joined by building ID. Duplicate names remain separate. Explicitly unassigned stations and stations with unavailable metadata have different filter options.
+
+Native personnel checkboxes and panels stay in place, including their handlers and expanded state. Stations with selected personnel stay visible even when they no longer match; a blue outline and count identify those retained stations. Filtering never changes selection or submits enrolment. Enter in the new search input applies the filter without submitting the form. The native visible counter callback is refreshed when available.
+
+The independent module `extension/nexus-schooling-filters.js` activates only on a building/course route with `form[action$="/education"] #accordion`. The DOM contract (`.panel-heading[building_id]`) was checked in the local LSS reference at `src/modules/extendedBuilding/assets/schoolsBuildingFilter.ts`; the new module does not load the LSS framework or its vehicle-fetching filter implementation. Native courses work both in iframes and full pages.
+
+One same-origin building-list read occurs on opening the course or pressing Refresh centres. Only IDs, captions and dispatch-centre assignments are retained. Search/filter changes do not fetch buildings, personnel or vehicles. A scoped accordion observer indexes added/removed station panels; there is no periodic scanner. Page suspension aborts requests, disconnects the observer, restores native station visibility and releases metadata. On API failure, local station search and native enrolment remain usable.
+
+The Settings switch is **Schooling → Course personnel filters**. Existing settings are preserved; feature changes take effect on refreshing the page. The panel wraps on phones and compensates for phone desktop-site scaling. Physical Orion and live account operation still require the local trial.
+
+This builds on local .46 (`1f8c4be9`) and retains its requirement buttons. Auto runtime changes are version markers only; the original .45-plus-manual-bridge hash regression still passes. The release authority remains the previously submitted .45 store build. **Local only: do not push, merge, tag or publish .47 without a subsequent explicit request.**
+
+Validation: `node scripts/verify-all.mjs`, twelve stages. Evidence is in `audit/verification-summary.json`, `audit/schooling-filters-47.json` and the three schooling screenshots. The UI fixture uses the packaged extension with a separate Edge profile and mocked network; it covers ID joins, duplicate names, missing versus unassigned metadata, combined filters, selection preservation, explicit native form submission, late station insertion, refresh, API failure, cleanup, preferences, iframes and mobile layouts.
+
+Delivery: run `native-navigation/build-schooling-filters-47.mjs` from the workspace root after all stages pass. It creates the local ZIP and extracted folder in `manual-install/Nexus-Extension-3.0.43.47-LOCAL-SCHOOLING-FILTERS`, verifies their file hashes and preserves the public .45 reporting destination. It does not access credentials or publish.

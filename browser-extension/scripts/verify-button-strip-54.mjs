@@ -1,3 +1,4 @@
+// Scoped local validation; unchanged feature UI suites remain in verify-all.mjs.
 import fs from 'node:fs';
 import {spawnSync} from 'node:child_process';
 fs.mkdirSync('audit',{recursive:true});
@@ -10,14 +11,6 @@ const steps=[
   ['package',['scripts/package.mjs']],
   ['package-verification',['--expose-internals','scripts/verify-package.mjs']],
   ['edge-smoke',['scripts/edge-smoke.mjs']],
-  ['settings-43',['tests/ui/settings-43.mjs']],
-  ['responsive-45',['tests/ui/responsive-45.mjs']],
-  ['requirement-buttons-46',['tests/ui/requirement-buttons-46.mjs']],
-  ['schooling-filters-47',['tests/ui/schooling-filters-47.mjs']],
-  ['course-dropdown-49',['tests/ui/course-dropdown-49.mjs']],
-  ['schooling-next-course-50',['tests/ui/schooling-next-course-50.mjs']],
-  ['schooling-station-tabs-50',['tests/ui/schooling-station-tabs-50.mjs']],
-  ['crew-freshness-51',['tests/ui/crew-freshness-51.mjs']],
   ['home-market-52',['tests/ui/home-market-52.mjs']],
   ['quick-buy-53',['tests/ui/quick-buy-53.mjs']]
 ];
@@ -29,5 +22,5 @@ for(const [name,args] of steps) {
   console.log(`${result.status===0?'PASS':'FAIL'} ${name}`);
   if(result.status!==0){console.error(result.stdout+result.stderr);break;}
 }
-fs.writeFileSync('audit/verification-summary.json',JSON.stringify(summary,null,2)+'\n');
+fs.writeFileSync('audit/button-strip-verification-summary.json',JSON.stringify(summary,null,2)+'\n');
 if(summary.some(r=>!r.passed)||summary.length!==steps.length)process.exitCode=1;
