@@ -25,7 +25,6 @@
   let tickNumber = 0;
   let decorating = false, decorateAgain = false;
   let nativeVehicleTabs = null, vehicleFilterRun = 0, activatingAllVehicles = false;
-  let fleetTable = null, fleetObserver = null, fleetTimer = null, fleetPending = false, fleetRevision = 0, fleetStarted = 0, fleetRowsKey = '', fleetRetryKey = '', registryPartial = false, personnelKey = '';
   const patientDeadlines = new Map();
   const style = document.createElement('style'); style.dataset.nexusComfort = 'style';
   style.textContent = `
@@ -71,13 +70,13 @@
     } catch { return false; }
     return true;
   }
-  function observe(target, fn, controls = false) {
+  function observe(target, fn) {
     if (!target) return;
     const observer = new MutationObserver(records => {
-      if (!visible() || records.every(r => (r.target.nodeType === 1 ? r.target : r.target.parentElement)?.closest?.(own) || r.type === 'attributes' && !r.target.matches('a,button,input'))) return;
+      if (!visible() || records.every(r => (r.target.nodeType === 1 ? r.target : r.target.parentElement)?.closest?.(own))) return;
       schedule(fn);
     });
-    observer.observe(target, { childList: true, subtree: true, characterData: true, ...(controls ? {attributes:true,attributeFilter:['class','href']} : {}) }); observers.push(observer);
+    observer.observe(target, { childList: true, subtree: true, characterData: true }); observers.push(observer);
   }
   const pending = new Set();
   function schedule(fn) {
@@ -332,69 +331,19 @@
     panel.append(summary, element('small', 'Multi-trained staff appear in each relevant training row; the total above counts people once.'));
     mergePersonnelPanels();
   }
-  function fleetNeeded() {
-    return flags.extendedBuilding?.personnelDemands || enabled('assignedCrew') || flags.extendedBuilding?.vehicleTypes || flags.extendedBuilding?.personnelAssignmentBtn || assignment && flags.extendedBuilding?.enhancedPersonnelAssignment;
-  }
-  function stationRows() {
-    const rows = [...document.querySelectorAll('#vehicle_table tbody tr')].slice(0,10000), ids = new Set();
-    for (const row of rows) { const a = row.querySelector('a[href^="/vehicles/"]'), id = a?.getAttribute('href')?.match(/^\/vehicles\/(\d+)\/?$/)?.[1]; if (id) ids.add(id); }
-    return {rows,ids,key:[...ids].sort().join(',')};
-  }
-  function assignmentLinks(rows = stationRows().rows) {
-    if (!flags.extendedBuilding?.personnelAssignmentBtn) return;
-    for (const row of rows) {
-      const a = row.querySelector('a[href^="/vehicles/"]'), id = a?.getAttribute('href')?.match(/^\/vehicles\/(\d+)\/?$/)?.[1];
-      if (!id || row.querySelector('[data-nx-assignment]')) continue;
-      const link = element('a', 'Assign crew', 'nx-crew-links'); link.href = `/vehicles/${id}/zuweisung`; link.dataset.nxAssignment = id; (row.lastElementChild || a.parentElement).append(link);
-    }
-  }
-  function requestFleetRefresh(delay = 200) {
-    if (!visible() || !fleetNeeded()) return;
-    fleetRevision++; fleetPending = true; clearTimeout(fleetTimer);
-    fleetTimer = setTimeout(() => { fleetTimer = null; if (apiJob || !visible()) return; fleetPending = false; void fleetSnapshot(); }, Math.max(delay,1000-(Date.now()-fleetStarted)));
-  }
-  function watchStationRows() {
-    if (!building || !fleetNeeded()) return;
-    const table = document.getElementById('vehicle_table'); if (table === fleetTable) return;
-    fleetObserver?.disconnect(); fleetTable = table;
-    if (!table) return;
-    const update = () => {
-      if (!visible()) return;
-      const current = stationRows(); assignmentLinks(current.rows);
-      if (current.key !== fleetRowsKey) { fleetRowsKey = current.key; fleetRetryKey = ''; requestFleetRefresh(); }
-      else if (!apiJob && registry.size) void staffDisplay(registryPartial);
-    };
-    const current = stationRows(); assignmentLinks(current.rows);
-    if (fleetRowsKey && current.key !== fleetRowsKey) { fleetRetryKey = ''; requestFleetRefresh(); }
-    fleetRowsKey = current.key;
-    fleetObserver = new MutationObserver(records => {
-      if (records.some(r => !((r.target.nodeType === 1 ? r.target : r.target.parentElement)?.closest?.(own)) && [...r.addedNodes,...r.removedNodes].some(n => n.nodeType === 1 && !n.matches(own) && (n.matches('tr,tbody,a[href^="/vehicles/"]') || n.querySelector('tr,a[href^="/vehicles/"]'))))) schedule(update);
-    });
-    fleetObserver.observe(table,{childList:true,subtree:true});
-  }
-  function personnelChanged() {
-    personnelSummary(); fitPersonnel();
-    if (!assignment || !P) return;
-    const table = document.getElementById('personal_table'); if (!table) return;
-    const layout = P.columns(table), id = path.match(/\d+/)?.[0];
-    const key = [...table.querySelectorAll('tbody tr')].slice(0,10000).map(row => { const p = P.read(row,layout,new Map(),id); return p ? `${p.identity}:${p.vehicle || ''}:${p.bound}` : ''; }).sort().join('|');
-    if (personnelKey && personnelKey !== key) requestFleetRefresh(); personnelKey = key;
-  }
   async function fleetSnapshot() {
     if (!flags.extendedBuilding?.personnelDemands && !enabled('assignedCrew') && !flags.extendedBuilding?.vehicleTypes && !flags.extendedBuilding?.personnelAssignmentBtn && !(assignment && flags.extendedBuilding?.enhancedPersonnelAssignment)) return;
-    if (!visible() || apiJob || (!building && !personnel && !assignment && !vehicle)) return;
-    apiJob = true; fleetStarted = Date.now(); controller = new AbortController(); const current = controller, ticket = generation, revision = fleetRevision;
+    if (apiJob || (!building && !personnel && !assignment && !vehicle)) return;
+    apiJob = true; controller = new AbortController(); const current = controller, ticket = generation;
     const timeout = setTimeout(() => current.abort(), 20000);
     try {
       state.fetches++;
-      const buildingId = /^\/buildings\/(\d+)/.exec(path)?.[1], vehicleId = /^\/vehicles\/(\d+)/.exec(path)?.[1];
-      const endpoint = buildingId ? `/api/buildings/${buildingId}/vehicles` : `/api/vehicles/${vehicleId}`;
-      const response = await fetch(endpoint, { signal: current.signal, credentials: 'same-origin', redirect: 'error', cache: 'no-store' });
+      const response = await fetch('/api/vehicles', { signal: current.signal, credentials: 'same-origin', redirect: 'error' });
       if (!response.ok) throw Error(`HTTP ${response.status}`);
       const reader = response.body.getReader(), decoder = new TextDecoder(); let raw = '', size = 0;
       try { while (true) { const { value, done } = await reader.read(); if (done) break; size += value.byteLength; if (size > 12 * 1024 * 1024) { await reader.cancel(); throw Error('Vehicle register is too large'); } raw += decoder.decode(value, { stream: true }); } raw += decoder.decode(); } finally { reader.releaseLock(); }
-      const parsed = JSON.parse(raw); raw = ''; const items = buildingId ? parsed : parsed && !Array.isArray(parsed) && String(parsed.id) === vehicleId ? [parsed] : null;
-      if (!Array.isArray(items)) throw Error('Unrecognised vehicle register');
+      const items = JSON.parse(raw); raw = ''; if (!Array.isArray(items)) throw Error('Unrecognised vehicle register');
+      const buildingId = /^\/buildings\/(\d+)/.exec(path)?.[1], vehicleId = /^\/vehicles\/(\d+)/.exec(path)?.[1];
       const wanted = new Set(Array.from(document.querySelectorAll('#vehicle_table a[href^="/vehicles/"]')).slice(0, 10000).map(a => a.getAttribute('href').match(/^\/vehicles\/(\d+)/)?.[1]).filter(Boolean));
       const next = new Map();
       for (let i = 0; i < Math.min(items.length, 30000); i++) {
@@ -403,22 +352,15 @@
         if (String(v.building_id) !== buildingId && String(v.id) !== vehicleId && !wanted.has(String(v.id))) continue;
         next.set(String(v.id), { id: v.id, name: text(v.caption,256), type: numeric(v.vehicle_type), assigned: numeric(v.assigned_personnel_count), limit: numeric(v.max_personnel_override), status: numeric(v.fms_real), building: String(v.building_id) });
       }
-      if (!visible() || ticket !== generation || revision !== fleetRevision) return;
-      const rows = stationRows(), missing = building && [...rows.ids].some(id => !next.has(id));
-      const label = building && [...document.querySelectorAll('dl.dl-horizontal dt')].find(n => /^vehicles:?$/i.test(text(n.textContent))), count = label && text(label.nextElementSibling?.textContent).match(/^([\d,]+)\s+of\b/i), expected = count ? Number(count[1].replaceAll(',','')) : null;
-      const mismatch = missing || expected !== null && next.size !== expected;
-      registry = next; registryPartial = items.length > 30000 || mismatch; registryTime = Date.now(); await staffDisplay(registryPartial); if(personnel||assignment)personnelSummary();fitPersonnel();
-      // A new purchase may reach the native list before the API. One follow-up
-      // per list change; persistent disagreement stays visibly partial.
-      const retryKey = rows.key + ':' + expected;
-      if (mismatch && fleetRetryKey !== retryKey) { fleetRetryKey = retryKey; requestFleetRefresh(1500); }
+      if (!visible() || ticket !== generation) return;
+      registry = next; registryTime = Date.now(); await staffDisplay(items.length > 30000); if(personnel||assignment)personnelSummary();fitPersonnel();
     } catch (err) {
-      if (ticket === generation && revision === fleetRevision && visible()) {
+      if (ticket === generation && visible()) {
         const anchor = document.getElementById('vehicle_table') || document.getElementById('personal_table') || document.querySelector('h1');
         if(building&&window.__NEXUS_BUILDING_OVERVIEW__)window.__NEXUS_BUILDING_OVERVIEW__.failFleet(err.message);
         else if(flags.extendedBuilding?.personnelDemands) { const panel = box('nx-personnel-demand', anchor, 'Crew data'); if (panel) panel.append(element('div', `Crew data unavailable (${text(err.message, 100)}). Existing game controls remain available.`));mergePersonnelPanels(); }
       }
-    } finally { clearTimeout(timeout); if (controller === current) { apiJob = false; controller = null; if (fleetPending && !fleetTimer && visible()) requestFleetRefresh(); } }
+    } finally { clearTimeout(timeout); if (controller === current) { apiJob = false; controller = null; } }
   }
   async function staffDisplay(partial = false) {
     const table = document.getElementById('vehicle_table'); let sumMin = 0, sumMax = 0, activeMin = 0, activeMax = 0, assigned = 0, unknown = 0, missingAssigned = 0;
@@ -429,12 +371,12 @@
       if (v.assigned === null) missingAssigned++; else assigned += v.assigned;
     }
     const anchor = table || document.getElementById('personal_table') || document.querySelector('h1');
-    if(building&&window.__NEXUS_BUILDING_OVERVIEW__)window.__NEXUS_BUILDING_OVERVIEW__.setFleet([...registry.values()],partial,registryTime,()=>{fleetRetryKey='';requestFleetRefresh(0);});
+    if(building&&window.__NEXUS_BUILDING_OVERVIEW__)window.__NEXUS_BUILDING_OVERVIEW__.setFleet([...registry.values()],partial,registryTime,()=>void fleetSnapshot());
     const panel = !flags.extendedBuilding?.personnelDemands||building&&window.__NEXUS_BUILDING_OVERVIEW__?null:box('nx-personnel-demand', anchor, 'Personnel requirements'); if (panel) {
       panel.replaceChildren(element('strong', `${personnel||assignment?'Crew requirements':'Nexus · Personnel requirements'}: min ${sumMin} / max ${sumMax}`),
         element('div', `Excluding status 6: min ${activeMin} / max ${activeMax} · Assigned crew: ${assigned}${missingAssigned ? ` (${missingAssigned} not reported)` : ''}`),
         element('small', `${registry.size} vehicles · ${partial || unknown ? `Partial: ${unknown} unknown types or register limit reached · ` : ''}Read ${new Date(registryTime).toLocaleTimeString('en-GB')}. Assigned crew is not the current crew aboard.`));
-      const refresh = element('button', 'Refresh crew'); refresh.type = 'button'; refresh.addEventListener('click', () => { requestFleetRefresh(0); }); panel.append(refresh);
+      const refresh = element('button', 'Refresh crew'); refresh.type = 'button'; refresh.addEventListener('click', () => { void fleetSnapshot(); }); panel.append(refresh);
       mergePersonnelPanels();
     }
     let rowNumber = 0; const ticket = generation;
@@ -455,7 +397,9 @@
       const display = ` Assigned ${nf(v.assigned)} / max ${nf(max)}`;
       if(info){set(info, display); info.className = `nx-staff ${v.assigned === null || max === null ? 'nx-unknown' : v.assigned < max ? 'nx-short' : 'nx-good'}`;}
       if (flags.extendedBuilding?.vehicleTypes && !a.parentElement.querySelector('[data-nx-building-type]')) { const label = element('small', ` ${definition?.name || `Type ${v.type}`}`, 'nx-type'); label.dataset.nxBuildingType = '1'; a.after(label); }
-      assignmentLinks([row]);
+      if (flags.extendedBuilding?.personnelAssignmentBtn && !row.querySelector('[data-nx-assignment]')) {
+        const link = element('a', 'Assign crew', 'nx-crew-links'); link.href = `/vehicles/${id}/zuweisung`; link.dataset.nxAssignment = id; (row.lastElementChild || a.parentElement).append(link);
+      }
     }
   }
   function fitPersonnel() {
@@ -532,7 +476,6 @@
     if (mission && tickNumber % 10 === 1) { generatedTime(); missing(); patients(); vehicleTabs(); window.__NEXUS_COMMANDS__?.activate(); window.__NEXUS_REQUIREMENT_TICKS__?.activate(); }
     if (home) { currency(); if (tickNumber % 10 === 1) chatExtras(); }
     if (building && tickNumber % 10 === 1) expansions();
-    if (building) watchStationRows();
     state.lastPassMs = Math.round((performance.now() - begin) * 100) / 100;
     timer = setTimeout(tick, mission || home ? 1000 : 10000);
   }
@@ -542,11 +485,10 @@
     if (mission) { restoreVehicleTabs(); window.__NEXUS_COMMANDS__?.suspend(); window.__NEXUS_REQUIREMENT_TICKS__?.suspend(); }
     generation++; clearTimeout(timer); timer = null; clearTimeout(deferred); deferred = null; pending.clear(); observers.forEach(o => o.disconnect()); observers = [];
     controller?.abort(); controller = null; apiJob = false; registry.clear(); patientDeadlines.clear(); decorateAgain = false; state.active = false;
-    fleetObserver?.disconnect(); fleetObserver = null; fleetTable = null; clearTimeout(fleetTimer); fleetTimer = null; fleetPending = false; fleetRevision++; fleetRowsKey = ''; fleetRetryKey = ''; personnelKey = '';
   }
   function activate() {
     if (!visible() || state.active) return; state.active = true; state.started = true;
-    if(building)window.__NEXUS_BUILDING_OVERVIEW__?.activate(()=>{fleetRetryKey='';requestFleetRefresh(0);});
+    if(building)window.__NEXUS_BUILDING_OVERVIEW__?.activate();
     if (home) { currency(); chatExtras(); observe(document.getElementById('chat_panel_body'), chatExtras); }
     if (mission) {
       window.__NEXUS_COMMANDS__?.activate();
@@ -557,8 +499,7 @@
       if (patientRoot && !patientRoot.querySelector('#vehicle_show_table_all')) observe(patientRoot, patients);
       watchVehicleAdditions();
     }
-    if (personnel || assignment) { personnelChanged(); observe(document.getElementById('personal_table'), personnelChanged,assignment); }
-    if (building) watchStationRows();
+    if (personnel || assignment) { personnelSummary(); observe(document.getElementById('personal_table'), () => {personnelSummary();fitPersonnel();}); }
     if (building || personnel || assignment || vehicle) { void fleetSnapshot(); if (building) expansions(); }
     profileId(); tick();
   }

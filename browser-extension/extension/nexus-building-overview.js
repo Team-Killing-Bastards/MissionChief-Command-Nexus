@@ -31,7 +31,7 @@
   function renderCrew(){
     if(!crew)return;crew.replaceChildren(el('h3','Nexus · Specialist crew coverage'));
     const value=document.getElementById('nx-required-personnel');
-    if(!fleet){if(value)value.textContent=staffError?'Crew data unavailable':'Loading crew…';crew.append(el('p',staffError||'Loading vehicle crew requirements…'));return;}
+    if(!fleet){if(value)value.textContent=staffError?'Crew data unavailable':'Loading crew…';crew.append(el('p',staffError||'Loading vehicle crew requirements…'));if(staffError&&refreshFleet){const retry=el('button','Refresh crew & training');retry.type='button';retry.addEventListener('click',refreshFleet);crew.append(retry);}return;}
     const model=C.calculate(fleet,D,staff,partial);state.model=model;const t=model.total,uncertain=t.partial||t.unknown>0,prefix=uncertain?'Known totals: ':'';
     value.replaceChildren(document.createTextNode(`${prefix}min: ${nf(t.min)} (${nf(t.activeMin)}) / max: ${nf(t.max)} (${nf(t.activeMax)})`),el('small','Figures in brackets exclude status 6 vehicles.'));
     if(uncertain)crew.append(el('p',`Partial vehicle data: ${t.unknown} unknown definitions${t.partial?' or incomplete register':''}.`));
@@ -67,7 +67,7 @@
     staffTried=true;const ticket=generation;controller=new AbortController();const current=controller,timeout=setTimeout(()=>current.abort(),15000);
     try{
       let doc=document,table=document.getElementById('personal_table');
-      if(!table){state.staffFetches++;const response=await fetch(`/buildings/${id}/personals`,{credentials:'same-origin',redirect:'error',signal:current.signal});if(!response.ok)throw Error(`HTTP ${response.status}`);
+      if(!table){state.staffFetches++;const response=await fetch(`/buildings/${id}/personals`,{credentials:'same-origin',redirect:'error',cache:'no-store',signal:current.signal});if(!response.ok)throw Error(`HTTP ${response.status}`);
         const reader=response.body.getReader(),decoder=new TextDecoder();let raw='',bytes=0;
         try{while(true){const {value,done}=await reader.read();if(done)break;bytes+=value.byteLength;if(bytes>4*1024*1024){await reader.cancel();throw Error('Personnel response too large');}raw+=decoder.decode(value,{stream:true});}raw+=decoder.decode();}finally{reader.releaseLock();}
         doc=new DOMParser().parseFromString(raw,'text/html');raw='';table=doc.getElementById('personal_table');
@@ -87,7 +87,7 @@
     }catch(err){if(ticket===generation&&visible())staffError=`Personnel unavailable (${txt(err.message,100)}). Coverage is not verified.`;}
     finally{clearTimeout(timeout);if(controller===current)controller=null;if(ticket===generation&&visible())renderCrew();}
   }
-  function setFleet(entries,isPartial,time,refresh){if(!visible()||!mount())return;const station=entries.filter(v=>String(v.building)===id);fleet=station.slice(0,5000);partial=isPartial||station.length>5000;readAt=time;refreshFleet=refresh;renderCrew();void readPersonnel();}
+  function setFleet(entries,isPartial,time,refresh){if(!visible()||!mount())return;if(time!==readAt){generation++;controller?.abort();controller=null;staff=null;staffTried=false;staffError='';}const station=entries.filter(v=>String(v.building)===id);fleet=station.slice(0,5000);partial=isPartial||station.length>5000;readAt=time;refreshFleet=refresh;renderCrew();void readPersonnel();}
   function failFleet(message){staffError=`Crew data unavailable (${txt(message,100)}).`;fleet=null;state.model=null;renderCrew();}
   function extensionStatus(row){
     const timer=row.querySelector('[data-end-time]'),raw=Number(timer?.getAttribute('data-end-time')),end=Number.isFinite(raw)&&raw>0?(raw<1e12?raw*1000:raw):null;
@@ -109,6 +109,6 @@
     for(const [name,states]of groups){const item=el('div',undefined,'nx-extension-item');item.append(el('strong',name,'nx-extension-name'));const slots=el('div',undefined,'nx-extension-slots');states.forEach((status,i)=>{const bar=el('span',status.text,`nx-extension-state nx-ext-${status.kind}`);bar.title=`${name}${states.length>1?` · slot ${i+1}/${states.length}`:''}${status.title?` · ${status.title}`:''}`;slots.append(bar);});item.append(slots);grid.append(item);}
     if(!groups.size)grid.append(el('p','No extension rows available.'));
   }
-  function activate(){active=true;if(visible()){mount();expansions();}}
+  function activate(refresh){active=true;if(refresh)refreshFleet=refresh;if(visible()){mount();expansions();}}
   function suspend(){active=false;generation++;controller?.abort();controller=null;staffTried=false;staff=null;fleet=null;state.model=null;refreshFleet=null;extensionObserver?.disconnect();extensionObserver=null;extensionSource=null;clearTimeout(extensionTimer);extensionTimer=null;}
 })();

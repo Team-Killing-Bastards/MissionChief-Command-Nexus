@@ -29,7 +29,7 @@ try{
  if(u.pathname.startsWith('/missions/'))return route.fulfill({contentType:'text/html',body:mission});
  if(u.pathname==='/buildings/1')return route.fulfill({contentType:'text/html',body:buildingOverviewFixture()});
  if(u.pathname==='/buildings/1/personals')return route.fulfill({contentType:'text/html',body:buildingPersonnel()});
- if(u.pathname==='/api/vehicles')return route.fulfill({contentType:'application/json',body:JSON.stringify(buildingFleet)});
+ if(u.pathname==='/api/buildings/1/vehicles')return route.fulfill({contentType:'application/json',body:JSON.stringify(buildingFleet.filter(v=>v.building_id===1))});
  if(u.pathname==='/api/userinfo')return route.fulfill({contentType:'application/json',body:'{"credits_user_total":655760580}'});
  if(u.pathname==='/api/buildings')return route.fulfill({contentType:'application/json',body:'[]'});
  report.requests.push(u.pathname);return route.fulfill({contentType:'application/json',body:'[]'});

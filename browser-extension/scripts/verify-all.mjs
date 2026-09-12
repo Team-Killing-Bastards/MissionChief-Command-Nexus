@@ -16,7 +16,8 @@ const steps=[
   ['schooling-filters-47',['tests/ui/schooling-filters-47.mjs']],
   ['course-dropdown-49',['tests/ui/course-dropdown-49.mjs']],
   ['schooling-next-course-50',['tests/ui/schooling-next-course-50.mjs']],
-  ['schooling-station-tabs-50',['tests/ui/schooling-station-tabs-50.mjs']]
+  ['schooling-station-tabs-50',['tests/ui/schooling-station-tabs-50.mjs']],
+  ['crew-freshness-51',['tests/ui/crew-freshness-51.mjs']]
 ];
 const summary=[];
 for(const [name,args] of steps) {

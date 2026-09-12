@@ -43,8 +43,14 @@ export function releaseProvenance() {
   const selected={...listed,version:dropdown.version,sourceRuntimeSha256:dropdown.sourceRuntimeSha256,changes:[...listed.changes,...dropdown.changes],files:{...listed.files,...dropdown.files}};
   if(version===dropdown.version)return selected;
   const stationTabs=JSON.parse(fs.readFileSync('reference/schooling-station-tabs-50.json'));
-  if(version!==stationTabs.version||stationTabs.baseVersion!==selected.version)throw Error('Unreviewed station tabs release');
+  if(stationTabs.baseVersion!==selected.version)throw Error('Unreviewed station tabs release');
   const tabAllowed=['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-schooling-filters.js','nexus-schooling-actions.js','nexus-settings.js','nexus-settings-main.js'];
   if(Object.keys(stationTabs.files).some(file=>!tabAllowed.includes(file)))throw Error('Unexpected station tabs change');
-  return {...selected,version,sourceRuntimeSha256:stationTabs.sourceRuntimeSha256,changes:[...selected.changes,...stationTabs.changes],files:{...selected.files,...stationTabs.files}};
+  const tabbed={...selected,version:stationTabs.version,sourceRuntimeSha256:stationTabs.sourceRuntimeSha256,changes:[...selected.changes,...stationTabs.changes],files:{...selected.files,...stationTabs.files}};
+  if(version===stationTabs.version)return tabbed;
+  const crew=JSON.parse(fs.readFileSync('reference/crew-freshness-51.json'));
+  if(version!==crew.version||crew.baseVersion!==tabbed.version)throw Error('Unreviewed crew freshness release');
+  const crewAllowed=['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-comfort.js','nexus-building-overview.js'];
+  if(Object.keys(crew.files).some(file=>!crewAllowed.includes(file)))throw Error('Unexpected crew freshness change');
+  return {...tabbed,version,sourceRuntimeSha256:crew.sourceRuntimeSha256,changes:[...tabbed.changes,...crew.changes],files:{...tabbed.files,...crew.files}};
 }

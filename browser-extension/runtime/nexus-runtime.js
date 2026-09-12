@@ -10,8 +10,8 @@
       parentBuild = window.top.__NEXUS_EXTENSION__?.build || '';
     }
   } catch {}
-  if (parentBuild && parentBuild !== '3.0.43.50') {
-    window.__NEXUS_EXTENSION__ = Object.freeze({ build: '3.0.43.50', sourceVersion: '3.0.43',
+  if (parentBuild && parentBuild !== '3.0.43.51') {
+    window.__NEXUS_EXTENSION__ = Object.freeze({ build: '3.0.43.51', sourceVersion: '3.0.43',
       status: 'parent-build-mismatch', parentBuild, startedAt: Date.now() });
     try {
       window.top.dispatchEvent(new window.top.CustomEvent('nexus-extension-update-required-v1', {
@@ -22,7 +22,7 @@
   }
   const alreadyRunning = Boolean(window.__MCN_V3_CONTROLLER__ || window.__MCN_BOOT_TRACE__);
   window.__NEXUS_EXTENSION__ = Object.freeze({
-    build: '3.0.43.50',
+    build: '3.0.43.51',
     sourceVersion: '3.0.43',
     status: alreadyRunning ? 'existing-runtime' : 'loaded',
     startedAt: Date.now()
@@ -265,7 +265,7 @@ function createNexusPerformance(env) {
     readRegistry, vehicleSignature, getRequirements, putRequirements, record, count, dispose,
     receiveCount(key, amount) { counters[key] = (counters[key] || 0) + amount; },
     receiveTiming(item) { timings.push({ ...item }); if (timings.length > 100) timings.shift(); },
-    snapshot() { return { build: '3.0.43.50', counters: { ...counters }, longTasks: { ...longTasks }, timings: timings.map(item => ({ ...item })), retainedDocuments: documents.size, registryRetained: !!registryValue, requirementTtlMs: REQUIREMENT_TTL, maxRequirementRecords: MAX_RECORDS }; }
+    snapshot() { return { build: '3.0.43.51', counters: { ...counters }, longTasks: { ...longTasks }, timings: timings.map(item => ({ ...item })), retainedDocuments: documents.size, registryRetained: !!registryValue, requirementTtlMs: REQUIREMENT_TTL, maxRequirementRecords: MAX_RECORDS }; }
   });
 }
 
@@ -10617,7 +10617,7 @@ function installNexusFullLogger() {
     const who = identity(); if (!who.player) return false; switchPlayer(who.player);
     const record = cleanRecord(raw); if (!record) return false;
     const capturedAt = Date.now();
-    record.clientVersion = '3.0.43.50';
+    record.clientVersion = '3.0.43.51';
     if (kind === 'mission') {
       if (!/^\d+$/.test(record.missionId || '')) return false;
       const old = registry[record.missionId] || {};
@@ -10649,7 +10649,7 @@ function installNexusFullLogger() {
     return true;
   }
   function activity(action, extra = {}) {
-    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.50', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
+    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.51', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
   }
   function current(eventType, options = {}) {
     const snapshot = getMissionLoggerMissionSnapshot();
@@ -10823,7 +10823,7 @@ function installNexusFullLogger() {
     finally {clearTimeout(timeout);timers.delete(timeout);creditAbort=null;creditBusy=false;}
   }
   function session(action) {
-    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.50',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
+    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.51',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
   }
   function tick() {
     try {
@@ -32681,7 +32681,7 @@ function installNexusFullLogger() {
     const who = identity(); if (!who.player) return false; switchPlayer(who.player);
     const record = cleanRecord(raw); if (!record) return false;
     const capturedAt = Date.now();
-    record.clientVersion = '3.0.43.50';
+    record.clientVersion = '3.0.43.51';
     if (kind === 'mission') {
       if (!/^\d+$/.test(record.missionId || '')) return false;
       const old = registry[record.missionId] || {};
@@ -32713,7 +32713,7 @@ function installNexusFullLogger() {
     return true;
   }
   function activity(action, extra = {}) {
-    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.50', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
+    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.51', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
   }
   function current(eventType, options = {}) {
     const snapshot = getMissionLoggerMissionSnapshot();
@@ -32887,7 +32887,7 @@ function installNexusFullLogger() {
     finally {clearTimeout(timeout);timers.delete(timeout);creditAbort=null;creditBusy=false;}
   }
   function session(action) {
-    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.50',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
+    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.51',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
   }
   function tick() {
     try {

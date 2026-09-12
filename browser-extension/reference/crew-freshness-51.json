@@ -1,0 +1,17 @@
+{
+  "version": "3.0.43.51",
+  "baseVersion": "3.0.43.50",
+  "sourceRuntimeSha256": "675cb4a15e72a07aa1d2736cf06224bf41ac8d20ced502ccff395ca97aba36d7",
+  "changes": [
+    "Read the current station or vehicle without browser cache instead of the account-wide register",
+    "Create Assign crew links from native row IDs immediately; detect row additions, refresh after binding changes and reject superseded reads",
+    "Flag incomplete station responses, allow one reconciliation read, refresh personnel with new vehicle data and release all watchers on suspension"
+  ],
+  "files": {
+    "manifest.json": "bdfb62efc784daebbd2918e1454514fd4fa897b6cc49b483627dde7ac1a51b38",
+    "nexus-runtime.js": "675cb4a15e72a07aa1d2736cf06224bf41ac8d20ced502ccff395ca97aba36d7",
+    "nexus-tools.js": "96b74e59b9de0bf5a4959758d6fedf6f9a4ddc6ddf3277961421cd37352cd07c",
+    "nexus-comfort.js": "4a433c9c099dc27b8444bc6381921268010eb72252fca5ea6b47b496893b0bab",
+    "nexus-building-overview.js": "9872f24c02a19c9fb3e89156331edcf793f788d1b1741056481789f3b132e440"
+  }
+}
