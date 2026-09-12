@@ -12,5 +12,9 @@ export function releaseProvenance() {
   const responsive=JSON.parse(fs.readFileSync('reference/responsive-45.json'));
   if(version!==responsive.version||responsive.baseVersion!==rules.version)throw Error('Unreviewed responsive release');
   if(Object.keys(responsive.files).some(file=>!['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-responsive.js'].includes(file)))throw Error('Unexpected responsive-release change');
-  return {...rules,version,sourceRuntimeSha256:responsive.sourceRuntimeSha256,changes:[...rules.changes,...responsive.changes],files:{...rules.files,...responsive.files}};
+  const reviewed={...rules,version,sourceRuntimeSha256:responsive.sourceRuntimeSha256,changes:[...rules.changes,...responsive.changes],files:{...rules.files,...responsive.files}};
+  const store=JSON.parse(fs.readFileSync('reference/store-45.json'));
+  if(store.version!==version||store.testedRuntimeSha256!==reviewed.sourceRuntimeSha256)throw Error('Store promotion differs from reviewed .45');
+  if(JSON.stringify(Object.entries(store.files).sort())!==JSON.stringify(Object.entries(reviewed.files).sort()))throw Error('Store files differ from the tested local .45 package');
+  return {...reviewed,testedLocalVersion:store.version,testedZipSha256:store.testedZipSha256,testedRuntimeSha256:store.testedRuntimeSha256,changes:[...reviewed.changes,...store.changes]};
 }

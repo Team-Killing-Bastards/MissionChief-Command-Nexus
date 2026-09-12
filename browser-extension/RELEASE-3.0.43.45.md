@@ -1,4 +1,6 @@
-# Local 3.0.43.45 — Help menu and phone layout
+# 3.0.43.45 — Help menu, phone layout and vehicle-rule defaults
+
+Store promotion requested on 12 September 2026. `reference/store-45.json` pins all executable files and the manifest to the tested local .45 ZIP, SHA-256 `5e9832ec31c2a51ff2614db9df9c1b7c15feaa150c9d344b9ced4764dcaa597d`. The existing main-branch workflow verifies the production package and submits the same ZIP to Edge and Chrome. Submission receipts, review and live availability are tracked separately in the GitHub releases.
 
 Nexus Tools now appears in the native **?** dropdown between **FAQ** and **Contact Support**, with white separators. The navbar's existing spacing is retained. A standalone page without the native Help menu keeps a fallback wrench; it hides while Tools is open so it cannot cover Close. A replaced or late-rendered Help menu is handled when navigation is focused or opened, without observing the mission list.
 
@@ -8,7 +10,7 @@ The user confirmed Orion on iPhone with Request Desktop Website enabled. A wide 
 
 The new `nexus-responsive.js` only manages manual UI layout. It reads no fleet, performs no requests, starts no polling timers and installs no DOM observers. Viewport events are coalesced into an animation frame; unchanged values do not mutate the DOM. Listeners are released on pagehide and restored on pageshow. Auto workers, preloads, retired workers and their nested frames are excluded.
 
-This release continues from local .44 at `31a1085c` and includes its five permanent vehicle-rule defaults. The Auto runtime is byte-identical to .44 after normalizing only the build version. The .43 release files and existing store submissions are unchanged. Do not push this branch or submit .45 without a release request.
+This release continues from local .44 at `31a1085c` and includes its five permanent vehicle-rule defaults. The Auto runtime is byte-identical to .44 after normalizing only the build version. The .43 release files remain immutable. The .44 changes ship together with .45; there is no separate .44 store submission.
 
 ## Verification
 

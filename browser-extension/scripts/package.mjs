@@ -12,7 +12,7 @@ const original=JSON.parse(fs.readFileSync('reference/original-extension/BUILD-IN
 const build={extensionVersion:manifest.version,sourceVersion:original.sourceVersion,components:{...original.components,personnelAssignment:'1.3.13'},
   runtimeSource:'browser-extension/runtime/nexus-runtime.js',
   releaseCommit:process.env.GITHUB_SHA || null,
-  testedLocalVersion:'3.0.43.43',testedLocalZipSha256:promotion.testedZipSha256,
+  testedLocalVersion:promotion.testedLocalVersion||'3.0.43.43',testedLocalZipSha256:promotion.testedZipSha256,
   reviewedRuntimeSha256:promotion.sourceRuntimeSha256,
   testedLocalRuntimeSha256:promotion.testedRuntimeSha256,promotionChanges:promotion.changes,
   sourceRepository:original.sourceRepository,sourceCommit:original.sourceCommit,

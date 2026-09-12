@@ -30,6 +30,7 @@ assert.equal(manifest.version,promotion.version,'Explicitly review the next rele
 assert.equal(manifest.version,JSON.parse(fs.readFileSync('package.json')).version);
 assert.equal(manifest.name,'MissionChief Command Nexus');
 assert.equal(info.testedLocalZipSha256,promotion.testedZipSha256);
+assert.equal(info.testedLocalVersion,promotion.testedLocalVersion||'3.0.43.43');
 assert.equal(info.runtimeSha256,promotion.sourceRuntimeSha256,'Package runtime must match the reviewed release source');
 for(const [file,sum] of Object.entries(promotion.files))assert.equal(sha(fs.readFileSync(path.join('extension',file))),sum,'Unreviewed promotion change: '+file);
 for(const entry of manifest.content_scripts)for(const file of entry.js)assert.ok(zip.file(file),'Missing content script '+file);
