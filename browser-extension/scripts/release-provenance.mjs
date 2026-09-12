@@ -61,7 +61,12 @@ export function releaseProvenance() {
   const stocked={...refreshed,version:market.version,sourceRuntimeSha256:market.sourceRuntimeSha256,changes:[...refreshed.changes,...market.changes],files:{...refreshed.files,...market.files}};
   if(version===market.version)return stocked;
   const quick=JSON.parse(fs.readFileSync('reference/quick-buy-53.json'));
-  if(version!==quick.version||quick.baseVersion!==stocked.version)throw Error('Unreviewed quick buy release');
+  if(quick.baseVersion!==stocked.version)throw Error('Unreviewed quick buy release');
   if(Object.keys(quick.files).some(file=>!['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-home-market.js'].includes(file)))throw Error('Unexpected quick buy change');
-  return {...stocked,version,sourceRuntimeSha256:quick.sourceRuntimeSha256,changes:[...stocked.changes,...quick.changes],files:{...stocked.files,...quick.files}};
+  const linked={...stocked,version:quick.version,sourceRuntimeSha256:quick.sourceRuntimeSha256,changes:[...stocked.changes,...quick.changes],files:{...stocked.files,...quick.files}};
+  if(version===quick.version)return linked;
+  const strip=JSON.parse(fs.readFileSync('reference/button-strip-54.json'));
+  if(version!==strip.version||strip.baseVersion!==linked.version)throw Error('Unreviewed button strip release');
+  if(Object.keys(strip.files).some(file=>!['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-home-market.js'].includes(file)))throw Error('Unexpected button strip change');
+  return {...linked,version,sourceRuntimeSha256:strip.sourceRuntimeSha256,changes:[...linked.changes,...strip.changes],files:{...linked.files,...strip.files}};
 }
