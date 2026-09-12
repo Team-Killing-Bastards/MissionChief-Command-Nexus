@@ -1,4 +1,4 @@
-import fs from 'node:fs';import path from 'node:path';import assert from 'node:assert/strict';
+import fs from 'node:fs';import path from 'node:path';import http from 'node:http';import assert from 'node:assert/strict';
 import {devLibrary} from '../../scripts/dev-library.mjs';
 const {chromium}=devLibrary('playwright');
 fs.mkdirSync('audit',{recursive:true});
@@ -10,26 +10,32 @@ let mode='ok',nextMode='valid';
 const home=(id,success=false)=>wrap(`<h1>Home Response ${id}</h1>${nextMode==='none'?'':`<a class="btn" href="${nextMode==='external'?'https://example.invalid/buildings/24':nextMode==='same'?'/buildings/'+id:'/buildings/'+(Number(id)+1)+'?dispatch=7'}">Next building</a>`}${success?'<div class="alert alert-success">Vehicle purchased.</div>':''}<div id="nx-building-overview"><div><dl class="dl-horizontal"><dt>Vehicles:</dt><dd>0 of 1 <a href="/buildings/${id}/vehicles/new">Vehicle Market</a></dd></dl><section class="fixture-panel">Nexus · Specialist crew coverage</section></div><div class="fixture-panel">Nexus · Building extensions</div></div>`);
 const card=(id,type,name,post=false)=>`<div class="vehicle_type"><h3>${name}</h3><a class="buy-vehicle-btn" ${post?'data-method="post" data-confirm="Buy this unit?"':''} href="/buildings/${id}/vehicle/${id}/${type}/credits?building=${id}">10,000</a></div>`;
 const market=id=>wrap(card(id,3,'Fire Officer')+card(id,80,'OTL',true));
-const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
-const ctx=await browser.newContext({viewport:{width:1150,height:760}});
-await ctx.addInitScript(texts=>document.addEventListener('DOMContentLoaded',()=>texts.forEach(text=>{const s=document.createElement('script');s.textContent=text;document.head.append(s);})),scripts);
-await ctx.route('https://**/*',route=>{
- const request=route.request(),u=new URL(request.url());if(u.origin!=='https://www.missionchief.co.uk')return route.abort();
- const api=u.pathname.match(/^\/api\/buildings\/(\d+)$/);if(api)return route.fulfill({json:{id:Number(api[1]),building_type:22}});
- const offer=u.pathname.match(/^\/buildings\/(\d+)\/vehicles\/new$/);if(offer)return route.fulfill({contentType:'text/html',body:market(offer[1])});
+// Serve the whole redirect chain locally. Browser route interception may only
+// handle the first request in an HTTP redirect, which must never hit the game.
+const server=http.createServer(async(request,response)=>{
+ const chunks=[];for await(const chunk of request)chunks.push(chunk);const data=Buffer.concat(chunks).toString();
+ const u=new URL(request.url,'http://127.0.0.1');
+ const fulfill=({status=200,headers={},contentType='application/json',body='',json})=>{response.writeHead(status,{'content-type':contentType,...headers});response.end(json===undefined?body:JSON.stringify(json));};
+ const api=u.pathname.match(/^\/api\/buildings\/(\d+)$/);if(api)return fulfill({json:{id:Number(api[1]),building_type:22}});
+ const offer=u.pathname.match(/^\/buildings\/(\d+)\/vehicles\/new$/);if(offer)return fulfill({contentType:'text/html',body:market(offer[1])});
  const purchase=u.pathname.match(/^\/buildings\/(\d+)\/vehicle\/(\d+)\/(\d+)\/credits$/);
- if(purchase){report.writes.push({id:purchase[1],type:purchase[3],method:request.method(),body:[...new URLSearchParams(request.postData()||'')]});
-  if(mode==='redirect')return route.fulfill({status:302,headers:{location:`/buildings/${purchase[1]}?bought=1`},body:''});
-  return route.fulfill({contentType:'text/html',body:wrap(mode==='reject'?'<div class="alert alert-danger">Purchase rejected.</div>':mode==='unconfirmed'?'<p>Result unavailable.</p>':'<div class="alert alert-success">Vehicle purchased.</div>')});
+ if(purchase){report.writes.push({id:purchase[1],type:purchase[3],method:request.method,body:[...new URLSearchParams(data)]});
+  if(mode==='redirect')return fulfill({status:302,headers:{location:`/buildings/${purchase[1]}?bought=1`},body:''});
+  return fulfill({contentType:'text/html',body:wrap(mode==='reject'?'<div class="alert alert-danger">Purchase rejected.</div>':mode==='unconfirmed'?'<p>Result unavailable.</p>':'<div class="alert alert-success">Vehicle purchased.</div>')});
  }
- const building=u.pathname.match(/^\/buildings\/(\d+)$/);if(building)return route.fulfill({contentType:'text/html',body:home(building[1],u.searchParams.has('bought'))});
- if(u.pathname==='/host')return route.fulfill({contentType:'text/html',body:wrap('<h1>Game map</h1><iframe src="/buildings/23" style="width:100%;height:650px"></iframe>')});
- return route.fulfill({json:[]});
+ const building=u.pathname.match(/^\/buildings\/(\d+)$/);if(building)return fulfill({contentType:'text/html',body:home(building[1],u.searchParams.has('bought'))});
+ if(u.pathname==='/host')return fulfill({contentType:'text/html',body:wrap('<h1>Game map</h1><iframe src="/buildings/23" style="width:100%;height:650px"></iframe>')});
+ return fulfill({json:[]});
 });
+await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const origin=`http://127.0.0.1:${server.address().port}`;
+const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
+const ctx=await browser.newContext({viewport:{width:1150,height:760},serviceWorkers:'block'});
+await ctx.addInitScript(texts=>document.addEventListener('DOMContentLoaded',()=>texts.forEach(text=>{const s=document.createElement('script');s.textContent=text;document.head.append(s);})),scripts);
+await ctx.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
 const page=await ctx.newPage();page.setDefaultTimeout(30000);page.on('pageerror',e=>report.errors.push(e.message));
 report.navigations=[];page.on('framenavigated',frame=>{if(frame===page.mainFrame())report.navigations.push(frame.url());});
 const panel=page.locator('#nx-home-market'),toggle=panel.getByRole('switch',{name:'Buy and next building'}),buy=name=>panel.getByRole(name==='OTL'?'button':'link',{name:new RegExp('^'+name+' ')});
-const open=async()=>{await page.goto('https://www.missionchief.co.uk/buildings/23');await buy('Fire Officer').waitFor();};
+const open=async()=>{await page.goto(origin+'/buildings/23');await buy('Fire Officer').waitFor();};
 try{
  await open();assert.equal(await toggle.isChecked(),false);assert.equal(report.writes.length,0);
  await buy('Fire Officer').click();await page.waitForURL('**/buildings/23');await buy('Fire Officer').waitFor();assert.equal(report.writes.length,1);assert.equal(await toggle.isChecked(),false);
@@ -50,10 +56,10 @@ try{
  nextMode='valid';await open();await page.evaluate(()=>sessionStorage.setItem('nexusHomeVehiclePurchaseV1',JSON.stringify({id:'23',at:Date.now()-120001,next:'/buildings/24'})));
  // Navigate directly to a mocked result to exercise an expired intent. This
  // fixture request is recorded, but no control click or retry is involved.
- await page.goto('https://www.missionchief.co.uk/buildings/23/vehicle/23/3/credits?building=23',{referer:'https://www.missionchief.co.uk/buildings/23'});await page.getByText('Vehicle purchased.').waitFor();assert.match(page.url(),/\/vehicle\/23\/3\/credits/);
+ await page.goto(origin+'/buildings/23/vehicle/23/3/credits?building=23',{referer:origin+'/buildings/23'});await page.getByText('Vehicle purchased.').waitFor();assert.match(page.url(),/\/vehicle\/23\/3\/credits/);
  await open();await toggle.uncheck();await page.reload();await buy('Fire Officer').waitFor();assert.equal(await toggle.isChecked(),false);await toggle.check();
  pass('Expired intents cannot advance; switching the preference off survives reload');
- const before=report.writes.length;await page.goto('https://www.missionchief.co.uk/host');const frame=page.frameLocator('iframe');await frame.locator('#nx-home-market a.nx-buy').waitFor();await frame.getByRole('link',{name:'Fire Officer 10,000 credits',exact:true}).click();await frame.getByRole('heading',{name:'Home Response 24',exact:true}).waitFor();assert.equal(new URL(page.url()).pathname,'/host');assert.equal(report.writes.length,before+1);assert.equal(await frame.getByRole('switch',{name:'Buy and next building'}).isChecked(),true);
+ const before=report.writes.length;await page.goto(origin+'/host');const frame=page.frameLocator('iframe');await frame.locator('#nx-home-market a.nx-buy').waitFor();await frame.getByRole('link',{name:'Fire Officer 10,000 credits',exact:true}).click();await frame.getByRole('heading',{name:'Home Response 24',exact:true}).waitFor();assert.equal(new URL(page.url()).pathname,'/host');assert.equal(report.writes.length,before+1);assert.equal(await frame.getByRole('switch',{name:'Buy and next building'}).isChecked(),true);
  pass('Buying within the visible building window advances that frame and keeps the main game page open');
  await open();await page.setViewportSize({width:390,height:844});await page.evaluate(()=>document.documentElement.dataset.nexusTouch='true');const bounds=await panel.boundingBox(),label=await panel.locator('.nx-home-buy-next').boundingBox();assert.ok(bounds.x>=0&&bounds.x+bounds.width<=390);assert.ok(label.height>=44);await page.screenshot({path:'audit/home-buy-next-59-phone.png',fullPage:true});
  pass('The themed toggle wraps within phone width and keeps a 44px touch target');assert.deepEqual(report.errors,[]);report.passed=true;
@@ -61,4 +67,4 @@ try{
  report.failure=String(error);
  report.failureState=await page.evaluate(()=>({url:location.href,referrer:document.referrer,readyState:document.readyState,hidden:document.hidden,pending:sessionStorage.getItem('nexusHomeVehiclePurchaseV1'),next:localStorage.getItem('nexusHomeVehicleBuyNextV1'),alerts:[...document.querySelectorAll('.alert')].map(n=>({className:n.className,text:n.textContent})),market:window.__NEXUS_HOME_MARKET__})).catch(e=>({unavailable:String(e)}));
  console.error(JSON.stringify({failureState:report.failureState,navigations:report.navigations,writes:report.writes,errors:report.errors},null,2));throw error;
-}finally{await browser.close();fs.writeFileSync('audit/home-buy-next-59.json',JSON.stringify(report,null,2)+'\n');}
+}finally{await browser.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));fs.writeFileSync('audit/home-buy-next-59.json',JSON.stringify(report,null,2)+'\n');}
