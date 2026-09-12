@@ -1,0 +1,11 @@
+# Local 3.0.43.58 — Alliance participation and confirmation fixes
+
+The shared-mission card can still say `new` when the player already has vehicles on scene. The panel now supplements the native card flag and confirmed support history with the player's `/api/vehicles` mission targets. All vehicle services count, both travelling and on scene. Queued-only missions and building targets do not count. This fixes support filtering for missions joined through the game's controls or another tool.
+
+The fleet is read when opening the panel, changing the supported toggle, pressing Refresh, or starting a support batch. Overlapping reads share one request; native mission-card updates reuse a recent result for up to 30 seconds. Responses are limited to 12 MiB and 20 seconds. Only the resulting mission ID set is retained, with no per-mission participation requests or polling timer. A failed read preserves known support but marks other participation unverified and disables new sends until a successful refresh.
+
+The old `Sent · 2` label used the first vehicle link's text, which can be its numeric status badge. The label now explicitly says `Sent: 1 Fire Officer`, including for confirmed records saved by .57. The actual native dispatch path still selects and validates exactly one officer. No changes to Auto Mode scheduling, dispatch, settings, or the existing uncertain-result checks.
+
+Primary schema checked against the game's vehicle projection already used in `nexus-tools-core.js`, and the publicly documented `target_type` / `target_id` fields in [LSSM Vehicle typings](https://github.com/LSS-Manager/LSSM-V.4/blob/dev/typings/Vehicle.d.ts). No third-party source implementation was copied.
+
+Validation: `scripts/verify-alliance-58.mjs` runs 13 scoped stages: reference preparation, runtime generation, protected parity, all hardening unit tests, adapted runtime regressions, packaging and integrity, isolated Edge smoke, settings, responsive layout, Auto Focus, existing alliance dispatch UI scenarios, and the new participation regression. Unchanged schooling/building UI suites are not rerun. Browser tests use intercepted fixture responses; they do not dispatch real game units. Local only; store publication and live acceptance are separate.

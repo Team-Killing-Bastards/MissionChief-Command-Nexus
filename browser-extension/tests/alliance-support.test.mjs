@@ -14,6 +14,20 @@ test('participation distinguishes joined, new and unavailable evidence',()=>{
   for(const input of ['new','not_participated','not participating','false'])assert.equal(C.participation(input),false);
   assert.equal(C.participation(''),null);assert.equal(C.participation('red'),null);
 });
+test('own fleet participation includes all services on scene and travelling, not queued or building targets',()=>{
+  const vehicles=[
+    {id:10,vehicle_type:8,fms_real:4,target_type:'mission',target_id:260720772},
+    {id:11,vehicle_type:8,fms_real:4,target_type:'mission',target_id:260720772},
+    {id:12,vehicle_type:4,fms_real:3,target_type:'mission',target_id:123},
+    {id:13,vehicle_type:3,fms_real:2,target_type:'building',target_id:999,queued_mission_id:456},
+    {id:14,vehicle_type:3,fms_real:2,target_type:null,target_id:null,queued_mission_id:789}
+  ];
+  assert.deepEqual(Array.from(C.supportedMissions(vehicles)),['260720772','123']);
+  assert.equal(C.supportedMissions([]).size,0);
+});
+test('invalid fleet reads are not treated as an empty fleet or confirmed non-participation',()=>{
+  for(const value of [null,{},'sign in',[null],[{}]])assert.throws(()=>C.supportedMissions(value));
+});
 test('runtime changes are limited to exact isolation and dispatch coordination guards',()=>{
   assert.equal(runtime.split(frameGuard).length-1,1);assert.equal(runtime.split(controllerBridge).length-1,1);assert.equal(runtime.split(startGuard).length-1,2);
   const child={frameElement:{hasAttribute:()=>true}};vm.runInNewContext('(()=>{'+frameGuard+'throw Error("Heavy runtime ran");})()',{window:child});

@@ -21,7 +21,8 @@ const steps=[
   ['home-market-52',['tests/ui/home-market-52.mjs']],
   ['quick-buy-53',['tests/ui/quick-buy-53.mjs']],
   ['auto-focus-56',['--expose-internals','tests/ui/auto-focus-56.mjs']],
-  ['alliance-support-57',['tests/ui/alliance-support-57.mjs']]
+  ['alliance-support-57',['tests/ui/alliance-support-57.mjs']],
+  ['alliance-participation-58',['tests/ui/alliance-participation-58.mjs']]
 ];
 const summary=[];
 for(const [name,args] of steps) {

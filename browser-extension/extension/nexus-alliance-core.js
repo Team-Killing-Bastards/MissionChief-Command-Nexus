@@ -16,6 +16,18 @@
     const range = ranges.find(r => r[0] === key);
     return !!range && credits !== null && credits >= range[2] && credits < range[3];
   }
+  function supportedMissions(vehicles) {
+    if (!Array.isArray(vehicles)) throw Error('The game did not return a vehicle list.');
+    const missions = new Set();
+    for (const vehicle of vehicles) {
+      if (!vehicle || !id(vehicle.id)) throw Error('The game returned an incomplete vehicle list.');
+      // /api/vehicles contains the player's fleet. target_type/target_id covers
+      // both travelling and on-scene units, of every service. A queued follow-up
+      // alone is not participation and a building target is not a mission.
+      if (vehicle.target_type === 'mission' && id(vehicle.target_id) && Number(vehicle.target_id) > 0) missions.add(String(vehicle.target_id));
+    }
+    return missions;
+  }
   function missions(doc) {
     const result = new Map();
     const containers = doc.querySelectorAll('#mission_list_alliance,#mission_list_alliance_event,#mission_list_alliance_event_missions');
@@ -67,5 +79,5 @@
   function attending(doc, vehicle) {
     return [...doc.querySelectorAll('#mission_vehicle_driving a[href],#mission_vehicle_at_mission a[href]')].some(link => link.getAttribute('href')?.split('?')[0] === '/vehicles/'+vehicle);
   }
-  globalThis.NexusAllianceCore = Object.freeze({clean,id,number,ranges,participation,inRange,missions,enabled,vehicleId,officers,success,attending});
+  globalThis.NexusAllianceCore = Object.freeze({clean,id,number,ranges,participation,inRange,supportedMissions,missions,enabled,vehicleId,officers,success,attending});
 })();
