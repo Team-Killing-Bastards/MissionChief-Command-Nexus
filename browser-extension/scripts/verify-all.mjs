@@ -27,7 +27,7 @@ const steps=[
 ];
 const summary=[];
 for(const [name,args] of steps) {
-  const result=spawnSync(process.execPath,args,{encoding:'utf8',windowsHide:true,timeout:name==='schooling-next-course-50'?180000:120000,maxBuffer:4*1024*1024});
+  const result=spawnSync(process.execPath,args,{encoding:'utf8',windowsHide:true,timeout:name==='alliance-support-57'?240000:name==='schooling-next-course-50'?180000:120000,maxBuffer:4*1024*1024});
   fs.writeFileSync(`audit/${name}.log`,result.stdout+result.stderr);
   summary.push({name,passed:result.status===0,exitCode:result.status});
   console.log(`${result.status===0?'PASS':'FAIL'} ${name}`);

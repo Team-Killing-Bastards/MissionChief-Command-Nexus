@@ -97,5 +97,9 @@ export function releaseProvenance() {
   const next=JSON.parse(fs.readFileSync('reference/home-buy-next-59.json'));
   if(version!==next.version||next.baseVersion!==participated.version)throw Error('Unreviewed Home Response buy-next release');
   if(Object.keys(next.files).some(file=>!['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-home-market.js'].includes(file)))throw Error('Unexpected Home Response buy-next change');
-  return {...participated,version,sourceRuntimeSha256:next.sourceRuntimeSha256,changes:[...participated.changes,...next.changes],files:{...participated.files,...next.files}};
+  const advanced={...participated,version,sourceRuntimeSha256:next.sourceRuntimeSha256,changes:[...participated.changes,...next.changes],files:{...participated.files,...next.files}};
+  const store59=JSON.parse(fs.readFileSync('reference/store-59.json'));
+  if(store59.version!==advanced.version||store59.testedRuntimeSha256!==advanced.sourceRuntimeSha256)throw Error('Store promotion differs from reviewed .59');
+  if(JSON.stringify(Object.entries(store59.files).sort())!==JSON.stringify(Object.entries(advanced.files).sort()))throw Error('Store files differ from the tested local .59 package');
+  return {...advanced,testedLocalVersion:advanced.version,testedZipSha256:store59.testedZipSha256,testedRuntimeSha256:store59.testedRuntimeSha256,changes:[...advanced.changes,...store59.changes]};
 }
