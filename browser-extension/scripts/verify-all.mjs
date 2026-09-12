@@ -9,6 +9,7 @@ const steps=[
   ['adapted-regressions',['scripts/regressions.mjs','adapted']],
   ['package',['scripts/package.mjs']],
   ['package-verification',['--expose-internals','scripts/verify-package.mjs']],
+  ['home-buy-next-59',['tests/ui/home-buy-next-59.mjs']],
   ['edge-smoke',['scripts/edge-smoke.mjs']],
   ['settings-43',['tests/ui/settings-43.mjs']],
   ['responsive-45',['tests/ui/responsive-45.mjs']],
@@ -22,8 +23,7 @@ const steps=[
   ['quick-buy-53',['tests/ui/quick-buy-53.mjs']],
   ['auto-focus-56',['--expose-internals','tests/ui/auto-focus-56.mjs']],
   ['alliance-support-57',['tests/ui/alliance-support-57.mjs']],
-  ['alliance-participation-58',['tests/ui/alliance-participation-58.mjs']],
-  ['home-buy-next-59',['tests/ui/home-buy-next-59.mjs']]
+  ['alliance-participation-58',['tests/ui/alliance-participation-58.mjs']]
 ];
 const summary=[];
 for(const [name,args] of steps) {

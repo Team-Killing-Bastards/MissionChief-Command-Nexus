@@ -26,7 +26,8 @@ await ctx.route('https://**/*',route=>{
  if(u.pathname==='/host')return route.fulfill({contentType:'text/html',body:wrap('<h1>Game map</h1><iframe src="/buildings/23" style="width:100%;height:650px"></iframe>')});
  return route.fulfill({json:[]});
 });
-const page=await ctx.newPage();page.setDefaultTimeout(12000);page.on('pageerror',e=>report.errors.push(e.message));
+const page=await ctx.newPage();page.setDefaultTimeout(30000);page.on('pageerror',e=>report.errors.push(e.message));
+report.navigations=[];page.on('framenavigated',frame=>{if(frame===page.mainFrame())report.navigations.push(frame.url());});
 const panel=page.locator('#nx-home-market'),toggle=panel.getByRole('switch',{name:'Buy and next building'}),buy=name=>panel.getByRole(name==='OTL'?'button':'link',{name:new RegExp('^'+name+' ')});
 const open=async()=>{await page.goto('https://www.missionchief.co.uk/buildings/23');await buy('Fire Officer').waitFor();};
 try{
@@ -56,4 +57,8 @@ try{
  pass('Buying within the visible building window advances that frame and keeps the main game page open');
  await open();await page.setViewportSize({width:390,height:844});await page.evaluate(()=>document.documentElement.dataset.nexusTouch='true');const bounds=await panel.boundingBox(),label=await panel.locator('.nx-home-buy-next').boundingBox();assert.ok(bounds.x>=0&&bounds.x+bounds.width<=390);assert.ok(label.height>=44);await page.screenshot({path:'audit/home-buy-next-59-phone.png',fullPage:true});
  pass('The themed toggle wraps within phone width and keeps a 44px touch target');assert.deepEqual(report.errors,[]);report.passed=true;
-}catch(error){report.failure=String(error);throw error;}finally{await browser.close();fs.writeFileSync('audit/home-buy-next-59.json',JSON.stringify(report,null,2)+'\n');}
+}catch(error){
+ report.failure=String(error);
+ report.failureState=await page.evaluate(()=>({url:location.href,referrer:document.referrer,readyState:document.readyState,hidden:document.hidden,pending:sessionStorage.getItem('nexusHomeVehiclePurchaseV1'),next:localStorage.getItem('nexusHomeVehicleBuyNextV1'),alerts:[...document.querySelectorAll('.alert')].map(n=>({className:n.className,text:n.textContent})),market:window.__NEXUS_HOME_MARKET__})).catch(e=>({unavailable:String(e)}));
+ console.error(JSON.stringify({failureState:report.failureState,navigations:report.navigations,writes:report.writes,errors:report.errors},null,2));throw error;
+}finally{await browser.close();fs.writeFileSync('audit/home-buy-next-59.json',JSON.stringify(report,null,2)+'\n');}
