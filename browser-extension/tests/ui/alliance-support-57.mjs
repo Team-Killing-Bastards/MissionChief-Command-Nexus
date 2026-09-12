@@ -10,6 +10,14 @@ const card=(id,value,participation='new')=>`<div class="missionSideBarEntry" mis
 const home=`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;background:#384852;font:14px Arial}.navbar-header{height:50px;background:#bd2f27}.navbar-brand{float:left;padding:14px;color:white}#map{height:1000px;background:linear-gradient(130deg,#22484c,#182d38)}.missionSideBarEntry{color:white}</style></head><body><div class="navbar-header"><a class="navbar-brand" href="/">MC</a></div><a id="navbar_profile_link" href="/profile/123">Player</a><div id="mission_list">${card(9,9000)}</div><div id="mission_list_alliance" style="display:none">${card(101,2500)}${card(102,3000)}${card(103,5000)}${card(104,15000)}${card(105,20000)}${card(106,null)}${card(107,9000,'participated')}${card(108,1500)}${card(109,1700)}${card(110,7000)}${card(111,12000)}${card(112,16000)}</div><div id="mission_list_alliance_event">${card(113,30000)}</div><div id="map"></div></body></html>`;
 const vehicle=(id,type,delay,extra='')=>`<tr ${delay===null?'':`data-sortvalue="${delay}"`}><td><input type="checkbox" name="vehicle_ids[]" class="vehicle_checkbox" id="vehicle_checkbox_${id}" vehicle_type_id="${type}" value="${id}" ${extra}><label for="vehicle_checkbox_${id}">Officer ${id}</label><a href="/vehicles/${id}">Officer ${id}</a></td></tr>`;
 let sent=new Map(),delayReply=0,unknownMission='',loading=false;
+let pendingReply=null;
+function holdDispatchReply() {
+  assert.equal(pendingReply,null);
+  let resolve;
+  const promise=new Promise(done=>{resolve=done;});
+  pendingReply={promise,resolve};
+  return ()=>{resolve();pendingReply=null;};
+}
 function mission(id) {
   const available=[vehicle(201,3,30),vehicle(202,3,10),vehicle(203,3,1,'disabled'),vehicle(204,8,0),vehicle(205,3,20)].join('');
   const rows=id==='108'?vehicle(204,8,0):id==='109'?vehicle(201,3,null):available;
@@ -26,7 +34,7 @@ try {
     const url=new URL(route.request().url());if(url.origin!=='https://www.missionchief.co.uk')return route.abort();
     if(url.pathname==='/')return route.fulfill({contentType:'text/html',body:home});
     const alarm=url.pathname.match(/^\/missions\/(\d+)\/alarm$/);
-    if(alarm){const selected=new URLSearchParams(route.request().postData()).getAll('vehicle_ids[]');report.dispatches.push({mission:alarm[1],selected});loading=true;if(delayReply)await new Promise(r=>setTimeout(r,delayReply));loading=false;
+    if(alarm){const selected=new URLSearchParams(route.request().postData()).getAll('vehicle_ids[]');report.dispatches.push({mission:alarm[1],selected});loading=true;if(pendingReply)await pendingReply.promise;else if(delayReply)await new Promise(r=>setTimeout(r,delayReply));loading=false;
       if(alarm[1]===unknownMission)return route.fulfill({contentType:'text/html',body:'<div class="alert alert-danger">No confirmed result</div>'});
       sent.set(alarm[1],selected[0]);return route.fulfill({contentType:'text/html',body:`<div class="alert alert-success" id="alert_success_${Date.now()}"><a href="/vehicles/${selected[0]}">Officer</a> has successfully been dispatched.</div>`});}
     const match=url.pathname.match(/^\/missions\/(\d+)$/);if(match)return route.fulfill({contentType:'text/html',body:mission(match[1])});
@@ -63,16 +71,17 @@ try {
   await page.locator('[data-mcn-start]').dispatchEvent('click');assert.equal(await page.evaluate(()=>window.__NEXUS_AUTO_DISPATCH_BUSY__()),false);
   await panel.getByRole('button',{name:'Close',exact:true}).click();assert.equal(await panel.isVisible(),false);await idle();assert.equal(await page.locator('[data-nx-alliance-worker]').count(),0);await page.locator('#nx-alliance-launcher').click();assert.equal(await row(104).count(),0);
   pass('Auto start is guarded during support; closing the list does not interrupt a pending result or navigate the map');
-  delayReply=1400;await row(105).getByRole('button',{name:'Select',exact:true}).click();await row(112).getByRole('button',{name:'Select',exact:true}).click();
+  // Keep the native result pending until Stop is clicked, regardless of CI speed.
+  const releaseStoppedReply=holdDispatchReply();await row(105).getByRole('button',{name:'Select',exact:true}).click();await row(112).getByRole('button',{name:'Select',exact:true}).click();
   const beforeStop=report.dispatches.length;await panel.getByRole('button',{name:'Support selected (2)',exact:true}).click();
   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('nexusAllianceSupportResultsV1')||'{}')['105']?.state==='uncertain');
-  await panel.getByRole('button',{name:'Stop queue',exact:true}).click();await idle();assert.equal(report.dispatches.length,beforeStop+1);assert.equal(report.dispatches.at(-1).mission,'105');assert.equal(await row(112).getByRole('button',{name:'Selected',exact:true}).count(),1);
+  await panel.getByRole('button',{name:'Stop queue',exact:true}).click();releaseStoppedReply();await idle();assert.equal(report.dispatches.length,beforeStop+1);assert.equal(report.dispatches.at(-1).mission,'105');assert.equal(await row(112).getByRole('button',{name:'Selected',exact:true}).count(),1);
   await panel.getByRole('button',{name:'Clear selection',exact:true}).click();
   pass('Stop queue checks the in-flight result and leaves remaining selections unsent');
-  delayReply=10000;await support(112).click();await page.waitForFunction(()=>JSON.parse(localStorage.getItem('nexusAllianceSupportResultsV1')||'{}')['112']?.state==='uncertain');
+  const releaseLockedReply=holdDispatchReply();await support(112).click();await page.waitForFunction(()=>JSON.parse(localStorage.getItem('nexusAllianceSupportResultsV1')||'{}')['112']?.state==='uncertain');
   const second=await context.newPage();await second.goto('https://www.missionchief.co.uk/');await second.locator('#nx-alliance-launcher').click();
   await second.locator('[data-mission="113"]').getByRole('button',{name:'Support',exact:true}).click();await second.waitForFunction(()=>!window.__NEXUS_ALLIANCE_SUPPORT__.busy);
-  assert.match(await second.locator('#nx-alliance-panel [role=status]').innerText(),/already sending in another game tab/);assert.equal(await second.locator('[data-nx-alliance-worker]').count(),0);await second.close();await idle();
+  assert.match(await second.locator('#nx-alliance-panel [role=status]').innerText(),/already sending in another game tab/);assert.equal(await second.locator('[data-nx-alliance-worker]').count(),0);await second.close();releaseLockedReply();await idle();
   pass('Two tabs cannot run competing alliance support queues');
   unknownMission='110';delayReply=0;await support(110).click();await idle();assert.equal(await row(110).getByRole('button',{name:'Check result'}).count(),1);assert.equal(await row(110).count(),1);
   const before=report.dispatches.length;await page.reload();await page.locator('#nx-alliance-launcher').click();assert.equal(await row(110).getByRole('button',{name:'Check result'}).count(),1);
@@ -95,4 +104,4 @@ try {
     await mobile.screenshot({path:'audit/alliance-57-orion-desktop.png'});pass('Phone desktop-site emulation fits the visible viewport with physical 44px action buttons');
   } finally { await phone.close(); }
   assert.deepEqual(report.errors,[]);report.passed=true;
-} finally {fs.writeFileSync('audit/alliance-support-57.json',JSON.stringify(report,null,2)+'\n');await context.close();}
+} finally {pendingReply?.resolve();fs.writeFileSync('audit/alliance-support-57.json',JSON.stringify(report,null,2)+'\n');await context.close();}
