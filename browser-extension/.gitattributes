@@ -1,3 +1,7 @@
 * text=auto eol=lf
 *.zip binary
 *.png binary
+# Preserve the exact tested extension bytes on Windows and CI.
+extension/** -text
+runtime/** -text
+reference/local-43.json -text

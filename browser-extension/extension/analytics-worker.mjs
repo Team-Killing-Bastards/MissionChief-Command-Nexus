@@ -1,3 +1,4 @@
+import './nexus-tools-storage.mjs';
 import { RULES_KEY, validateRules, DOG_RULE_MIGRATION_KEY, repairLegacySearchDogRule } from './rules-core.mjs';
 import { cleanEvent, boundState, storedBytes, prepareBatch, acceptAck, retryDelay, validEndpoint, loggerHealth, describeDelivery } from './analytics-core.mjs';
 import { GOOGLE_ENDPOINT } from './deployment-config.mjs';

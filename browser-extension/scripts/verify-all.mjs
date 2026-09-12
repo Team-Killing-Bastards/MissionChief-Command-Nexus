@@ -9,7 +9,8 @@ const steps=[
   ['adapted-regressions',['scripts/regressions.mjs','adapted']],
   ['package',['scripts/package.mjs']],
   ['package-verification',['--expose-internals','scripts/verify-package.mjs']],
-  ['edge-smoke',['scripts/edge-smoke.mjs']]
+  ['edge-smoke',['scripts/edge-smoke.mjs']],
+  ['settings-43',['tests/ui/settings-43.mjs']]
 ];
 const summary=[];
 for(const [name,args] of steps) {
