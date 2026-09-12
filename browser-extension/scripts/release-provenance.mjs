@@ -55,8 +55,13 @@ export function releaseProvenance() {
   const refreshed={...tabbed,version:crew.version,sourceRuntimeSha256:crew.sourceRuntimeSha256,changes:[...tabbed.changes,...crew.changes],files:{...tabbed.files,...crew.files}};
   if(version===crew.version)return refreshed;
   const market=JSON.parse(fs.readFileSync('reference/home-market-52.json'));
-  if(version!==market.version||market.baseVersion!==refreshed.version)throw Error('Unreviewed Home Response market release');
+  if(market.baseVersion!==refreshed.version)throw Error('Unreviewed Home Response market release');
   const marketAllowed=['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-building-overview.js','nexus-home-market.js','nexus-schooling-filters.js','nexus-settings.js','nexus-settings-main.js'];
   if(Object.keys(market.files).some(file=>!marketAllowed.includes(file)))throw Error('Unexpected Home Response market change');
-  return {...refreshed,version,sourceRuntimeSha256:market.sourceRuntimeSha256,changes:[...refreshed.changes,...market.changes],files:{...refreshed.files,...market.files}};
+  const stocked={...refreshed,version:market.version,sourceRuntimeSha256:market.sourceRuntimeSha256,changes:[...refreshed.changes,...market.changes],files:{...refreshed.files,...market.files}};
+  if(version===market.version)return stocked;
+  const quick=JSON.parse(fs.readFileSync('reference/quick-buy-53.json'));
+  if(version!==quick.version||quick.baseVersion!==stocked.version)throw Error('Unreviewed quick buy release');
+  if(Object.keys(quick.files).some(file=>!['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-home-market.js'].includes(file)))throw Error('Unexpected quick buy change');
+  return {...stocked,version,sourceRuntimeSha256:quick.sourceRuntimeSha256,changes:[...stocked.changes,...quick.changes],files:{...stocked.files,...quick.files}};
 }
