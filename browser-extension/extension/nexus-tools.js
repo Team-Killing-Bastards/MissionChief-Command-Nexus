@@ -6,6 +6,8 @@
   const C = globalThis.NexusNativeCore;
   const MAX_ROWS = 20000, PAGE_SIZE = 50, MAX_BYTES = 12 * 1024 * 1024;
   const host = document.createElement('div'); host.id = 'nexus-native-tools';
+  host.toggleAttribute('data-compact', document.documentElement.dataset.nexusLayout === 'phone');
+  host.toggleAttribute('data-touch', document.documentElement.dataset.nexusTouch === 'true');
   const ui = host.attachShadow({ mode: 'open' });
   ui.innerHTML = `
   <style>
@@ -17,6 +19,7 @@
   #panel{position:fixed;right:16px;top:54px;width:min(850px,calc(100vw - 32px));height:min(800px,calc(100vh - 70px));display:flex;flex-direction:column;background:#0b1525;border:1px solid #365779;border-radius:14px;box-shadow:0 15px 55px #0008;overflow:hidden}
   header{display:flex;align-items:center;gap:10px;padding:16px 20px;background:#101f34;border-bottom:1px solid #29405a}header img{width:38px;height:38px}header .brand{flex:1}h1{font-size:18px;margin:0}header small{font-size:11px;color:#9caec8}
   #toggle{display:grid;place-items:center;width:36px;height:36px;padding:5px;border-radius:50%;border-color:#6598c3;box-shadow:0 4px 16px #0005}#toggle svg{height:23px;width:23px}
+  #panel:not([hidden])~#toggle{display:none}
   #tabs{display:flex;gap:4px;padding:10px 14px;border-bottom:1px solid #29405a;flex-wrap:wrap}#tabs button{border-color:transparent;background:transparent;padding:7px 9px;font-size:13px}#tabs button[aria-pressed=true]{background:#234562;border-color:#537fa8}
   #body{padding:18px 20px;overflow:auto;flex:1;min-height:0}h2{font-size:21px;margin:0 0 5px}p{margin:6px 0 14px;color:#aabbd3}small{font-size:12px;color:#aabbd3}#intro{font-size:13px}
   #summary:empty,#homeLinks:empty{display:none}.toolbar:has(>#refresh[hidden]):has(>#cancel[hidden]){display:none}
@@ -29,9 +32,21 @@
   .settings-group{border:1px solid #29405a;border-radius:8px;margin:12px 0;padding:12px;background:#101f34}.settings-group legend{padding:0 6px;color:#a6dbff;font-weight:650}.setting-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px}#settings .setting-row{display:flex;align-items:center;gap:10px;margin:0;padding:8px 0;font-size:13px}#settings .setting-row span{flex:1}#settings input[role=switch]{appearance:none;flex:none;width:36px;height:21px;border-radius:15px;padding:0;margin:0;background:#3b4a5e;position:relative;cursor:pointer}#settings input[role=switch]:before{content:'';position:absolute;width:15px;height:15px;left:2px;top:2px;background:white;border-radius:50%;transition:transform .12s}#settings input[role=switch]:checked{background:#2182af;border-color:#6bcdf4}#settings input[role=switch]:checked:before{transform:translateX(15px)}#settings input[type=number]{width:90px}#settings .save-row{position:sticky;bottom:-18px;background:#0b1525;border-top:1px solid #365779;padding:12px 0;margin-bottom:0}#settingsStatus{margin:8px 0;font-size:12px;color:#bde9d2}#settingsStatus.error{color:#ffb9a7}
   @media(max-width:650px){.setting-grid{grid-template-columns:1fr}}
   @media(max-width:550px){.cards{grid-template-columns:1fr}#body{padding:12px}#tabs{padding:7px}#panel{height:calc(100vh - 85px)}header{padding:10px}#clock{display:none}}
+  :host([data-touch]):not([data-compact]) #panel{left:var(--nx-visible-left,8px);top:var(--nx-visible-top,8px);right:auto;width:min(850px,var(--nx-visible-width,calc(100vw - 16px)));height:min(800px,var(--nx-visible-height,calc(100dvh - 16px)))}
+  :host([data-compact]) #panel{left:var(--nx-visible-left,8px);top:var(--nx-visible-top,8px);right:auto;width:var(--nx-visible-width,calc(100vw - 16px));height:var(--nx-visible-height,calc(100dvh - 16px));border-radius:10px;transform:scale(var(--nx-ui-scale,1));transform-origin:top left}
+  :host([data-compact]) header{padding:8px 10px;flex:none}:host([data-compact]) header img{width:30px;height:30px}:host([data-compact]) header small{font-size:10px}:host([data-compact]) #clock{display:none}
+  :host([data-compact]) #tabs{flex:none;flex-wrap:nowrap;overflow-x:auto;padding:4px;gap:0;overscroll-behavior:contain}:host([data-compact]) #tabs button{flex:0 0 auto;padding:8px;font-size:12px;min-height:44px}
+  :host([data-compact]) #body{padding:12px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scroll-padding-block:12px 85px;overflow-x:hidden}
+  :host([data-compact]) .setting-grid{grid-template-columns:minmax(0,1fr)}:host([data-compact]) .cards{grid-template-columns:1fr}:host([data-compact]) .settings-group{min-width:0;padding:10px}:host([data-compact]) #settings .save-row{bottom:-12px}
+  :host([data-compact]) footer{padding:6px 10px;font-size:10px;flex:none}:host([data-compact]) #toggle{position:fixed;right:calc(8px + env(safe-area-inset-right,0px));top:calc(8px + env(safe-area-inset-top,0px))}
+  :host([data-touch]) button,:host([data-touch]) .links a,:host([data-touch]) #settings .setting-row{min-height:44px;touch-action:manipulation}:host([data-touch]) #toggle{width:44px;height:44px}
+  :host([data-touch]) #close{min-width:44px}
+  :host([data-touch]) input:not([role=switch]),:host([data-touch]) select,:host([data-touch]) #settings textarea{font-size:16px;min-height:44px}
+  :host([data-compact]) #panel header .brand{min-width:0}:host([data-compact]) #panel header small{overflow-wrap:anywhere}
+  :host([data-compact]) #settings .setting-row span{min-width:0;overflow-wrap:anywhere}
   </style>
-  <section id="panel" hidden aria-label="Nexus Tools">
-    <header><img class="logo" alt=""><div class="brand"><h1>Nexus Tools</h1><small>MissionChief Command Nexus · 3.0.43.44</small></div><small id="clock"></small><button id="close" aria-label="Close Nexus Tools">×</button></header>
+  <section id="panel" hidden role="dialog" aria-label="Nexus Tools">
+    <header><img class="logo" alt=""><div class="brand"><h1>Nexus Tools</h1><small>MissionChief Command Nexus · 3.0.43.45</small></div><small id="clock"></small><button id="close" aria-label="Close Nexus Tools">×</button></header>
     <nav id="tabs" aria-label="Nexus tools views">
       <button data-view="home">Overview</button><button data-view="buildings">Buildings</button><button data-view="vehicles">Vehicles</button><button data-view="schoolings">Schooling</button><button data-view="settings">Settings</button>
     </nav>
@@ -43,11 +58,46 @@
     </main><footer>On-demand snapshots · links open separately · close to release loaded lists</footer>
   </section><button id="toggle" aria-expanded="false" aria-label="Nexus Tools" title="Nexus Tools"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M14 5a5 5 0 0 0-6 6L3 16a3 3 0 0 0 5 5l5-5a5 5 0 0 0 6-6l-4 4-4-4 4-4Z"/></svg></button>`;
   document.body.append(host);
-  // Reserve the launcher's space in an existing right-hand navbar, instead of
-  // covering the game's balance or coin controls with a floating button.
-  const rightNav=document.querySelector('#navbar-main-collapse .navbar-right, .navbar-right');
-  if(rightNav){const padding=parseFloat(getComputedStyle(rightNav).paddingRight)||0;rightNav.style.paddingRight=`${padding+104}px`;}
   const $ = id => ui.getElementById(id);
+  let menuEntry = null, helpToggle = null;
+  const menuStyle = document.createElement('style');
+  menuStyle.textContent = '.dropdown-menu .nx-tools-separator{height:1px;margin:8px 0;overflow:hidden;background:#fff;border:0}.dropdown-menu #nexus-tools-menu-link{display:flex;align-items:center;gap:9px}.dropdown-menu #nexus-tools-menu-link svg{width:20px;height:20px;flex:none}html[data-nexus-touch=true] #nexus-tools-menu-link{min-height:44px}html[data-nexus-layout=phone][data-nexus-tools-open],html[data-nexus-layout=phone][data-nexus-tools-open] body{overflow:hidden}';
+  document.head.append(menuStyle);
+  menuStyle.textContent += 'html[data-nexus-desktop-phone] .dropdown-menu:has(>#nexus-tools-menu-item){min-width:calc(220px * var(--nx-ui-scale));font-size:calc(14px * var(--nx-ui-scale))}html[data-nexus-desktop-phone] .dropdown-menu:has(>#nexus-tools-menu-item)>li>a{min-height:calc(44px * var(--nx-ui-scale));display:flex;align-items:center}html[data-nexus-desktop-phone] #nexus-tools-menu-link svg{width:calc(20px * var(--nx-ui-scale));height:calc(20px * var(--nx-ui-scale))}';
+  function mountHelpMenu() {
+    if (menuEntry?.isConnected) return;
+    // Only inspect native navigation when it appears or is opened. No observer
+    // sees the constantly changing mission/vehicle lists.
+    for (const menu of document.querySelectorAll('.navbar .dropdown-menu,#navbar-main-collapse .dropdown-menu,.navbar-header .dropdown-menu')) {
+      const links = [...menu.querySelectorAll('a')];
+      const faq = links.find(a => /^(faq|frequently asked questions)$/i.test(a.textContent.trim()));
+      const support = links.find(a => /^contact support$/i.test(a.textContent.trim()));
+      if (!faq || !support || faq.closest('li')?.parentElement !== menu || support.closest('li')?.parentElement !== menu) continue;
+      const contactRow = support.closest('li');
+      menuEntry = document.createElement('li'); menuEntry.id = 'nexus-tools-menu-item';
+      const entry = document.createElement('a'); entry.id = 'nexus-tools-menu-link'; entry.href = '#nexus-tools';
+      entry.setAttribute('aria-haspopup', 'dialog'); entry.setAttribute('aria-expanded', 'false');
+      entry.append($('toggle').querySelector('svg').cloneNode(true), document.createTextNode('Nexus Tools')); menuEntry.append(entry);
+      menu.insertBefore(menuEntry, contactRow);
+      const separator = () => { const node = document.createElement('li'); node.className = 'divider nx-tools-separator'; node.setAttribute('role', 'separator'); return node; };
+      if (menuEntry.previousElementSibling?.matches('.divider,[role=separator]')) menuEntry.previousElementSibling.classList.add('nx-tools-separator');
+      else menuEntry.before(separator());
+      menuEntry.after(separator());
+      helpToggle = menu.parentElement.querySelector('[data-toggle=dropdown],.dropdown-toggle');
+      $('toggle').hidden = true;
+      entry.addEventListener('click', e => {
+        e.preventDefault();
+        const focus = helpToggle || entry;
+        menu.parentElement.classList.remove('open'); helpToggle?.setAttribute('aria-expanded', 'false');
+        void open(focus);
+      });
+      return;
+    }
+    $('toggle').hidden = false; // Standalone mission pages may have no help menu.
+  }
+  function onNavigation(e) {
+    if (e.target instanceof Element && e.target.closest('.navbar,#navbar-main-collapse,.navbar-header')) mountHelpMenu();
+  }
   const S = globalThis.NexusSettings;
   let settingsDraft = null;
   function settingsNotice(message, error=false) { $('settingsStatus').textContent=message; $('settingsStatus').classList.toggle('error',error); }
@@ -119,6 +169,8 @@
   }
   function close() {
     $('panel').hidden = true; $('toggle').setAttribute('aria-expanded', 'false'); release(); clearTimeout(clockTimer); clockTimer = null;
+    menuEntry?.querySelector('a')?.setAttribute('aria-expanded', 'false');
+    document.documentElement.removeAttribute('data-nexus-tools-open');
     returnFocus = null;
   }
   function busy(value) { $('cancel').hidden = !value; }
@@ -303,14 +355,30 @@
     if (view === 'settings') { renderSettings(); $('groupEditor').value = prefs.groups.map(g => `${g.name}: ${g.types.join(' ')}`).join('\n'); status(''); }
     if (view === 'credits') addLink($('homeLinks'), '/credits/daily', 'Game daily summary');
     if (view === 'schoolings') addLink($('homeLinks'), '/schoolings', 'Game schooling');
-    drawGroups(); void load();
+    drawGroups(); void load(); $('body').scrollTop = 0;
   }
-  $('toggle').addEventListener('click', async () => {
-    if (!$('panel').hidden) { close(); return; }
-    await initialSettings; returnFocus = document.activeElement; $('panel').hidden = false; $('toggle').setAttribute('aria-expanded', 'true'); select('home'); startClock(); $('close').focus();
-  });
+  async function open(focus) {
+    if (!$('panel').hidden) { $('close').focus(); return; }
+    await initialSettings; returnFocus = focus || document.activeElement;
+    $('panel').hidden = false; $('toggle').setAttribute('aria-expanded', 'true');
+    menuEntry?.querySelector('a')?.setAttribute('aria-expanded', 'true');
+    document.documentElement.setAttribute('data-nexus-tools-open', '');
+    select('home'); startClock(); $('close').focus({preventScroll:true});
+  }
+  $('toggle').addEventListener('click', () => { if (!$('panel').hidden) close(); else void open($('toggle')); });
   $('close').addEventListener('click', () => { const focus = returnFocus?.isConnected ? returnFocus : $('toggle'); close(); focus.focus(); });
-  ui.addEventListener('keydown', e => { if (e.key === 'Escape') { close(); $('toggle').focus(); returnFocus = null; } });
+  ui.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.preventDefault(); const focus = returnFocus?.isConnected ? returnFocus : $('toggle'); close(); focus.focus(); }
+    if (e.key === 'Tab' && !$('panel').hidden) {
+      const focusable = [...$('panel').querySelectorAll('button:not(:disabled),a[href],input:not(:disabled),select,textarea,summary')].filter(n => n.getClientRects().length);
+      const first = focusable[0], last = focusable.at(-1);
+      if (e.shiftKey && ui.activeElement === first) { e.preventDefault(); last?.focus(); }
+      else if (!e.shiftKey && ui.activeElement === last) { e.preventDefault(); first?.focus(); }
+    }
+  });
+  mountHelpMenu();
+  document.addEventListener('click', onNavigation, true);
+  document.addEventListener('focusin', onNavigation, true);
   $('tabs').addEventListener('click', e => { const next = e.target.closest('[data-view]')?.dataset.view; if (next) select(next); });
   $('refresh').addEventListener('click', load);
   $('cancel').addEventListener('click', () => { stopRequest(); status('Loading cancelled. No register data retained.'); });

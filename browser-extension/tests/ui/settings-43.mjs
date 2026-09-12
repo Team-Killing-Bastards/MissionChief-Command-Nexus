@@ -35,10 +35,10 @@ try{
  report.requests.push(u.pathname);return route.fulfill({contentType:'application/json',body:'[]'});
  });
  const page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));page.setDefaultTimeout(12000);
- await page.goto('https://www.missionchief.co.uk/');const tools=page.locator('#nexus-native-tools');await tools.locator('#toggle').click();
+ await page.goto('https://www.missionchief.co.uk/');const tools=page.locator('#nexus-native-tools');await tools.locator('#toggle').waitFor();const rect=await tools.locator('#toggle').boundingBox();assert.ok(rect.x>1100&&rect.y<25);await tools.locator('#toggle').click();
  assert.equal(await page.evaluate(()=>window.__NEXUS_EXTENSION__.build),JSON.parse(fs.readFileSync(base+'/manifest.json')).version);
  assert.deepEqual(await tools.locator('#tabs button').allTextContents(),['Overview','Buildings','Vehicles','Schooling','Settings']);
- const rect=await tools.locator('#toggle').boundingBox();assert.ok(rect.x>1100&&rect.y<25);
+ assert.equal(await tools.locator('#toggle').isVisible(),false,'Standalone launcher must not cover the dialog close button');
  await tools.locator('[data-view=settings]').click();assert.equal(await tools.locator('input[role=switch]').count(),36);
  pass('Packaged extension loads with five Tools tabs, top-right launcher and 36 on/off switches under actual extension CSP');
  await page.screenshot({path:'audit/settings-43-wide.png'});

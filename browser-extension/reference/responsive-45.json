@@ -1,0 +1,15 @@
+{
+  "version": "3.0.43.45",
+  "baseVersion": "3.0.43.44",
+  "sourceRuntimeSha256": "80b62667742e4153c290835bae898b9823657f25ae5a0bbbd9c3ff35e1d6305b",
+  "changes": [
+    "Nexus Tools moves to the native Help menu between FAQ and Contact Support",
+    "Visible viewport and safe-area layouts for phone, tablet and touch controls; no Auto runtime changes except version"
+  ],
+  "files": {
+    "manifest.json": "278d42165a50ef7b9767df1ea054c2aea742ab8fc671f6169e423a4e74253e52",
+    "nexus-tools.js": "562e07d50078b24141cc1cfa9c06ec5ab7a59fede5cc5e206cf4225451524e31",
+    "nexus-responsive.js": "88cbfef7a68785f2a4e6824461b35ad419c948e6496cba32a1453a0a0c992957",
+    "nexus-runtime.js": "80b62667742e4153c290835bae898b9823657f25ae5a0bbbd9c3ff35e1d6305b"
+  }
+}
