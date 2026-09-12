@@ -71,11 +71,16 @@ export function releaseProvenance() {
   const stripped={...linked,version:strip.version,sourceRuntimeSha256:strip.sourceRuntimeSha256,changes:[...linked.changes,...strip.changes],files:{...linked.files,...strip.files}};
   if(version===strip.version)return stripped;
   const cleanup=JSON.parse(fs.readFileSync('reference/training-filter-cleanup-55.json'));
-  if(version!==cleanup.version||cleanup.baseVersion!==stripped.version)throw Error('Unreviewed training filter cleanup');
+  if(cleanup.baseVersion!==stripped.version)throw Error('Unreviewed training filter cleanup');
   if(Object.keys(cleanup.files).some(file=>!['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-schooling-filters.js'].includes(file)))throw Error('Unexpected training filter cleanup change');
-  const cleaned={...stripped,version,sourceRuntimeSha256:cleanup.sourceRuntimeSha256,changes:[...stripped.changes,...cleanup.changes],files:{...stripped.files,...cleanup.files}};
+  const cleaned={...stripped,version:cleanup.version,sourceRuntimeSha256:cleanup.sourceRuntimeSha256,changes:[...stripped.changes,...cleanup.changes],files:{...stripped.files,...cleanup.files}};
   const store55=JSON.parse(fs.readFileSync('reference/store-55.json'));
-  if(store55.version!==version||store55.testedRuntimeSha256!==cleaned.sourceRuntimeSha256)throw Error('Store promotion differs from reviewed .55');
+  if(store55.version!==cleaned.version||store55.testedRuntimeSha256!==cleaned.sourceRuntimeSha256)throw Error('Store promotion differs from reviewed .55');
   if(JSON.stringify(Object.entries(store55.files).sort())!==JSON.stringify(Object.entries(cleaned.files).sort()))throw Error('Store files differ from the tested local .55 package');
-  return {...cleaned,testedLocalVersion:version,testedZipSha256:store55.testedZipSha256,testedRuntimeSha256:store55.testedRuntimeSha256,changes:[...cleaned.changes,...store55.changes]};
+  const promoted55={...cleaned,testedLocalVersion:cleaned.version,testedZipSha256:store55.testedZipSha256,testedRuntimeSha256:store55.testedRuntimeSha256,changes:[...cleaned.changes,...store55.changes]};
+  if(version===promoted55.version)return promoted55;
+  const focus=JSON.parse(fs.readFileSync('reference/auto-focus-56.json'));
+  if(version!==focus.version||focus.baseVersion!==promoted55.version)throw Error('Unreviewed Auto Focus panel release');
+  if(Object.keys(focus.files).some(file=>!['manifest.json','nexus-runtime.js','nexus-tools.js'].includes(file)))throw Error('Unexpected Auto Focus panel change');
+  return {...promoted55,version,sourceRuntimeSha256:focus.sourceRuntimeSha256,changes:[...promoted55.changes,...focus.changes],files:{...promoted55.files,...focus.files}};
 }

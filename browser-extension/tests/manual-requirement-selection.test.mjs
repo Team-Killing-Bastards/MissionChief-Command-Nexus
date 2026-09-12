@@ -4,10 +4,11 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 const bridge=fs.readFileSync('runtime/manual-requirement-selection.inc.js','utf8');
-test('manual bridge is the only executable runtime addition to the verified .45 source',()=>{
+test('manual bridge remains unchanged alongside the reviewed Focus panel',()=>{
  const runtime=fs.readFileSync('runtime/nexus-runtime.js','utf8');assert.equal(runtime.split(bridge+'\n').length,2);
- const original=runtime.replace(bridge+'\n','').replaceAll(JSON.parse(fs.readFileSync('extension/manifest.json')).version,'3.0.43.45');
- assert.equal(crypto.createHash('sha256').update(original).digest('hex'),JSON.parse(fs.readFileSync('reference/store-45.json')).testedRuntimeSha256);
+ // Full runtime identity outside the explicitly reviewed UI/skip functions is
+ // checked against .55 in auto-focus.test.mjs; keep the bridge's own byte guard.
+ assert.equal(crypto.createHash('sha256').update(bridge).digest('hex'),JSON.parse(fs.readFileSync('reference/auto-focus-protected-55.json')).manualBridgeSha256);
 });
 function environment({auto=false,hidden=false,name='',rulesReady=true,staffing=false}={}){
  let calls=0;const document={hidden,querySelectorAll:()=>[]};const window={name};window.top=window;

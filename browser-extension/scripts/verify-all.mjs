@@ -19,7 +19,8 @@ const steps=[
   ['schooling-station-tabs-50',['tests/ui/schooling-station-tabs-50.mjs']],
   ['crew-freshness-51',['tests/ui/crew-freshness-51.mjs']],
   ['home-market-52',['tests/ui/home-market-52.mjs']],
-  ['quick-buy-53',['tests/ui/quick-buy-53.mjs']]
+  ['quick-buy-53',['tests/ui/quick-buy-53.mjs']],
+  ['auto-focus-56',['--expose-internals','tests/ui/auto-focus-56.mjs']]
 ];
 const summary=[];
 for(const [name,args] of steps) {

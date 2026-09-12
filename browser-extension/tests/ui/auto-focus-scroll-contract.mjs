@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+const source=await readFile('src/missionchief-command-nexus.user.js','utf8');
+const styleStart=source.indexOf('style.textContent = `');
+const styleEnd=source.indexOf('`;\ndocument.head.appendChild(style);',styleStart);
+assert.ok(styleStart>=0&&styleEnd>styleStart);
+const styles=source.slice(styleStart,styleEnd).replace(/\s+/g,'');
+for(const token of ['max-height:calc(100dvh-70px)','.mcn-body{min-height:0;overflow-y:auto','overscroll-behavior:contain','.mcn-actions{position:sticky;top:0','min-height:44px','[hidden]{display:none!important;}','max-height:var(--nx-visible-height'])assert.ok(styles.includes(token),'Focus panel overflow protection lost '+token);
+const start=source.indexOf('function buildUi() {'),end=source.indexOf('function readablePhaseLabel(',start);
+assert.ok(start>=0&&end>start);const ui=source.slice(start,end);
+for(const token of ['data-mcn-skip-details','data-mcn-skips-empty','data-mcn-system-details','data-mcn-stop','data-mcn-export','aria-expanded','startButton.addEventListener(\'click\', startController)','stopButton.addEventListener(\'click\', gracefulStop)'])assert.ok(ui.includes(token),'Focus control missing '+token);
+assert.ok(ui.indexOf('<div class="mcn-actions">')<ui.indexOf('<details class="mcn-disclosure"'),'Sticky Start/Stop must precede long disclosures');
+assert.doesNotMatch(ui,/C: waiting/);
+console.log('PASS: Focus panel has bounded viewport scrolling, sticky Stop, accessible disclosures and original action handlers. Browser geometry is checked in auto-focus-56.mjs.');
