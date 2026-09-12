@@ -90,7 +90,12 @@ export function releaseProvenance() {
   const shared={...focused,version:alliance.version,sourceRuntimeSha256:alliance.sourceRuntimeSha256,changes:[...focused.changes,...alliance.changes],files:{...focused.files,...alliance.files}};
   if(version===shared.version)return shared;
   const participation=JSON.parse(fs.readFileSync('reference/alliance-participation-58.json'));
-  if(version!==participation.version||participation.baseVersion!==shared.version)throw Error('Unreviewed alliance participation release');
+  if(participation.baseVersion!==shared.version)throw Error('Unreviewed alliance participation release');
   if(Object.keys(participation.files).some(file=>!['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-alliance-core.js','nexus-alliance-support.js'].includes(file)))throw Error('Unexpected alliance participation change');
-  return {...shared,version,sourceRuntimeSha256:participation.sourceRuntimeSha256,changes:[...shared.changes,...participation.changes],files:{...shared.files,...participation.files}};
+  const participated={...shared,version:participation.version,sourceRuntimeSha256:participation.sourceRuntimeSha256,changes:[...shared.changes,...participation.changes],files:{...shared.files,...participation.files}};
+  if(version===participated.version)return participated;
+  const next=JSON.parse(fs.readFileSync('reference/home-buy-next-59.json'));
+  if(version!==next.version||next.baseVersion!==participated.version)throw Error('Unreviewed Home Response buy-next release');
+  if(Object.keys(next.files).some(file=>!['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-home-market.js'].includes(file)))throw Error('Unexpected Home Response buy-next change');
+  return {...participated,version,sourceRuntimeSha256:next.sourceRuntimeSha256,changes:[...participated.changes,...next.changes],files:{...participated.files,...next.files}};
 }
