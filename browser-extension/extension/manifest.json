@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "MissionChief Command Nexus",
   "description": "MissionChief UK mission controls, vehicle selection, transport, naming and personnel tools, with optional gameplay reporting.",
-  "version": "3.0.43.45",
+  "version": "3.0.43.46",
   "minimum_chrome_version": "111",
   "permissions": [
     "activeTab",

@@ -30,7 +30,7 @@
   style.textContent = `
   [data-nexus-comfort]{font-family:system-ui,sans-serif}.nx-box{border:1px solid #7891aa;border-left:4px solid #579cc5;border-radius:5px;padding:9px 12px;margin:8px 0;background:#102338;color:#e8f0fb;font-size:12px}
   .nx-box strong{color:#b9e1fc}.nx-box small{color:#cad7e5}.nx-box a{color:#95d5ff}.nx-line{display:flex;gap:7px;align-items:center;flex-wrap:wrap}.nx-badge{display:inline-block;border:1px solid #6685a1;border-radius:4px;padding:2px 6px;margin:2px;background:#17354b;color:#eef5ff;font-size:12px}
-  #nx-missing .nx-requirement-tick{display:inline-block;margin-left:6px;color:#69c8ff;font-weight:800;font-size:14px;line-height:1;vertical-align:baseline}#nx-missing .nx-requirement-covered{border-color:#69b6e1}
+  #nx-missing button.nx-badge{font-size:12px;padding:3px 7px;margin:2px;line-height:1.4}html[data-nexus-touch=true] #nx-missing button.nx-badge{min-height:calc(44px * var(--nx-ui-scale,1));touch-action:manipulation}#nx-missing button.nx-badge:hover{background:#285777}#nx-missing button.nx-badge:focus-visible{outline:2px solid #69c8ff;outline-offset:2px}#nx-missing button[aria-disabled=true]{opacity:.7;cursor:wait}#nx-missing .nx-requirement-short{border-color:#ffb347}#nx-missing [data-nx-requirement-shortfall]{color:#ffb347;font-weight:bold}#nx-missing [data-nx-requirement-status]{margin-top:5px;font-size:12px}#nx-missing .nx-requirement-tick{display:inline-block;margin-left:6px;color:#69c8ff;font-weight:800;font-size:14px;line-height:1;vertical-align:baseline}#nx-missing .nx-requirement-covered{border-color:#69b6e1}
   .nx-good{color:#176330;background:#d6f2df}.nx-short{color:#942523;background:#ffe6df}.nx-unknown{color:#4f5260;background:#edf0f5}.nx-staff{font-size:12px;white-space:nowrap}.nx-type{font-size:11px;font-weight:normal;margin-left:5px;color:#486c86}.nx-box button{background:#1d415d;color:#fff;border:1px solid #7193ac;border-radius:4px;padding:4px 8px;margin:3px;font:inherit;cursor:pointer}.nx-box button[aria-pressed=true]{background:#39799a;border-color:#b6e3fa}
   .nx-original-hidden{display:none!important}.nx-native-vehicle-tabs-hidden{display:none!important}.nx-group-hidden{display:none!important}.nx-currency{font-weight:bold;white-space:nowrap}.nx-currency-icon{display:none!important}.nx-aging{border:1px solid #df6666;border-radius:3px;padding:1px 3px}.nx-time{font-size:11px;padding:1px 5px;color:#17455b;background:#e4f3fc;border-radius:3px}
   .nx-training{border-collapse:collapse;width:auto;font-size:12px}.nx-training th,.nx-training td{padding:4px 14px 4px 0;text-align:left}.nx-inline-list{display:flex;gap:4px;flex-wrap:wrap}.nx-box input{color:#172e40;background:#fff;border:1px solid #819ab1;border-radius:3px;padding:4px 6px}.nx-arr{position:relative}.nx-crew-links{display:block;font-size:11px}
@@ -102,7 +102,7 @@
   function missing() {
     if (!flags.extendedCallWindow?.enhancedMissingVehicles) return;
     const source = document.getElementById('missing_text'); if (!source) return;
-    const value = text(source.textContent, 12000); if (value === missingKey && document.getElementById('nx-missing')) return; missingKey = value;
+    const value = text(source.textContent, 12000),key=value+'|'+!!window.__NEXUS_RULES__?.isReady(); if (key === missingKey && document.getElementById('nx-missing')) return; missingKey = key;
     const panel = box('nx-missing', source, 'Missing requirements'); if (!panel) return;
     panel.replaceChildren(element('strong', 'Nexus · Missing requirements'));
     const groups = [...source.querySelectorAll('[data-requirement-type]')].slice(0, 8);
@@ -115,7 +115,13 @@
       const raw = text(section.textContent, 6000).replace(text(section.querySelector('b,strong')?.textContent), '').trim();
       const kind=section.getAttribute('data-requirement-type'),vehicleGroup=kind==='vehicles',vehicleLike=vehicleGroup||kind==='other',ticks=window.__NEXUS_REQUIREMENT_TICKS__;
       const requirements=vehicleLike&&ticks?ticks.split(raw):splitRequirements(raw);
-      for (const requirement of requirements) { const badge=element('span',requirement,'nx-badge');if(vehicleGroup||(kind==='other'&&ticks?.supports(requirement)))badge.dataset.nxVehicleRequirement=requirement;line.append(badge); }
+      for (const requirement of requirements) {
+        const supported=ticks?.supports(requirement),selectable=vehicleLike&&supported&&ticks?.buttonsEnabled;
+        const badge=element(selectable?'button':'span',requirement,'nx-badge');
+        if(selectable){badge.type='button';badge.setAttribute('aria-label',`Select remaining units: ${requirement}`);}
+        if(vehicleGroup||(kind==='other'&&supported))badge.dataset.nxVehicleRequirement=requirement;
+        line.append(badge);
+      }
       panel.append(line);
     }
     // Preserve the original source text and any unclassified details for other readers.

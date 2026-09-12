@@ -10,8 +10,8 @@
       parentBuild = window.top.__NEXUS_EXTENSION__?.build || '';
     }
   } catch {}
-  if (parentBuild && parentBuild !== '3.0.43.45') {
-    window.__NEXUS_EXTENSION__ = Object.freeze({ build: '3.0.43.45', sourceVersion: '3.0.43',
+  if (parentBuild && parentBuild !== '3.0.43.46') {
+    window.__NEXUS_EXTENSION__ = Object.freeze({ build: '3.0.43.46', sourceVersion: '3.0.43',
       status: 'parent-build-mismatch', parentBuild, startedAt: Date.now() });
     try {
       window.top.dispatchEvent(new window.top.CustomEvent('nexus-extension-update-required-v1', {
@@ -22,7 +22,7 @@
   }
   const alreadyRunning = Boolean(window.__MCN_V3_CONTROLLER__ || window.__MCN_BOOT_TRACE__);
   window.__NEXUS_EXTENSION__ = Object.freeze({
-    build: '3.0.43.45',
+    build: '3.0.43.46',
     sourceVersion: '3.0.43',
     status: alreadyRunning ? 'existing-runtime' : 'loaded',
     startedAt: Date.now()
@@ -265,7 +265,7 @@ function createNexusPerformance(env) {
     readRegistry, vehicleSignature, getRequirements, putRequirements, record, count, dispose,
     receiveCount(key, amount) { counters[key] = (counters[key] || 0) + amount; },
     receiveTiming(item) { timings.push({ ...item }); if (timings.length > 100) timings.shift(); },
-    snapshot() { return { build: '3.0.43.45', counters: { ...counters }, longTasks: { ...longTasks }, timings: timings.map(item => ({ ...item })), retainedDocuments: documents.size, registryRetained: !!registryValue, requirementTtlMs: REQUIREMENT_TTL, maxRequirementRecords: MAX_RECORDS }; }
+    snapshot() { return { build: '3.0.43.46', counters: { ...counters }, longTasks: { ...longTasks }, timings: timings.map(item => ({ ...item })), retainedDocuments: documents.size, registryRetained: !!registryValue, requirementTtlMs: REQUIREMENT_TTL, maxRequirementRecords: MAX_RECORDS }; }
   });
 }
 
@@ -10617,7 +10617,7 @@ function installNexusFullLogger() {
     const who = identity(); if (!who.player) return false; switchPlayer(who.player);
     const record = cleanRecord(raw); if (!record) return false;
     const capturedAt = Date.now();
-    record.clientVersion = '3.0.43.45';
+    record.clientVersion = '3.0.43.46';
     if (kind === 'mission') {
       if (!/^\d+$/.test(record.missionId || '')) return false;
       const old = registry[record.missionId] || {};
@@ -10649,7 +10649,7 @@ function installNexusFullLogger() {
     return true;
   }
   function activity(action, extra = {}) {
-    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.45', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
+    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.46', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
   }
   function current(eventType, options = {}) {
     const snapshot = getMissionLoggerMissionSnapshot();
@@ -10823,7 +10823,7 @@ function installNexusFullLogger() {
     finally {clearTimeout(timeout);timers.delete(timeout);creditAbort=null;creditBusy=false;}
   }
   function session(action) {
-    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.45',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
+    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.46',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
   }
   function tick() {
     try {
@@ -32681,7 +32681,7 @@ function installNexusFullLogger() {
     const who = identity(); if (!who.player) return false; switchPlayer(who.player);
     const record = cleanRecord(raw); if (!record) return false;
     const capturedAt = Date.now();
-    record.clientVersion = '3.0.43.45';
+    record.clientVersion = '3.0.43.46';
     if (kind === 'mission') {
       if (!/^\d+$/.test(record.missionId || '')) return false;
       const old = registry[record.missionId] || {};
@@ -32713,7 +32713,7 @@ function installNexusFullLogger() {
     return true;
   }
   function activity(action, extra = {}) {
-    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.45', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
+    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.46', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
   }
   function current(eventType, options = {}) {
     const snapshot = getMissionLoggerMissionSnapshot();
@@ -32887,7 +32887,7 @@ function installNexusFullLogger() {
     finally {clearTimeout(timeout);timers.delete(timeout);creditAbort=null;creditBusy=false;}
   }
   function session(action) {
-    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.45',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
+    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.46',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
   }
   function tick() {
     try {
@@ -42044,6 +42044,50 @@ registryVehicleCount
         } catch (error) {}
         return true;
     }
+    // Manual requirement buttons share the existing matcher, but never enter the
+    // Auto selection ledger, paging, logger or dispatch paths.
+    function nexusManualSelectionBlocked() {
+        if (!/^\/missions\/\d+\/?$/.test(location.pathname) || document.hidden) return 'This mission is not visible.';
+        try {
+            let win = window;
+            while (true) {
+                if (/^mcn-v3-(active-worker|pipeline-preload)-/.test(win.name || '')) return 'Background worker.';
+                if (win === win.top) break;
+                const frame = win.frameElement;
+                if (!frame || frame.matches('[data-mcn-v3-worker],[data-mcn-v3-pipeline-preload],#mcn-v3-background-mission-worker') || frame.getAttribute('aria-hidden') === 'true') return 'Background worker.';
+                const css = win.parent.getComputedStyle(frame);
+                if (css.display === 'none' || css.visibility === 'hidden' || !frame.getClientRects().length) return 'This mission is not visible.';
+                win = win.parent;
+            }
+        } catch (_) { return 'This mission is not accessible.'; }
+        if (autoModeRunning || autoModeLoopActive) return 'Stop Auto Mode on this mission before selecting manually.';
+        if (globalThis.__NEXUS_RULES__ && !globalThis.__NEXUS_RULES__.isReady()) return 'Vehicle rules are still loading. Try again shortly.';
+        return '';
+    }
+    if (/^\/missions\/\d+\/?$/.test(location.pathname) && !/^mcn-v3-(active-worker|pipeline-preload)-/.test(window.name || '')) {
+        window.__NEXUS_MANUAL_REQUIREMENT_SELECTION__ = Object.freeze({
+            candidates(label) {
+                const blocked = nexusManualSelectionBlocked();
+                if (blocked) return { blocked, nodes: [] };
+                // A current local snapshot, including checked boxes, makes retries
+                // independent of Auto's processedSelectionKeys and cached lists.
+                if (document.querySelectorAll('input.vehicle_checkbox').length > 15000) return { blocked: 'Vehicle list is too large. Use the game selection controls.', nodes: [] };
+                getVehicleCheckboxSnapshot(true);
+                return { nodes: getAllMatchingVehicleCheckboxes(label, resolveUnitName(label), true).filter(node => node.ownerDocument === document && node.matches('#vehicle_show_table_all input.vehicle_checkbox,#occupied input.vehicle_checkbox')) };
+            },
+            select(node) {
+                const blocked = nexusManualSelectionBlocked();
+                if (blocked) return { blocked, selected: false };
+                if (!node || node.ownerDocument !== document || !node.matches('#vehicle_show_table_all input.vehicle_checkbox,#occupied input.vehicle_checkbox') || !node.isConnected || node.disabled || node.checked) return { selected: false };
+                if (getVisibleStaffingShortageText() || getInlinePersonnelQualificationAlertText()) return { blocked: 'The game reports a staffing problem. Check the assigned crew before retrying.', selected: false };
+                // Respect native rejection; never force a checkbox back on after
+                // the game's click handler has declined the selection.
+                node.click();
+                return { selected: node.checked === true };
+            }
+        });
+    }
+
     function selectVehicleUnits(
         originalName,
         mappedName,

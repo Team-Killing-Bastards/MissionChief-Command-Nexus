@@ -13,6 +13,7 @@
     ['generationDate', 'Mission window', 'Mission generation time', 'extendedCallWindow', 'generationDate'],
     ['oldMissionBorder', 'Mission window', 'Highlight older missions', 'extendedCallWindow', 'redBorder'],
     ['missingRequirements', 'Mission window', 'Missing requirements panel', 'extendedCallWindow', 'enhancedMissingVehicles'],
+    ['requirementButtons', 'Mission window', 'Click missing vehicles to select units'],
     ['requirementTicks', 'Mission window', 'Blue ticks for selected and incoming units'],
     ['patientSummary', 'Mission window', 'Patient summary', 'extendedCallWindow', 'patientSummary'],
     ['patientTime', 'Mission window', 'Patient treatment time', 'extendedCallWindow', 'remainingPatientTime'],

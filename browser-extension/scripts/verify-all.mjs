@@ -11,7 +11,8 @@ const steps=[
   ['package-verification',['--expose-internals','scripts/verify-package.mjs']],
   ['edge-smoke',['scripts/edge-smoke.mjs']],
   ['settings-43',['tests/ui/settings-43.mjs']],
-  ['responsive-45',['tests/ui/responsive-45.mjs']]
+  ['responsive-45',['tests/ui/responsive-45.mjs']],
+  ['requirement-buttons-46',['tests/ui/requirement-buttons-46.mjs']]
 ];
 const summary=[];
 for(const [name,args] of steps) {
