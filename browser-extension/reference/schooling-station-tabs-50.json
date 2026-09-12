@@ -1,0 +1,19 @@
+{
+  "version": "3.0.43.50",
+  "baseVersion": "3.0.43.49",
+  "sourceRuntimeSha256": "7d65de9609c790c7b5f71a67ccb33ab5835050754585f3233c00c7fea099c0e3",
+  "changes": [
+    "Station-type tabs using building IDs, separate Home Response, grouped standard/small stations, combined counts and preserved selection",
+    "Educate + select again now opens another session of the same course; prefer exactly 10 free places, then larger/partly filled sessions in native list order",
+    "One bounded course-list GET after confirmed native submission, abort on navigation, no POST retry, and preserved centre/name/type filters"
+  ],
+  "files": {
+    "manifest.json": "b66934eee04e336cd4ad3782f84674a69d2e97fc7a987d533bf607fbede3f72e",
+    "nexus-runtime.js": "7d65de9609c790c7b5f71a67ccb33ab5835050754585f3233c00c7fea099c0e3",
+    "nexus-tools.js": "5539383036b9993dc5630e8a5907d433733542155837c57bbd44061fac1262b2",
+    "nexus-schooling-filters.js": "a858614f4823d3893874b40530cbd0a57160571171491dfe1365330c9dd225d8",
+    "nexus-schooling-actions.js": "b3333691ef9317102f50cfd4d5faa0dbe9c5119f7541422386ede4b84f7986b7",
+    "nexus-settings.js": "a2a9201e5a199a54ececd70393f742a7e87b68b7030b622075a90574b0171c57",
+    "nexus-settings-main.js": "a2a9201e5a199a54ececd70393f742a7e87b68b7030b622075a90574b0171c57"
+  }
+}

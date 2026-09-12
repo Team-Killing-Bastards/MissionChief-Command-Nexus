@@ -37,8 +37,14 @@ export function releaseProvenance() {
   const listed={...enrolment,version:lists.version,sourceRuntimeSha256:lists.sourceRuntimeSha256,changes:[...enrolment.changes,...lists.changes],files:{...enrolment.files,...lists.files}};
   if(version===lists.version)return listed;
   const dropdown=JSON.parse(fs.readFileSync('reference/course-dropdown-49.json'));
-  if(version!==dropdown.version||dropdown.baseVersion!==listed.version)throw Error('Unreviewed course dropdown release');
+  if(dropdown.baseVersion!==listed.version)throw Error('Unreviewed course dropdown release');
   const dropdownAllowed=['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-course-list-filters.js','nexus-building-overview.js','nexus-schooling-actions.js','nexus-settings.js','nexus-settings-main.js','nexus-schooling-filters.js'];
   if(Object.keys(dropdown.files).some(file=>!dropdownAllowed.includes(file)))throw Error('Unexpected course dropdown change');
-  return {...listed,version,sourceRuntimeSha256:dropdown.sourceRuntimeSha256,changes:[...listed.changes,...dropdown.changes],files:{...listed.files,...dropdown.files}};
+  const selected={...listed,version:dropdown.version,sourceRuntimeSha256:dropdown.sourceRuntimeSha256,changes:[...listed.changes,...dropdown.changes],files:{...listed.files,...dropdown.files}};
+  if(version===dropdown.version)return selected;
+  const stationTabs=JSON.parse(fs.readFileSync('reference/schooling-station-tabs-50.json'));
+  if(version!==stationTabs.version||stationTabs.baseVersion!==selected.version)throw Error('Unreviewed station tabs release');
+  const tabAllowed=['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-schooling-filters.js','nexus-schooling-actions.js','nexus-settings.js','nexus-settings-main.js'];
+  if(Object.keys(stationTabs.files).some(file=>!tabAllowed.includes(file)))throw Error('Unexpected station tabs change');
+  return {...selected,version,sourceRuntimeSha256:stationTabs.sourceRuntimeSha256,changes:[...selected.changes,...stationTabs.changes],files:{...selected.files,...stationTabs.files}};
 }

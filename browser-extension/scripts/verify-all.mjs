@@ -15,11 +15,12 @@ const steps=[
   ['requirement-buttons-46',['tests/ui/requirement-buttons-46.mjs']],
   ['schooling-filters-47',['tests/ui/schooling-filters-47.mjs']],
   ['course-dropdown-49',['tests/ui/course-dropdown-49.mjs']],
-  ['schooling-actions-49',['tests/ui/schooling-actions-49.mjs']]
+  ['schooling-next-course-50',['tests/ui/schooling-next-course-50.mjs']],
+  ['schooling-station-tabs-50',['tests/ui/schooling-station-tabs-50.mjs']]
 ];
 const summary=[];
 for(const [name,args] of steps) {
-  const result=spawnSync(process.execPath,args,{encoding:'utf8',windowsHide:true,timeout:120000,maxBuffer:4*1024*1024});
+  const result=spawnSync(process.execPath,args,{encoding:'utf8',windowsHide:true,timeout:name==='schooling-next-course-50'?180000:120000,maxBuffer:4*1024*1024});
   fs.writeFileSync(`audit/${name}.log`,result.stdout+result.stderr);
   summary.push({name,passed:result.status===0,exitCode:result.status});
   console.log(`${result.status===0?'PASS':'FAIL'} ${name}`);
