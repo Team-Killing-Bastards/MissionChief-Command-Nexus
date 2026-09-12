@@ -46,7 +46,7 @@
   :host([data-compact]) #settings .setting-row span{min-width:0;overflow-wrap:anywhere}
   </style>
   <section id="panel" hidden role="dialog" aria-label="Nexus Tools">
-    <header><img class="logo" alt=""><div class="brand"><h1>Nexus Tools</h1><small>MissionChief Command Nexus · 3.0.43.56</small></div><small id="clock"></small><button id="close" aria-label="Close Nexus Tools">×</button></header>
+    <header><img class="logo" alt=""><div class="brand"><h1>Nexus Tools</h1><small>MissionChief Command Nexus · 3.0.43.57</small></div><small id="clock"></small><button id="close" aria-label="Close Nexus Tools">×</button></header>
     <nav id="tabs" aria-label="Nexus tools views">
       <button data-view="home">Overview</button><button data-view="buildings">Buildings</button><button data-view="vehicles">Vehicles</button><button data-view="schoolings">Schooling</button><button data-view="settings">Settings</button>
     </nav>

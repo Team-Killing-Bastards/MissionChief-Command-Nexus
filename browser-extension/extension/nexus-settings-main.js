@@ -9,6 +9,7 @@
     ['dailyCredits', 'Credits & coins', 'Daily credit summary'],
     ['creditOverview', 'Credits & coins', 'Credit history chart'],
     ['missionRewards', 'Mission list', 'Estimated credits on mission cards'],
+    ['allianceSupport', 'Mission list', 'Alliance mission support panel'],
     ['listPatientTime', 'Mission list', 'Patient treatment time on mission cards', 'extendedCallList', 'remainingPatientTime'],
     ['generationDate', 'Mission window', 'Mission generation time', 'extendedCallWindow', 'generationDate'],
     ['oldMissionBorder', 'Mission window', 'Highlight older missions', 'extendedCallWindow', 'redBorder'],

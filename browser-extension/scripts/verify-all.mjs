@@ -20,7 +20,8 @@ const steps=[
   ['crew-freshness-51',['tests/ui/crew-freshness-51.mjs']],
   ['home-market-52',['tests/ui/home-market-52.mjs']],
   ['quick-buy-53',['tests/ui/quick-buy-53.mjs']],
-  ['auto-focus-56',['--expose-internals','tests/ui/auto-focus-56.mjs']]
+  ['auto-focus-56',['--expose-internals','tests/ui/auto-focus-56.mjs']],
+  ['alliance-support-57',['tests/ui/alliance-support-57.mjs']]
 ];
 const summary=[];
 for(const [name,args] of steps) {

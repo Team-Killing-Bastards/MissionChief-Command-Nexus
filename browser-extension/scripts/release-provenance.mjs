@@ -80,7 +80,12 @@ export function releaseProvenance() {
   const promoted55={...cleaned,testedLocalVersion:cleaned.version,testedZipSha256:store55.testedZipSha256,testedRuntimeSha256:store55.testedRuntimeSha256,changes:[...cleaned.changes,...store55.changes]};
   if(version===promoted55.version)return promoted55;
   const focus=JSON.parse(fs.readFileSync('reference/auto-focus-56.json'));
-  if(version!==focus.version||focus.baseVersion!==promoted55.version)throw Error('Unreviewed Auto Focus panel release');
+  if(focus.baseVersion!==promoted55.version)throw Error('Unreviewed Auto Focus panel release');
   if(Object.keys(focus.files).some(file=>!['manifest.json','nexus-runtime.js','nexus-tools.js'].includes(file)))throw Error('Unexpected Auto Focus panel change');
-  return {...promoted55,version,sourceRuntimeSha256:focus.sourceRuntimeSha256,changes:[...promoted55.changes,...focus.changes],files:{...promoted55.files,...focus.files}};
+  const focused={...promoted55,version:focus.version,sourceRuntimeSha256:focus.sourceRuntimeSha256,changes:[...promoted55.changes,...focus.changes],files:{...promoted55.files,...focus.files}};
+  if(version===focus.version)return focused;
+  const alliance=JSON.parse(fs.readFileSync('reference/alliance-support-57.json'));
+  if(version!==alliance.version||alliance.baseVersion!==focused.version)throw Error('Unreviewed alliance support release');
+  if(Object.keys(alliance.files).some(file=>!['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-alliance-core.js','nexus-alliance-support.js','nexus-settings.js','nexus-settings-main.js'].includes(file)))throw Error('Unexpected alliance support change');
+  return {...focused,version,sourceRuntimeSha256:alliance.sourceRuntimeSha256,changes:[...focused.changes,...alliance.changes],files:{...focused.files,...alliance.files}};
 }

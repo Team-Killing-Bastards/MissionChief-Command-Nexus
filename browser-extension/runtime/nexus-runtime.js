@@ -1,5 +1,8 @@
 (() => {
   'use strict';
+  // BEGIN ALLIANCE FRAME ISOLATION 57
+  if (window.frameElement?.hasAttribute('data-nx-alliance-worker')) return;
+  // END ALLIANCE FRAME ISOLATION 57
   if (window.__NEXUS_EXTENSION__) return;
   // Store updates do not replace code already running in an open game tab.
   // Refuse a new child realm under a different parent build before any hooks,
@@ -10,8 +13,8 @@
       parentBuild = window.top.__NEXUS_EXTENSION__?.build || '';
     }
   } catch {}
-  if (parentBuild && parentBuild !== '3.0.43.56') {
-    window.__NEXUS_EXTENSION__ = Object.freeze({ build: '3.0.43.56', sourceVersion: '3.0.43',
+  if (parentBuild && parentBuild !== '3.0.43.57') {
+    window.__NEXUS_EXTENSION__ = Object.freeze({ build: '3.0.43.57', sourceVersion: '3.0.43',
       status: 'parent-build-mismatch', parentBuild, startedAt: Date.now() });
     try {
       window.top.dispatchEvent(new window.top.CustomEvent('nexus-extension-update-required-v1', {
@@ -22,7 +25,7 @@
   }
   const alreadyRunning = Boolean(window.__MCN_V3_CONTROLLER__ || window.__MCN_BOOT_TRACE__);
   window.__NEXUS_EXTENSION__ = Object.freeze({
-    build: '3.0.43.56',
+    build: '3.0.43.57',
     sourceVersion: '3.0.43',
     status: alreadyRunning ? 'existing-runtime' : 'loaded',
     startedAt: Date.now()
@@ -265,7 +268,7 @@ function createNexusPerformance(env) {
     readRegistry, vehicleSignature, getRequirements, putRequirements, record, count, dispose,
     receiveCount(key, amount) { counters[key] = (counters[key] || 0) + amount; },
     receiveTiming(item) { timings.push({ ...item }); if (timings.length > 100) timings.shift(); },
-    snapshot() { return { build: '3.0.43.56', counters: { ...counters }, longTasks: { ...longTasks }, timings: timings.map(item => ({ ...item })), retainedDocuments: documents.size, registryRetained: !!registryValue, requirementTtlMs: REQUIREMENT_TTL, maxRequirementRecords: MAX_RECORDS }; }
+    snapshot() { return { build: '3.0.43.57', counters: { ...counters }, longTasks: { ...longTasks }, timings: timings.map(item => ({ ...item })), retainedDocuments: documents.size, registryRetained: !!registryValue, requirementTtlMs: REQUIREMENT_TTL, maxRequirementRecords: MAX_RECORDS }; }
   });
 }
 
@@ -8084,7 +8087,18 @@ createWorker(mission.url);
 }
 }, MISSION_RESCAN_MS);
 }
+// BEGIN ALLIANCE CONTROLLER BRIDGE 57
+window.__NEXUS_AUTO_DISPATCH_BUSY__ = () => Boolean(state.wanted || state.running || state.stopping);
+function nexusAllianceSupportBusy() {
+  if (window.__NEXUS_ALLIANCE_SUPPORT__?.busy) return true;
+  try { return Number(JSON.parse(localStorage.getItem('nexusAllianceSupportLeaseV1') || 'null')?.until) > Date.now(); } catch { return false; }
+}
+// END ALLIANCE CONTROLLER BRIDGE 57
 function startController() {
+// BEGIN ALLIANCE START GUARD 57
+if (nexusAllianceSupportBusy()) { log('Alliance support is sending; wait for its queue to finish before starting Auto Mode.'); return; }
+// END ALLIANCE START GUARD 57
+
 if (state.wanted || state.stopping) return;
 pausePipelineController('new-run-active-bootstrap', true);
 resetRunStats();
@@ -8108,6 +8122,10 @@ if (request && startTransportOnlyWorker(request, 'run-start')) return;
 createWorker(supply.candidates[0].url);
 }
 function retryCurrent() {
+// BEGIN ALLIANCE START GUARD 57
+if (nexusAllianceSupportBusy()) { log('Alliance support is sending; wait for its queue to finish before starting Auto Mode.'); return; }
+// END ALLIANCE START GUARD 57
+
 if (state.stopping) return;
 if (!state.runStartedAt) resetRunStats();
 sessionSet(SESSION_RESUME_HANDOFF_AT, '');
@@ -10591,7 +10609,7 @@ function installNexusFullLogger() {
     const who = identity(); if (!who.player) return false; switchPlayer(who.player);
     const record = cleanRecord(raw); if (!record) return false;
     const capturedAt = Date.now();
-    record.clientVersion = '3.0.43.56';
+    record.clientVersion = '3.0.43.57';
     if (kind === 'mission') {
       if (!/^\d+$/.test(record.missionId || '')) return false;
       const old = registry[record.missionId] || {};
@@ -10623,7 +10641,7 @@ function installNexusFullLogger() {
     return true;
   }
   function activity(action, extra = {}) {
-    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.56', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
+    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.57', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
   }
   function current(eventType, options = {}) {
     const snapshot = getMissionLoggerMissionSnapshot();
@@ -10797,7 +10815,7 @@ function installNexusFullLogger() {
     finally {clearTimeout(timeout);timers.delete(timeout);creditAbort=null;creditBusy=false;}
   }
   function session(action) {
-    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.56',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
+    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.57',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
   }
   function tick() {
     try {
@@ -32655,7 +32673,7 @@ function installNexusFullLogger() {
     const who = identity(); if (!who.player) return false; switchPlayer(who.player);
     const record = cleanRecord(raw); if (!record) return false;
     const capturedAt = Date.now();
-    record.clientVersion = '3.0.43.56';
+    record.clientVersion = '3.0.43.57';
     if (kind === 'mission') {
       if (!/^\d+$/.test(record.missionId || '')) return false;
       const old = registry[record.missionId] || {};
@@ -32687,7 +32705,7 @@ function installNexusFullLogger() {
     return true;
   }
   function activity(action, extra = {}) {
-    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.56', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
+    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.57', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
   }
   function current(eventType, options = {}) {
     const snapshot = getMissionLoggerMissionSnapshot();
@@ -32861,7 +32879,7 @@ function installNexusFullLogger() {
     finally {clearTimeout(timeout);timers.delete(timeout);creditAbort=null;creditBusy=false;}
   }
   function session(action) {
-    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.56',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
+    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.57',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
   }
   function tick() {
     try {
