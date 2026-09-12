@@ -29,9 +29,13 @@ const server=http.createServer(async(request,response)=>{
 });
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const origin=`http://127.0.0.1:${server.address().port}`;
 const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
-const ctx=await browser.newContext({viewport:{width:1150,height:760},serviceWorkers:'block'});
-await ctx.addInitScript(texts=>document.addEventListener('DOMContentLoaded',()=>texts.forEach(text=>{const s=document.createElement('script');s.textContent=text;document.head.append(s);})),scripts);
-await ctx.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
+async function fixtureContext(options){
+ const context=await browser.newContext({serviceWorkers:'block',...options});
+ await context.addInitScript(texts=>document.addEventListener('DOMContentLoaded',()=>texts.forEach(text=>{const s=document.createElement('script');s.textContent=text;document.head.append(s);})),scripts);
+ await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
+ return context;
+}
+const ctx=await fixtureContext({viewport:{width:1150,height:760}});
 const page=await ctx.newPage();page.setDefaultTimeout(30000);page.on('pageerror',e=>report.errors.push(e.message));
 report.navigations=[];page.on('framenavigated',frame=>{if(frame===page.mainFrame())report.navigations.push(frame.url());});
 const panel=page.locator('#nx-home-market'),toggle=panel.getByRole('switch',{name:'Buy and next building'}),buy=name=>panel.getByRole(name==='OTL'?'button':'link',{name:new RegExp('^'+name+' ')});
@@ -61,7 +65,12 @@ try{
  pass('Expired intents cannot advance; switching the preference off survives reload');
  const before=report.writes.length;await page.goto(origin+'/host');const frame=page.frameLocator('iframe');await frame.locator('#nx-home-market a.nx-buy').waitFor();await frame.getByRole('link',{name:'Fire Officer 10,000 credits',exact:true}).click();await frame.getByRole('heading',{name:'Home Response 24',exact:true}).waitFor();assert.equal(new URL(page.url()).pathname,'/host');assert.equal(report.writes.length,before+1);assert.equal(await frame.getByRole('switch',{name:'Buy and next building'}).isChecked(),true);
  pass('Buying within the visible building window advances that frame and keeps the main game page open');
- await open();await page.setViewportSize({width:390,height:844});await page.evaluate(()=>document.documentElement.dataset.nexusTouch='true');const bounds=await panel.boundingBox(),label=await panel.locator('.nx-home-buy-next').boundingBox();assert.ok(bounds.x>=0&&bounds.x+bounds.width<=390);assert.ok(label.height>=44);await page.screenshot({path:'audit/home-buy-next-59-phone.png',fullPage:true});
+ const phone=await fixtureContext({viewport:{width:390,height:844},screen:{width:390,height:844},hasTouch:true,isMobile:true});
+ try{
+  const mobile=await phone.newPage();mobile.on('pageerror',e=>report.errors.push(e.message));await mobile.goto(origin+'/buildings/23');
+  await mobile.locator('#nx-home-market .nx-buy').first().waitFor();await mobile.waitForFunction(()=>document.documentElement.dataset.nexusTouch==='true'&&document.documentElement.dataset.nexusLayout==='phone');
+  const mobilePanel=mobile.locator('#nx-home-market'),bounds=await mobilePanel.boundingBox(),label=await mobilePanel.locator('.nx-home-buy-next').boundingBox();assert.ok(bounds.x>=0&&bounds.x+bounds.width<=390);assert.ok(label.height>=44);await mobile.screenshot({path:'audit/home-buy-next-59-phone.png',fullPage:true});
+ }finally{await phone.close();}
  pass('The themed toggle wraps within phone width and keeps a 44px touch target');assert.deepEqual(report.errors,[]);report.passed=true;
 }catch(error){
  report.failure=String(error);
