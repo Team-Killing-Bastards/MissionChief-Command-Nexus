@@ -31,7 +31,7 @@
   @media(max-width:550px){.cards{grid-template-columns:1fr}#body{padding:12px}#tabs{padding:7px}#panel{height:calc(100vh - 85px)}header{padding:10px}#clock{display:none}}
   </style>
   <section id="panel" hidden aria-label="Nexus Tools">
-    <header><img class="logo" alt=""><div class="brand"><h1>Nexus Tools</h1><small>MissionChief Command Nexus · 3.0.43.43</small></div><small id="clock"></small><button id="close" aria-label="Close Nexus Tools">×</button></header>
+    <header><img class="logo" alt=""><div class="brand"><h1>Nexus Tools</h1><small>MissionChief Command Nexus · 3.0.43.44</small></div><small id="clock"></small><button id="close" aria-label="Close Nexus Tools">×</button></header>
     <nav id="tabs" aria-label="Nexus tools views">
       <button data-view="home">Overview</button><button data-view="buildings">Buildings</button><button data-view="vehicles">Vehicles</button><button data-view="schoolings">Schooling</button><button data-view="settings">Settings</button>
     </nav>

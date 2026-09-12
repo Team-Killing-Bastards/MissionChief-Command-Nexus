@@ -373,7 +373,7 @@
     },
     {
       "id": "105",
-      "name": "Recovery Vehicle",
+      "name": "Flatbed Recovery Vehicle",
       "service": "Recovery"
     },
     {
@@ -740,27 +740,33 @@
     },
     {
       "requirement": "Require Drone",
-      "vehicleName": "Drone"
+      "vehicleName": "Drone Vehicle SAR HQ",
+      "vehicleTypeId": "89"
     },
     {
       "requirement": "Require Drones",
-      "vehicleName": "Drone"
+      "vehicleName": "Drone Vehicle SAR HQ",
+      "vehicleTypeId": "89"
     },
     {
       "requirement": "Required Drone",
-      "vehicleName": "Drone"
+      "vehicleName": "Drone Vehicle SAR HQ",
+      "vehicleTypeId": "89"
     },
     {
       "requirement": "Required Drones",
-      "vehicleName": "Drone"
+      "vehicleName": "Drone Vehicle SAR HQ",
+      "vehicleTypeId": "89"
     },
     {
       "requirement": "Requires Drone",
-      "vehicleName": "Drone"
+      "vehicleName": "Drone Vehicle SAR HQ",
+      "vehicleTypeId": "89"
     },
     {
       "requirement": "Requires Drones",
-      "vehicleName": "Drone"
+      "vehicleName": "Drone Vehicle SAR HQ",
+      "vehicleTypeId": "89"
     },
     {
       "requirement": "Police Drone",
@@ -800,19 +806,23 @@
     },
     {
       "requirement": "Any vehicle",
-      "vehicleName": "Ambulance"
+      "vehicleName": "Ambulance",
+      "vehicleTypeId": "5"
     },
     {
       "requirement": "Any vehicles",
-      "vehicleName": "Ambulance"
+      "vehicleName": "Ambulance",
+      "vehicleTypeId": "5"
     },
     {
       "requirement": "Required Any vehicle",
-      "vehicleName": "Ambulance"
+      "vehicleName": "Ambulance",
+      "vehicleTypeId": "5"
     },
     {
       "requirement": "Required Any vehicles",
-      "vehicleName": "Ambulance"
+      "vehicleName": "Ambulance",
+      "vehicleTypeId": "5"
     },
     {
       "requirement": "Ambulance Officer",
@@ -1148,7 +1158,8 @@
     },
     {
       "requirement": "Hovercraft (trailer)",
-      "vehicleName": "Hovercraft (trailer)"
+      "vehicleName": "Hovercraft Trailer",
+      "vehicleTypeId": "71"
     },
     {
       "requirement": "Coastguard Mud Rescue Unit",
@@ -1168,7 +1179,8 @@
     },
     {
       "requirement": "Coastguard Commander",
-      "vehicleName": "CG Commander"
+      "vehicleName": "Coastguard Commander",
+      "vehicleTypeId": "60"
     },
     {
       "requirement": "Flood Rescue Units",
@@ -1348,15 +1360,18 @@
     },
     {
       "requirement": "1 car to tow",
-      "vehicleName": "Flatbed Recovery Vehicle"
+      "vehicleName": "Flatbed Recovery Vehicle",
+      "vehicleTypeId": "105"
     },
     {
       "requirement": "Cars to tow",
-      "vehicleName": "Flatbed Recovery Vehicle"
+      "vehicleName": "Flatbed Recovery Vehicle",
+      "vehicleTypeId": "105"
     },
     {
       "requirement": "Car to tow",
-      "vehicleName": "Flatbed Recovery Vehicle"
+      "vehicleName": "Flatbed Recovery Vehicle",
+      "vehicleTypeId": "105"
     },
     {
       "requirement": "Maximum amount of cars to tow",
@@ -1593,6 +1608,26 @@
     {
       "requirement": "Operational Support Units x1",
       "vehicleName": "OSU"
+    },
+    {
+      "requirement": "Coastguard Commanders",
+      "vehicleName": "Coastguard Commander",
+      "vehicleTypeId": "60"
+    },
+    {
+      "requirement": "Hovercrafts (Trailer)",
+      "vehicleName": "Hovercraft Trailer",
+      "vehicleTypeId": "71"
+    },
+    {
+      "requirement": "Hovercraft Trailer",
+      "vehicleName": "Hovercraft Trailer",
+      "vehicleTypeId": "71"
+    },
+    {
+      "requirement": "Hovercraft Trailers",
+      "vehicleName": "Hovercraft Trailer",
+      "vehicleTypeId": "71"
     }
   ]
 }

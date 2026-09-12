@@ -30,6 +30,12 @@ try {
   await page.screenshot({path:'audit/edge-sharing.png',fullPage:true});
   await page.goto(`chrome-extension://${extensionId}/rules.html`);
   await page.locator('#status').filter({hasText:'Ready.'}).waitFor();
+  await page.locator('#requirement').fill('Required 3 Drones');
+  await page.locator('#match-preview').filter({hasText:'Drone Vehicle SAR HQ (#89)'}).waitFor();
+  await page.locator('details').evaluate(node=>node.open=true);
+  await page.locator('#builtin-search').fill('Hovercrafts (Trailer)');
+  assert.match(await page.locator('#builtins').innerText(),/Hovercraft Trailer \(#71\)/);
+  report.checks.push('Rules page exposes permanent defaults and normalised exact-ID previews without importing');
   await page.locator('#requirement').fill('Test Ambulance Requirement');
   await page.locator('#vehicle').selectOption('5');
   await page.locator('#save').click();
@@ -44,7 +50,8 @@ try {
   report.checks.push('Data/sharing disclosure renders with extension CSP');
   await page.goto('https://www.missionchief.co.uk/');
   await page.waitForFunction(()=>window.__NEXUS_RULES__?.isReady(),{},{timeout:10000});
-  const state=await page.evaluate(()=>({runtime:window.__NEXUS_EXTENSION__,rules:window.__NEXUS_RULES__.snapshot()}));
+  const state=await page.evaluate(()=>({runtime:window.__NEXUS_EXTENSION__,rules:window.__NEXUS_RULES__.snapshot(),defaults:['Coastguard Commanders','Drones','Hovercrafts (Trailer)','Any vehicle','car to tow'].map(name=>window.__NEXUS_RULES__.lookup(name)?.vehicleTypeId)}));
+  assert.deepEqual(state.defaults,['60','89','71','5','105']);
   assert.equal(state.runtime.build,JSON.parse(fs.readFileSync('extension/manifest.json','utf8')).version);assert.equal(state.runtime.status,'loaded');
   assert.ok(state.rules.rules.some(r=>r.requirement==='Test Ambulance Requirement'));
   report.checks.push('MAIN-world runtime receives authoritative rules from isolated bridge on mocked game origin');

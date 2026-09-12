@@ -11,9 +11,9 @@ const game={frameId:0,tab:{id:1},url:'https://www.missionchief.co.uk/'};
 const settingsPage={url:'chrome-extension://test/analytics.html'};
 const raw=()=>({kind:'activity',player:'123',at:Date.now(),record:{action:'CLICK'},id:randomUUID(),session:randomUUID()});
 function worker(data={},options={}) {
-  const messages=[],requests=[],locks=[];let listener,alarmListener;
+  const messages=[],requests=[],locks=[];let listener,alarmListener,installedListener;
   const chrome={
-    runtime:{getURL:name=>'chrome-extension://test/'+name,onMessage:{addListener:fn=>listener=fn},onInstalled:{addListener(){}},onStartup:{addListener(){}}},
+    runtime:{getURL:name=>'chrome-extension://test/'+name,onMessage:{addListener:fn=>listener=fn},onInstalled:{addListener:fn=>installedListener=fn},onStartup:{addListener(){}}},
     tabs:{create:async()=>{}},
     storage:{local:{
       get:async keys=>{
@@ -32,8 +32,17 @@ function worker(data={},options={}) {
   });
   vm.runInContext(fs.readFileSync('extension/analytics-worker.mjs','utf8').replace(/^import .*\n/gm,''),context);
   const send=(message,sender=game)=>new Promise(resolve=>{const result=listener(message,sender,reply=>{messages.push(reply);resolve(reply)});if(result!==true)resolve(undefined);});
-  return {send,data,requests,locks,navigator,context,alarm:()=>alarmListener({name:'nexus-analytics'})};
+  return {send,data,requests,locks,navigator,context,alarm:()=>alarmListener({name:'nexus-analytics'}),installed:details=>installedListener(details)};
 }
+
+test('extension update and worker restart retain user rules, disabled choices and telemetry storage',async()=>{
+  const saved={schema:1,rules:[{requirement:'Drones',vehicleTypeId:'98',vehicleName:'My drone',enabled:true},{requirement:'Any vehicle',vehicleTypeId:'5',vehicleName:'Ambulance',enabled:false}]};
+  const data={[rules.RULES_KEY]:structuredClone(saved),[rules.DOG_RULE_MIGRATION_KEY]:true,nexusDevice:'retain-device',[KEY]:{sentinel:'retain-queue'}};
+  const w=worker(data);w.installed({reason:'update',previousVersion:'3.0.43.43'});await settle();
+  assert.deepEqual(data[rules.RULES_KEY],saved);assert.equal(data.nexusDevice,'retain-device');assert.deepEqual(data[KEY],{sentinel:'retain-queue'});
+  const restarted=worker(data);const reply=await restarted.send({type:'NEXUS_REQUIREMENT_RULES_GET'},{...game,frameId:1});
+  assert.deepEqual(reply.data,saved);assert.deepEqual(data[rules.RULES_KEY],saved);
+});
 test('fresh installs capture and upload nothing until an explicit choice',async()=>{
   const w=worker();const reply=await w.send({type:'NEXUS_ANALYTICS_CAPTURE',events:[raw()]});await settle();
   assert.equal(reply.disabled,true);assert.equal(w.requests.length,0);assert.equal(w.data[KEY],undefined);
