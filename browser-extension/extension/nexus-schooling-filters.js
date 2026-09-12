@@ -48,17 +48,16 @@
     return buildings.get(row.id).centre;
   }
   const rowType = row => buildings?.get(row.id)?.type ?? '?';
-  const typeMatches = (row, type) => !type || (type === '@stations' ? rowType(row) !== '?' && rowType(row) !== 'type:22' : rowType(row) === type);
+  const typeMatches = (row, type) => !type || rowType(row) === type;
   function updateTypes() {
     if (!tabs) return;
     const options = new Map([['','All']]);
     const types = new Set(rows.map(rowType));
-    if ([...types].some(type => type !== '?' && type !== 'type:22')) options.set('@stations','Stations');
     if (types.has('type:22')) options.set('type:22','Home response');
     for (const type of [...types].filter(type => type !== 'type:22' && type !== '?').sort((a,b) => typeLabel(a).localeCompare(typeLabel(b),'en-GB'))) options.set(type,typeLabel(type));
     if (types.has('?')) options.set('?','Type unavailable');
     // Keep the active filter visible if its final station disappears on refresh.
-    if (selectedType && !options.has(selectedType)) options.set(selectedType, selectedType === '@stations' ? 'Stations' : typeLabel(selectedType));
+    if (selectedType && !options.has(selectedType)) options.set(selectedType, typeLabel(selectedType));
     for (const [key, button] of typeButtons) if (!options.has(key)) { button.remove(); typeButtons.delete(key); }
     for (const [key, label] of options) {
       let button = typeButtons.get(key);
@@ -91,7 +90,7 @@
     const counts = new Map([...typeButtons.keys()].map(key => [key,0]));
     for (const row of rows) {
       const baseMatch = (!query || normal(buildings?.get(row.id)?.name || row.name).includes(query) || normal(row.name).includes(query)) && (!centre || membership(row) === centre);
-      if (baseMatch) { counts.set('',(counts.get('') || 0)+1); const type = rowType(row); counts.set(type,(counts.get(type) || 0)+1); if (type !== '?' && type !== 'type:22') counts.set('@stations',(counts.get('@stations') || 0)+1); }
+      if (baseMatch) { counts.set('',(counts.get('') || 0)+1); const type = rowType(row); counts.set(type,(counts.get(type) || 0)+1); }
       const match = baseMatch && typeMatches(row,selectedType);
       // Never conceal personnel already chosen for this course. Native inputs,
       // expanded panels, submission fields and selection counters stay intact.
@@ -101,7 +100,7 @@
       if (match) matches++; else if (selected) kept++;
     }
     root.dataset.stationType = selectedType;
-    for (const [key, button] of typeButtons) { button.setAttribute('aria-pressed',String(key === selectedType)); const label = `${button.dataset.label} (${counts.get(key) || 0})`; if (button.textContent !== label) button.textContent = label; button.title = key === '@stations' ? 'Known station and building types, excluding Home Response locations. Counts include the dispatch-centre and station-name filters.' : 'Count includes the dispatch-centre and station-name filters.'; }
+    for (const [key, button] of typeButtons) { button.setAttribute('aria-pressed',String(key === selectedType)); const label = `${button.dataset.label} (${counts.get(key) || 0})`; if (button.textContent !== label) button.textContent = label; button.title = 'Count includes the dispatch-centre and station-name filters.'; }
     status.textContent = `${matches} of ${rows.length} stations match${kept ? ` · ${kept} kept visible with selected staff` : ''}.`;
     try { window.schooling_check_educated_counter_visible_check?.(); } catch {}
   }
@@ -187,7 +186,7 @@
   document.addEventListener('ausbildungs-mausschoner:buildings-appended', () => { if (active) indexRows(); else start(); });
   document.addEventListener('nexus-schooling-restore', event => {
     if (!active || typeof event.detail !== 'string' || event.detail.length > 1000) return;
-    try { const saved = JSON.parse(event.detail); if (typeof saved.centre !== 'string' || typeof saved.station !== 'string') return; restoredCentre = clean(saved.centre); search.value = clean(saved.station); if (typeof saved.stationType === 'string' && /^(?:|@stations|\?|type:\d{1,4})$/.test(saved.stationType)) selectedType = saved.stationType; updateCentres(); updateTypes(); apply(); } catch {}
+    try { const saved = JSON.parse(event.detail); if (typeof saved.centre !== 'string' || typeof saved.station !== 'string') return; restoredCentre = clean(saved.centre); search.value = clean(saved.station); if (typeof saved.stationType === 'string' && /^(?:|@stations|\?|type:\d{1,4})$/.test(saved.stationType)) selectedType = saved.stationType === '@stations' ? '' : saved.stationType; updateCentres(); updateTypes(); apply(); } catch {}
   });
   start();
 })();

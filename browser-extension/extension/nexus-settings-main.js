@@ -28,6 +28,7 @@
     ['crewRequirements', 'Buildings & personnel', 'Crew requirements and specialist coverage', 'extendedBuilding', 'personnelDemands'],
     ['extensions', 'Buildings & personnel', 'Building extension status cards', 'extendedBuilding', 'expansions'],
     ['personnelSummary', 'Buildings & personnel', 'Personnel and training summary', 'extendedBuilding', 'schoolingSummary'],
+    ['homeVehicleMarket', 'Buildings & personnel', 'Vehicle purchase table in Home Response buildings'],
     ['assignedCrew', 'Buildings & personnel', 'Assigned crew counts beside vehicles'],
     ['buildingVehicleTypes', 'Buildings & personnel', 'Vehicle types in building lists', 'extendedBuilding', 'vehicleTypes'],
     ['assignmentLinks', 'Buildings & personnel', 'Assign crew shortcuts', 'extendedBuilding', 'personnelAssignmentBtn'],

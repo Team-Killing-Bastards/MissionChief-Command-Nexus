@@ -49,8 +49,14 @@ export function releaseProvenance() {
   const tabbed={...selected,version:stationTabs.version,sourceRuntimeSha256:stationTabs.sourceRuntimeSha256,changes:[...selected.changes,...stationTabs.changes],files:{...selected.files,...stationTabs.files}};
   if(version===stationTabs.version)return tabbed;
   const crew=JSON.parse(fs.readFileSync('reference/crew-freshness-51.json'));
-  if(version!==crew.version||crew.baseVersion!==tabbed.version)throw Error('Unreviewed crew freshness release');
+  if(crew.baseVersion!==tabbed.version)throw Error('Unreviewed crew freshness release');
   const crewAllowed=['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-comfort.js','nexus-building-overview.js'];
   if(Object.keys(crew.files).some(file=>!crewAllowed.includes(file)))throw Error('Unexpected crew freshness change');
-  return {...tabbed,version,sourceRuntimeSha256:crew.sourceRuntimeSha256,changes:[...tabbed.changes,...crew.changes],files:{...tabbed.files,...crew.files}};
+  const refreshed={...tabbed,version:crew.version,sourceRuntimeSha256:crew.sourceRuntimeSha256,changes:[...tabbed.changes,...crew.changes],files:{...tabbed.files,...crew.files}};
+  if(version===crew.version)return refreshed;
+  const market=JSON.parse(fs.readFileSync('reference/home-market-52.json'));
+  if(version!==market.version||market.baseVersion!==refreshed.version)throw Error('Unreviewed Home Response market release');
+  const marketAllowed=['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-building-overview.js','nexus-home-market.js','nexus-schooling-filters.js','nexus-settings.js','nexus-settings-main.js'];
+  if(Object.keys(market.files).some(file=>!marketAllowed.includes(file)))throw Error('Unexpected Home Response market change');
+  return {...refreshed,version,sourceRuntimeSha256:market.sourceRuntimeSha256,changes:[...refreshed.changes,...market.changes],files:{...refreshed.files,...market.files}};
 }

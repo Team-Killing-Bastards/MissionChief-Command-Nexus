@@ -1,0 +1,20 @@
+{
+  "version": "3.0.43.52",
+  "baseVersion": "3.0.43.51",
+  "sourceRuntimeSha256": "2d6fa04fbac289117de8ed97066cb816654a3efc0efbd63eca1974e8e93290cf",
+  "changes": [
+    "Home Response-only inline market beneath building extensions, native category/name/price controls and individual purchases",
+    "One building type read plus bounded uncached market reads, no retained iframe, native restrictions and confirmations preserved",
+    "Remove general Stations schooling tab, retain All/Home response/specific station types and migrate pending filter state"
+  ],
+  "files": {
+    "manifest.json": "4c1797c3cbd61ccc17b1c7583eca9d3fa89c9276fea992815652dd911b4e0433",
+    "nexus-runtime.js": "2d6fa04fbac289117de8ed97066cb816654a3efc0efbd63eca1974e8e93290cf",
+    "nexus-tools.js": "3fe3239f91b65480436536639aa96a4fdfbafd7d8b10206414de6a18a7617e85",
+    "nexus-building-overview.js": "7bd89eb4bbd4a82674a367a95df3fe13a6a669184a88016a29d5d4ed4841a17e",
+    "nexus-home-market.js": "507d44d6be61e5bba463ae8d762e9400f902a7d389a03dfdf0a0c2d65050228e",
+    "nexus-schooling-filters.js": "bab87def5c0d58eae833befa4557c82ad44606913690fb7b2706d8a2f8bf1cc8",
+    "nexus-settings.js": "785b9aedca41d8fad788523a0b9f34ca907a454c18f8946bee927bd1c9d324f8",
+    "nexus-settings-main.js": "785b9aedca41d8fad788523a0b9f34ca907a454c18f8946bee927bd1c9d324f8"
+  }
+}
