@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "MissionChief Command Nexus",
   "description": "MissionChief UK mission controls, vehicle selection, transport, naming and personnel tools, with optional gameplay reporting.",
-  "version": "3.0.43.21",
+  "version": "3.0.43.43",
   "minimum_chrome_version": "111",
   "permissions": [
     "activeTab",
@@ -36,6 +36,19 @@
         "https://police.missionchief.co.uk/*"
       ],
       "js": [
+        "nexus-settings.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "ISOLATED"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-settings-main.js",
         "nexus-runtime.js"
       ],
       "run_at": "document_start",
@@ -65,6 +78,86 @@
       "run_at": "document_start",
       "all_frames": true,
       "world": "ISOLATED"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-settings-defaults.js",
+        "nexus-tools-core.js",
+        "nexus-tools.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false,
+      "world": "ISOLATED"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-comfort-data.js",
+        "nexus-settings-apply.js",
+        "nexus-currency-ranks.js",
+        "nexus-currency.js",
+        "nexus-command-toolbar.js",
+        "nexus-requirement-data.js",
+        "nexus-requirement-ticks.js",
+        "nexus-building-data.js",
+        "nexus-building-core.js",
+        "nexus-personnel-reader.js",
+        "nexus-building-overview.js",
+        "nexus-comfort.js",
+        "nexus-transport-shortcuts.js"
+      ],
+      "world": "MAIN",
+      "run_at": "document_idle",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/credits/daily*",
+        "https://police.missionchief.co.uk/credits/daily*"
+      ],
+      "js": [
+        "nexus-credit-page-chrome.js",
+        "nexus-daily-data.js",
+        "nexus-daily-core.js",
+        "nexus-daily.js"
+      ],
+      "world": "ISOLATED",
+      "run_at": "document_idle",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/credits/overview*",
+        "https://police.missionchief.co.uk/credits/overview*"
+      ],
+      "js": [
+        "nexus-credit-page-chrome.js",
+        "nexus-overview-core.js",
+        "nexus-overview.js"
+      ],
+      "world": "ISOLATED",
+      "run_at": "document_idle",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-mission-rewards-data.js",
+        "nexus-mission-rewards.js"
+      ],
+      "world": "ISOLATED",
+      "run_at": "document_idle",
+      "all_frames": false
     }
   ],
   "content_security_policy": {
@@ -75,5 +168,16 @@
     "32": "icons/nexus-32.png",
     "48": "icons/nexus-48.png",
     "128": "icons/nexus-128.png"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/nexus-48.png"
+      ],
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ]
+    }
+  ]
 }

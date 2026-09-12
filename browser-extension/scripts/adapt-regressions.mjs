@@ -37,6 +37,32 @@ expect(JSON.stringify(context.result) === '[true,true,false,false]', 'Search Dog
   ['PERSONNEL_STATE.registerReader.read(url, timeoutMs)', 'all register documents use the shared gate'],
   ['while (active >= limit)', 'global in-flight request limit'],`);
   edit('check-fast-personnel-register.mjs','const PERSONNEL_REGISTER_LAUNCH_GAP_MS = 350;','const PERSONNEL_REGISTER_LAUNCH_GAP_MS = 250;');
+  // .43 moves these controls into the separately bundled Settings module.
+  // Keep the behavioral selector/lifecycle tests; update only obsolete UI
+  // ownership assertions. Actual extension rendering/persistence is covered by
+  // tests/ui/settings-43.mjs, which is a required verification step.
+  for(const name of ['nexus-settings.js','nexus-tools.js'])fs.copyFileSync(path.join('extension',name),path.join(fixture,'src',name));
+  function replaceBlock(name,start,end,replacement) {
+    const text=fs.readFileSync(path.join(fixture,'scripts',name),'utf8');
+    const a=text.indexOf(start),b=text.indexOf(end,a);
+    if(a<0||b<0)throw Error('Missing .43 test adapter block '+name);
+    edit(name,text.slice(a,b),replacement+'\n\n');
+  }
+  const settingsContract=`const settingsSource = await (await import('node:fs/promises')).readFile('src/nexus-settings.js', 'utf8');
+for(const token of ['mf_high_risk_missing_person_ambulance_v1','mf_ambulance_officer_threshold_enabled_v1','mf_ambulance_officer_threshold_v1','missingAmbulance','officerEnabled','officerThreshold'])expect(settingsSource.includes(token), 'Central settings contract missing '+token);
+for(const token of ['MF_HIGH_RISK_MISSING_PERSON_AMBULANCE_KEY','MF_AMBULANCE_OFFICER_THRESHOLD_ENABLED_KEY','MF_AMBULANCE_OFFICER_THRESHOLD_KEY'])expect(source.includes(token), 'Runtime setting reader missing '+token);`;
+  replaceBlock('check-ambulance-officer-threshold-v10101.mjs', 'for (const token of [', 'const normaliser =',settingsContract);
+  replaceBlock('check-high-risk-missing-person-ambulance-v1076.mjs', 'for (const token of [', 'const classifierSource =',settingsContract);
+  edit('check-auto-memory-lifecycle.mjs',"const firstStartupIndex = source.indexOf('startMissionEventCollectibleCollector();');", "const firstStartupIndex = source.indexOf('\\n        startMissionEventCollectibleCollector();');");
+  edit('check-compact-nexus-ui-v1071.mjs','width: min(360px, calc(100vw - 20px))','width: min(440px, calc(100vw - 20px))');
+  edit('check-iphone-mission-ui.mjs',`requireText("'mf-iphone-advanced-toggle'", 'advanced settings disclosure');`, `requireText('nexus:export-mission-diagnostics', 'central settings diagnostic event');`);
+  edit('check-unit-finder-diagnostic-export.mjs',`requireText("diagnosticsBtn.id = 'mf-export-unit-finder-diagnostics'", 'export button');`, `requireText('nexus:export-mission-diagnostics', 'central settings export event');`);
+  edit('check-saved-position-helper-copy.mjs',"const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');", "const source = await readFile('src/nexus-settings.js', 'utf8');");
+  edit('check-saved-position-helper-copy.mjs',"['Keep my saved panel position', 'saved-position checkbox label']", "['Keep my saved mission panel position', 'saved-position checkbox label']");
+  for(const token of ['  \'<span class="mf-dashboard-tab-icon">02</span>\',\n','  \'<span class="mf-dashboard-tab-icon">03</span>\',\n'])edit('check-nexus-visual-system-v1070.mjs',token,'');
+  replaceBlock('check-mission-dashboard-v1069.mjs', 'for (const token of [', "expect(startScanner.includes", `for(const token of ["dashboardRail.id = 'mf-dashboard-rail'", 'data-mf-dashboard-tab="mission"', 'MF_EVENT_SCANNER_ENABLED_KEY', 'nexus:export-mission-diagnostics'])expect(source.includes(token), 'Mission/Settings ownership missing '+token);
+for(const token of ['data-mf-dashboard-tab="settings"','data-mf-dashboard-tab="diagnostics"'])expect(!panel.includes(token), 'Removed utility tab was restored');`);
+  edit('check-mission-dashboard-v1069.mjs',"expect(panel.indexOf('settingsPane.appendChild(advancedBody)') < panel.indexOf('const unitFinderBtn'), 'Settings ownership must be established before action creation');", "expect(!panel.includes('settingsPane.appendChild'), 'Settings must be owned by Nexus Tools');");
   fs.writeFileSync(path.join(fixture,'ADAPTERS.json'),JSON.stringify(changes,null,2)+'\n');
   return changes;
 }

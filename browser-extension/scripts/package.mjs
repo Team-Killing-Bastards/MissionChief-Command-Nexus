@@ -3,17 +3,16 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { devLibrary } from './dev-library.mjs';
 const JSZip=devLibrary('jszip');
-export const files=[
-  'manifest.json','nexus-runtime.js','analytics-worker.mjs','analytics-core.mjs','analytics-record.mjs',
-  'analytics-bridge.js','analytics-settings.js','analytics.html','deployment-config.mjs',
-  'rules-core.mjs','rules-bridge.js','rules.js','rules.html','rules.css','rules-catalogue.json',
-  'popup.js','popup.html','popup.css','privacy.html','LICENSE',
-  'icons/nexus-16.png','icons/nexus-32.png','icons/nexus-48.png','icons/nexus-128.png'
-];
+const promotion=JSON.parse(fs.readFileSync('reference/local-43.json'));
+export const files=[...Object.keys(promotion.files),'deployment-config.mjs'].sort();
 const sha=data=>crypto.createHash('sha256').update(data).digest('hex');
 const manifest=JSON.parse(fs.readFileSync('extension/manifest.json','utf8'));
 const original=JSON.parse(fs.readFileSync('reference/original-extension/BUILD-INFO.json','utf8'));
 const build={extensionVersion:manifest.version,sourceVersion:original.sourceVersion,components:{...original.components,personnelAssignment:'1.3.13'},
+  runtimeSource:'browser-extension/runtime/nexus-runtime.js',
+  releaseCommit:process.env.GITHUB_SHA || null,
+  testedLocalVersion:promotion.version,testedLocalZipSha256:promotion.testedZipSha256,
+  testedLocalRuntimeSha256:promotion.testedRuntimeSha256,promotionChanges:promotion.changes,
   sourceRepository:original.sourceRepository,sourceCommit:original.sourceCommit,
   canonicalUserscriptSha256:original.sourceSha256,
   suppliedLegacySha256:sha(fs.readFileSync('reference/legacy-runtime.txt')),
