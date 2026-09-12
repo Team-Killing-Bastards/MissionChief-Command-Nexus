@@ -32,16 +32,56 @@
   const typeLabel = key => key === '?' ? 'Type unavailable' : typeLabels[key.slice(5)] || `Building type #${key.slice(5)}`;
   let form, accordion, root, search, centres, status, refresh, observer, tabs, rows = [], buildings = null, selectedType = '';
   const typeButtons = new Map();
+  const nativeFilters = new Set();
+  const nativeTypeLabels = new Set([...Object.values(typeLabels),
+    'Fire Station','Small Fire Station','Rescue Station','Small Rescue Station',
+    'Police Station','Small Police Station','Police Aviation','Home Response Location',
+    'Large Police Depot','Bomb Disposal HQ','Ambulance Station','HART Base',
+    'Lifeboat Station','Coastguard Station','Mountain Rescue Station','GP Surgery'
+  ].map(normal));
   let controller = null, timeout = null, debounce = null, generation = 0, active = false, requestCount = 0, restoredCentre = null;
   const state = globalThis.__NEXUS_SCHOOLING_FILTERS__ = { snapshot: () => ({active, rows: rows.length, buildings: buildings?.size || 0, requestCount}) };
   const el = (tag, text) => { const n = document.createElement(tag); if (text !== undefined) n.textContent = text; return n; };
+  // Only replace station filters above the personnel accordion. The native
+  // course-start/price fields, enrolment buttons and station panels stay intact.
+  // Keep the originals in place for a failed metadata read or page suspension.
+  function replaceNativeFilters() {
+    if (!active || !root?.isConnected || !buildings) return;
+    const scope = form.parentElement;
+    const beforeList = node => !node.closest('#nx-schooling-filters,nav,.navbar') &&
+      !accordion.contains(node) && !!(node.compareDocumentPosition(accordion) & Node.DOCUMENT_POSITION_FOLLOWING) &&
+      (!node.closest('form') || node.closest('form') === form);
+    for (const node of scope.querySelectorAll('button,a.btn,select,input[placeholder]')) {
+      if (!beforeList(node)) continue;
+      const text = normal(node.tagName === 'SELECT' ? node.options[0]?.textContent : node.textContent);
+      const dispatch = /^select dispatch cent(?:er|re)$/.test(text);
+      const stationType = node.matches('a.btn,button.btn') && nativeTypeLabels.has(text);
+      const stationSearch = node.matches('input') && /^stations? search$/i.test(clean(node.placeholder));
+      if (!dispatch && !stationType && !stationSearch) continue;
+      // Named controls may be actual course fields. Never hide submit controls.
+      if (node.matches('button') && node.type === 'submit' && !node.matches('[data-toggle="dropdown"],.dropdown-toggle')) continue;
+      if (node.matches('[name]') && !stationSearch && !dispatch) continue;
+      let target = node;
+      if (dispatch) {
+        const group = node.closest('.btn-group,.dropdown');
+        if (group && beforeList(group) && !group.querySelector('input,select,button[type="submit"]:not(.dropdown-toggle)')) target = group;
+      }
+      if (!target.classList.contains('nx-native-course-filter')) {
+        target.classList.add('nx-native-course-filter'); nativeFilters.add(target);
+      }
+    }
+  }
+  function restoreNativeFilters() {
+    for (const node of nativeFilters) node.classList.remove('nx-native-course-filter');
+    nativeFilters.clear();
+  }
   function indexRows() {
     rows = [...accordion.querySelectorAll('.panel-heading[building_id]')].map(heading => {
       const panel = heading.closest('.panel'); if (!panel || !accordion.contains(panel)) return null;
       const copy = heading.cloneNode(true); for (const badge of copy.querySelectorAll('.badge,.label,input,button')) badge.remove();
       return {panel, id: id(heading.getAttribute('building_id')), name: clean(copy.textContent)};
     }).filter(Boolean);
-    updateCentres(); updateTypes(); apply();
+    updateCentres(); updateTypes(); apply(); replaceNativeFilters();
   }
   function membership(row) {
     if (!buildings?.has(row.id)) return '?';
@@ -123,10 +163,11 @@
         projected.set(key, {name: clean(building.caption) || `Building #${key}`, centre: raw === null || raw === 0 || raw === '0' ? '-' : id(raw) || '?', type: stationType(building.building_type)});
       }
       if (!active || ticket !== generation) return;
-      buildings = projected; updateCentres(); updateTypes(); apply();
+      buildings = projected; updateCentres(); updateTypes(); apply(); replaceNativeFilters();
       root.querySelector('[data-load-status]').textContent = 'Stations with selected staff stay visible. Filters do not enrol anyone.';
     } catch (error) {
       if (!active || ticket !== generation) return;
+      if (!buildings) restoreNativeFilters();
       root.querySelector('[data-load-status]').textContent = `${signal.aborted ? 'Loading timed out.' : error.message} Station search still works; use Refresh centres to retry.`;
     } finally {
       if (ticket === generation) { clearTimeout(timeout); timeout = null; controller = null; if (refresh) refresh.disabled = false; }
@@ -145,6 +186,7 @@
       #nx-schooling-filters button{background:#1d415d;color:white;border:1px solid #7193ac;border-radius:4px;padding:7px 10px;font:inherit;cursor:pointer}#nx-schooling-filters button:disabled{opacity:.6;cursor:wait}#nx-schooling-filters :focus-visible{outline:2px solid #69c8ff;outline-offset:2px}
       #nx-schooling-filters .nx-station-types{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px}#nx-schooling-filters .nx-station-types button[aria-pressed=true]{background:#327da3;border-color:#9fddff;box-shadow:inset 0 -3px #9fddff}#nx-schooling-filters .nx-station-types button{min-width:0;max-width:100%;white-space:normal}
       #nx-schooling-filters p{margin:7px 0 0}#nx-schooling-filters [data-load-status]{font-size:11px;color:#c4d6e5}.nx-course-filtered{display:none!important}.nx-course-kept>.panel-heading{outline:2px solid #69c8ff;outline-offset:-2px}
+      .nx-native-course-filter{display:none!important}
       @media(max-width:600px){#nx-schooling-filters label{width:100%}#nx-schooling-filters select,#nx-schooling-filters input{width:100%}}
       html[data-nexus-layout=phone] #nx-schooling-filters label{width:100%}html[data-nexus-layout=phone] #nx-schooling-filters :is(select,input){width:100%}
       html[data-nexus-touch=true] #nx-schooling-filters :is(input,select,button){min-height:44px}html[data-nexus-desktop-phone] #nx-schooling-filters{font-size:calc(13px * var(--nx-ui-scale))}html[data-nexus-desktop-phone] #nx-schooling-filters :is(input,select,button){min-height:calc(44px * var(--nx-ui-scale));max-width:100%}
@@ -170,12 +212,14 @@
     accordion.addEventListener('change', schedule);
     observer = new MutationObserver(records => {
       if (records.some(record => [...record.addedNodes,...record.removedNodes].some(node => node.nodeType === 1 && (node.matches('.panel,.panel-heading[building_id]') || node.querySelector('.panel-heading[building_id]'))))) indexRows();
+      else if (records.some(record => !root.contains(record.target) && [...record.addedNodes].some(node => node.nodeType === 1 && (node.matches('button,a.btn,select,input') || node.querySelector('button,a.btn,select,input'))))) replaceNativeFilters();
     });
-    observer.observe(accordion, {childList:true,subtree:true}); indexRows(); void load();
+    observer.observe(form.parentElement, {childList:true,subtree:true}); indexRows(); void load();
   }
   function stop() {
     active = false; generation++; controller?.abort(); controller = null; clearTimeout(timeout); clearTimeout(debounce); observer?.disconnect(); observer = null;
     accordion?.removeEventListener('change', schedule);
+    restoreNativeFilters();
     for (const {panel} of rows) panel.classList.remove('nx-course-filtered','nx-course-kept');
     root?.remove(); rows = []; buildings = null; typeButtons.clear(); selectedType = ''; restoredCentre = null; root = form = accordion = search = centres = status = refresh = tabs = null;
   }

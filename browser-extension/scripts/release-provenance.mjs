@@ -66,7 +66,12 @@ export function releaseProvenance() {
   const linked={...stocked,version:quick.version,sourceRuntimeSha256:quick.sourceRuntimeSha256,changes:[...stocked.changes,...quick.changes],files:{...stocked.files,...quick.files}};
   if(version===quick.version)return linked;
   const strip=JSON.parse(fs.readFileSync('reference/button-strip-54.json'));
-  if(version!==strip.version||strip.baseVersion!==linked.version)throw Error('Unreviewed button strip release');
+  if(strip.baseVersion!==linked.version)throw Error('Unreviewed button strip release');
   if(Object.keys(strip.files).some(file=>!['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-home-market.js'].includes(file)))throw Error('Unexpected button strip change');
-  return {...linked,version,sourceRuntimeSha256:strip.sourceRuntimeSha256,changes:[...linked.changes,...strip.changes],files:{...linked.files,...strip.files}};
+  const stripped={...linked,version:strip.version,sourceRuntimeSha256:strip.sourceRuntimeSha256,changes:[...linked.changes,...strip.changes],files:{...linked.files,...strip.files}};
+  if(version===strip.version)return stripped;
+  const cleanup=JSON.parse(fs.readFileSync('reference/training-filter-cleanup-55.json'));
+  if(version!==cleanup.version||cleanup.baseVersion!==stripped.version)throw Error('Unreviewed training filter cleanup');
+  if(Object.keys(cleanup.files).some(file=>!['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-schooling-filters.js'].includes(file)))throw Error('Unexpected training filter cleanup change');
+  return {...stripped,version,sourceRuntimeSha256:cleanup.sourceRuntimeSha256,changes:[...stripped.changes,...cleanup.changes],files:{...stripped.files,...cleanup.files}};
 }
