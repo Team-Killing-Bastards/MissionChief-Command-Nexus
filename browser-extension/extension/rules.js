@@ -1,4 +1,4 @@
-import { RULES_KEY, requirementKey, validateRules, mergeRules } from './rules-core.mjs';
+import { RULES_KEY, requirementKey, validateRules, mergeRules, builtInTypeRule } from './rules-core.mjs';
 const $ = id => document.getElementById(id);
 let data = { schema: 1, rules: [] }, catalogue, editing = null, pendingImport = null, busy = false;
 function status(text, error = false) { $('status').textContent = text; $('status').classList.toggle('error', error); }
@@ -11,8 +11,8 @@ function vehicleOptions(preferred = $('vehicle').value) {
 }
 function preview() {
   const key = requirementKey($('requirement').value);
-  const builtin = catalogue.builtIn.find(r => requirementKey(r.requirement) === key);
-  $('match-preview').textContent = !key ? '' : builtin ? `Built-in match: ${builtin.vehicleName}. Your enabled rule takes priority for this vehicle requirement.` : `Matches “${key}” regardless of case, extra spaces, a Required prefix or a leading quantity. Add a separate rule for different wording or plurals.`;
+  const builtin = builtInTypeRule(key) || catalogue.builtIn.find(r => requirementKey(r.requirement) === key);
+  $('match-preview').textContent = !key ? '' : builtin ? `Built-in match: ${builtin.vehicleName}${builtin.vehicleTypeId ? ` (#${builtin.vehicleTypeId})` : ''}. Your enabled rule takes priority for this vehicle requirement.` : `Matches “${key}” regardless of case, extra spaces, a Required prefix or a leading quantity. Add a separate rule for different wording or plurals.`;
 }
 function cell(row, value) { const td = document.createElement('td'); td.textContent = value; row.append(td); return td; }
 function render() {
@@ -82,7 +82,7 @@ $('confirm-import').onclick = async () => { const incoming = pendingImport; if (
 $('cancel-import').onclick = () => { pendingImport=null; $('import-dialog').close(); };
 $('builtin-search').oninput = () => {
   const query = $('builtin-search').value.toLowerCase(); $('builtins').replaceChildren();
-  for (const r of catalogue.builtIn.filter(r => `${r.requirement} ${r.vehicleName}`.toLowerCase().includes(query))) { const tr=document.createElement('tr'); cell(tr,r.requirement); cell(tr,r.vehicleName); $('builtins').append(tr); }
+  for (const r of catalogue.builtIn.filter(r => `${r.requirement} ${r.vehicleName}`.toLowerCase().includes(query))) { const tr=document.createElement('tr'); cell(tr,r.requirement); cell(tr,`${r.vehicleName}${r.vehicleTypeId ? ` (#${r.vehicleTypeId})` : ''}`); $('builtins').append(tr); }
 };
 $('discover').onclick = async () => {
   try {

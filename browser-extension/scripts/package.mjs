@@ -2,8 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { devLibrary } from './dev-library.mjs';
+import {releaseProvenance} from './release-provenance.mjs';
 const JSZip=devLibrary('jszip');
-const promotion=JSON.parse(fs.readFileSync('reference/local-43.json'));
+const promotion=releaseProvenance();
 export const files=[...Object.keys(promotion.files),'deployment-config.mjs'].sort();
 const sha=data=>crypto.createHash('sha256').update(data).digest('hex');
 const manifest=JSON.parse(fs.readFileSync('extension/manifest.json','utf8'));
@@ -11,7 +12,8 @@ const original=JSON.parse(fs.readFileSync('reference/original-extension/BUILD-IN
 const build={extensionVersion:manifest.version,sourceVersion:original.sourceVersion,components:{...original.components,personnelAssignment:'1.3.13'},
   runtimeSource:'browser-extension/runtime/nexus-runtime.js',
   releaseCommit:process.env.GITHUB_SHA || null,
-  testedLocalVersion:promotion.version,testedLocalZipSha256:promotion.testedZipSha256,
+  testedLocalVersion:promotion.testedLocalVersion||'3.0.43.43',testedLocalZipSha256:promotion.testedZipSha256,
+  reviewedRuntimeSha256:promotion.sourceRuntimeSha256,
   testedLocalRuntimeSha256:promotion.testedRuntimeSha256,promotionChanges:promotion.changes,
   sourceRepository:original.sourceRepository,sourceCommit:original.sourceCommit,
   canonicalUserscriptSha256:original.sourceSha256,

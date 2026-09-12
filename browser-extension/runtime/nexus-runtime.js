@@ -10,8 +10,8 @@
       parentBuild = window.top.__NEXUS_EXTENSION__?.build || '';
     }
   } catch {}
-  if (parentBuild && parentBuild !== '3.0.43.43') {
-    window.__NEXUS_EXTENSION__ = Object.freeze({ build: '3.0.43.43', sourceVersion: '3.0.43',
+  if (parentBuild && parentBuild !== '3.0.43.45') {
+    window.__NEXUS_EXTENSION__ = Object.freeze({ build: '3.0.43.45', sourceVersion: '3.0.43',
       status: 'parent-build-mismatch', parentBuild, startedAt: Date.now() });
     try {
       window.top.dispatchEvent(new window.top.CustomEvent('nexus-extension-update-required-v1', {
@@ -22,7 +22,7 @@
   }
   const alreadyRunning = Boolean(window.__MCN_V3_CONTROLLER__ || window.__MCN_BOOT_TRACE__);
   window.__NEXUS_EXTENSION__ = Object.freeze({
-    build: '3.0.43.43',
+    build: '3.0.43.45',
     sourceVersion: '3.0.43',
     status: alreadyRunning ? 'existing-runtime' : 'loaded',
     startedAt: Date.now()
@@ -265,7 +265,7 @@ function createNexusPerformance(env) {
     readRegistry, vehicleSignature, getRequirements, putRequirements, record, count, dispose,
     receiveCount(key, amount) { counters[key] = (counters[key] || 0) + amount; },
     receiveTiming(item) { timings.push({ ...item }); if (timings.length > 100) timings.shift(); },
-    snapshot() { return { build: '3.0.43.43', counters: { ...counters }, longTasks: { ...longTasks }, timings: timings.map(item => ({ ...item })), retainedDocuments: documents.size, registryRetained: !!registryValue, requirementTtlMs: REQUIREMENT_TTL, maxRequirementRecords: MAX_RECORDS }; }
+    snapshot() { return { build: '3.0.43.45', counters: { ...counters }, longTasks: { ...longTasks }, timings: timings.map(item => ({ ...item })), retainedDocuments: documents.size, registryRetained: !!registryValue, requirementTtlMs: REQUIREMENT_TTL, maxRequirementRecords: MAX_RECORDS }; }
   });
 }
 
@@ -358,6 +358,19 @@ function requirementKey(value) {
     .replace(/^\s*\d+\s+/, '').replace(/\s+x\s*\d+\s*$/i, '')
     .replace(/\s+/g, ' ').trim().toLowerCase();
 }
+// Permanent exact-type defaults promoted from the user's .43 rules export.
+// Explicit aliases avoid unsafe general singularisation or substring matching.
+const BUILT_IN_TYPE_RULES = Object.freeze([
+  { requirement:'Coastguard Commanders', vehicleTypeId:'60', vehicleName:'Coastguard Commander', aliases:['Coastguard Commander','Coastguard Commanders'] },
+  { requirement:'Drones', vehicleTypeId:'89', vehicleName:'Drone Vehicle SAR HQ', aliases:['Drone','Drones'] },
+  { requirement:'Hovercrafts (Trailer)', vehicleTypeId:'71', vehicleName:'Hovercraft Trailer', aliases:['Hovercraft (Trailer)','Hovercrafts (Trailer)','Hovercraft Trailer','Hovercraft Trailers'] },
+  { requirement:'Any vehicle', vehicleTypeId:'5', vehicleName:'Ambulance', aliases:['Any vehicle','Any vehicles'] },
+  { requirement:'car to tow', vehicleTypeId:'105', vehicleName:'Flatbed Recovery Vehicle', aliases:['Car to tow','Cars to tow'] }
+].map(rule=>Object.freeze({...rule,enabled:true,aliases:Object.freeze(rule.aliases)})));
+const builtInTypeRuleLookup = new Map(BUILT_IN_TYPE_RULES.flatMap(rule=>rule.aliases.map(name=>[requirementKey(name),rule])));
+function builtInTypeRule(name) {
+  return builtInTypeRuleLookup.get(requirementKey(name)) || null;
+}
 function validateRules(value) {
   if (!value || value.schema !== 1 || !Array.isArray(value.rules) || value.rules.length > RULE_LIMIT) throw Error('Invalid rules file (schema 1, maximum 300 rules).');
   const seen = new Set();
@@ -391,8 +404,8 @@ function mergeRules(existing, incoming) {
   window.__NEXUS_RULES__ = Object.freeze({
     isReady: () => authoritative,
     normalise: requirementKey,
-    lookup(name) { locked = true; return rules.get(requirementKey(name)) || null; },
-    snapshot() { return { count: rules.size, locked, rules: [...rules.values()] }; }
+    lookup(name) { locked = true; return rules.get(requirementKey(name)) || builtInTypeRule(name); },
+    snapshot() { return { count: rules.size, locked, rules: [...rules.values()], builtInTypeRules: BUILT_IN_TYPE_RULES }; }
   });
   document.addEventListener('nexus-rules-delivery-v1', event => {
     if (typeof event.detail !== 'string' || event.detail.length > 150000) return;
@@ -10604,7 +10617,7 @@ function installNexusFullLogger() {
     const who = identity(); if (!who.player) return false; switchPlayer(who.player);
     const record = cleanRecord(raw); if (!record) return false;
     const capturedAt = Date.now();
-    record.clientVersion = '3.0.43.43';
+    record.clientVersion = '3.0.43.45';
     if (kind === 'mission') {
       if (!/^\d+$/.test(record.missionId || '')) return false;
       const old = registry[record.missionId] || {};
@@ -10636,7 +10649,7 @@ function installNexusFullLogger() {
     return true;
   }
   function activity(action, extra = {}) {
-    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.43', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
+    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.45', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
   }
   function current(eventType, options = {}) {
     const snapshot = getMissionLoggerMissionSnapshot();
@@ -10810,7 +10823,7 @@ function installNexusFullLogger() {
     finally {clearTimeout(timeout);timers.delete(timeout);creditAbort=null;creditBusy=false;}
   }
   function session(action) {
-    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.43',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
+    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.45',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
   }
   function tick() {
     try {
@@ -32668,7 +32681,7 @@ function installNexusFullLogger() {
     const who = identity(); if (!who.player) return false; switchPlayer(who.player);
     const record = cleanRecord(raw); if (!record) return false;
     const capturedAt = Date.now();
-    record.clientVersion = '3.0.43.43';
+    record.clientVersion = '3.0.43.45';
     if (kind === 'mission') {
       if (!/^\d+$/.test(record.missionId || '')) return false;
       const old = registry[record.missionId] || {};
@@ -32700,7 +32713,7 @@ function installNexusFullLogger() {
     return true;
   }
   function activity(action, extra = {}) {
-    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.43', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
+    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.45', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
   }
   function current(eventType, options = {}) {
     const snapshot = getMissionLoggerMissionSnapshot();
@@ -32874,7 +32887,7 @@ function installNexusFullLogger() {
     finally {clearTimeout(timeout);timers.delete(timeout);creditAbort=null;creditBusy=false;}
   }
   function session(action) {
-    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.43',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
+    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.45',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
   }
   function tick() {
     try {

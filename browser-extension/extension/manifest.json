@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "MissionChief Command Nexus",
   "description": "MissionChief UK mission controls, vehicle selection, transport, naming and personnel tools, with optional gameplay reporting.",
-  "version": "3.0.43.43",
+  "version": "3.0.43.45",
   "minimum_chrome_version": "111",
   "permissions": [
     "activeTab",
@@ -76,6 +76,18 @@
         "rules-bridge.js"
       ],
       "run_at": "document_start",
+      "all_frames": true,
+      "world": "ISOLATED"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-responsive.js"
+      ],
+      "run_at": "document_idle",
       "all_frames": true,
       "world": "ISOLATED"
     },

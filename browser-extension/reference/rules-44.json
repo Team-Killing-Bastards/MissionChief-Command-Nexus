@@ -1,0 +1,19 @@
+{
+  "version": "3.0.43.44",
+  "baseVersion": "3.0.43.43",
+  "sourceRuntimeSha256": "0930007e8c19fec80e18b3a614f3ddf216652e4685427540d5c42c88a82f0e68",
+  "changes": [
+    "Five exported vehicle rules are permanent exact-type defaults with explicit wording aliases",
+    "Saved custom rules retain priority; storage keys and update migration unchanged",
+    "Type 105 is labelled Flatbed Recovery Vehicle consistently with dispatch matching"
+  ],
+  "files": {
+    "manifest.json": "c4e6bd19c1e80e2397c3dd86cd85e632830df04f9e5894e6ca38aad354be14d6",
+    "nexus-runtime.js": "0930007e8c19fec80e18b3a614f3ddf216652e4685427540d5c42c88a82f0e68",
+    "nexus-tools.js": "3b3ed18bd3e285ab9283e297175b1df6350a12bf080fb9b2b1a4bce02ac0d09e",
+    "rules-core.mjs": "4600039214e9a07db546331f53be4632b05c5b7a609f0fa3d264093b5b426cba",
+    "rules.js": "673886849268a3031d4232f9394c76a0c12d45b3dc863f5b0f654afa6dbd214d",
+    "rules.html": "57123a979fad7566dcc397600eedc2a32d8a64576079639bb68303e997890aa4",
+    "rules-catalogue.json": "a640457b1a26be9d194341378dcaf1218b96b75326c65f6d12606c409541c8f1"
+  }
+}
