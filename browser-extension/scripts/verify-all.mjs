@@ -13,7 +13,8 @@ const steps=[
   ['settings-43',['tests/ui/settings-43.mjs']],
   ['responsive-45',['tests/ui/responsive-45.mjs']],
   ['requirement-buttons-46',['tests/ui/requirement-buttons-46.mjs']],
-  ['schooling-filters-47',['tests/ui/schooling-filters-47.mjs']]
+  ['schooling-filters-47',['tests/ui/schooling-filters-47.mjs']],
+  ['course-list-filters-48',['tests/ui/course-list-filters-48.mjs']]
 ];
 const summary=[];
 for(const [name,args] of steps) {

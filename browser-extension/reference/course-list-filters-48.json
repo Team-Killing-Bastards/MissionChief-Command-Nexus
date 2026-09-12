@@ -1,0 +1,17 @@
+{
+  "version": "3.0.43.48",
+  "baseVersion": "3.0.43.47",
+  "sourceRuntimeSha256": "9c713710fe9ae9d2e3e9d62387eec2cb2cd7b4571782ab324ad88fd6a0e27f41",
+  "changes": [
+    "Local-only course type and name filters for both native course lists, using existing row labels without requests",
+    "Keeps native search, sorting and links; scoped observers ignore countdown updates; Auto routines unchanged apart from version"
+  ],
+  "files": {
+    "manifest.json": "ec8df66ead293ab7bad8b00dd77a25d58e0382f63fe1f36d2152bdb7b0902c03",
+    "nexus-runtime.js": "9c713710fe9ae9d2e3e9d62387eec2cb2cd7b4571782ab324ad88fd6a0e27f41",
+    "nexus-tools.js": "e2540619621d709f5bb69289fc32c89a20d1465da525a3085e297c637a060dc0",
+    "nexus-settings.js": "71370fa315a0c94de5a7a901caecbef7baa9fd1e9f42f11b1fbb79b6ae6eec44",
+    "nexus-settings-main.js": "71370fa315a0c94de5a7a901caecbef7baa9fd1e9f42f11b1fbb79b6ae6eec44",
+    "nexus-course-list-filters.js": "bd9a0681528880b05a18a7e8b844787272906591c09fc4a05aa27154bfcd2deb"
+  }
+}

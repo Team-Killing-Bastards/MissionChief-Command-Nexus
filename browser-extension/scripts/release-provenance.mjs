@@ -25,8 +25,14 @@ export function releaseProvenance() {
   const manual={...promoted,version:buttons.version,sourceRuntimeSha256:buttons.sourceRuntimeSha256,changes:[...promoted.changes,...buttons.changes],files:{...promoted.files,...buttons.files}};
   if(version===buttons.version)return manual;
   const schooling=JSON.parse(fs.readFileSync('reference/schooling-filters-47.json'));
-  if(version!==schooling.version||schooling.baseVersion!==manual.version)throw Error('Unreviewed schooling filters release');
+  if(schooling.baseVersion!==manual.version)throw Error('Unreviewed schooling filters release');
   const schoolAllowed=['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-settings.js','nexus-settings-main.js','nexus-schooling-filters.js'];
   if(Object.keys(schooling.files).some(file=>!schoolAllowed.includes(file)))throw Error('Unexpected schooling filters change');
-  return {...manual,version,sourceRuntimeSha256:schooling.sourceRuntimeSha256,changes:[...manual.changes,...schooling.changes],files:{...manual.files,...schooling.files}};
+  const enrolment={...manual,version:schooling.version,sourceRuntimeSha256:schooling.sourceRuntimeSha256,changes:[...manual.changes,...schooling.changes],files:{...manual.files,...schooling.files}};
+  if(version===schooling.version)return enrolment;
+  const lists=JSON.parse(fs.readFileSync('reference/course-list-filters-48.json'));
+  if(version!==lists.version||lists.baseVersion!==enrolment.version)throw Error('Unreviewed course list filters release');
+  const listAllowed=['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-settings.js','nexus-settings-main.js','nexus-course-list-filters.js'];
+  if(Object.keys(lists.files).some(file=>!listAllowed.includes(file)))throw Error('Unexpected course list change');
+  return {...enrolment,version,sourceRuntimeSha256:lists.sourceRuntimeSha256,changes:[...enrolment.changes,...lists.changes],files:{...enrolment.files,...lists.files}};
 }
