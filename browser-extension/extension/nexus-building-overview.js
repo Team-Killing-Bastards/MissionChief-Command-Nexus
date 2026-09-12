@@ -54,6 +54,12 @@
     }else crew.append(el('p',t.unknown?'Specialist requirements unavailable for unknown vehicle types.':'No specialist training required by the active vehicles in this register.'));
     const foot=el('p',`${t.vehicles} station vehicles · ${t.paused} in status 6${readAt?` · Read ${new Date(readAt).toLocaleTimeString('en-GB')}`:''}`);foot.title='Assigned crew is not the current crew aboard.';crew.append(foot);
     const refresh=el('button','Refresh crew & training');refresh.type='button';refresh.disabled=!!controller;refresh.addEventListener('click',()=>{if(!visible()||controller)return;staff=null;staffTried=false;staffError='';renderCrew();refreshFleet?.();});crew.append(refresh);
+    if(model.training.length&&globalThis.NexusSettings?.enabled('courseListFilters')!==false){
+      // Transfer only the displayed training names and their known course aliases.
+      // A fragment stays in the browser; no station, player or personnel data is sent.
+      const groups=model.training.slice(0,40).map(g=>({name:g.name,aliases:[...new Set([g.name,...Object.values(D).flatMap(v=>v.training.filter(r=>r.name===g.name).flatMap(r=>r.aliases))])].slice(0,8)}));
+      const link=el('a','Open courses','nx-building-link');link.id='nx-crew-courses';link.href='/schoolings#'+new URLSearchParams({'nexus-training':JSON.stringify(groups)});link.title='Show active courses matching the training in this crew table';link.style.cssText='display:inline-block;margin-left:8px;text-decoration:none';crew.append(link);
+    }
   }
   async function readPersonnel(){
     if(!flags.personnelDemands)return;

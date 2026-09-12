@@ -31,8 +31,14 @@ export function releaseProvenance() {
   const enrolment={...manual,version:schooling.version,sourceRuntimeSha256:schooling.sourceRuntimeSha256,changes:[...manual.changes,...schooling.changes],files:{...manual.files,...schooling.files}};
   if(version===schooling.version)return enrolment;
   const lists=JSON.parse(fs.readFileSync('reference/course-list-filters-48.json'));
-  if(version!==lists.version||lists.baseVersion!==enrolment.version)throw Error('Unreviewed course list filters release');
+  if(lists.baseVersion!==enrolment.version)throw Error('Unreviewed course list filters release');
   const listAllowed=['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-settings.js','nexus-settings-main.js','nexus-course-list-filters.js'];
   if(Object.keys(lists.files).some(file=>!listAllowed.includes(file)))throw Error('Unexpected course list change');
-  return {...enrolment,version,sourceRuntimeSha256:lists.sourceRuntimeSha256,changes:[...enrolment.changes,...lists.changes],files:{...enrolment.files,...lists.files}};
+  const listed={...enrolment,version:lists.version,sourceRuntimeSha256:lists.sourceRuntimeSha256,changes:[...enrolment.changes,...lists.changes],files:{...enrolment.files,...lists.files}};
+  if(version===lists.version)return listed;
+  const dropdown=JSON.parse(fs.readFileSync('reference/course-dropdown-49.json'));
+  if(version!==dropdown.version||dropdown.baseVersion!==listed.version)throw Error('Unreviewed course dropdown release');
+  const dropdownAllowed=['manifest.json','nexus-runtime.js','nexus-tools.js','nexus-course-list-filters.js','nexus-building-overview.js','nexus-schooling-actions.js','nexus-settings.js','nexus-settings-main.js','nexus-schooling-filters.js'];
+  if(Object.keys(dropdown.files).some(file=>!dropdownAllowed.includes(file)))throw Error('Unexpected course dropdown change');
+  return {...listed,version,sourceRuntimeSha256:dropdown.sourceRuntimeSha256,changes:[...listed.changes,...dropdown.changes],files:{...listed.files,...dropdown.files}};
 }

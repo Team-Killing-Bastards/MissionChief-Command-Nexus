@@ -23,7 +23,7 @@
   const clean = value => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, 220);
   const normal = value => clean(value).toLocaleLowerCase('en-GB');
   let form, accordion, root, search, centres, status, refresh, observer, rows = [], buildings = null;
-  let controller = null, timeout = null, debounce = null, generation = 0, active = false, requestCount = 0;
+  let controller = null, timeout = null, debounce = null, generation = 0, active = false, requestCount = 0, restoredCentre = null;
   const state = globalThis.__NEXUS_SCHOOLING_FILTERS__ = { snapshot: () => ({active, rows: rows.length, buildings: buildings?.size || 0, requestCount}) };
   const el = (tag, text) => { const n = document.createElement(tag); if (text !== undefined) n.textContent = text; return n; };
   function indexRows() {
@@ -40,7 +40,7 @@
   }
   function updateCentres() {
     if (!centres) return;
-    const previous = centres.value, options = new Map();
+    const previous = restoredCentre ?? centres.value, options = new Map();
     if (buildings) for (const row of rows) {
       const centre = membership(row);
       options.set(centre, centre === '-' ? 'Unassigned' : centre === '?' ? 'Assignment unavailable' : buildings.get(centre)?.name || `Dispatch centre #${centre}`);
@@ -51,6 +51,7 @@
       centres.append(new Option(labels.filter(label => label === name).length > 1 ? `${name} (#${key})` : name, key));
     }
     if ([...centres.options].some(option => option.value === previous)) centres.value = previous;
+    if (buildings) restoredCentre = null;
     centres.disabled = !buildings;
   }
   function apply() {
@@ -120,7 +121,7 @@
     const reset = el('button', 'Clear filters'); reset.type = 'button'; refresh = el('button', 'Refresh centres'); refresh.type = 'button';
     controls.append(dcLabel, searchLabel, reset, refresh); root.append(controls);
     status = el('p'); status.setAttribute('role','status'); status.setAttribute('aria-live','polite'); const hint = el('p'); hint.dataset.loadStatus = '1'; root.append(status, hint); accordion.before(root);
-    centres.addEventListener('change', apply); search.addEventListener('input', schedule);
+    centres.addEventListener('change', () => { restoredCentre = null; apply(); }); search.addEventListener('input', schedule);
     search.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); clearTimeout(debounce); apply(); } });
     reset.addEventListener('click', () => { search.value = ''; centres.value = ''; apply(); }); refresh.addEventListener('click', load);
     accordion.addEventListener('change', schedule);
@@ -140,5 +141,9 @@
   // Native course pages render the enrolment form server-side; the event also
   // admits a list inserted later by the existing training-page convenience.
   document.addEventListener('ausbildungs-mausschoner:buildings-appended', () => { if (active) indexRows(); else start(); });
+  document.addEventListener('nexus-schooling-restore', event => {
+    if (!active || typeof event.detail !== 'string' || event.detail.length > 1000) return;
+    try { const saved = JSON.parse(event.detail); if (typeof saved.centre !== 'string' || typeof saved.station !== 'string') return; restoredCentre = clean(saved.centre); search.value = clean(saved.station); updateCentres(); apply(); } catch {}
+  });
   start();
 })();

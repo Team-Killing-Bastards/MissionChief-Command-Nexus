@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "MissionChief Command Nexus",
   "description": "MissionChief UK mission controls, vehicle selection, transport, naming and personnel tools, with optional gameplay reporting.",
-  "version": "3.0.43.48",
+  "version": "3.0.43.49",
   "minimum_chrome_version": "111",
   "permissions": [
     "activeTab",
@@ -189,7 +189,8 @@
         "https://police.missionchief.co.uk/schoolings*"
       ],
       "js": [
-        "nexus-course-list-filters.js"
+        "nexus-course-list-filters.js",
+        "nexus-schooling-actions.js"
       ],
       "world": "ISOLATED",
       "run_at": "document_idle",

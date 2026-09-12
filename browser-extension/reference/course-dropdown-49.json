@@ -1,0 +1,21 @@
+{
+  "version": "3.0.43.49",
+  "baseVersion": "3.0.43.48",
+  "sourceRuntimeSha256": "0022f184e28149dc259f0d82b7fbe52d08036a3376101c5c938a7655dccc2d49",
+  "changes": [
+    "Local dependent course-name dropdown and crew training shortcut using current course labels and known aliases",
+    "Native Educate styling and explicit Educate + select again, preserving native submission and returning by GET only after confirmation",
+    "Separate schooling action preference and restoration of station filters; Auto runtime changes are version markers only"
+  ],
+  "files": {
+    "manifest.json": "2415fbdd5cb89f3093d1d0b05b104b261b1335967453ac00399cb905caaf7ba7",
+    "nexus-runtime.js": "0022f184e28149dc259f0d82b7fbe52d08036a3376101c5c938a7655dccc2d49",
+    "nexus-tools.js": "138380c572b75baf3531d754931fcdc235761d5f55918c01c3db90bf009ea5a2",
+    "nexus-course-list-filters.js": "400cff1c46549ed8401b1e23fb25d9840f3dae64e7d20f374aa89018ebbff7d0",
+    "nexus-building-overview.js": "51d9c201f3a118a8d83c07b158113af28f5d74328d1c18a58aba4e336034118d",
+    "nexus-schooling-actions.js": "ec3de3846e96298f0180bd95609eeee8fedad4d2f3dff56aa0234aeb9da332f6",
+    "nexus-settings.js": "e8434b81b4083d96ed5153f2c8fed61637e7e37ffabdd7ff4b452d0b6e0a8547",
+    "nexus-settings-main.js": "e8434b81b4083d96ed5153f2c8fed61637e7e37ffabdd7ff4b452d0b6e0a8547",
+    "nexus-schooling-filters.js": "c30854080247b30dcb28f9515c2e90b398c3c5887c0c8224277784fe3fcf34ba"
+  }
+}

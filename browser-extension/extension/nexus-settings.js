@@ -22,6 +22,7 @@
     ['selectedCounter', 'Mission window', 'Selected unit and crew summary', 'extendedCallWindow', 'selectedVehicleCounter'],
     ['arrDetails', 'Mission window', 'Alarm and response plan details on hover', 'extendedCallWindow', 'arrSpecs'],
     ['commandBar', 'Mission window', 'Nexus dispatch and sharing toolbar'],
+    ['schoolingActions', 'Schooling', 'Educate and select another batch'],
     ['courseListFilters', 'Schooling', 'Course type and name filters'],
     ['schoolingFilters', 'Schooling', 'Course personnel filters'],
     ['crewRequirements', 'Buildings & personnel', 'Crew requirements and specialist coverage', 'extendedBuilding', 'personnelDemands'],
