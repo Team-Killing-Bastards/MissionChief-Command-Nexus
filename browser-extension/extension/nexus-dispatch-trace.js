@@ -13,7 +13,7 @@
         events = saved.events.slice(-limit); dropped = Number(saved.dropped) || 0;
       }
     } catch { storageFailed = true; }
-    const snapshot = () => ({schema: 1, build: '3.0.43.72-local-trace', limit,
+    const snapshot = () => ({schema: 1, build: '3.0.43.82-local-trace', limit,
       retained: events.length, dropped, storageFailed,
       scope: 'Recent events in this tab, including same-origin frames. Timings are observations, not server acceptance. No request or response bodies captured.',
       events: events.map(event => ({...event}))});

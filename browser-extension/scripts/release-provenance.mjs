@@ -1,5 +1,11 @@
 import fs from 'node:fs';
 export function releaseProvenance() {
+  if(JSON.parse(fs.readFileSync('extension/manifest.json')).version==='3.0.43.82') {
+    const promotion=JSON.parse(fs.readFileSync('reference/store-82.json'));
+    if(promotion.version!=='3.0.43.82'||promotion.sourceRuntimeSha256!==promotion.testedRuntimeSha256)throw Error('Unreviewed .82 store source');
+    for(const [name,digest] of Object.entries(promotion.files))if(name!=='manifest.json'&&digest!==promotion.localFiles[name])throw Error('Store payload differs from tested local .82: '+name);
+    return promotion;
+  }
   if(JSON.parse(fs.readFileSync('extension/manifest.json')).version==='3.0.43.72') {
     const promotion=JSON.parse(fs.readFileSync('reference/store-72.json'));
     if(promotion.version!=='3.0.43.72'||promotion.sourceRuntimeSha256!==promotion.testedRuntimeSha256)throw Error('Unreviewed .72 store source');

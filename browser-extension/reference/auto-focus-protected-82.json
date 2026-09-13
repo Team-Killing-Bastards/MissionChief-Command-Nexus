@@ -1,0 +1,6 @@
+{
+  "version": "3.0.43.82",
+  "protectedRuntimeSha256": "db3e0048daff4b18e3699ea6809b9460ad1c319332bb7eff39fc9ced3ed49a02",
+  "changes": ["Reviewed cumulative .82 runtime from the user-confirmed local candidate", "Selection and validation waits, stale patient ledger reconciliation, requirements source visibility, one coverage scan per warning pass"],
+  "testedLocalZipSha256": "59ed89781f618b77bbff8b8f56292d25b370d8082c0331b7f243f176e9381800"
+}

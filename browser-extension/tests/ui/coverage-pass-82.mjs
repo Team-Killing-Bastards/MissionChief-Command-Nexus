@@ -1,0 +1,15 @@
+import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
+const source=fs.readFileSync('extension/nexus-runtime.js','utf8');
+const start=source.indexOf('    function getVisibleInlineProblemAlertText() {');
+const end=source.indexOf('    function normaliseVisibleRequirementName(',start);
+assert.ok(start>=0&&end>start);
+let calls=0,covered=true;
+let alerts=Array.from({length:216},()=>({textContent:'We need: Ambulance Officer, Mass Casualty Equipment',innerText:'We need: Ambulance Officer, Mass Casualty Equipment'}));
+const context=vm.createContext({getCurrentMissionAlertScopes:()=>[{querySelectorAll:()=>alerts}],isElementVisible:()=>true,hasSupportedMissingPersonnelUpdate:()=>false,areCurrentMissionUpdateRowsFullySelected:()=>{calls++;return covered;}});
+vm.runInContext(source.slice(start,end),context);
+assert.equal(context.getVisibleInlineProblemAlertText(),'');assert.equal(calls,1);
+covered=false;calls=0;assert.match(context.getVisibleInlineProblemAlertText(),/We need/);assert.equal(calls,1);
+covered=true;alerts.push({textContent:'Vehicle has not enough personnel',innerText:'Vehicle has not enough personnel'});
+assert.match(context.getVisibleInlineProblemAlertText(),/not enough personnel/);
+alerts=[];calls=0;assert.equal(context.getVisibleInlineProblemAlertText(),'');assert.equal(calls,0);
+console.log('PASS 216 patient warnings use one coverage scan; subsequent passes recheck selection; real staffing shortages block.');

@@ -105,6 +105,7 @@
     const source = document.getElementById('missing_text'); if (!source) return;
     const value = text(source.textContent, 12000),key=value+'|'+!!window.__NEXUS_RULES__?.isReady(); if (key === missingKey && document.getElementById('nx-missing')) return; missingKey = key;
     const panel = box('nx-missing', source, 'Missing requirements'); if (!panel) return;
+    panel.setAttribute('data-nx-requirements-source', source.id);
     panel.replaceChildren(element('strong', 'Nexus · Missing requirements'));
     const groups = [...source.querySelectorAll('[data-requirement-type]')].slice(0, 8);
     if (!value) { panel.hidden = true; source.classList.remove('nx-original-hidden'); return; }
