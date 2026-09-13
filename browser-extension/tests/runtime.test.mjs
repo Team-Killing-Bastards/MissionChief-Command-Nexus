@@ -48,7 +48,7 @@ test('attended patient upgrades require live rows from this mission and origin',
 });
 test('custom rules never fall back to a similarly named wrong-type vehicle',()=>{
   const boxes=[{type:'102',name:'Search Dog Unit'},{type:'101',name:'Anything'},{type:'101',disabled:true},{type:'101',checked:true}];
-  const api=functions(['getAllMatchingVehicleCheckboxes'],{__NEXUS_RULES__:{lookup:()=>({vehicleTypeId:'101'})},mfApplyStoredStaffingQuarantine(){},getVehicleCheckboxSnapshot:()=>boxes,getVehicleTypeIdentifiers:i=>[i.type],sortVehicleCheckboxesByBestArrival:x=>x});
+  const api=functions(['getAllMatchingVehicleCheckboxes','getCoastguardRescueHelicopterTypeId'],{normaliseVehicleText:s=>String(s||'').toLowerCase().trim(),__NEXUS_RULES__:{lookup:()=>({vehicleTypeId:'101'})},mfApplyStoredStaffingQuarantine(){},getVehicleCheckboxSnapshot:()=>boxes,getVehicleTypeIdentifiers:i=>[i.type],sortVehicleCheckboxesByBestArrival:x=>x});
   assert.deepEqual(api.getAllMatchingVehicleCheckboxes('Custom','Search Dog Unit',false),[boxes[1]]);
   assert.deepEqual(api.getAllMatchingVehicleCheckboxes('Custom','Search Dog Unit',true),[boxes[1],boxes[3]]);
 });

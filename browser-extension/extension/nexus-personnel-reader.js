@@ -45,7 +45,7 @@
     const boundHere=!!currentVehicle&&controls.some(n=>!n.hidden&&!n.closest('.hidden,.d-none,[hidden]')&&!/display\s*:\s*none|visibility\s*:\s*hidden/i.test(n.getAttribute('style')||'')&&
       (n.classList.contains('btn-assigned')||/remove\s+binding/i.test(clean(n.textContent||n.value))));
     if(boundHere&&(!vehicle||vehicle===String(currentVehicle)))vehicle=String(currentVehicle);
-    const bound=!!vehicle||(!empty&&!!assigned&&!/^(?:assign|bind|select)$/i.test(assignedText));
+    const bound=!!vehicle||(!empty&&!!assigned&&!/^(?:assign(?: vehicle| personnel)?|bind(?: vehicle)?|select)$/i.test(assignedText));
     const identity=row.getAttribute('personal_id')||row.dataset.personalId||row.id||row.querySelector('input.personal-delete-checkbox[value]')?.value||row.querySelector('a[href*="/personals/"]')?.getAttribute('href');
     return {identity,training:[...training],trainingKnown:!!trainingCell||keys.size>0,bound,vehicle};
   }

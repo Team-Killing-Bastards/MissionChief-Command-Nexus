@@ -70,6 +70,18 @@ for(const token of ['data-mf-dashboard-tab="settings"','data-mf-dashboard-tab="d
   // actual 320px and desktop-site phone geometry and accessible actions.
   fs.copyFileSync('tests/ui/auto-focus-scroll-contract.mjs',path.join(fixture,'scripts/check-v3-panel-scroll-safety.mjs'));
   changes.push({file:'check-v3-panel-scroll-safety.mjs',reason:'Focus panel scroll contract plus required browser geometry checks'});
+  // Approved .68-.72 behaviour: large substitutes for standard, reduced storage cap,
+  // and separate cache refresh points for partial and full loading.
+  edit('check-coastguard-helicopter-exact-dispatch.mjs',
+    "context.matchesType({ typeIds: ['65'] }, '64'), false, 'Large type 65 must not satisfy a normal request'",
+    "context.matchesType({ typeIds: ['65'] }, '64'), true, 'Large type 65 satisfies a standard request'");
+  edit('check-coastguard-helicopter-exact-dispatch.mjs','normal requests use only type 64','normal requests accept type 65 or type 64');
+  edit('check-runtime-memory-maintenance-v1074.mjs','MAX_STORAGE_CHARS = 2500000;','MAX_STORAGE_CHARS = 180000;');
+  edit('check-v3-speed-transport-fairness.mjs',
+    "  1,\n  'the expensive attribute caches should reset once, after the final stable list'",
+    "  2,\n  'partial revalidation and final full loading each have one cache refresh point'");
+  edit('check-missing-on-mission-authority.mjs','  ${selectorFunction}',
+    '  function nexusFleetPreferenceTypes() { return null; }\n  ${selectorFunction}');
   fs.writeFileSync(path.join(fixture,'ADAPTERS.json'),JSON.stringify(changes,null,2)+'\n');
   return changes;
 }

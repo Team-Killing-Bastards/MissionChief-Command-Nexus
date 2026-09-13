@@ -3,8 +3,8 @@ import {createRequire} from 'node:module';
 import {frameGuard,controllerBridge,startGuard} from './prepare-alliance-57.mjs';
 const acorn=createRequire(import.meta.url)('internal/deps/acorn/acorn/dist/acorn');
 export function controllerProtectedDigest(source) {
-  // Only these exact reviewed .57 additions are removed. Any other runtime
-  // change still fails the protected .55 executable-AST identity check.
+  // Strip the exact reviewed UI additions before comparing against the
+  // release-specific protected executable-AST baseline.
   source=source.replace(frameGuard,'').replace(controllerBridge,'').replaceAll(startGuard,'');
   const ast=acorn.parse(source.replaceAll('3.0.43.55','3.0.43.VERSION').replaceAll('3.0.43.56','3.0.43.VERSION').replaceAll('3.0.43.57','3.0.43.VERSION').replaceAll('3.0.43.58','3.0.43.VERSION').replaceAll('3.0.43.59','3.0.43.VERSION'),{ecmaVersion:'latest'});
   const changed=new Set(['injectStyles','buildUi','render','registerRecoverableMissionSkip']);

@@ -25,14 +25,15 @@
         group.trainingTarget+=target;
         const detail={id:String(v.id),name:String(v.name||`${type.name} #${v.id}`).slice(0,256),assigned:null,max,qualified:null,target,status:'unknown'};
         group.coverageDetails.push(detail);
-        if(!staff||staff.partial||partial||!number(v.assigned)){group.unknown++;continue;}
-        const assigned=assignedCounts.get(String(v.id))||0,qualified=qualifiedCounts.get(String(v.id))||0;
-        if(assigned!==v.assigned||v.assigned>max){group.unknown++;continue;}
+        const verified=staff?.vehicleAssignments?.[String(v.id)];
+        if(!verified&&(!staff||staff.partial||partial||!number(v.assigned))){group.unknown++;continue;}
+        const assigned=verified?verified.assigned:assignedCounts.get(String(v.id))||0,qualified=verified?verified.people.filter(p=>p.training.some(t=>group.aliases.has(normal(t)))).length:qualifiedCounts.get(String(v.id))||0;
+        if((!verified&&assigned!==v.assigned)||assigned>max){group.unknown++;continue;}
         detail.assigned=assigned;detail.qualified=qualified;
         // Spare specialists at another vehicle or the station cannot fill this vehicle's places.
         group.qualifiedAssigned+=Math.min(qualified,target);
-        const need=rule.all?Math.max(type.min,v.assigned):minimum;
-        if(v.assigned>=type.min&&qualified>=need)group.ready++;
+        const need=rule.all?Math.max(type.min,assigned):minimum;
+        if(assigned>=type.min&&qualified>=need)group.ready++;
         if(assigned===max&&qualified>=target){group.full++;detail.status='full';}
         else detail.status=assigned<max?'underfilled':'training-shortfall';
       }

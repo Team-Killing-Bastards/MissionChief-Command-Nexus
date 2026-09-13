@@ -35,7 +35,7 @@ test('real runtime selector uses exact IDs and rejects wrong-type names, checked
   for(const[name,id]of exported){
     const match={types:[Number(id)],name:'Renamed by player'},wrong={types:['999'],name:bridge.api.lookup(name).vehicleName};
     const checked={types:[id],checked:true},disabled={types:[id],disabled:true};
-    const api=functions(['getAllMatchingVehicleCheckboxes'],{__NEXUS_RULES__:bridge.api,mfApplyStoredStaffingQuarantine(){},getVehicleCheckboxSnapshot:()=>[wrong,disabled,checked,match],getVehicleTypeIdentifiers:i=>i.types,sortVehicleCheckboxesByBestArrival:x=>x});
+    const api=functions(['getAllMatchingVehicleCheckboxes','getCoastguardRescueHelicopterTypeId'],{normaliseVehicleText:s=>String(s||'').toLowerCase().trim(),__NEXUS_RULES__:bridge.api,mfApplyStoredStaffingQuarantine(){},getVehicleCheckboxSnapshot:()=>[wrong,disabled,checked,match],getVehicleTypeIdentifiers:i=>i.types,sortVehicleCheckboxesByBestArrival:x=>x});
     assert.deepEqual(api.getAllMatchingVehicleCheckboxes(name,'wrong display name',false),[match]);
     assert.deepEqual(api.getAllMatchingVehicleCheckboxes(name,'',true,true),[disabled,checked,match]);
   }

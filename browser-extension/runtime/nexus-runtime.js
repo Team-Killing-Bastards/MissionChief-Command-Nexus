@@ -13,8 +13,8 @@
       parentBuild = window.top.__NEXUS_EXTENSION__?.build || '';
     }
   } catch {}
-  if (parentBuild && parentBuild !== '3.0.43.59') {
-    window.__NEXUS_EXTENSION__ = Object.freeze({ build: '3.0.43.59', sourceVersion: '3.0.43',
+  if (parentBuild && parentBuild !== '3.0.43.72') {
+    window.__NEXUS_EXTENSION__ = Object.freeze({ build: '3.0.43.72', sourceVersion: '3.0.43',
       status: 'parent-build-mismatch', parentBuild, startedAt: Date.now() });
     try {
       window.top.dispatchEvent(new window.top.CustomEvent('nexus-extension-update-required-v1', {
@@ -25,7 +25,7 @@
   }
   const alreadyRunning = Boolean(window.__MCN_V3_CONTROLLER__ || window.__MCN_BOOT_TRACE__);
   window.__NEXUS_EXTENSION__ = Object.freeze({
-    build: '3.0.43.59',
+    build: '3.0.43.72',
     sourceVersion: '3.0.43',
     status: alreadyRunning ? 'existing-runtime' : 'loaded',
     startedAt: Date.now()
@@ -268,7 +268,7 @@ function createNexusPerformance(env) {
     readRegistry, vehicleSignature, getRequirements, putRequirements, record, count, dispose,
     receiveCount(key, amount) { counters[key] = (counters[key] || 0) + amount; },
     receiveTiming(item) { timings.push({ ...item }); if (timings.length > 100) timings.shift(); },
-    snapshot() { return { build: '3.0.43.59', counters: { ...counters }, longTasks: { ...longTasks }, timings: timings.map(item => ({ ...item })), retainedDocuments: documents.size, registryRetained: !!registryValue, requirementTtlMs: REQUIREMENT_TTL, maxRequirementRecords: MAX_RECORDS }; }
+    snapshot() { return { build: '3.0.43.72', counters: { ...counters }, longTasks: { ...longTasks }, timings: timings.map(item => ({ ...item })), retainedDocuments: documents.size, registryRetained: !!registryValue, requirementTtlMs: REQUIREMENT_TTL, maxRequirementRecords: MAX_RECORDS }; }
   });
 }
 
@@ -1425,6 +1425,7 @@ return '';
 }
 }
 function resetRunStats() {
+globalThis.__NEXUS_SELECTIVE_LOADING__ = null;
 state.runStartedAt = nowIso();
 state.runStoppedAt = '';
 state.runMissionIds = [];
@@ -1803,6 +1804,7 @@ function startMissionTiming(missionId, missionName = '', source = 'worker-load')
 const id = String(missionId || '');
 if (!id) return;
 if (state.activeMissionTiming?.missionId === id) return;
+try { globalThis.__NEXUS_LOCAL_DISPATCH_TRACE__?.record('controller-mission-start', {missionId: id, previousMissionId: state.activeMissionTiming?.missionId || '', source}); } catch {}
 if (state.activeMissionTiming) finaliseActiveMissionTiming('next-mission-loaded');
 const now = Date.now();
 state.activeMissionTiming = {
@@ -1825,6 +1827,7 @@ if (!record) return;
 const now = Date.now();
 const add = (key) => {
 if (!record.milestones[key]) {
+try { globalThis.__NEXUS_LOCAL_DISPATCH_TRACE__?.record('mission-milestone', {missionId: record.missionId, milestone: key, source}); } catch {}
 record.milestones[key] = { at: new Date(now).toISOString(), atMs: now, source, text: text.slice(0, 280) };
 }
 };
@@ -1863,6 +1866,7 @@ function armPostDispatchWatchdog(record, source = 'worker', statusText = '', sta
 const missionId = String(record?.missionId || state.currentMissionId || '');
 if (!missionId || !state.wanted || state.stopping) return false;
 if (state.postDispatchWatchdog?.missionId === missionId) return false;
+try { globalThis.__NEXUS_LOCAL_DISPATCH_TRACE__?.record('watchdog-armed', {missionId, source, softAfterMs: POST_DISPATCH_SOFT_RECOVERY_MS, hardAfterMs: POST_DISPATCH_HARD_RECOVERY_MS}); } catch {}
 state.postDispatchWatchdog = {
 missionId,
 missionName: cleanMissionCaption(record?.missionName || state.currentMissionName || missionNameForId(missionId)),
@@ -1895,6 +1899,7 @@ return true;
 function clearPostDispatchWatchdog(reason = '') {
 const watchdog = state.postDispatchWatchdog;
 if (!watchdog) return false;
+try { globalThis.__NEXUS_LOCAL_DISPATCH_TRACE__?.record('watchdog-cleared', {missionId: watchdog.missionId, reason, elapsedMs: postDispatchEffectiveElapsed(watchdog), softRecovered: watchdog.softRecovered}); } catch {}
 state.postDispatchWatchdog = null;
 if (
 reason &&
@@ -1934,6 +1939,7 @@ effectiveElapsedMs: postDispatchEffectiveElapsed(watchdog),
 pausedMs: Number(watchdog?.pausedMs || 0),
 ...data,
 };
+try { globalThis.__NEXUS_LOCAL_DISPATCH_TRACE__?.record('watchdog-recovery', {missionId: event.missionId, level, elapsedMs: event.effectiveElapsedMs, pausedMs: event.pausedMs, guardReleased: event.guardReleased, action: event.action}); } catch {}
 state.postDispatchRecoveryHistory.push(event);
 if (state.postDispatchRecoveryHistory.length > POST_DISPATCH_RECOVERY_HISTORY_LIMIT) {
 state.postDispatchRecoveryHistory.splice(
@@ -1976,11 +1982,15 @@ return false;
 const now = Date.now();
 const pauseReason = postDispatchPauseReason(href, context);
 if (pauseReason) {
-if (!watchdog.pausedAt) watchdog.pausedAt = now;
+if (!watchdog.pausedAt) {
+try { globalThis.__NEXUS_LOCAL_DISPATCH_TRACE__?.record('watchdog-paused', {missionId: watchdog.missionId, pauseReason}); } catch {}
+watchdog.pausedAt = now;
+}
 watchdog.pauseReason = pauseReason;
 return false;
 }
 if (watchdog.pausedAt) {
+try { globalThis.__NEXUS_LOCAL_DISPATCH_TRACE__?.record('watchdog-resumed', {missionId: watchdog.missionId, pauseMs: Math.max(0, now - watchdog.pausedAt)}); } catch {}
 watchdog.pausedMs += Math.max(0, now - watchdog.pausedAt);
 watchdog.pausedAt = 0;
 watchdog.pauseReason = '';
@@ -6219,6 +6229,8 @@ if (Date.now() - state.priorityPendingSince < TOP_PRIORITY_STABLE_MS) return;
 redirectWorkerToPriority(target, currentMissionId);
 }
 function createWorker(url, role = 'MISSION_A') {
+try { globalThis.__NEXUS_LOCAL_DISPATCH_TRACE__?.record('worker-navigation-request', {missionId: missionIdFromUrl(url), role}); } catch {}
+
 if (role === 'MISSION_A' && typeof canonicalMissionWorkerUrl === 'function') url = canonicalMissionWorkerUrl(url);
 clearPostDispatchWatchdog('worker-recreated');
 removeWorker(false);
@@ -6523,6 +6535,8 @@ clearPromotedWorkTracking();
 }
 function adoptWorkerDocument(doc, href = '', source = 'worker') {
 if (!doc || state.workerDocument === doc) return false;
+try { globalThis.__NEXUS_LOCAL_DISPATCH_TRACE__?.record('worker-document-observed', {missionId: missionIdFromUrl(href), source}); } catch {}
+
 releaseRetiredWorkerDocument();
 disconnectAirfieldOperationsSupervisorObservers();
 const incomingMissionId = missionIdFromUrl(href);
@@ -7165,8 +7179,9 @@ return;
 }
 if (elapsed >= NEXUS_DISCOVERY_TIMEOUT_MS) {
 const bootstrap = captureBootstrap('fatal-after-clean-a-only-retry', elapsed);
+const startupError = bootstrap.trace?.errors?.find(item => item.type === 'mission-finder-startup');
 setError(
-'Command Nexus Auto Mode was not found in the background worker.',
+startupError ? `Mission Finder startup failed: ${String(startupError.message || '').slice(0, 240)}` : 'Command Nexus Auto Mode was not found in the background worker.',
 `Embedded Mission Finder ${MISSION_FINDER_VERSION} still did not mount after ${state.activeBootstrapRescueAttempts} clean A-only retry for mission ${missionId}. Bootstrap trace: ${bootstrap.trace?.events?.map(item => item.stage).join(' > ') || 'userscript trace absent'}. No dispatch was attempted.`
 );
 return;
@@ -8511,8 +8526,11 @@ excludeMissionId: state.lowQueuePaused ? state.lowQueueTriggerMissionId : '',
 });
 return {
 generatedAt: nowIso(),
+localDispatchTrace: globalThis.__NEXUS_LOCAL_DISPATCH_TRACE__?.snapshot() || null,
 extensionRequirementRules: globalThis.__NEXUS_RULES__?.snapshot() || null,
 extensionPerformance: globalThis.__NEXUS_PERFORMANCE__?.snapshot() || null,
+selectiveVehicleLoading: globalThis.__NEXUS_SELECTIVE_LOADING__ || null,
+storageDiagnostics: globalThis.__NEXUS_STORAGE_GUARD__?.snapshot() || null,
 memoryDiagnostics: nexusMemoryDiagnostics.snapshot(),
 extensionLogger: globalThis.__NEXUS_FULL_LOGGER__?.snapshot() || null,
 controllerVersion: VERSION,
@@ -10586,7 +10604,8 @@ function installNexusFullLogger() {
   }
   function persist() {
     savedTimer = null; prune();
-    try { if (player) localStorage.setItem('nexus-full-missions-v1:' + player, JSON.stringify(registry)); } catch {}
+    // No persisted duplicate: switchPlayer deliberately rebuilds from the live map.
+    // Completed analytics remain in their existing durable reporting pipeline.
   }
   function switchPlayer(id) {
     refreshActivitySession();
@@ -10609,7 +10628,7 @@ function installNexusFullLogger() {
     const who = identity(); if (!who.player) return false; switchPlayer(who.player);
     const record = cleanRecord(raw); if (!record) return false;
     const capturedAt = Date.now();
-    record.clientVersion = '3.0.43.59';
+    record.clientVersion = '3.0.43.72';
     if (kind === 'mission') {
       if (!/^\d+$/.test(record.missionId || '')) return false;
       const old = registry[record.missionId] || {};
@@ -10641,7 +10660,7 @@ function installNexusFullLogger() {
     return true;
   }
   function activity(action, extra = {}) {
-    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.59', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
+    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.72', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
   }
   function current(eventType, options = {}) {
     const snapshot = getMissionLoggerMissionSnapshot();
@@ -10815,7 +10834,7 @@ function installNexusFullLogger() {
     finally {clearTimeout(timeout);timers.delete(timeout);creditAbort=null;creditBusy=false;}
   }
   function session(action) {
-    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.59',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
+    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.72',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
   }
   function tick() {
     try {
@@ -17746,6 +17765,39 @@ bootMark('heavy-runtime-start');
         );
         return stationVehicles.length;
     }
+    // Shared writer owned by the existing register tool, including its live cache.
+    window.__NEXUS_CREW_REGISTER__ = {
+        ready() {
+            if (PERSONNEL_STATE.running) throw new Error('Finish or stop the personnel/register tool before assigning crew');
+            return true;
+        },
+        save(snapshot) {
+            this.ready();
+            const {vehicleId, vehicleTypeId, buildingId, profiles} = snapshot || {};
+            if (![vehicleId, vehicleTypeId, buildingId].every(id => /^\d+$/.test(String(id))) ||
+                !Array.isArray(profiles) || profiles.length > 100 ||
+                profiles.some(p => !Array.isArray(p) || p.some(code => typeof code !== 'string' || !/^[a-zA-Z0-9_]+$/.test(code)))) {
+                throw new Error('Verified crew record is incomplete');
+            }
+            // Finish pending writes, then merge with the latest saved register.
+            if (PERSONNEL_TRAINING_REGISTRY_DIRTY) {
+                const pending = flushPersonnelTrainingRegistry(true);
+                if (!pending.saved) throw new Error('Training register could not be saved');
+            }
+            PERSONNEL_TRAINING_REGISTRY_CACHE = null;
+            publishPersonnelVehicleTrainingRegistry({
+                station: {href: `/buildings/${buildingId}`, displayName: String(snapshot.stationName || '').slice(0, 256)},
+                vehicles: [{vehicleId: String(vehicleId), vehicleTypeId: String(vehicleTypeId), name: String(snapshot.vehicleName || '').slice(0, 256), assignmentPersonnelRowsSeen: snapshot.rowsSeen}],
+                personnel: profiles.map(trainingCodes => ({assignedVehicleId: String(vehicleId), trainingCodes})),
+                source: 'personnel-register-exact-assign-crew',
+                pruneMissingVehicles: false
+            });
+            const result = flushPersonnelTrainingRegistry(false);
+            if (!result.saved) throw new Error('Crew assigned, but training register could not be saved');
+            return true;
+        }
+    };
+
     function getPersonnelAssignmentIndex(personnel) {
         if (!Array.isArray(personnel)) {
             return { byVehicleId: new Map(), byVehicleName: new Map() };
@@ -22294,11 +22346,13 @@ bootMark('heavy-runtime-start');
     const MF_RECORDER_KEY = 'mf_issue_recorder_v1';
     const MF_RECORDER_ENABLED_KEY = 'mf_issue_recorder_enabled_v1';
     const MF_RECORDER_MAX_ENTRIES = 40;
-    const MF_RECORDER_MAX_BYTES = 1500000;
+    const MF_RECORDER_MAX_BYTES = 60000;
     let mfIssueRecorderEnabled = false;
 
     if (!mfV3DormantPreload) {
-        localStorage.setItem(MF_RECORDER_ENABLED_KEY, 'false');
+        // Optional recorder preference must never prevent Mission Finder startup.
+        try { localStorage.setItem(MF_RECORDER_ENABLED_KEY, 'false'); } catch {}
+
     }
     let mfIssueRecorderLastDangerFingerprint = '';
     let mfIssueRecorderLastDangerAt = 0;
@@ -22308,6 +22362,7 @@ bootMark('heavy-runtime-start');
     const DEFAULT_MISSION_READY_DELAY = 1000;
     const MF_READY_DELAY_10_6_58_MIGRATION_KEY =
         'mf_ready_delay_10_6_58_migrated';
+    try {
     if (
         !mfV3DormantPreload &&
         localStorage.getItem(
@@ -22335,6 +22390,7 @@ bootMark('heavy-runtime-start');
             'true'
         );
     }
+    } catch {} // Keep the current/default delay when optional migration cannot be persisted.
     let missionReadyDelayMs = parseInt(
         localStorage.getItem(
             'mf_mission_ready_delay_ms'
@@ -22446,7 +22502,7 @@ bootMark('heavy-runtime-start');
             let encoded = JSON.stringify(bounded);
             while (
                 encoded.length > MF_RECORDER_MAX_BYTES &&
-                bounded.length > 1
+                bounded.length > 0
             ) {
                 bounded = bounded.slice(1);
                 encoded = JSON.stringify(bounded);
@@ -22456,7 +22512,7 @@ bootMark('heavy-runtime-start');
             try {
                 localStorage.setItem(
                     MF_RECORDER_KEY,
-                    JSON.stringify(entries.slice(-10))
+                    '[]'
                 );
             } catch (_innerError) {}
         }
@@ -22636,11 +22692,11 @@ bootMark('heavy-runtime-start');
     const MF_UNIT_FINDER_DIAGNOSTICS_KEY =
         'mf_unit_finder_diagnostics_v1';
     const MF_UNIT_FINDER_DIAGNOSTICS_LIMIT = 120;
-    const MF_UNIT_FINDER_DIAGNOSTICS_MAX_STORAGE_CHARS = 2500000;
+    const MF_UNIT_FINDER_DIAGNOSTICS_MAX_STORAGE_CHARS = 180000;
     const MF_STAFFING_FAILURE_HISTORY_KEY =
         'mf_staffing_failure_history_v1';
     const MF_STAFFING_FAILURE_HISTORY_LIMIT = 600;
-    const MF_STAFFING_FAILURE_MAX_STORAGE_CHARS = 900000;
+    const MF_STAFFING_FAILURE_MAX_STORAGE_CHARS = 60000;
     const MF_STAFFING_QUARANTINE_KEY =
         'mf_staffing_vehicle_quarantine_v1';
     const MF_STAFFING_QUARANTINE_LIMIT = 80;
@@ -23688,7 +23744,9 @@ return snapshot;
     const MF_FIRE_ENGINE_TYPE_IDS = new Set([
         '0',
         '16',
-        '17'
+        '17',
+        '37',
+        '38'
     ]);
     const MF_FIRE_ENGINE_REQUIREMENT_NAMES = new Set([
         'pump',
@@ -24694,7 +24752,10 @@ function isRoadRailUnitVehicleCheckbox(input) {
         const value = [originalName, mappedName].map(normaliseVehicleText).find(name => /^(?:required )?(?:\d+ )?(?:cg|coastguard) rescue helicopters?(?: \(20%\)| \(large\)| large)?$/.test(name));
         return value ? (value.includes('large') ? '65' : '64') : '';
     }
-    function isCoastguardRescueHelicopterVehicleCheckbox(input, typeId) { return ['64', '65'].includes(typeId) && getVehicleTypeIdentifiers(input).includes(typeId); }
+    function isCoastguardRescueHelicopterVehicleCheckbox(input, typeId) {
+        const allowed = typeId === '64' ? ['65', '64'] : typeId === '65' ? ['65'] : [];
+        return getVehicleTypeIdentifiers(input).map(String).some(id => allowed.includes(id));
+    }
     function getPrvSrvRequirementTypeId(originalName, mappedName) {
         const names = [originalName, mappedName].map(value =>
             normaliseVehicleText(value).replace(/^(?:required\s+)?(?:\d+\s+)?/, '')
@@ -26035,14 +26096,45 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 normalised === 'marine eod response vehicles';
         });
     }
+    // Preferences apply only to a capability's eligible types. Explicit rules still win.
+    function nexusFleetPreferenceTypes(originalName, mappedName) {
+        if (isFireEngineRequirement(originalName, mappedName)) return ['38', '37', '16', '0', '17'];
+        const name = normaliseVehicleText(originalName || mappedName)
+            .replace(/^(?:required|requires|require)\s+/, '').replace(/\s+x\s*\d+$/, '');
+        if (/^rescue pumps?$/.test(name)) return ['38', '16', '17'];
+        if (/^(?:rescue support units?(?: \(rsu\))?|rescue support vehicles?|rescue support units? or rescue pumps?)$/.test(name)) {
+            return ['38', '16', '17', '4'];
+        }
+        if (/^(?:aerial appliances?(?: trucks?)?|carp|combined aerial rescue pumps?)$/.test(name)) return ['17', '2'];
+        return null;
+    }
+    function nexusFleetMatches(types, includeChecked, includeDisabled) {
+        const ranks = new Map();
+        const rank = input => {
+            if (ranks.has(input)) return ranks.get(input);
+            const ids = getVehicleTypeIdentifiers(input).map(String);
+            const value = types.findIndex(id => ids.includes(id));
+            ranks.set(input, value);
+            return value;
+        };
+        const eligible = getVehicleCheckboxSnapshot().filter(input =>
+            (includeDisabled || !input.disabled) && (includeChecked || !input.checked) && rank(input) >= 0);
+        // Stable sort retains the earliest arrival within each preferred type.
+        return sortVehicleCheckboxesByBestArrival(eligible).sort((a, b) => rank(a) - rank(b));
+    }
 function getAllMatchingVehicleCheckboxes(originalName, mappedName, includeChecked, includeDisabled = false) {
 mfApplyStoredStaffingQuarantine();
+// Coastguard substitution is authoritative, including older exact type-64 saved rules.
+const helicopterRequirement = getCoastguardRescueHelicopterTypeId(originalName, mappedName);
+if (helicopterRequirement) return nexusFleetMatches(helicopterRequirement === '64' ? ['65', '64'] : ['65'], includeChecked, includeDisabled);
 const customRule = globalThis.__NEXUS_RULES__?.lookup(originalName);
 if (customRule) {
 return sortVehicleCheckboxesByBestArrival(getVehicleCheckboxSnapshot().filter(input =>
 (includeDisabled || !input.disabled) && (includeChecked || !input.checked) &&
 getVehicleTypeIdentifiers(input).map(String).includes(customRule.vehicleTypeId)));
 }
+const fleetTypes = nexusFleetPreferenceTypes(originalName, mappedName);
+if (fleetTypes) return nexusFleetMatches(fleetTypes, includeChecked, includeDisabled);
 if (isFireOperationalSupportRequirement(originalName, mappedName)) {
 return sortVehicleCheckboxesByBestArrival(getVehicleCheckboxSnapshot().filter(input => {
 if (!includeDisabled && input.disabled) return false;
@@ -26083,11 +26175,6 @@ return eodResponseMode === 'marine'
 : isEodResponseVehicleCheckbox(input);
 })
 );
-}
-const coastguardHelicopterTypeId = getCoastguardRescueHelicopterTypeId(originalName, mappedName);
-if (coastguardHelicopterTypeId) {
-return sortVehicleCheckboxesByBestArrival(getVehicleCheckboxSnapshot().filter(input =>
-(includeDisabled || !input.disabled) && (includeChecked || !input.checked) && isCoastguardRescueHelicopterVehicleCheckbox(input, coastguardHelicopterTypeId)));
 }
 const prvSrvTypeId = getPrvSrvRequirementTypeId(
 originalName,
@@ -26756,6 +26843,10 @@ return sortVehicleCheckboxesByBestArrival(matches);
         return getAllMatchingVehicleCheckboxes(originalName, mappedName, false);
     }
     function countSelectedMatchingVehicles(originalName, mappedName) {
+        if (!globalThis.__NEXUS_RULES__?.lookup(originalName)) {
+            const fleetTypes = nexusFleetPreferenceTypes(originalName, mappedName);
+            if (fleetTypes) return nexusFleetMatches(fleetTypes, true, true).filter(input => input.checked).length;
+        }
         if (isFireOperationalSupportRequirement(originalName, mappedName)) {
             return getVehicleCheckboxSnapshot().filter(input =>
                 input.checked && isFireOperationalSupportUnitCheckbox(input)).length;
@@ -27051,6 +27142,7 @@ return sortVehicleCheckboxesByBestArrival(matches);
         return true;
     }
     function findUnitButton(mappedName, originalName) {
+        if (nexusFleetPreferenceTypes(originalName, mappedName)) return getAllMatchingVehicleCheckboxes(originalName, mappedName, false)[0] || null;
         if (globalThis.__NEXUS_RULES__?.lookup(originalName)) return getAllMatchingVehicleCheckboxes(originalName, mappedName, false)[0] || null;
         if (isFireOperationalSupportRequirement(originalName, mappedName)) {
             return sortVehicleCheckboxesByBestArrival(getVehicleCheckboxSnapshot().filter(input =>
@@ -31087,7 +31179,8 @@ return sortVehicleCheckboxesByBestArrival(matches);
             if (
                 elapsed >= minimumWait &&
                 stableElapsed >= stableFor &&
-                !isLoadingBarVisible()
+                (!isLoadingBarVisible() || (nexusSelectiveLoadCurrent?.partial === true &&
+                    nexusSelectiveLoadCurrent.mission === getLocalMissionInstanceKey() && !isVehicleListLoadingIndicatorVisible()))
             ) {
                 if (mfDebugEnabled) {
                     debugLog(
@@ -32650,7 +32743,8 @@ function installNexusFullLogger() {
   }
   function persist() {
     savedTimer = null; prune();
-    try { if (player) localStorage.setItem('nexus-full-missions-v1:' + player, JSON.stringify(registry)); } catch {}
+    // No persisted duplicate: switchPlayer deliberately rebuilds from the live map.
+    // Completed analytics remain in their existing durable reporting pipeline.
   }
   function switchPlayer(id) {
     refreshActivitySession();
@@ -32673,7 +32767,7 @@ function installNexusFullLogger() {
     const who = identity(); if (!who.player) return false; switchPlayer(who.player);
     const record = cleanRecord(raw); if (!record) return false;
     const capturedAt = Date.now();
-    record.clientVersion = '3.0.43.59';
+    record.clientVersion = '3.0.43.72';
     if (kind === 'mission') {
       if (!/^\d+$/.test(record.missionId || '')) return false;
       const old = registry[record.missionId] || {};
@@ -32705,7 +32799,7 @@ function installNexusFullLogger() {
     return true;
   }
   function activity(action, extra = {}) {
-    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.59', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
+    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.72', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
   }
   function current(eventType, options = {}) {
     const snapshot = getMissionLoggerMissionSnapshot();
@@ -32879,7 +32973,7 @@ function installNexusFullLogger() {
     finally {clearTimeout(timeout);timers.delete(timeout);creditAbort=null;creditBusy=false;}
   }
   function session(action) {
-    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.59',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
+    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.72',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
   }
   function tick() {
     try {
@@ -40111,9 +40205,10 @@ let sessionRuntimeTicker = null;
             );
         const currentId =
             String(currentVehicleId || '');
+        const allTrainingRules = [{"key":"gw_gefahrgut","name":"HazMat Unit","aliases":["HazMat Unit","HazMat"],"all":true,"min":0},{"key":"critical_care","name":"Critical care","aliases":["Critical care"],"all":true,"min":1},{"key":"polizeihubschrauber","name":"Police aviation","aliases":["Police aviation"],"all":true,"min":1},{"key":"k9","name":"Dog handling","aliases":["Dog handling"],"all":true,"min":1},{"key":"swat","name":"Firearms training","aliases":["Firearms training"],"all":true,"min":1},{"key":"elw2","name":"Level 1 Incident Commander Training","aliases":["Level 1 Incident Commander Training","Mobile command"],"all":true,"min":0},{"key":"coresponder","name":"Co-Responder","aliases":["Co-Responder","Co-Responder Training"],"all":true,"min":1},{"key":"traffic_police","name":"Roads Policing Officer","aliases":["Roads Policing Officer","Roads Policing Officer Training"],"all":true,"min":1},{"key":"hazard_response_ems","name":"HART Training","aliases":["HART Training"],"all":true,"min":1},{"key":"elw2_ems","name":"Tactical Command Course","aliases":["Tactical Command Course"],"all":true,"min":1},{"key":"special_operation_response","name":"SORT","aliases":["SORT","SORT Training"],"all":true,"min":1},{"key":"ems_mobile_command","name":"Ambulance Officer","aliases":["Ambulance Officer"],"all":true,"min":1},{"key":"pump","name":"High Volume Pump Training","aliases":["High Volume Pump Training"],"all":true,"min":0},{"key":"police_horse","name":"Mounted Officers","aliases":["Mounted Officers","Mounted Training"],"all":true,"min":1},{"key":"gw_hoehenrettung","name":"Rope Rescue Training","aliases":["Rope Rescue Training"],"all":true,"min":1},{"key":"coastal_command","name":"Coastal Command Training","aliases":["Coastal Command Training"],"all":true,"min":1},{"key":"flood_equipment","name":"Flood First Responder Training","aliases":["Flood First Responder Training"],"all":true,"min":0},{"key":"coastal_mud_rescue","name":"Mud Rescue Training","aliases":["Mud Rescue Training"],"all":true,"min":0},{"key":"coastal_rescue_pilot","name":"Coastal Air Rescue Pilot","aliases":["Coastal Air Rescue Pilot","Coastal Air Rescue Operations Training"],"all":true,"min":4},{"key":"gw_wasserrettung","name":"Lifeguard Training","aliases":["Lifeguard Training"],"all":true,"min":0},{"key":"ocean_navigation","name":"Lifeboat Operator","aliases":["Lifeboat Operator","Lifeboat Operations Training"],"all":true,"min":5},{"key":"jetski","name":"Jet Ski Handling","aliases":["Jet Ski Handling"],"all":true,"min":0},{"key":"hover_boat_elw","name":"Hovercraft Commander Training","aliases":["Hovercraft Commander Training"],"all":true,"min":1},{"key":"arff","name":"ARFF","aliases":["ARFF","Aircraft Rescue and Firefighting"],"all":true,"min":1},{"key":"search_and_rescue_command","name":"Search Management Training","aliases":["Search Management Training"],"all":true,"min":1},{"key":"drone","name":"Drone Operator","aliases":["Drone Operator","Drone Operator Training"],"all":true,"min":1},{"key":"midwife","name":"Midwife","aliases":["Midwife","Midwifery Training"],"all":true,"min":1},{"key":"paramedic_advanced","name":"Specialist Paramedic","aliases":["Specialist Paramedic","Specialist Paramedic Training"],"all":true,"min":1},{"key":"rescue_dogs","name":"Dog handler","aliases":["Dog handler","Dog handling"],"all":true,"min":1},{"key":"railway_fire","name":"Railway Firefighter","aliases":["Railway Firefighter","Railway Fire"],"all":true,"min":1},{"key":"railway_police_command","name":"Mobile Operations Manager","aliases":["Mobile Operations Manager","Mobile Operations Management"],"all":true,"min":1},{"key":"bomb_disposal_command","name":"EOD Commander","aliases":["EOD Commander"],"all":true,"min":1},{"key":"bomb_disposal","name":"Bomb Disposal","aliases":["Bomb Disposal"],"all":true,"min":1},{"key":"bomb_disposal_diver","name":"Marine Bomb Disposal","aliases":["Marine Bomb Disposal"],"all":true,"min":1}];
         const supportedCodes =
             new Set(
-                MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES
+                [...MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES, ...allTrainingRules.map(rule => rule.key)]
             );
         const trainingCounts = {};
         const trainingCombinationCounts = {};
@@ -40246,6 +40341,12 @@ let sessionRuntimeTicker = null;
             ) {
                 rowCodes.add('railway_police');
             }
+            // Training text fallback is restricted to the education cell, not names/status.
+            const header = personnelTable.tHead?.rows[0];
+            const educationIndex = [...(header?.cells || [])].findIndex(cell => /^(education|training|schooling|qualifications?)$/i.test(cell.textContent.trim()));
+            const educationCell = row.cells[educationIndex >= 0 ? educationIndex : 1];
+            const labels = String(educationCell?.innerHTML || '').replace(/<br\s*\/?\s*>/gi, ',').replace(/<[^>]*>/g, '').split(/[,;\n]/).map(value => value.replace(/\s+/g, ' ').trim().toLowerCase());
+            for (const rule of allTrainingRules) if ([rule.name, ...rule.aliases].some(alias => labels.includes(alias.toLowerCase()))) rowCodes.add(rule.key);
             const trainingProfile =
                 Array.from(rowCodes)
                     .map(String)
@@ -42172,11 +42273,12 @@ registryVehicleCount
                 const row = vehicleLoadState.rows.find(r => r.originalName === originalName && r.mappedName === mappedName);
                 if (row) {
                     row.status = assigned >= required ? 'assigned' : 'retrying';
-                    renderVehicleLoadList();
                 }
             }
         }
+        if (assigned > 0) renderVehicleLoadList();
         const strictVehicleTypeOnly = !!(
+            nexusFleetPreferenceTypes(originalName, mappedName) ||
             globalThis.__NEXUS_RULES__?.lookup(originalName) ||
             nexusIsFlexibleSarSupportRequirement(originalName) ||
             isAmbulanceTransportRequest(originalName, mappedName) ||
@@ -54256,6 +54358,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
                 nexusHasAttendedPatientUpgrade(earlyUpdateRows);
             // Fresh patient alerts retain full requirements; attended patient upgrades use live shortages.
             let prefetchedAttachmentRowsPromise = null;
+            let nexusUsedPartialList = false;
             const staffingBlockedAtFirstGate =
                 detectAndLatchStaffingBlock(
                     'after-update-first-gate'
@@ -54273,6 +54376,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
                         : readLiveMissionRequirements();
                 const autoVehicleLoadState =
                     await ensureVehicleListLoaded({
+                        canStopEarly: hasEarlyCurrentMissionUpdateAuthority ? null : nexusMakeSelectiveProbe(prefetchedAttachmentRowsPromise),
                         stableTimeoutMs:
                             MF_AUTO_VEHICLE_LIST_STABLE_TIMEOUT_MS,
                         stableForMs:
@@ -54283,6 +54387,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
                             MF_AUTO_VEHICLE_LIST_LOAD_TIMEOUT_MS,
                         requireNonZero: true
                     });
+                nexusUsedPartialList = autoVehicleLoadState.partial === true;
                 if (!autoVehicleLoadState.ready) {
                     vehicleLoadState.ready = false;
                     changeDispatchBoxColor(false);
@@ -54342,6 +54447,27 @@ async function handleAutoPrisonerReleaseAfterActions() {
                         String(error)
                     );
                     changeDispatchBoxColor(false);
+                }
+                if (nexusUsedPartialList && !vehicleLoadState.ready &&
+                    autoModeRunning && !isManualAutoStopActive() &&
+                    getCurrentMissionIdForQueueRestart() === autoCycleMissionId &&
+                    isCurrentMissionExecutionOwner('selective full-list fallback')) {
+                    try {
+                    const full = await ensureVehicleListLoaded({requireNonZero:true});
+                    if (full.ready && getCurrentMissionIdForQueueRestart() === autoCycleMissionId &&
+                        autoModeRunning && !isManualAutoStopActive()) {
+                        clearSelectionGuards();
+                        await withTimeout(handleCombinedLogic({vehicleListAlreadyLoaded:true,
+                            attachmentRowsPromise:prefetchedAttachmentRowsPromise,
+                            selectionRunState:autoSelectionRunState}), 45000, 'Full-list selection fallback');
+                    } else {
+                        changeDispatchBoxColor(false);
+                    }
+                    } catch (error) {
+                        changeDispatchBoxColor(false);
+                        stopAutoMode('Auto stopped: full-list selection fallback could not be verified. No dispatch was attempted.');
+                        break;
+                    }
                 }
                 await waitForFastDispatchReadiness(
                     'Unit Finder selection',
@@ -54663,6 +54789,8 @@ async function handleAutoPrisonerReleaseAfterActions() {
                 );
                 break;
             }
+            const nexusDispatchWasPartial = nexusSelectiveLoadCurrent?.mission === getLocalMissionInstanceKey() &&
+                nexusSelectiveLoadCurrent.partial && !!getVisibleVehicleListLoadControl();
             const dispatchResult =
                 clickMissionDispatchByValue(
                     missionCredits,
@@ -54680,6 +54808,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
                 );
                 break;
             }
+            nexusRecordSelectiveDispatch(nexusDispatchWasPartial);
             clearAutoSelectionMissionGuard(
                 'completed mission dispatched'
             );
@@ -54947,7 +55076,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
             if (
                 elapsed >= minimumWaitMs &&
                 stableElapsed >= stableForMs &&
-                !loadControlVisible &&
+                (!loadControlVisible || options.allowRemainingControl === true) &&
                 !loadingIndicatorVisible &&
                 (!requireNonZero || snapshot.boxes.length > 0)
             ) {
@@ -54978,7 +55107,9 @@ async function handleAutoPrisonerReleaseAfterActions() {
         let stableSince = Number.isFinite(confirmedStableSince) && confirmedStableSince <= started
             ? Math.max(started - 400, confirmedStableSince) : started;
         // Keep the old maximum pause, but stop waiting when the next control
-        // is available and the completed page has remained quiet.
+        // is available OR the last page is complete and has remained quiet.
+        // The caller still checks for remaining controls and performs its full
+        // final stability check; this avoids waiting 1200ms for a nonexistent page.
         while (Date.now() - started < MF_VEHICLE_NEXT_PAGE_SETTLE_MS) {
             if (getLocalMissionInstanceKey() !== missionKey) return;
             invalidateVehicleListStructureCache();
@@ -54987,13 +55118,97 @@ async function handleAutoPrisonerReleaseAfterActions() {
             const loading = isVehicleListLoadingIndicatorVisible();
             if (loading) stableSince = Date.now();
             if (Date.now() - stableSince >= 400 &&
-                getVisibleVehicleListLoadControl() &&
                 !loading) return;
             await wait(100);
         }
     }
+    // Read-only eligibility probe. Complex or changing requirements use the full loader.
+    function nexusMakeSelectiveProbe(attachmentPromise) {
+        const mission = getLocalMissionInstanceKey();
+        let rows = null;
+        nexusSelectiveProbeReason = 'requirements pending';
+        Promise.resolve(attachmentPromise).then(value => { rows = value; }, () => {});
+        return async function() {
+            await Promise.resolve();
+            const reject = reason => { nexusSelectiveProbeReason = reason; return false; };
+            if (!autoModeRunning || isManualAutoStopActive() ||
+                mission !== getLocalMissionInstanceKey() || !isCurrentMissionExecutionOwner('selective loading') ||
+                !Array.isArray(rows) || !rows.length || getMissionRequirementReadFailure(mission) ||
+                findPatientCount(true) > 0 || readUnitFinderPatientRequirementRows().length ||
+                hasVisibleCurrentMissingOnMissionTable() ||
+                getExplicitCurrentMissingRequirementRows(readMissionUpdateRows({silent:true})).length ||
+                hasMissionVehiclesOnSceneForTrainedPersonnelAuthority() ||
+                globalThis.__NEXUS_RULES__?.isReady() === false) return reject('live authority, patients, pending requirements or inactive mission');
+            const requirements = applyConfiguredFreshMissionVehicleRequirements(
+                collapseSharedFireOperationalSupportRequirements(normaliseOperationalRequirementRows(rows)), []);
+            const inputs = getVehicleCheckboxSnapshot();
+            if (inputs.some(input => input.checked)) return reject('existing selection');
+            const used = new Set();
+            let total = 0;
+            for (const row of requirements) {
+                if (!row || row.isTrainedPersonnelRequirement || row.personnelTrainingRequirements?.length ||
+                    row.convertedFromPersonnelRequirement || row.nexusAbsoluteTraining) return reject('trained personnel requirement');
+                const required = Number(row.stillNeeded);
+                if (!Number.isSafeInteger(required) || required < 0) return reject('invalid requirement count');
+                if (required === 0) continue;
+                const name = String(row.unitName || '');
+                const mapped = resolveUnitName(name);
+                const fleet = nexusFleetPreferenceTypes(name, mapped);
+                const simple = /^(?:required\s+)?(?:fire officers?|ambulances?|water carriers?|police cars?)$/i.test(name.trim());
+                // No optimistic inference for specialised vehicles, personnel, water volume or equipment.
+                if (!fleet && !simple) return reject('full search required: ' + name.slice(0,100));
+                const custom = globalThis.__NEXUS_RULES__?.lookup(name);
+                const expectedTypes = custom ? [String(custom.vehicleTypeId)] : fleet ? [fleet[0]] :
+                    /police cars?/i.test(name) ? ['8'] : /fire officers?/i.test(name) ? ['3'] : /water carriers?/i.test(name) ? ['6'] : ['5'];
+                // An explicit specialist override still requires the normal full search and verification.
+                if (expectedTypes.some(type => !['38','37','16','0','17','2','3','4','5','6','8'].includes(type))) return reject('specialist custom rule');
+                const seen = new Set();
+                const candidates = getAllMatchingVehicleCheckboxes(name, mapped, false).filter(input => {
+                    const id = getMissionVehicleId(input);
+                    if (!id || seen.has(id) || used.has(id) || input.checked || input.disabled ||
+                        !getVehicleTypeIdentifiers(input).map(String).some(type => expectedTypes.includes(type))) return false;
+                    seen.add(id);
+                    return true;
+                });
+                if (candidates.length < required) return reject('more preferred vehicles needed: ' + name.slice(0,100));
+                candidates.slice(0, required).forEach(input => used.add(getMissionVehicleId(input)));
+                total += required;
+            }
+            nexusSelectiveProbeReason = total > 0 ? 'loaded vehicles cover requirements' : 'no actionable requirements';
+            return total > 0;
+        };
+    }
+    let nexusSelectiveProbeReason = 'full loading requested';
+    let nexusSelectiveLoadCurrent = null;
+    function nexusRecordSelectiveLoad(result, elapsed, mission = getLocalMissionInstanceKey()) {
+        nexusSelectiveLoadCurrent = {mission, partial:result.ready === true && result.partial === true};
+        try {
+            const host = window.top || window;
+            const stats = host.__NEXUS_SELECTIVE_LOADING__ ||= host.JSON.parse(JSON.stringify({
+                startedAt:new Date().toISOString(), loads:0, pagesLoaded:0, loadingMs:0,
+                partialLoads:0, fullLoads:0, failedLoads:0, dispatchClicksWithoutFullList:0, recent:[]
+            }));
+            stats.loads++;
+            stats.pagesLoaded += Number(result.clickedPages || 0);
+            stats.loadingMs += Math.max(0, elapsed);
+            if (!result.ready) stats.failedLoads++;
+            else if (result.partial) stats.partialLoads++;
+            else stats.fullLoads++;
+            stats.recent.push(host.JSON.parse(JSON.stringify({mission, at:Date.now(), pages:Number(result.clickedPages || 0),
+                loadingMs:elapsed, partial:!!result.partial, ready:!!result.ready, count:result.count || 0, probeReason:nexusSelectiveProbeReason})));
+            if (stats.recent.length > 300) stats.recent.shift();
+        } catch {}
+    }
+    function nexusRecordSelectiveDispatch(partial) {
+        if (!partial) return;
+        try { if (window.top.__NEXUS_SELECTIVE_LOADING__) window.top.__NEXUS_SELECTIVE_LOADING__.dispatchClicksWithoutFullList++; } catch {}
+    }
+
     async function ensureVehicleListLoaded(options = {}) {
         const nexusLoadStarted = Date.now();
+        const nexusLoadMission = getLocalMissionInstanceKey();
+        let nexusLoadPages = 0;
+        nexusSelectiveLoadCurrent = null;
         try {
         const stableTimeoutMs = Number.isFinite(options.stableTimeoutMs)
             ? Math.max(1500, options.stableTimeoutMs)
@@ -55034,6 +55249,28 @@ async function handleAutoPrisonerReleaseAfterActions() {
             const vehicleDisplayBar =
                 getVisibleVehicleListLoadControl();
             if (!vehicleDisplayBar) break;
+            if (typeof options.canStopEarly === 'function') {
+                let enough = false;
+                try { enough = await options.canStopEarly(); } catch {}
+                if (enough) {
+                    const partial = await waitForVehicleCheckboxListStable(stableTimeoutMs, stableForMs,
+                        {minimumWaitMs:minimumSettleMs, requireNonZero:true, allowRemainingControl:true});
+                    invalidateVehicleCheckboxCache();
+                    try { enough = partial.ready && await options.canStopEarly(); } catch { enough = false; }
+                    if (enough && getLocalMissionInstanceKey() === missionKeyAtStart && !isVehicleListLoadingIndicatorVisible()) {
+                        const result = {...partial, partial:!!getVisibleVehicleListLoadControl(), loadClicked, clickedPages};
+                        nexusRecordSelectiveLoad(result, Date.now() - nexusLoadStarted);
+                        updateStatusBox('Loaded vehicles cover the mission with preferred types. Unit Finder will verify selection.');
+                        return result;
+                    }
+                }
+            }
+            if (typeof options.canStopEarly === 'function' &&
+                (getLocalMissionInstanceKey() !== missionKeyAtStart || !autoModeRunning ||
+                 isManualAutoStopActive() || !isCurrentMissionExecutionOwner('selective page load'))) {
+                loadFailureReason = 'selective loading cancelled or mission changed';
+                break;
+            }
             const beforeSnapshot =
                 getVehicleCheckboxListSignature();
             const controlToken =
@@ -55071,6 +55308,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
             }
             loadClicked = true;
             clickedPages += 1;
+            nexusLoadPages = clickedPages;
             const pageStartedAt = Date.now();
             let rowProgressSeen = false;
             let controlTransitionSeen = false;
@@ -55219,6 +55457,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
                 `READY | pages=${clickedPages} | vehicles=${stability.count} | elapsed=${Date.now() - loadingStartedAt}ms`
             );
         }
+        nexusRecordSelectiveLoad({...stability, clickedPages, partial:false}, Date.now() - nexusLoadStarted);
         globalThis.__NEXUS_PERFORMANCE__?.record('vehicle-list-ready', Date.now() - nexusLoadStarted,
             {count: stability.count, pages: clickedPages, remainingLoadControl: !!getVisibleVehicleListLoadControl()});
         return {
@@ -55227,6 +55466,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
             clickedPages
         };
         } finally {
+            if (!nexusSelectiveLoadCurrent) nexusRecordSelectiveLoad({ready:false, clickedPages:nexusLoadPages}, Date.now() - nexusLoadStarted, nexusLoadMission);
             globalThis.__NEXUS_PERFORMANCE__?.record('vehicle-list-loading', Date.now() - nexusLoadStarted);
         }
     }

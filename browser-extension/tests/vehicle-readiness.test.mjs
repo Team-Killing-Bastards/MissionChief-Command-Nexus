@@ -22,9 +22,9 @@ test('ready next page removes 800ms of redundant waiting', async () => {
 test('changing rows restart the stability window', async () => {
   assert.equal(await run({signature: t => t >= 300 ? 'more-rows' : 'rows'}), 700);
 });
-test('spinner and absent next control preserve the original pause', async () => {
+test('spinner preserves the pause; stable final page no longer needs a next control', async () => {
   assert.equal(await run({loading: () => true}), 1200);
-  assert.equal(await run({control: () => false}), 1200);
+  assert.equal(await run({control: () => false}), 400);
 });
 test('mission changes return to the outer mission guard', async () => {
   assert.equal(await run({mission: t => t >= 200 ? 'two' : 'one'}), 200);

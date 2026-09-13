@@ -5,7 +5,7 @@
   const C = NexusAllianceCore, nf = new Intl.NumberFormat('en-GB');
   const recordKey = 'nexusAllianceSupportResultsV1', leaseKey = 'nexusAllianceSupportLeaseV1';
   const owner = crypto.randomUUID(), selected = new Set(), reserved = new Set();
-  let records = {}, items = [], busy = false, cancelled = false, frame = null, panel, launcher, list, status, total, send, stop, joined, value, observer, timer, lastHeartbeat = 0;
+  let records = {}, items = [], busy = false, cancelled = false, frame = null, panel, launcher, list, status, total, send, stop, joined, value, sort, observer, timer, lastHeartbeat = 0;
   let supportedIds=new Set(), supportReadState='unread', supportReadAt=0, supportAttemptAt=0, supportRead=null, supportAbort=null, supportHint;
   function readRecords() { try { const data=JSON.parse(localStorage.getItem(recordKey)||'{}'); records=Object.fromEntries(Object.entries(data).filter(([id,r])=>C.id(id)&&r&&['sent','uncertain'].includes(r.state)&&C.id(r.vehicle)&&Number.isFinite(r.at)&&(r.state==='uncertain'||Date.now()-r.at<86400000))); } catch { records={}; } }
   function saveRecord(id, state, vehicle) {
@@ -46,7 +46,7 @@
   }
   function refresh(force=false) {
     readRecords(); const previous=new Map(items.map(item=>[item.id,item]));
-    items=C.missions(document).map(fresh=>Object.assign(previous.get(fresh.id)||{},fresh));
+    items=C.missions(document).filter(item=>item.credits!==0).map(fresh=>Object.assign(previous.get(fresh.id)||{},fresh));
     const current=new Set(items.map(item=>item.id));
     for(const id of selected)if(!current.has(id)||already(items.find(item=>item.id===id)))selected.delete(id);
     // Only confirmed records for missions removed from the live list expire here.
@@ -57,7 +57,7 @@
   function render() {
     if (!panel || panel.hidden) return;
     const fragment=document.createDocumentFragment();let visible=0;
-    for(const item of items) {
+    for(const item of [...items].sort((a,b)=>a.credits===null?(b.credits===null?0:1):b.credits===null?-1:(sort.value==='low'?a.credits-b.credits:b.credits-a.credits))) {
       const supported=already(item), pending=records[item.id]?.state==='uncertain';
       if ((!joined.checked&&supported)||!C.inRange(item.credits,value.value))continue;
       visible++;
@@ -107,7 +107,7 @@
     panel=el('section');panel.id='nx-alliance-panel';panel.hidden=true;panel.setAttribute('role','region');panel.setAttribute('aria-label','Alliance missions');
     const header=el('header'),heading=el('div');heading.append(el('h2','Alliance missions'),el('p','Send one closest available Fire Officer per mission.'));header.append(heading,button('Close',close));panel.append(header);
     const filters=el('div',undefined,'nx-as-filters'),joinedLabel=el('label');joined=el('input');joined.type='checkbox';joinedLabel.append(joined,document.createTextNode('Show already supported'));joined.addEventListener('change',()=>{render();void refreshParticipation(true);});
-    const valueLabel=el('label','Value');value=el('select');value.setAttribute('aria-label','Mission value');for(const [key,label]of C.ranges){const option=el('option',label);option.value=key;value.append(option);}value.addEventListener('change',render);valueLabel.append(value);filters.append(joinedLabel,valueLabel,button('Refresh',()=>{void refreshParticipation(true);refresh();}));panel.append(filters);
+    const valueLabel=el('label','Value');value=el('select');value.setAttribute('aria-label','Mission value');for(const [key,label]of C.ranges){const option=el('option',label);option.value=key;value.append(option);}value.addEventListener('change',render);valueLabel.append(value);const sortLabel=el('label','Sort');sort=el('select');sort.setAttribute('aria-label','Sort mission value');for(const [key,label]of [['high','Highest first'],['low','Lowest first']]){const option=el('option',label);option.value=key;sort.append(option);}try{sort.value=localStorage.getItem('nexusAllianceValueSort')==='low'?'low':'high';}catch{}sort.addEventListener('change',()=>{try{localStorage.setItem('nexusAllianceValueSort',sort.value);}catch{}render();});sortLabel.append(sort);filters.append(joinedLabel,valueLabel,sortLabel,button('Refresh',()=>{void refreshParticipation(true);refresh();}));panel.append(filters);
     total=el('div',undefined,'nx-as-count');supportHint=el('div',undefined,'nx-as-count');supportHint.dataset.supportRead='1';panel.append(total,supportHint);list=el('div',undefined,'nx-as-list');panel.append(list);
     const footer=el('footer'),bulk=el('div',undefined,'nx-as-bulk');send=button('Support selected',()=>void run([...selected]),'nx-as-primary');stop=button('Stop queue',()=>{cancelled=true;say('Stopping after the current dispatch result is checked.');render();});stop.hidden=true;bulk.append(send,button('Clear selection',()=>{if(!busy){selected.clear();render();}}),stop);status=el('div','Choose missions, then support them individually or as a batch.');status.setAttribute('role','status');footer.append(bulk,status);panel.append(footer);document.body.append(panel);
     panel.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close();}});
