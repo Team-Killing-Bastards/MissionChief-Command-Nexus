@@ -2,7 +2,7 @@
 
 This is the source and reproducible build for the Edge and Chrome Store editions. The canonical Tampermonkey edition remains at `src/missionchief-command-nexus.user.js` in the repository root; its release process is independent.
 
-Version **3.0.43.59** adds the compact Auto Mode Focus panel, shared alliance mission support with participation filtering and clear one-officer confirmation, and a Home Response Buy and next building switch. It retains the .55 schooling, crew and quick-buy improvements. See [the cumulative release notes](STORE-3.0.43.59.md). Its tested local source is pinned in `reference/store-59.json`; the full twenty-two-stage suite runs before publication.
+Version **3.0.43.72** promotes the local crew/register accuracy, alliance sorting, guarded loading, storage and worker-memory fixes, and large-first coastguard helicopter preference. See [the cumulative release notes](STORE-3.0.43.72.md). Its application payloads are pinned in `reference/store-72.json`; all twenty-five verification stages run before publication.
 
 ## Release flow
 

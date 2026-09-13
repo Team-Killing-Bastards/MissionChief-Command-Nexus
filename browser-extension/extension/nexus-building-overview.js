@@ -32,6 +32,7 @@
     if(!crew)return;crew.replaceChildren(el('h3','Nexus · Specialist crew coverage'));
     const value=document.getElementById('nx-required-personnel');
     if(!fleet){if(value)value.textContent=staffError?'Crew data unavailable':'Loading crew…';crew.append(el('p',staffError||'Loading vehicle crew requirements…'));if(staffError&&refreshFleet){const retry=el('button','Refresh crew & training');retry.type='button';retry.addEventListener('click',refreshFleet);crew.append(retry);}return;}
+    for(const v of fleet){const known=staff?.vehicleAssignments?.[String(v.id)];const badge=document.querySelector('[data-nx-crew="'+v.id+'"]');if(known&&badge){const max=v.limit??D[v.type]?.max;badge.textContent=' Assigned '+known.assigned+' / max '+max;badge.className='nx-staff '+(known.assigned<max?'nx-short':'nx-good');}}
     const model=C.calculate(fleet,D,staff,partial);state.model=model;const t=model.total,uncertain=t.partial||t.unknown>0,prefix=uncertain?'Known totals: ':'';
     value.replaceChildren(document.createTextNode(`${prefix}min: ${nf(t.min)} (${nf(t.activeMin)}) / max: ${nf(t.max)} (${nf(t.activeMax)})`),el('small','Figures in brackets exclude status 6 vehicles.'));
     if(uncertain)crew.append(el('p',`Partial vehicle data: ${t.unknown} unknown definitions${t.partial?' or incomplete register':''}.`));
@@ -54,11 +55,13 @@
     }else crew.append(el('p',t.unknown?'Specialist requirements unavailable for unknown vehicle types.':'No specialist training required by the active vehicles in this register.'));
     const foot=el('p',`${t.vehicles} station vehicles · ${t.paused} in status 6${readAt?` · Read ${new Date(readAt).toLocaleTimeString('en-GB')}`:''}`);foot.title='Assigned crew is not the current crew aboard.';crew.append(foot);
     const refresh=el('button','Refresh crew & training');refresh.type='button';refresh.disabled=!!controller;refresh.addEventListener('click',()=>{if(!visible()||controller)return;staff=null;staffTried=false;staffError='';renderCrew();refreshFleet?.();});crew.append(refresh);
+    const actions=el('div');actions.style.cssText='display:flex;flex-wrap:wrap;gap:8px;align-items:center';crew.append(actions);actions.append(refresh);
+    window.__NEXUS_ASSIGN_CREW__?.mount(actions,()=>{staff=null;staffTried=false;staffError='';refreshFleet?.();});
     if(model.training.length&&globalThis.NexusSettings?.enabled('courseListFilters')!==false){
       // Transfer only the displayed training names and their known course aliases.
       // A fragment stays in the browser; no station, player or personnel data is sent.
       const groups=model.training.slice(0,40).map(g=>({name:g.name,aliases:[...new Set([g.name,...Object.values(D).flatMap(v=>v.training.filter(r=>r.name===g.name).flatMap(r=>r.aliases))])].slice(0,8)}));
-      const link=el('a','Open courses','nx-building-link');link.id='nx-crew-courses';link.href='/schoolings#'+new URLSearchParams({'nexus-training':JSON.stringify(groups)});link.title='Show active courses matching the training in this crew table';link.style.cssText='display:inline-block;margin-left:8px;text-decoration:none';crew.append(link);
+      const link=el('a','Open courses','nx-building-link');link.id='nx-crew-courses';link.href='/schoolings#'+new URLSearchParams({'nexus-training':JSON.stringify(groups)});link.title='Show active courses matching the training in this crew table';link.style.cssText='display:inline-block;margin-left:8px;text-decoration:none';actions.append(link);
     }
   }
   async function readPersonnel(){
@@ -84,6 +87,8 @@
       const label=[...sourceList.querySelectorAll('dt')].find(n=>/^personnel:?$/i.test(txt(n.textContent))),expectedText=txt(label?.nextElementSibling?.textContent),match=expectedText.match(/^([\d,]+)\s+(?:Employees|Personnel|Staff)\b/i),expected=match?Number(match[1].replaceAll(',','')):null;
       if(!people.length&&!(expected===0||/\bNo (?:personnel|employees|staff)\b/i.test(table.textContent)))throw Error('Personnel rows not recognised');
       if(ticket!==generation||!visible())return;staff={people,partial:rows.length>10000||invalid>0||pagination||(expected!==null&&expected!==people.length)};staffError='';
+      const verified=await window.__NEXUS_ASSIGN_CREW__?.readCoverage(fleet,current.signal);
+      if(ticket!==generation||!visible())return;staff.vehicleAssignments=verified||{};
     }catch(err){if(ticket===generation&&visible())staffError=`Personnel unavailable (${txt(err.message,100)}). Coverage is not verified.`;}
     finally{clearTimeout(timeout);if(controller===current)controller=null;if(ticket===generation&&visible())renderCrew();}
   }
