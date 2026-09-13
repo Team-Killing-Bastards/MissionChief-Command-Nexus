@@ -9,6 +9,8 @@
     ['dailyCredits', 'Credits & coins', 'Daily credit summary'],
     ['creditOverview', 'Credits & coins', 'Credit history chart'],
     ['missionRewards', 'Mission list', 'Estimated credits on mission cards'],
+    ['compactMissions', 'Mission list', 'Compact mission cards'],
+    ['fixedNavigation', 'Mission list', 'Keep top navigation visible'],
     ['allianceSupport', 'Mission list', 'Alliance mission support panel'],
     ['listPatientTime', 'Mission list', 'Patient treatment time on mission cards', 'extendedCallList', 'remainingPatientTime'],
     ['generationDate', 'Mission window', 'Mission generation time', 'extendedCallWindow', 'generationDate'],

@@ -1,4 +1,4 @@
-name: Build and publish Edge and Chrome extensions
+name: Build and publish Chrome extension
 on:
   push:
     branches: [main]
@@ -6,6 +6,12 @@ on:
   pull_request:
     paths: ['browser-extension/**', '.github/workflows/edge-extension.yml']
   workflow_dispatch:
+    inputs:
+      publish_edge:
+        description: Also submit to Edge only when separately requested
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -48,7 +54,8 @@ jobs:
             browser-extension/audit/verification-summary.json
           if-no-files-found: error
   publish:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    name: Edge (manual opt-in only)
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.publish_edge == true
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 30

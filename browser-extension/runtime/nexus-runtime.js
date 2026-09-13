@@ -13,8 +13,8 @@
       parentBuild = window.top.__NEXUS_EXTENSION__?.build || '';
     }
   } catch {}
-  if (parentBuild && parentBuild !== '3.0.43.72') {
-    window.__NEXUS_EXTENSION__ = Object.freeze({ build: '3.0.43.72', sourceVersion: '3.0.43',
+  if (parentBuild && parentBuild !== '3.0.43.82') {
+    window.__NEXUS_EXTENSION__ = Object.freeze({ build: '3.0.43.82', sourceVersion: '3.0.43',
       status: 'parent-build-mismatch', parentBuild, startedAt: Date.now() });
     try {
       window.top.dispatchEvent(new window.top.CustomEvent('nexus-extension-update-required-v1', {
@@ -25,7 +25,7 @@
   }
   const alreadyRunning = Boolean(window.__MCN_V3_CONTROLLER__ || window.__MCN_BOOT_TRACE__);
   window.__NEXUS_EXTENSION__ = Object.freeze({
-    build: '3.0.43.72',
+    build: '3.0.43.82',
     sourceVersion: '3.0.43',
     status: alreadyRunning ? 'existing-runtime' : 'loaded',
     startedAt: Date.now()
@@ -268,7 +268,7 @@ function createNexusPerformance(env) {
     readRegistry, vehicleSignature, getRequirements, putRequirements, record, count, dispose,
     receiveCount(key, amount) { counters[key] = (counters[key] || 0) + amount; },
     receiveTiming(item) { timings.push({ ...item }); if (timings.length > 100) timings.shift(); },
-    snapshot() { return { build: '3.0.43.72', counters: { ...counters }, longTasks: { ...longTasks }, timings: timings.map(item => ({ ...item })), retainedDocuments: documents.size, registryRetained: !!registryValue, requirementTtlMs: REQUIREMENT_TTL, maxRequirementRecords: MAX_RECORDS }; }
+    snapshot() { return { build: '3.0.43.82', counters: { ...counters }, longTasks: { ...longTasks }, timings: timings.map(item => ({ ...item })), retainedDocuments: documents.size, registryRetained: !!registryValue, requirementTtlMs: REQUIREMENT_TTL, maxRequirementRecords: MAX_RECORDS }; }
   });
 }
 
@@ -2352,6 +2352,7 @@ const context = transportContextDetails(doc, href);
 const control = findAutoModeControl(doc);
 const snapshot = {
 capturedAt: nowIso(),
+autoLoopFailure: nexusReadAutoLoopFailure(doc),
 href: href || '',
 path: pathFromUrl(href),
 missionId: missionIdFromUrl(href) || state.currentMissionId || '',
@@ -3288,6 +3289,12 @@ return false;
 }
 }
 function maybeHandleRecoverableAutoStop(doc, stopStatus) {
+const selectionWait = doc.defaultView?.__NEXUS_AUTO_SELECTION_WAIT__;
+if (selectionWait && String(selectionWait.missionId) === String(state.currentMissionId) &&
+    (selectionWait.active || selectionWait.failed)) {
+clearAutoRecoveryWatchdog('selection-not-completed');
+return false;
+}
 if (!state.wanted || state.stopping || state.postDispatchWatchdog || state.transportServiceActive || state.transportKind) {
 clearAutoRecoveryWatchdog('transport-or-stop-state');
 return false;
@@ -7558,6 +7565,12 @@ state.lastWatchHeartbeatAt = now;
 if (!previous || state.wakeRecoveryActive) return state.wakeRecoveryActive;
 return recoverFromSuspendedTimerGap(Math.max(0, now - previous), source);
 }
+function nexusReadAutoLoopFailure(doc) {
+  try {
+    const failure = doc?.defaultView?.__NEXUS_AUTO_LOOP_FAILURE__;
+    return failure ? {missionId:String(failure.missionId || ''), at:Number(failure.at || 0), message:String(failure.message || '').slice(0,240)} : null;
+  } catch { return null; }
+}
 function nexusCheckMissionProgress(doc, href, context = {}) {
   const now = Date.now();
   const id = missionIdFromUrl(href);
@@ -7568,8 +7581,15 @@ function nexusCheckMissionProgress(doc, href, context = {}) {
       state.workerRole !== 'MISSION_A' || !id || context.kind ||
       state.transportKind || state.transportServiceActive || state.postDispatchWatchdog ||
       doc.readyState !== 'complete' || !autoControlLooksRunning(findAutoModeControl(doc))) return reset();
+  const validationWait = doc.defaultView?.__NEXUS_AUTO_VALIDATION_WAIT__;
+  if (validationWait?.active && String(validationWait.missionId) === id &&
+      now >= validationWait.startedAt && now - validationWait.startedAt < 300000) return reset();
+  const selectionWait = doc.defaultView?.__NEXUS_AUTO_SELECTION_WAIT__;
+  if (selectionWait?.active && String(selectionWait.missionId) === id &&
+      now >= selectionWait.startedAt && now - selectionWait.startedAt < 300000) return reset();
   const status = String(findUsefulNexusStatus(doc) || '').trim();
-  if (!/^(?:Vehicle display limited\.|Units ready for dispatch\.|Vehicle list|All additional vehicle pages)/i.test(status)) return reset();
+  // Track every running selection phase, including preloaded/update messages.
+  // Native navigation and transport are excluded independently of UI wording.
   const boxes = doc.querySelectorAll('input.vehicle_checkbox');
   // The sampling pass is bounded and retains strings, never document references.
   if (boxes.length > 10000) return reset();
@@ -7577,10 +7597,13 @@ function nexusCheckMissionProgress(doc, href, context = {}) {
     String(b.value || b.id || '') + ':' + Number(b.checked) + ':' + Number(b.disabled)).join(',');
   const same = previous && previous.missionId === id &&
     previous.documentSerial === state.workerDocumentSerial && previous.signature === signature &&
-    now - previous.sampleAt <= 15000;
+    now >= previous.sampleAt;
   const probe = state.nexusProgress = {missionId:id, documentSerial:state.workerDocumentSerial,
     status, signature, sampleAt:now, unchangedSince:same ? previous.unchangedSince : now};
-  if (now - probe.unchangedSince < 120000) return false;
+  const failure = doc.defaultView?.__NEXUS_AUTO_LOOP_FAILURE__;
+  const failed = failure && String(failure.missionId) === id && now >= failure.at && now - failure.at < 300000;
+  const ready = /^Units ready for dispatch\./i.test(status);
+  if (!failed && now - probe.unchangedSince < (ready ? 45000 : 120000)) return false;
   let unsafe = '';
   try {
     const storage = doc.defaultView.sessionStorage;
@@ -7593,7 +7616,7 @@ function nexusCheckMissionProgress(doc, href, context = {}) {
   // Bound the recovery registry without evicting prior protection during a run.
   if (Object.keys(state.nexusProgressAttempts).length >= 100) unsafe = 'recovery limit reached';
   const event = {missionId:id, status, unchangedMs:now-probe.unchangedSince,
-    action:unsafe ? 'stop' : 'reload-current-mission', reason:unsafe || 'no progress for two minutes'};
+    action:unsafe ? 'stop' : 'reload-current-mission', reason:unsafe || (failed ? 'Auto loop error: ' + String(failure.message).slice(0,240) : 'unchanged ' + (ready ? 'ready state for 45 seconds' : 'selection state for two minutes'))};
   log('Mission progress watchdog reached its limit.', event);
   captureWorkerSnapshot();
   if (unsafe) { setError('Mission stopped making progress; Auto Mode stopped safely', unsafe); return true; }
@@ -8920,6 +8943,7 @@ sameOriginReadable: Boolean(doc) || Boolean(workerSnapshot.sameOriginReadable),
 readyState: doc?.readyState || workerSnapshot.readyState || '',
 title: normaliseText(doc?.title || workerSnapshot.title || ''),
 lastCapturedAt: workerSnapshot.capturedAt || '',
+autoLoopFailure: nexusReadAutoLoopFailure(doc) || workerSnapshot.autoLoopFailure || null,
 lastPath: workerSnapshot.path || '',
 lastMissionId: workerSnapshot.missionId || '',
 lastMissionName: workerSnapshot.missionName || '',
@@ -10628,7 +10652,7 @@ function installNexusFullLogger() {
     const who = identity(); if (!who.player) return false; switchPlayer(who.player);
     const record = cleanRecord(raw); if (!record) return false;
     const capturedAt = Date.now();
-    record.clientVersion = '3.0.43.72';
+    record.clientVersion = '3.0.43.82';
     if (kind === 'mission') {
       if (!/^\d+$/.test(record.missionId || '')) return false;
       const old = registry[record.missionId] || {};
@@ -10660,7 +10684,7 @@ function installNexusFullLogger() {
     return true;
   }
   function activity(action, extra = {}) {
-    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.72', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
+    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.82', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
   }
   function current(eventType, options = {}) {
     const snapshot = getMissionLoggerMissionSnapshot();
@@ -10834,7 +10858,7 @@ function installNexusFullLogger() {
     finally {clearTimeout(timeout);timers.delete(timeout);creditAbort=null;creditBusy=false;}
   }
   function session(action) {
-    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.72',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
+    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.82',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
   }
   function tick() {
     try {
@@ -22720,24 +22744,34 @@ bootMark('heavy-runtime-start');
         processedSelectionKeys = new Set();
     }
     function withTimeout(promise, timeoutMs, label) {
+        const selection = /^(?:Auto Mode Unit Finder|Auto Mode zero-selection retry|Full-list selection fallback)$/.test(label || '');
+        const work = selection ? {
+            missionId: String(getCurrentMissionIdForQueueRestart() || ''),
+            startedAt: Date.now(), active: true, failed: false, label
+        } : null;
+        if (work) window.__NEXUS_AUTO_SELECTION_WAIT__ = work;
+        const limit = selection ? 300000 : timeoutMs;
         return new Promise((resolve, reject) => {
-            const timeoutId = setTimeout(() => {
-                reject(
-                    new Error(
-                        `${label || 'Operation'} timed out after ${timeoutMs}ms`
-                    )
-                );
-            }, timeoutMs);
-            Promise.resolve(promise).then(
-                value => {
-                    clearTimeout(timeoutId);
-                    resolve(value);
-                },
-                error => {
-                    clearTimeout(timeoutId);
-                    reject(error);
+            let settled = false;
+            const finish = (error, value) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timeoutId);
+                if (work) {
+                    work.active = false;
+                    work.failed = !!error;
+                    work.finishedAt = Date.now();
+                    if (error && work.missionId === String(getCurrentMissionIdForQueueRestart() || '') && autoModeRunning) {
+                        changeDispatchBoxColor(false);
+                        stopAutoMode('Auto stopped: vehicle selection did not finish. This mission has been kept for retry; no dispatch or skip was attempted.');
+                    }
                 }
-            );
+                if (error) reject(error); else resolve(value);
+            };
+            const timeoutId = setTimeout(() => finish(new Error(
+                (label || 'Operation') + ' timed out after ' + limit + 'ms'
+            )), limit);
+            Promise.resolve(promise).then(value => finish(null, value), error => finish(error));
         });
     }
     function debugLog() {}
@@ -29687,6 +29721,12 @@ return sortVehicleCheckboxesByBestArrival(matches);
                     vehicleLoadState.trainedPersonnelBlocked = false;
                     vehicleLoadState.trainedPersonnelBlockText = '';
                     clearSelectionGuards();
+                    // Reconcile this explicit manual operation with the current
+                    // page. Historical selections are not dispatched vehicles.
+                    mfPatientSelectionLedgerCache = {
+                        missionKey: getPatientSelectionMissionKey(), counts: {}
+                    };
+                    savePatientSelectionLedger(mfPatientSelectionLedgerCache);
                     const manualUpdateRows =
                         readMissionUpdateRows();
                     await preparePoliceVehicleSafetyForRows(
@@ -32767,7 +32807,7 @@ function installNexusFullLogger() {
     const who = identity(); if (!who.player) return false; switchPlayer(who.player);
     const record = cleanRecord(raw); if (!record) return false;
     const capturedAt = Date.now();
-    record.clientVersion = '3.0.43.72';
+    record.clientVersion = '3.0.43.82';
     if (kind === 'mission') {
       if (!/^\d+$/.test(record.missionId || '')) return false;
       const old = registry[record.missionId] || {};
@@ -32799,7 +32839,7 @@ function installNexusFullLogger() {
     return true;
   }
   function activity(action, extra = {}) {
-    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.72', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
+    emit('activity', { source: 'NEXUS', category: 'WORKFLOW', action, route: location.pathname, clientVersion: '3.0.43.82', ...nexusActivityContext(extra.route || location.pathname, null, document), ...extra });
   }
   function current(eventType, options = {}) {
     const snapshot = getMissionLoggerMissionSnapshot();
@@ -32973,7 +33013,7 @@ function installNexusFullLogger() {
     finally {clearTimeout(timeout);timers.delete(timeout);creditAbort=null;creditBusy=false;}
   }
   function session(action) {
-    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.72',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
+    emit('session',{ source:'SYSTEM',category:'LIFECYCLE',action,route:location.pathname,clientVersion:'3.0.43.82',userAgent:navigator.userAgent,viewport:innerWidth+'x'+innerHeight,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone });
   }
   function tick() {
     try {
@@ -36404,7 +36444,7 @@ let sessionRuntimeTicker = null;
                         .filter(
                             element => {
                                 if (
-                                    !isMissionElementVisible(
+                                    !isMissionRequirementSourceReadable(
                                         element
                                     )
                                 ) {
@@ -36481,7 +36521,7 @@ let sessionRuntimeTicker = null;
             fallbackElements
                 .filter(element => {
                     if (
-                        !isMissionElementVisible(
+                        !isMissionRequirementSourceReadable(
                             element
                         )
                     ) {
@@ -36513,7 +36553,7 @@ let sessionRuntimeTicker = null;
                         []
                     ).some(child => {
                         if (
-                            !isMissionElementVisible(
+                            !isMissionRequirementSourceReadable(
                                 child
                             )
                         ) {
@@ -44361,6 +44401,10 @@ registryVehicleCount
             return false;
         }
         synchroniseMissionInstanceState('Unit Finder start');
+        // Match manual Mission Update: previous-document checkbox intent is not
+        // evidence that this document selected or dispatched any patient units.
+        mfPatientSelectionLedgerCache = { missionKey: getPatientSelectionMissionKey(), counts: {} };
+        savePatientSelectionLedger(mfPatientSelectionLedgerCache);
         const missionKeyAtStart =
             getLocalMissionInstanceKey();
         const vehicleListAlreadyLoaded =
@@ -46120,6 +46164,24 @@ registryVehicleCount
             `${documentKey}|unscoped-patient:${alertIdentifier || Math.max(0, Number(fallbackIndex) || 0)}`
         );
     }
+    // The comfort panel replaces the native missing alert visually, not semantically.
+    // Read its live native source only while the paired replacement is visible.
+    function isMissionRequirementSourceReadable(element) {
+        if (isMissionElementVisible(element)) return true;
+        const source = element?.closest?.('#missing_text.nx-original-hidden');
+        const panel = source?.previousElementSibling;
+        if (!source?.isConnected || source.hidden ||
+            panel?.id !== 'nx-missing' ||
+            panel.getAttribute('data-nx-requirements-source') !== source.id ||
+            !isMissionElementVisible(panel)) return false;
+        const win = source.ownerDocument.defaultView;
+        for (let node = element; node && node !== source; node = node.parentElement) {
+            const style = win.getComputedStyle(node);
+            if (node.hidden || style.display === 'none' ||
+                style.visibility === 'hidden' || Number(style.opacity) === 0) return false;
+        }
+        return source.style.display !== 'none' && source.style.visibility !== 'hidden';
+    }
     function getStructuredMissingVehicleRows(suppliedRoots) {
         const roots = Array.isArray(suppliedRoots)
             ? suppliedRoots
@@ -46142,7 +46204,7 @@ registryVehicleCount
         });
         const deduped = new Map();
         elements
-            .filter(element => isMissionElementVisible(element))
+            .filter(element => isMissionRequirementSourceReadable(element))
             .forEach(element => {
                 const text = String(
                     element.innerText ||
@@ -46191,7 +46253,7 @@ registryVehicleCount
                 );
             } catch (_error) {}
             rawHtmlHosts
-                .filter(element => isMissionElementVisible(element))
+                .filter(element => isMissionRequirementSourceReadable(element))
                 .forEach(element => {
                     const rawHtml = String(
                         element.getAttribute?.('data-raw-html') ||
@@ -49685,6 +49747,15 @@ registryVehicleCount
                 if (!alerts.includes(alert)) alerts.push(alert);
             });
         });
+        // This pass is synchronous: all patient alerts share one selection state.
+        // Keep the result local so the next call rechecks any changed selections.
+        let currentRequirementsCovered;
+        const requirementsCovered = () => {
+            if (currentRequirementsCovered === undefined) {
+                currentRequirementsCovered = areCurrentMissionUpdateRowsFullySelected();
+            }
+            return currentRequirementsCovered;
+        };
         for (const alert of alerts) {
             try {
                 if (!isElementVisible(alert)) continue;
@@ -49719,7 +49790,7 @@ registryVehicleCount
                 );
             if (
                 isActionableMissionUpdateAlert &&
-                areCurrentMissionUpdateRowsFullySelected()
+                requirementsCovered()
             ) {
                 continue;
             }
@@ -54259,6 +54330,8 @@ async function handleAutoPrisonerReleaseAfterActions() {
             return;
         }
         autoModeLoopActive = true;
+        globalThis.__NEXUS_AUTO_LOOP_FAILURE__ = null;
+        try {
         while (autoModeRunning && !isManualAutoStopActive()) {
             if (!isCurrentMissionExecutionOwner('Auto Mode cycle')) {
                 removeMissionFinderPanelForClosedMission(
@@ -54469,6 +54542,10 @@ async function handleAutoPrisonerReleaseAfterActions() {
                         break;
                     }
                 }
+                window.__NEXUS_AUTO_VALIDATION_WAIT__ = {
+                    active: true, missionId: String(autoCycleMissionId), startedAt: Date.now()
+                };
+                updateStatusBox('Auto Mode verifying selected vehicles before dispatch...');
                 await waitForFastDispatchReadiness(
                     'Unit Finder selection',
                     {
@@ -54768,6 +54845,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
                 );
                 break;
             }
+            window.__NEXUS_AUTO_VALIDATION_WAIT__ = null;
             if (!claimAutoMissionDispatch(autoCycleMissionId)) {
                 updateStatusBox(
                     'Auto Mode: duplicate Dispatch blocked for this mission. Waiting for MissionChief to finish the existing handoff...'
@@ -54840,8 +54918,18 @@ async function handleAutoPrisonerReleaseAfterActions() {
             }
             break;
         }
-        autoModeLoopActive = false;
-        updateAutoModeButton();
+        } catch (error) {
+            globalThis.__NEXUS_AUTO_LOOP_FAILURE__ = {
+                missionId: String(getCurrentMissionIdForQueueRestart() || ''),
+                at: Date.now(), message: String(error?.message || error).slice(0,240)
+            };
+            console.error('Nexus Auto loop failed; guarded recovery required.', error);
+            updateStatusBox('Auto Mode interrupted. Checking safe recovery...');
+        } finally {
+            window.__NEXUS_AUTO_VALIDATION_WAIT__ = null;
+            autoModeLoopActive = false;
+            updateAutoModeButton();
+        }
     }
     function initialize() {
         try { installNexusFullLogger(); } catch {}

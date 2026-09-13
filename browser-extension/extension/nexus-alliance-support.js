@@ -5,11 +5,14 @@
   const C = NexusAllianceCore, nf = new Intl.NumberFormat('en-GB');
   const recordKey = 'nexusAllianceSupportResultsV1', leaseKey = 'nexusAllianceSupportLeaseV1';
   const owner = crypto.randomUUID(), selected = new Set(), reserved = new Set();
+  const unitKey='nexusAllianceSupportVehicleV1';
+  let selectAll, unit, unitDescription, batchType='3';
+  const unitName=type=>C.homeUnits.find(([id])=>id===String(type))?.[1] || 'Fire Officer';
   let records = {}, items = [], busy = false, cancelled = false, frame = null, panel, launcher, list, status, total, send, stop, joined, value, sort, observer, timer, lastHeartbeat = 0;
   let supportedIds=new Set(), supportReadState='unread', supportReadAt=0, supportAttemptAt=0, supportRead=null, supportAbort=null, supportHint;
   function readRecords() { try { const data=JSON.parse(localStorage.getItem(recordKey)||'{}'); records=Object.fromEntries(Object.entries(data).filter(([id,r])=>C.id(id)&&r&&['sent','uncertain'].includes(r.state)&&C.id(r.vehicle)&&Number.isFinite(r.at)&&(r.state==='uncertain'||Date.now()-r.at<86400000))); } catch { records={}; } }
-  function saveRecord(id, state, vehicle) {
-    readRecords();if(!records[id]&&Object.keys(records).length>=2000)throw Error('Support history is full. Check unconfirmed dispatches before sending more.');records[id]={state,vehicle,at:Date.now()};
+  function saveRecord(id, state, vehicle, vehicleType = records[id]?.vehicleType || batchType) {
+    readRecords();if(!records[id]&&Object.keys(records).length>=2000)throw Error('Support history is full. Check unconfirmed dispatches before sending more.');records[id]={state,vehicle,vehicleType,at:Date.now()};
     // A send is never attempted unless its pending record can be persisted.
     localStorage.setItem(recordKey,JSON.stringify(records));
   }
@@ -54,6 +57,9 @@
     for(const [id,record]of Object.entries(records))if(record.state==='sent'&&!current.has(id)&&Date.now()-record.at>86400000)delete records[id];
     render();if(panel&&!panel.hidden)void refreshParticipation(force);
   }
+  function eligibleForSelectAll(item) {
+    return !already(item) && records[item.id]?.state!=='uncertain' && C.inRange(item.credits,value.value);
+  }
   function render() {
     if (!panel || panel.hidden) return;
     const fragment=document.createDocumentFragment();let visible=0;
@@ -64,7 +70,7 @@
       const row=el('div',undefined,'nx-as-row');row.dataset.mission=item.id;
       const description=el('div',undefined,'nx-as-description');const link=el('a',item.name);link.href='/missions/'+item.id;link.className='lightbox-open';
       description.append(link,el('small','M'+item.id+' · '+(item.credits===null?'Value unavailable':'≈ '+nf.format(item.credits)+' credits')));
-      const detail=el('span',records[item.id]?.state==='sent'?'Sent: 1 Fire Officer':supported?'Supported':item.progress||(pending?'Check dispatch result':supportReadState==='ready'?'Not supported':'Participation not verified'),'nx-as-state');
+      const detail=el('span',records[item.id]?.state==='sent'?'Sent: 1 '+unitName(records[item.id].vehicleType || '3'):supported?'Supported':item.progress||(pending?'Check dispatch result':supportReadState==='ready'?'Not supported':'Participation not verified'),'nx-as-state');
       if(item.error||pending)detail.classList.add('nx-as-warning');description.append(detail);row.append(description);
       const actions=el('div',undefined,'nx-as-row-actions');
       const pick=button(selected.has(item.id)?'Selected':'Select',()=>{selected.has(item.id)?selected.delete(item.id):selected.add(item.id);render();});pick.setAttribute('aria-pressed',String(selected.has(item.id)));pick.disabled=busy||supported||pending||supportReadState!=='ready';
@@ -78,6 +84,8 @@
     total.textContent=`${visible} of ${items.length} shared missions · ${selected.size} selected`;
     supportHint.textContent=supportReadState==='ready'?`Supported missions checked against your vehicles at ${new Date(supportReadAt).toLocaleTimeString()}.`:supportReadState==='loading'?'Checking your vehicles for supported missions…':'Could not verify supported missions. Refresh to retry; known support is retained.';
     send.textContent=selected.size?`Support selected (${selected.size})`:'Support selected';send.disabled=busy||!selected.size||supportReadState!=='ready';stop.hidden=!busy;stop.disabled=cancelled;
+    selectAll.disabled=busy||supportReadState!=='ready'||!items.some(item=>eligibleForSelectAll(item)&&!selected.has(item.id));
+    unit.disabled=busy;
     launcher.textContent=busy?'Alliance missions · sending':'Alliance missions';
   }
   function observe() {
@@ -105,11 +113,13 @@
       html[data-nexus-layout=phone] #nx-alliance-panel,html[data-nexus-desktop-phone] #nx-alliance-panel{--as-scale:1;transform:scale(var(--nx-ui-scale,1));transform-origin:top left}
     `;document.head.append(style);
     panel=el('section');panel.id='nx-alliance-panel';panel.hidden=true;panel.setAttribute('role','region');panel.setAttribute('aria-label','Alliance missions');
-    const header=el('header'),heading=el('div');heading.append(el('h2','Alliance missions'),el('p','Send one closest available Fire Officer per mission.'));header.append(heading,button('Close',close));panel.append(header);
+    const header=el('header'),heading=el('div');heading.append(el('h2','Alliance missions'),(unitDescription=el('p','Send one closest available Fire Officer per mission.')));header.append(heading,button('Close',close));panel.append(header);
     const filters=el('div',undefined,'nx-as-filters'),joinedLabel=el('label');joined=el('input');joined.type='checkbox';joinedLabel.append(joined,document.createTextNode('Show already supported'));joined.addEventListener('change',()=>{render();void refreshParticipation(true);});
-    const valueLabel=el('label','Value');value=el('select');value.setAttribute('aria-label','Mission value');for(const [key,label]of C.ranges){const option=el('option',label);option.value=key;value.append(option);}value.addEventListener('change',render);valueLabel.append(value);const sortLabel=el('label','Sort');sort=el('select');sort.setAttribute('aria-label','Sort mission value');for(const [key,label]of [['high','Highest first'],['low','Lowest first']]){const option=el('option',label);option.value=key;sort.append(option);}try{sort.value=localStorage.getItem('nexusAllianceValueSort')==='low'?'low':'high';}catch{}sort.addEventListener('change',()=>{try{localStorage.setItem('nexusAllianceValueSort',sort.value);}catch{}render();});sortLabel.append(sort);filters.append(joinedLabel,valueLabel,sortLabel,button('Refresh',()=>{void refreshParticipation(true);refresh();}));panel.append(filters);
+    const valueLabel=el('label','Value');value=el('select');value.setAttribute('aria-label','Mission value');for(const [key,label]of C.ranges){const option=el('option',label);option.value=key;value.append(option);}value.addEventListener('change',render);valueLabel.append(value);const sortLabel=el('label','Sort');sort=el('select');sort.setAttribute('aria-label','Sort mission value');for(const [key,label]of [['high','Highest first'],['low','Lowest first']]){const option=el('option',label);option.value=key;sort.append(option);}try{sort.value=localStorage.getItem('nexusAllianceValueSort')==='low'?'low':'high';}catch{}sort.addEventListener('change',()=>{try{localStorage.setItem('nexusAllianceValueSort',sort.value);}catch{}render();});sortLabel.append(sort);const unitLabel=el('label','Send vehicle');unit=el('select');unit.setAttribute('aria-label','Support vehicle');for(const [id,name] of C.homeUnits){const option=el('option',name);option.value=id;unit.append(option);}try{const saved=localStorage.getItem(unitKey);unit.value=C.homeUnits.some(([id])=>id===saved)?saved:'3';}catch{unit.value='3';}
+    const updateUnit=()=>{unitDescription.textContent='Send one closest available '+unitName(unit.value)+' per mission.';};updateUnit();unit.addEventListener('change',()=>{try{localStorage.setItem(unitKey,unit.value);}catch{say('Vehicle chosen for this session; browser could not save it.');}updateUnit();});unitLabel.append(unit);
+    filters.append(joinedLabel,valueLabel,sortLabel,unitLabel,button('Refresh',()=>{void refreshParticipation(true);refresh();}));panel.append(filters);
     total=el('div',undefined,'nx-as-count');supportHint=el('div',undefined,'nx-as-count');supportHint.dataset.supportRead='1';panel.append(total,supportHint);list=el('div',undefined,'nx-as-list');panel.append(list);
-    const footer=el('footer'),bulk=el('div',undefined,'nx-as-bulk');send=button('Support selected',()=>void run([...selected]),'nx-as-primary');stop=button('Stop queue',()=>{cancelled=true;say('Stopping after the current dispatch result is checked.');render();});stop.hidden=true;bulk.append(send,button('Clear selection',()=>{if(!busy){selected.clear();render();}}),stop);status=el('div','Choose missions, then support them individually or as a batch.');status.setAttribute('role','status');footer.append(bulk,status);panel.append(footer);document.body.append(panel);
+    const footer=el('footer'),bulk=el('div',undefined,'nx-as-bulk');send=button('Support selected',()=>void run([...selected]),'nx-as-primary');stop=button('Stop queue',()=>{cancelled=true;say('Stopping after the current dispatch result is checked.');render();});stop.hidden=true;selectAll=button('Select all',()=>{if(busy||supportReadState!=='ready')return;for(const item of items)if(eligibleForSelectAll(item))selected.add(item.id);render();});selectAll.title='Select all eligible missions matching the current filters';bulk.append(selectAll,send,button('Clear selection',()=>{if(!busy){selected.clear();render();}}),stop);status=el('div','Choose missions, then support them individually or as a batch.');status.setAttribute('role','status');footer.append(bulk,status);panel.append(footer);document.body.append(panel);
     panel.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close();}});
     return true;
   }
@@ -170,11 +180,11 @@
         if(C.success(doc,record.vehicle)||C.attending(doc,record.vehicle)){saveRecord(item.id,'sent',record.vehicle);progress('Support confirmed');selected.delete(item.id);return 'sent';}
         doc=await loadVehicles(item.id);
         const available=[...doc.querySelectorAll('input.vehicle_checkbox')].find(box=>C.vehicleId(box)===record.vehicle&&C.enabled(box)&&!box.checked);
-        if(available){forgetRecord(item.id);progress('Officer still available. You can try Support again.');return 'checked';}
-        throw Error('Dispatch is still unconfirmed. Check this mission before sending another officer.');
+        if(available){forgetRecord(item.id);progress('Vehicle still available. You can try Support again.');return 'checked';}
+        throw Error('Dispatch is still unconfirmed. Check this mission before sending another vehicle.');
       }
       if(checkOnly)return 'checked';
-      progress('Finding closest Fire Officer…');doc=await loadVehicles(item.id);
+      progress('Finding closest '+unitName(batchType)+'…');doc=await loadVehicles(item.id);
       if(autoBusy())throw Error('Stop Auto Mode before sending alliance support.');
       const fresh=C.missions(document).find(m=>m.id===item.id);if(!fresh)throw Error('This mission is no longer in the shared list.');
       if(already(fresh)){selected.delete(item.id);progress('Already supported');return 'joined';}
@@ -182,20 +192,20 @@
       const unavailable=new Set(reserved);
       const docs=[document];for(const other of document.querySelectorAll('iframe'))if(other!==frame){try{if(other.contentDocument)docs.push(other.contentDocument);}catch{}}
       for(const other of docs)for(const box of other.querySelectorAll('input.vehicle_checkbox:checked'))unavailable.add(C.vehicleId(box));
-      const candidates=C.officers(doc,unavailable);chosen=candidates.items[0];
-      if(!chosen)throw Error(candidates.unknownOrder?'The game has not reported officer travel times. Open the mission to check.':'No available Fire Officer in this mission’s vehicle range.');
+      const candidates=C.officers(doc,unavailable,batchType);chosen=candidates.items[0];
+      if(!chosen)throw Error(candidates.unknownOrder?'The game has not reported vehicle travel times. Open the mission to check.':'No available '+unitName(batchType)+' in this mission’s vehicle range.');
       for(const box of doc.querySelectorAll('input.vehicle_checkbox:checked'))box.click();
       chosen.box.click();
-      const dispatch=await waitFor(()=>{const current=docFor(item.id),button=current?.querySelector('a#mission_alarm_btn');return button&&usable(button)&&/^dispatch\b/i.test(C.clean(button.textContent))&&!/\bnext\b/i.test(button.title)&&Number(C.clean(button.querySelector('#vehicle_amount')?.textContent))===1&&button;},4000,'The game could not prepare exactly one officer for dispatch.');
+      const dispatch=await waitFor(()=>{const current=docFor(item.id),button=current?.querySelector('a#mission_alarm_btn');return button&&usable(button)&&/^dispatch\b/i.test(C.clean(button.textContent))&&!/\bnext\b/i.test(button.title)&&Number(C.clean(button.querySelector('#vehicle_amount')?.textContent))===1&&button;},4000,'The game could not prepare exactly one vehicle for dispatch.');
       const latest=C.missions(document).find(m=>m.id===item.id);
       if(latest&&already(latest)){selected.delete(item.id);progress('Already supported');return 'joined';}
       const picked=new Set([...doc.querySelectorAll('input.vehicle_checkbox:checked')].map(C.vehicleId));
       if(!latest||docFor(item.id)!==doc||!C.enabled(chosen.box)||autoBusy()||cancelled||picked.size!==1||!picked.has(chosen.id))throw Error('Selection changed before dispatch. No support was sent.');
       const previousAlerts=new Set(doc.querySelectorAll('.alert.alert-success'));
       saveRecord(item.id,'uncertain',chosen.id);reserved.add(chosen.id);
-      progress('Sending 1 Fire Officer…');clicked=true;dispatch.click();
+      progress('Sending 1 '+unitName(batchType)+'…');clicked=true;dispatch.click();
       await waitFor(()=>{const current=docFor(item.id);return current&&(C.success(current,chosen.id,previousAlerts)||C.attending(current,chosen.id));},20000,'Dispatch could not be confirmed. Use Check result before trying again.',true);
-      saveRecord(item.id,'sent',chosen.id);selected.delete(item.id);progress('Sent: 1 Fire Officer');return 'sent';
+      saveRecord(item.id,'sent',chosen.id);selected.delete(item.id);progress('Sent: 1 '+unitName(batchType));return 'sent';
     } catch(error) {
       item.error=true;progress(error.message||'Support could not be completed.');
       if(clicked)say('A dispatch result is unconfirmed. The queue has stopped; use Check result on that mission.');
@@ -206,6 +216,7 @@
     if(busy||!ids.length)return;
     if(!checkOnly&&autoBusy()){say('Stop Auto Mode, then send alliance support. Your selections are kept.');return;}
     if(!navigator.locks?.request){say('This browser cannot lock background dispatch safely. Use the mission’s normal dispatch control.');return;}
+    batchType=unit.value;
     busy=true;cancelled=false;render();observe();
     try {
       await navigator.locks.request('nexus-alliance-support-v1',{mode:'exclusive',ifAvailable:true},async lock=>{

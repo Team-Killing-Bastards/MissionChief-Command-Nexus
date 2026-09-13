@@ -4,8 +4,8 @@ import {functions} from './helpers.mjs';
 import fs from 'node:fs';
 import {controllerProtectedDigest} from '../scripts/auto-focus-integrity.mjs';
 
-test('executable code outside UI and skip records matches reviewed cumulative .72 source',()=>{
-  const baseline=JSON.parse(fs.readFileSync('reference/auto-focus-protected-72.json'));
+test('executable code outside UI and skip records matches reviewed cumulative .82 source',()=>{
+  const baseline=JSON.parse(fs.readFileSync('reference/auto-focus-protected-82.json'));
   assert.equal(controllerProtectedDigest(fs.readFileSync('extension/nexus-runtime.js','utf8')),baseline.protectedRuntimeSha256);
 });
 

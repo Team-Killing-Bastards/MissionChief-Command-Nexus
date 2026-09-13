@@ -52,16 +52,18 @@
   }
   function enabled(node) { return !!node && !node.disabled && node.getAttribute('aria-disabled') !== 'true' && !node.closest('.disabled,[disabled]'); }
   function vehicleId(box) { return id(box.getAttribute('vehicle_id') || box.dataset.vehicleId || (/^\d+$/.test(box.value) ? box.value : '') || box.id.match(/(?:vehicle_checkbox_|vehicle_)(\d+)$/)?.[1]); }
-  function officers(doc, reserved = new Set()) {
+  const homeUnits = Object.freeze([['3','Fire Officer'],['10','RRV'],['20','OTL'],['21','General Practitioner'],['22','Community First Responder'],['34','Ambulance Officer'],['95','Community Midwife'],['96','Specialist Paramedic RRV']].map(Object.freeze));
+  function officers(doc, reserved = new Set(), vehicleType = '3') {
+    if (!homeUnits.some(([id]) => id === String(vehicleType))) return {items:[],unknownOrder:false};
     const found = new Map();
     for (const box of doc.querySelectorAll('#vehicle_list_step input.vehicle_checkbox,input.vehicle_checkbox[name="vehicle_ids[]"]')) {
       const row = box.closest('tr'), key = vehicleId(box);
       const type = box.getAttribute('vehicle_type_id') ?? box.dataset.vehicleTypeId ?? row?.querySelector('[vehicle_type_id]')?.getAttribute('vehicle_type_id');
-      if (!key || String(type) !== '3' || !enabled(box) || box.checked || reserved.has(key) || box.closest('#mission_vehicle_driving,#mission_vehicle_at_mission,#vehicle_show_table_alliance')) continue;
+      if (!key || String(type) !== String(vehicleType) || !enabled(box) || box.checked || reserved.has(key) || box.closest('#mission_vehicle_driving,#mission_vehicle_at_mission,#vehicle_show_table_alliance')) continue;
       const delay = number(row?.getAttribute('data-sortvalue') ?? row?.getAttribute('timevalue'));
       const distance = number(row?.getAttribute('data-distance'));
       const link = row?.querySelector('a[href^="/vehicles/"]');
-      const item = {id:key, name:clean(link?.textContent || row?.querySelector('label')?.textContent || 'Fire Officer '+key).slice(0,140), delay, distance, box};
+      const item = {id:key, name:clean(link?.textContent || row?.querySelector('label')?.textContent || 'Support vehicle '+key).slice(0,140), delay, distance, box};
       if (!found.has(key)) found.set(key,item);
     }
     const list = [...found.values()];
@@ -79,5 +81,5 @@
   function attending(doc, vehicle) {
     return [...doc.querySelectorAll('#mission_vehicle_driving a[href],#mission_vehicle_at_mission a[href]')].some(link => link.getAttribute('href')?.split('?')[0] === '/vehicles/'+vehicle);
   }
-  globalThis.NexusAllianceCore = Object.freeze({clean,id,number,ranges,participation,inRange,supportedMissions,missions,enabled,vehicleId,officers,success,attending});
+  globalThis.NexusAllianceCore = Object.freeze({clean,id,number,ranges,participation,inRange,supportedMissions,missions,enabled,vehicleId,homeUnits,officers,success,attending});
 })();
