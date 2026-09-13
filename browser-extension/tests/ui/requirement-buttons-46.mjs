@@ -23,17 +23,17 @@ try{
  const change=async label=>{await page.evaluate(label=>document.querySelector('#missing_text [data-requirement-type=vehicles]').innerHTML='<b>Missing Vehicles:</b> '+label,label);await button(label).waitFor();};
  await button('2 Fire engines').waitFor();await page.waitForFunction(()=>window.__NEXUS_RULES__?.isReady()&&!!window.__NEXUS_MANUAL_REQUIREMENT_SELECTION__);
  assert.equal(await button('1 Unknown test requirement').count(),0);assert.equal(await button('1,000 litres of water').count(),0);
- await choose('2 Fire engines');assert.deepEqual(await selected(),[2,3]);await choose('2 Fire engines');assert.deepEqual(await selected(),[2,3]);assert.equal(await page.evaluate(()=>dispatches),0);
- pass('Actual packaged matcher selects nearest required units; repeated click adds none; no dispatch and unsupported items stay text');
- await page.locator('#vehicle_2').uncheck();await choose('2 Fire engines');assert.deepEqual(await selected(),[2,3]);
- await reset();await page.evaluate(html=>document.querySelector('#mission_vehicle_driving tbody').innerHTML=html,travelling(2,0));await choose('2 Fire engines');assert.deepEqual(await selected(),[3]);
- await reset();await page.evaluate(html=>{document.querySelector('#mission_vehicle_at_mission tbody').innerHTML=html;document.querySelector('#mission_vehicle_driving tbody').innerHTML=html;},travelling(2,0));await choose('2 Fire engines');assert.deepEqual(await selected(),[1,3]);
+ await choose('2 Fire engines');assert.deepEqual(await selected(),[2,8]);await choose('2 Fire engines');assert.deepEqual(await selected(),[2,8]);assert.equal(await page.evaluate(()=>dispatches),0);
+ pass('Actual packaged matcher prefers Rescue Pump before Water Ladder, then nearest within type; repeated click adds none; no dispatch and unsupported items stay text');
+ await page.locator('#vehicle_2').uncheck();await choose('2 Fire engines');assert.deepEqual(await selected(),[2,8]);
+ await reset();await page.evaluate(html=>document.querySelector('#mission_vehicle_driving tbody').innerHTML=html,travelling(2,0));await choose('2 Fire engines');assert.deepEqual(await selected(),[8]);
+ await reset();await page.evaluate(html=>{document.querySelector('#mission_vehicle_at_mission tbody').innerHTML=html;document.querySelector('#mission_vehicle_driving tbody').innerHTML=html;},travelling(2,0));await choose('2 Fire engines');assert.deepEqual(await selected(),[3,8]);
  pass('Deselection/retry works; incoming IDs counted once; on-scene vehicles are not subtracted twice or reselected');
- await reset();await page.evaluate(html=>document.querySelector('#occupied tbody').innerHTML=html,row(2,0,10,true));await choose('2 Fire engines');assert.deepEqual(await selected(),[3]);
+ await reset();await page.evaluate(html=>document.querySelector('#occupied tbody').innerHTML=html,row(2,0,10,true));await choose('2 Fire engines');assert.deepEqual(await selected(),[8]);
  await reset();await choose('2 Rescue Support Units or Rescue Pumps');assert.deepEqual(await selected(),[7,8]);
  pass('Follow-up duplicate IDs do not overcount; OR requirement selects valid alternatives');
  await reset();await page.evaluate(html=>document.querySelector('#mission_vehicle_driving tbody').innerHTML=html,travelling(55,0).replace('vehicle_type_id="0"',''));await choose('2 Fire engines');assert.deepEqual(await selected(),[]);assert.match(await page.locator('[data-nx-requirement-status]').innerText(),/no vehicle type/);
- await reset();await page.evaluate(()=>document.getElementById('vehicle_2').addEventListener('click',e=>e.preventDefault(),{once:true}));await choose('2 Fire engines');assert.deepEqual(await selected(),[1,3]);
+ await reset();await page.evaluate(()=>document.getElementById('vehicle_2').addEventListener('click',e=>e.preventDefault(),{once:true}));await choose('2 Fire engines');assert.deepEqual(await selected(),[3,8]);
  pass('Unknown incoming types fail closed and native rejection is respected without forcing a selection');
  await reset();await choose('2 Ambulances');assert.deepEqual(await selected(),[4]);assert.equal(await button('2 Ambulances').locator('[data-nx-requirement-shortfall]').innerText(),' ! 1 short');await choose('2 Ambulances');assert.deepEqual(await selected(),[4]);assert.equal(await page.evaluate(()=>loads),0);
  await page.locator('#load-more').click();await choose('2 Ambulances');assert.deepEqual(await selected(),[4,99]);await button('2 Ambulances').locator('[data-nx-requirement-tick]').waitFor();assert.equal(await button('2 Ambulances').locator('[data-nx-requirement-shortfall]').count(),0);
@@ -45,11 +45,11 @@ try{
  await reset();await page.evaluate(()=>document.querySelector('#nx-missing button[data-nx-vehicle-requirement="1 Police car"]').click());assert.deepEqual(await selected(),[]);
  pass('Keyboard activation selects without form submission; synthetic background clicks are ignored');
  // Native coupled selections must be noticed before selecting another candidate.
- await change('2 Fire engines');await page.evaluate(()=>document.getElementById('vehicle_2').addEventListener('click',()=>{document.getElementById('vehicle_1').checked=true;},{once:true}));await choose('2 Fire engines');assert.deepEqual(await selected(),[1,2]);
- await reset();await page.evaluate(()=>{document.getElementById('vehicle_2').addEventListener('click',()=>window.dispatchEvent(new Event('pagehide')),{once:true});});await choose('2 Fire engines');assert.deepEqual(await selected(),[2]);await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));
+ await change('2 Fire engines');await page.evaluate(()=>document.getElementById('vehicle_8').addEventListener('click',()=>{document.getElementById('vehicle_1').checked=true;},{once:true}));await choose('2 Fire engines');assert.deepEqual(await selected(),[1,8]);
+ await reset();await page.evaluate(()=>{document.getElementById('vehicle_8').addEventListener('click',()=>window.dispatchEvent(new Event('pagehide')),{once:true});});await choose('2 Fire engines');assert.deepEqual(await selected(),[8]);await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));
  pass('Coupled native selections are recounted and page suspension cancels further unit clicks');
  // Settings are read at document startup, just like the existing convenience switches.
- await page.evaluate(()=>localStorage.setItem('nexusConveniencesV1',JSON.stringify({requirementTicks:false})));await page.reload();await button('2 Fire engines').waitFor();await page.waitForFunction(()=>__NEXUS_RULES__.isReady());await choose('2 Fire engines');assert.deepEqual(await selected(),[2,3]);assert.equal(await page.locator('[data-nx-requirement-tick]').count(),0);
+ await page.evaluate(()=>localStorage.setItem('nexusConveniencesV1',JSON.stringify({requirementTicks:false})));await page.reload();await button('2 Fire engines').waitFor();await page.waitForFunction(()=>__NEXUS_RULES__.isReady());await choose('2 Fire engines');assert.deepEqual(await selected(),[2,8]);assert.equal(await page.locator('[data-nx-requirement-tick]').count(),0);
  await page.evaluate(()=>localStorage.setItem('nexusConveniencesV1',JSON.stringify({requirementButtons:false})));await page.reload();await page.locator('#nx-missing').waitFor();assert.equal(await page.locator('#nx-missing button[data-nx-vehicle-requirement]').count(),0);await page.locator('#vehicle_2').check();await page.locator('#vehicle_3').check();await page.locator('#nx-missing [data-nx-requirement-tick]').waitFor();
  pass('Buttons and blue ticks have independent settings and preserve the existing display-only mode');
  const worker=ctx.serviceWorkers()[0]||await ctx.waitForEvent('serviceworker');await worker.evaluate(()=>chrome.storage.local.set({nexusRequirementRulesV1:{schema:1,rules:[{requirement:'Fire engines',vehicleTypeId:'5',vehicleName:'Ambulance',enabled:true}]}}));
