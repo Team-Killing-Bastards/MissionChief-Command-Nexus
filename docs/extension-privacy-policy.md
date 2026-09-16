@@ -1,5 +1,25 @@
 # MissionChief Command Nexus — Privacy
 
+Updated 16 September 2026 · Version 3.0.43.106 · Publisher: MartyBlyth
+
+## Automatic collector registration and uploads
+
+New installations enable gameplay uploads by default. Previously saved upload-off preferences are preserved. Nexus registers the browser automatically with https://nexus.blyth.scot using the visible MissionChief username, player ID, a generated device label and random installation credentials. No pairing code is required. An in-game notice provides a collector-settings link and a Turn uploads off control. Uploads can also be disabled in Private collector; local recording continues.
+
+Registration credentials and the upload-only device token are stored locally and excluded from health displays and ordinary event exports. These credentials do not grant reporting-dashboard access. Game labels are self-reported and do not independently verify account ownership. Manual pairing remains available; its bootstrap code is not bundled or retained.
+
+Nexus records game identity, mission activity and game locations, requirements and shortages, selected units, dispatch attempts and observed confirmations, transport activity, completion/disappearance evidence, reliably observed game credits, and building/vehicle registers including staffing and training counts. Records support gameplay reporting, shortage analysis, upgrade planning and fault investigation. No game passwords, session cookies, payment data or unrelated browsing are collected. Game locations and game personnel are not device GPS data or real medical records. The host receives ordinary connection metadata such as IP addresses.
+
+Records are saved locally and uploaded separately from gameplay workers. Acknowledged events are removed from the pending queue; failures retry. Turning uploads off or uninstalling does not delete server records. No automatic server retention period is specified. For deletion requests or privacy questions, use the [support tracker](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues) to request a private contact channel; do not post credentials or private exports publicly. Reports are not sold or used for advertising.
+
+This section supersedes the manual-pairing requirement in the archived .102 policy below. Other browser-local storage, retention and control details remain as described there.
+
+---
+
+<details><summary>Version 3.0.43.102 and earlier policies</summary>
+
+# MissionChief Command Nexus — Privacy
+
 Updated 16 September 2026 · Version 3.0.43.102 · Publisher: MartyBlyth
 
 
@@ -85,5 +105,7 @@ The current upload service does not authenticate the claimed player identity. Pl
 ## Policy changes
 
 The version and date at the top identify the extension behaviour described by this policy. Changes to collection or reporting behaviour should be reflected here and in the store disclosures.
+
+</details>
 
 </details>
