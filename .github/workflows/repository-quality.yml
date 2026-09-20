@@ -43,6 +43,9 @@ jobs:
       - name: Run repository checks
         run: python3 scripts/check_repository.py
 
+      - name: Validate Realism backend source
+        run: python3 scripts/check_realism_backend.py
+
       - name: Validate current project state
         run: node scripts/check-project-state.mjs
 
