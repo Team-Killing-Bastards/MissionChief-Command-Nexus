@@ -1,7 +1,7 @@
 {
   "$schema": "./docs/project-state.schema.json",
   "schemaVersion": 1,
-  "lastUpdated": "2026-09-05",
+  "lastUpdated": "2026-09-20",
   "project": {
     "name": "MissionChief Command Nexus",
     "repository": "Team-Killing-Bastards/MissionChief-Command-Nexus",
@@ -119,7 +119,9 @@
       "A parent-appointed managed Worker A is terminal positive authority before DOM readiness and visible-primary ranking.",
       "Visible Mission Control and manual actions remain independent of background worker ownership.",
       "Durable station, vehicle, personnel, training and user-setting data are never cleared by runtime recovery.",
-      "Visible-page sleep recovery requires at least 90 seconds; hidden-page recovery requires at least three minutes."
+      "Visible-page sleep recovery requires at least 90 seconds; hidden-page recovery requires at least three minutes.",
+      "Nexus Realism geographic data is imported and classified on the VPS into PostgreSQL/PostGIS; routine browser map movement must not parse PBF data or call live Overpass.",
+      "Realism client reads are bounded, read-only Nexus API queries and remain operationally separate from Mission Worker A, Transport Worker B and collector event ingestion."
     ]
   },
   "lockedDecisions": [
@@ -171,6 +173,13 @@
       "file": "docs/decisions/0007-edge-store-release.md",
       "status": "accepted",
       "introducedIn": "Edge extension 3.0.43.15"
+    },
+    {
+      "id": "ADR-0008",
+      "title": "VPS-backed PostGIS is the Realism Map data authority",
+      "file": "docs/decisions/0008-realism-map-vps-data-plane.md",
+      "status": "accepted",
+      "introducedIn": "Realism Map Phase 1 (2026-09-20)"
     }
   ],
   "evidence": [
@@ -211,6 +220,16 @@
       "supports": [
         "station-level shortage evidence",
         "candidate rejection diagnostics"
+      ]
+    },
+    {
+      "id": "RUN-2026-09-20-REALISM-PHASE1",
+      "title": "Realism Map Phase 1 VPS/PostGIS validation",
+      "file": "docs/evidence/realism-backend-phase1-2026-09-20.md",
+      "kind": "sanitised-summary",
+      "supports": [
+        "REALISM-001",
+        "ADR-0008"
       ]
     }
   ],
@@ -260,6 +279,33 @@
         "A representative run records creditCaptureSuccesses greater than zero.",
         "Missing credit evidence remains telemetry-only and never blocks a mission."
       ]
+    },
+    {
+      "id": "REALISM-001",
+      "priority": "P1",
+      "status": "ready",
+      "title": "Build the Nexus Realism Map client on the verified PostGIS backend",
+      "issue": 421,
+      "issueUrl": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/421",
+      "evidence": [
+        "RUN-2026-09-20-REALISM-PHASE1"
+      ],
+      "objective": "Deliver Phase 2 of Nexus Realism Map by rendering the verified VPS/PostGIS dataset on the MissionChief map without moving OSM import or heavy geographic processing into the browser.",
+      "guardrails": [
+        "Keep the existing Mission Worker A and Transport Worker B ownership contracts unchanged.",
+        "Fetch only the visible MissionChief map viewport and requested service types through the bounded Nexus Realism API.",
+        "Debounce pan and zoom requests and cache safely so the map layer does not recreate long-session memory pressure.",
+        "Do not introduce direct browser PBF parsing, live Overpass polling or a dependency on third-party Realism runtime code."
+      ],
+      "acceptanceCriteria": [
+        "Settings exposes a master Nexus Realism Map toggle and per-service marker controls.",
+        "The client fetches only the current visible map viewport and respects the API result limits.",
+        "Pan and zoom requests are debounced and stale responses cannot overwrite a newer viewport.",
+        "Markers expose location name, address where available and all Nexus service classifications.",
+        "Fire, Ambulance, Police, Hospital, Coastguard/Lifeboat, Mountain Rescue, Prison and Dispatch Centre types are supported.",
+        "Client caching and cleanup have permanent memory/performance regression coverage.",
+        "Disabling the feature removes its markers/listeners and leaves MissionChief/Nexus operational paths unchanged."
+      ]
     }
   ],
   "knownRisks": [
@@ -280,15 +326,23 @@
       "severity": "medium",
       "summary": "The 3.0.42 trained-personnel final retry and no-partial-dispatch gate require live Auto Mode validation.",
       "mitigation": "Run a fully staffed Armed Response mission and an intentionally under-covered mission; confirm the first completes in one Auto cycle and the second dispatches zero vehicles before controller quarantine."
+    },
+    {
+      "id": "RISK-REALISM-001",
+      "severity": "medium",
+      "summary": "OpenStreetMap coverage and tagging quality are incomplete and can contain missing, stale or ambiguous emergency-service locations.",
+      "mitigation": "Keep classification fail-closed, expose source identity, preserve multi-service records, and treat missing OSM coverage as unknown rather than proof that no real-world facility exists."
     }
   ],
   "handover": {
-    "nextAction": "Install and run 3.0.43, then export diagnostics after shortage/trained-personnel events and rank run.failureDiagnostics.stationIssueSummary before changing any selection rules.",
+    "nextAction": "Build Phase 2 of issue #421: add the Nexus Realism Map client against the verified bounded PostGIS API while preserving the current Worker A / Transport Worker B runtime contracts.",
     "readOrder": [
       "project-state.json",
       "docs/PROJECT_STATE.md",
       "docs/decisions/README.md",
       "browser-extension/README.md",
+      "docs/evidence/realism-backend-phase1-2026-09-20.md",
+      "server/realism/README.md",
       "docs/DEVELOPER_HANDOFF.md",
       "docs/evidence/live-run-v3.0.39-2026-08-30.md",
       "docs/evidence/hot-brakes-airfield-command-v3.0.40-2026-09-01.md",
