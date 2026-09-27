@@ -1,5 +1,7 @@
 # Changelog
 
+Current MV3 extension candidates: [extension change notes](docs/extension-changelog.md). The entries below track the canonical userscript.
+
 All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.

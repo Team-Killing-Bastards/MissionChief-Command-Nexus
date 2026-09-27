@@ -1,0 +1,29 @@
+MISSIONCHIEF COMMAND NEXUS — LOCAL FIX 3.0.43.142
+
+Live fault corrected
+- 3.0.43.141 could correctly distinguish own versus foreign Planned Appearances, but the Alliance table still depended on MissionChief creating a mission sidebar/card row.
+- Live Fire Station Open Day evidence shows MissionChief can expose an alliance Planned Appearance on the map and open it as an `[Alliance]` mission while creating no mission card at all.
+- The supplied mission page confirms Fire Station Open Day is mission type 526 and is a real Alliance mission, so the sidebar cannot be treated as the only discovery source.
+
+3.0.43.142 behaviour
+- Nexus retains the existing read-only mission object hooks and now also harvests MissionChief's live `missions_data` cache when the Alliance panel refreshes.
+- Captured mission records now retain mission id, owner user_id, planned status, alliance_id, mission type, caption/name and advertised credits where MissionChief provides them.
+- The Alliance table merges current map-only Planned Appearances after native DOM rows. Native mission cards remain preferred; duplicate ids are not duplicated.
+- A map-only Planned Appearance is admitted only when it is owned by another user. Own Planned Appearances remain excluded.
+- If MissionChief supplies alliance_id, it must match the signed-in alliance. Wrong-alliance records are rejected.
+- Current map membership is authoritative for synthetic rows: once MissionChief removes a marker from `missions_data`, a later refresh removes it from Nexus instead of retaining stale capture history.
+- Map-only rows are labelled `Planned appearance` and use the same Support flow as ordinary Alliance rows.
+- The existing Ocean-only/offshore filter is applied to map-only rows using exact mission type ids, and the pre-dispatch offshore guard remains unchanged.
+- Fire Station Open Day type 526 remains eligible.
+- MissionChief's native mission list and map are never hidden, reordered or modified by this change.
+
+Versions
+- Extension: 3.0.43.142
+- Mission Finder: 10.6.188 (unchanged)
+- Unit Naming: 3.3.29 (unchanged)
+
+Regressions
+- regressions/check-alliance-planned-appearances-v3140.mjs
+- regressions/check-alliance-planned-owner-authority-v3141.mjs
+- regressions/check-alliance-map-planned-appearances-v3142.mjs
+- regressions/check-alliance-offshore-filter-v3139.mjs

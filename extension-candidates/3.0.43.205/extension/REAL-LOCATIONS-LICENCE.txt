@@ -1,0 +1,12 @@
+Real-world facility dataset: copyright OpenStreetMap contributors.
+
+The derived database nexus-real-locations-data.json is provided under the Open Database Licence (ODbL) 1.0: https://opendatacommons.org/licenses/odbl/1-0/
+
+Attribution and source information: https://www.openstreetmap.org/copyright
+
+The entire derived database is supplied in readable JSON in this ZIP. Its metadata records the source, extraction timestamp, source data timestamp, coverage rectangle, category counts and source checksum.
+
+This licence applies to the dataset, separately from the extension code.
+
+The snapshot is a community map extract, not an authoritative directory of operational facilities. Coverage can be incomplete or outdated.
+
