@@ -1,0 +1,29 @@
+name: Validate extension candidates
+on:
+  pull_request:
+    paths: ['extension-candidates/**', 'docs/extension-changelog.md', '.github/workflows/extension-candidates.yml']
+  push:
+    branches: [main]
+    paths: ['extension-candidates/**', 'docs/extension-changelog.md', '.github/workflows/extension-candidates.yml']
+permissions:
+  contents: read
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Verify exact source bytes and package
+        run: python extension-candidates/3.0.43.205/package.py
+      - name: Check JavaScript and changelog targets
+        run: node extension-candidates/3.0.43.205/validate.mjs
+      - name: Test update notification state and tab races
+        run: node extension-candidates/3.0.43.205/check-update-notes.mjs
+        env:
+          NEXUS_SKIP_BROWSER: '1'

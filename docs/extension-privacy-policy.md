@@ -1,6 +1,14 @@
 # MissionChief Command Nexus — Privacy
 
-Updated 16 September 2026 · Version 3.0.43.106 · Publisher: MartyBlyth
+Updated 27 September 2026 · Prepared for Version 3.0.43.205 · Publisher: MartyBlyth
+
+## Optional Discord account sync and update notices
+
+Choosing Sign in with Discord opens Discord authorisation. Nexus uses the Discord user ID and username to identify your Nexus account; it does not request access to Discord messages. Optional account sync transfers supported preferences, saved profiles, requirement rules and personnel-register records, including game personnel identifiers and training combinations. Saved profiles are separated by Nexus account, game realm and MissionChief player ID.
+
+Account sync runs while MissionChief is open when enabled. Game-page checks supply new station and staffing evidence; sync shares those saved records between browsers. Sign-in tokens stay in extension storage. The Discord application secret is not distributed in the extension. Nexus Tools → Overview offers Sync now, Keep device settings, Use saved cloud settings and Sign out. Signing out or disabling sync does not delete previously saved cloud records; the local register remains available offline.
+
+Update notices use packaged text and an extension-local seen-version record. This record is not part of Discord sync. Opening the notice makes no GitHub request; choosing a changelog link opens the corresponding GitHub page in a new tab.
 
 ## Automatic collector registration and uploads
 

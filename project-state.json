@@ -1,7 +1,7 @@
 {
   "$schema": "./docs/project-state.schema.json",
   "schemaVersion": 1,
-  "lastUpdated": "2026-09-20",
+  "lastUpdated": "2026-09-27",
   "project": {
     "name": "MissionChief Command Nexus",
     "repository": "Team-Killing-Bastards/MissionChief-Command-Nexus",
@@ -335,9 +335,11 @@
     }
   ],
   "handover": {
-    "nextAction": "Build Phase 2 of issue #421: add the Nexus Realism Map client against the verified bounded PostGIS API while preserving the current Worker A / Transport Worker B runtime contracts.",
+    "nextAction": "Review the versioned MV3 extension 3.0.43.205 candidate and update notes before the separately requested Chrome Web Store submission. See extension-candidates/3.0.43.205/README.md. The canonical userscript and historical .82 automated store pipeline are unchanged.",
     "readOrder": [
       "project-state.json",
+      "extension-candidates/3.0.43.205/README.md",
+      "docs/extension-changelog.md",
       "docs/PROJECT_STATE.md",
       "docs/decisions/README.md",
       "browser-extension/README.md",
