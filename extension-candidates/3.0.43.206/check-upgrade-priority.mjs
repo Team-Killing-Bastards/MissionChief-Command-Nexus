@@ -1,0 +1,23 @@
+import {fileURLToPath} from 'node:url';
+import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';
+const root=process.env.NEXUS_CANDIDATE_ROOT||fileURLToPath(new URL('./extension/',import.meta.url));const source=fs.readFileSync(root+'/nexus-runtime.js','utf8');
+function fn(name){const a=source.indexOf('function '+name+'(');assert(a>=0,name);const b=source.indexOf('\nfunction ',a+10);return source.slice(a,b<0?source.length:b);}
+const context=vm.createContext({rows:[],events:[],state:{recentlyNativeAdvanced:new Map(),missionRowSignatures:new Map(),missionSkipRecords:new Map(),ruleChangeHistory:[],nativeMissionAdvances:0},RULE_CHANGE_HISTORY_LIMIT:60,CONTROLLER_IDENTITY_CACHE_LIMIT:2000,normaliseText:v=>String(v||'').replace(/\s+/g,' ').trim(),nowIso:()=>new Date().toISOString(),recordMissionSkipEvent:e=>context.events.push(e),log:()=>{},trimOldestMapEntries:()=>{},pruneRecentlyNativeAdvanced:()=>{},compactMissionCandidate:x=>x,cacheMissionName:()=>{},readMissionEntry:x=>x});
+vm.runInContext(`const findMissionListRoot=()=>({querySelectorAll:()=>rows});${['compareMissionUpgradePriority','collectMissionCandidates','recordMissionRuleSignature','missionSkipRemaining','isMissionTemporarilySkipped','chooseTopMission','pipelineActionableCandidates'].map(fn).join('\n')}`,context);
+const candidate=(missionId,actionKind,visualOrder=0,extra={})=>({missionId,actionKind,visualOrder,domIndex:visualOrder,rendered:true,allianceLike:false,score:0,caption:'Fixture',...extra});
+context.rows=[candidate('400','NEW',0),candidate('300','UPGRADE',3),candidate('200','UPGRADE',20),candidate('500','NEW',1),candidate('100','UPGRADE',-1,{rendered:false}),candidate('50','UPGRADE',-2,{allianceLike:true})];
+const top=()=>vm.runInContext('chooseTopMission({actionableOnly:true})',context);
+assert.equal(top().missionId,'200','upgrade beats new and displayed order; hidden/alliance excluded');
+assert.deepEqual(Array.from(vm.runInContext('pipelineActionableCandidates()',context),x=>x.missionId),['200','300','400','500'],'preloads use same priority');
+context.state.missionSkipRecords.set('200',{retryAfterAdvance:20,category:'RESOURCE_SHORTAGE'});assert.equal(top().missionId,'300','unchanged shortage is deferred');
+context.state.nativeMissionAdvances=20;assert.equal(top().missionId,'200','expired upgrade returns ahead of fresh work');
+context.rows=[candidate('400','NEW',7),candidate('500','NEW',2)];assert.equal(top().missionId,'500','fresh-only queue retains displayed order');
+context.rows=[candidate('10000000000000001','UPGRADE',0),candidate('9999999999999999','UPGRADE',3)];assert.equal(top().missionId,'9999999999999999','large IDs are compared without rounding');
+const signature=(missingText,caption='Fixture')=>JSON.stringify({missingText,caption});
+context.changed=candidate('200','UPGRADE',0,{missingText:'2 Fire Engines',ruleSignature:signature('2 Fire Engines','New caption')});
+context.state.missionRowSignatures.set('200',signature('2 Fire Engines'));context.state.missionSkipRecords.set('200',{retryAfterAdvance:40,category:'RESOURCE_SHORTAGE'});
+vm.runInContext('recordMissionRuleSignature(changed)',context);assert(context.state.missionSkipRecords.has('200'),'caption-only change does not release same shortage');
+context.changed={...context.changed,missingText:'1 Foam Unit',ruleSignature:signature('1 Foam Unit')};vm.runInContext('recordMissionRuleSignature(changed)',context);assert(!context.state.missionSkipRecords.has('200'),'changed missing requirements release old shortage');assert.equal(context.events.at(-1).event,'changed-requirement-skip-released');
+context.state.missionRowSignatures.set('200',signature(''));context.state.missionSkipRecords.set('200',{retryAfterAdvance:40,category:'RESOURCE_SHORTAGE'});vm.runInContext('recordMissionRuleSignature(changed)',context);assert(!context.state.missionSkipRecords.has('200'),'newly appearing requirement is fresh work');
+context.rows=[candidate('200','UPGRADE',10),candidate('400','NEW',0)];context.state.recentlyNativeAdvanced.set('200',Date.now());assert.equal(top().missionId,'200','recent native advance does not suppress upgrade');
+console.log('PASS: upgrade priority, oldest ID ordering, hidden/alliance exclusion, preload order, preserved fresh order, cooldown/expiry, changed-requirement release, native-advance revisit and memory fix preservation.');

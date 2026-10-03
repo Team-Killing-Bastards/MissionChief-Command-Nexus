@@ -27,3 +27,23 @@ jobs:
         run: node extension-candidates/3.0.43.205/check-update-notes.mjs
         env:
           NEXUS_SKIP_BROWSER: '1'
+      - name: Verify Nexus 206 exact source and package
+        run: python extension-candidates/3.0.43.206/package.py
+      - name: Validate Nexus 206 source and changelog
+        run: node extension-candidates/3.0.43.206/validate.mjs
+      - name: Check priority, memory lifecycle and vehicle claims
+        run: |
+          node extension-candidates/3.0.43.206/check-upgrade-priority.mjs
+          node extension-candidates/3.0.43.206/check-memory.mjs
+          node extension-candidates/3.0.43.206/check-vehicle-claims.mjs
+      - name: Install browser fixture dependencies
+        run: npm install --prefix browser-extension --ignore-scripts --no-audit --no-fund --package-lock=false
+      - name: Install fixture browser
+        working-directory: browser-extension
+        run: npx playwright install --with-deps chromium
+      - name: Verify background alliance queue and Settings toggle
+        run: node extension-candidates/3.0.43.206/check-alliance-auto.mjs
+      - name: Verify durable dispatch checkpoint failures
+        run: node extension-candidates/3.0.43.206/check-alliance-storage-failure.mjs
+      - name: Verify Nexus 206 update notice
+        run: node extension-candidates/3.0.43.206/check-update-notes.mjs
