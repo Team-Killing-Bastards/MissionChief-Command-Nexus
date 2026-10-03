@@ -1,0 +1,30 @@
+MISSIONCHIEF COMMAND NEXUS — LOCAL FIX 3.0.43.143
+
+Live fault corrected
+- 3.0.43.142 still showed only missions that had a normal mission-card row.
+- Root cause 1: once `missions_data` existed, 3.0.43.142 treated absence from that cache as proof that a separately captured map marker was no longer current. MissionChief can expose a shared Planned Appearance on the map while omitting it from the normal card/list cache.
+- Root cause 2: when `missions_data` was unavailable, the fallback considered marker evidence current for only two minutes. The supplied Fire Station Open Day was already more than an hour old and still had over an hour before its planned start, so two minutes is not a valid lifetime for Planned Appearances.
+
+3.0.43.143 behaviour
+- Direct MissionChief map evidence from `missionMarkerAdd` and `missionMarkerAddSingle` now remains authoritative independently of `missions_data` membership.
+- `processMissionElement` is also wrapped because current virtual-list builds can pass the same full mission object through that path.
+- Marker-observed Planned Appearances keep a bounded 72-hour fallback lifetime, and native `date_end` is used when MissionChief supplies it. Ended entries expire after a short grace period.
+- `missions_data` is now positive evidence, not negative evidence against a directly observed map marker. A mission known only through `missions_data` can still be removed when a later `missions_data` harvest drops it.
+- Nexus also reads the live `mission_markers` collection as a recovery path for mission markers created before the wrapper was installed, but only accepts entries that expose both mission id and owner user_id.
+- Capture is refreshed again on load, pageshow, focus and return to a visible tab.
+- Own Planned Appearances remain excluded; foreign Planned Appearances with a conflicting alliance_id remain excluded.
+- Exact Ocean-only/offshore filtering remains unchanged and also applies to map-only Planned Appearances.
+- Fire Station Open Day mission type 526 remains eligible.
+- Native MissionChief mission/card/map behaviour is never hidden, reordered or modified by this fix.
+
+Versions
+- Extension: 3.0.43.143
+- Mission Finder: 10.6.188 (unchanged)
+- Unit Naming: 3.3.29 (unchanged)
+
+Regressions
+- regressions/check-alliance-live-marker-planned-v3143.mjs
+- regressions/check-alliance-map-planned-appearances-v3142.mjs
+- regressions/check-alliance-planned-owner-authority-v3141.mjs
+- regressions/check-alliance-planned-appearances-v3140.mjs
+- regressions/check-alliance-offshore-filter-v3139.mjs

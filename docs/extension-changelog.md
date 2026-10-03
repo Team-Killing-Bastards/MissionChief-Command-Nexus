@@ -2,7 +2,25 @@
 
 Selected recent extension changes. Each linked entry is bundled with its release. The update notice shows entries newer than the version previously installed in this browser.
 
-3.0.43.205 is a prepared release candidate; this record does not mean it has been published to a browser store.
+3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
+
+## v3-0-43-206-alliance-auto
+
+**Alliance Auto alongside personal Auto Mode · 3.0.43.206**
+
+An optional background queue sends one chosen support unit per eligible shared mission without waiting for your personal backlog. Enable it in Nexus Tools > Settings > Alliance support; it starts off. Uses the Alliance missions vehicle and value filters, keeps confirmed support history, and pauses on an unconfirmed dispatch.
+
+## v3-0-43-206-upgrade-priority
+
+**Return to missions with missing requirements first · 3.0.43.206**
+
+Personal Auto Mode handles transport requests, then missions with missing requirements, then fresh missions. Missing-requirement missions use older mission IDs first. Changed requirements release an old shortage skip; an unchanged shortage retains its retry cooldown.
+
+## v3-0-43-206-closed-frame-memory
+
+**Release closed mission frames · 3.0.43.206**
+
+Mission ownership records are created in the top window and released when their mission frame closes. Queued reporting data is copied into the top window, so it does not retain a closed mission frame.
 
 ## v3-0-43-205-update-notes
 

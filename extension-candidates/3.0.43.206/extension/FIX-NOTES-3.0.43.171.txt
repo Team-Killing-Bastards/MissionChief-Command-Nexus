@@ -1,0 +1,12 @@
+Nexus .171 - Alliance map missions and events
+
+The Alliance Missions panel now merges current shared map missions, including
+alliance events without sidebar cards, instead of limiting map-only entries to
+Planned Appearances. System-owned and ownerless events require a matching
+alliance ID. Personal and other-alliance missions remain excluded.
+
+Existing filters still apply. Choose All values to include events with no known
+credit value. Existing participation checks and dispatch behaviour are unchanged.
+Includes the .170 MCE fixes. Local tests passed; live panel not verified this run.
+
+Reload the extension and refresh MissionChief after installing.
