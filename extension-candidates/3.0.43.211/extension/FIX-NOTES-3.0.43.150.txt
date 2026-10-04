@@ -1,0 +1,7 @@
+Nexus 3.0.43.150 - Realism Map full-width toggle layout
+
+- Keeps the standalone Realism Map launcher removed.
+- Moves the always-visible Realism service toggles to the full-width New building form level.
+- Fixes the .149 narrow Back-action-cell mount that forced one toggle per line.
+- Toggles now wrap horizontally across the available panel width, matching the requested compact two-row layout.
+- Preserves supported/disabled service states, saved selections, live VPS/PostGIS overlays, pan/zoom refresh, cache, clear/refresh actions and marker cleanup.

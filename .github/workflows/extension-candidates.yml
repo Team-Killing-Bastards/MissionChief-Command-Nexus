@@ -119,3 +119,21 @@ jobs:
           node extension-candidates/3.0.43.206/check-vehicle-claims.mjs
           node extension-candidates/3.0.43.206/check-alliance-auto.mjs
           node extension-candidates/3.0.43.206/check-alliance-storage-failure.mjs
+      - name: Verify Nexus 211 package, manifest and upgrade checkpoint isolation
+        run: |
+          python extension-candidates/3.0.43.211/package.py
+          node extension-candidates/3.0.43.211/validate.mjs
+          node extension-candidates/3.0.43.211/check-upgrade-audit.mjs
+      - name: Verify choose-first scan selection and update notice
+        run: |
+          node extension-candidates/3.0.43.211/check-building-upgrades.mjs
+          node extension-candidates/3.0.43.211/check-update-notes.mjs
+      - name: Preserve Auto Mode and Alliance Auto behavior in 211
+        env:
+          NEXUS_CANDIDATE_ROOT: extension-candidates/3.0.43.211/extension
+        run: |
+          node extension-candidates/3.0.43.206/check-upgrade-priority.mjs
+          node extension-candidates/3.0.43.206/check-memory.mjs
+          node extension-candidates/3.0.43.206/check-vehicle-claims.mjs
+          node extension-candidates/3.0.43.206/check-alliance-auto.mjs
+          node extension-candidates/3.0.43.206/check-alliance-storage-failure.mjs
