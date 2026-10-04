@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const here=path.dirname(fileURLToPath(import.meta.url)),root=path.resolve(here,'..');
+const source=fs.readFileSync(path.join(root,'nexus-real-locations.js'),'utf8');
+const manifest=JSON.parse(fs.readFileSync(path.join(root,'manifest.json'),'utf8'));
+assert.equal(manifest.version,'3.0.43.189');
+assert.ok(source.includes("const details=d.createElement('details');details.className='nx-real-build'"),'marker card must create Build details');
+assert.ok(source.includes("summary.textContent='🏗️ Build'"),'marker card must label the Build section');
+assert.ok(source.includes('box.append(details);'),'Build details must actually be appended to the visible marker card');
+assert.ok(source.includes("field('Building Type',controls.type)"),'Build card must expose Building Type');
+assert.ok(source.includes("field('Dispatch Center',controls.dispatch)"),'Build card must expose Dispatch Center');
+assert.ok(source.includes("field('Starting Vehicle',controls.start)"),'Build card must expose Starting Vehicle');
+assert.ok(source.includes('Multi Build — same type'),'Build card must retain same-type Multi Build');
+console.log('PASS: 3.0.43.189 appends the Build details section to every rich Realism marker card.');
