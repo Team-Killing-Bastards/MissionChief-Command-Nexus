@@ -1,0 +1,15 @@
+MissionChief Command Nexus 3.0.43.147 LOCAL
+
+Realism Map UI rework
+=====================
+
+- Removes the old "Nexus · Realism Map" table/panel from the native New building form.
+- Replaces the failed in-layout launcher with a position-anchored Realism Map button in the empty Stations action area beneath New building / Set a new POI.
+- Clicking Realism Map now opens a compact RLM-style toggle menu instead of opening the New building form.
+- Toggles are independent and markers refresh automatically when the MissionChief map moves or zooms.
+- Live marker data now comes from the verified Nexus VPS/PostGIS API at nexus.blyth.scot rather than the old bundled offline panel workflow.
+- Supported now: Fire Stations, Police Stations, Ambulance Stations, Control Centers, Hospitals, Prisons, Mountain Rescue, Coastguard Stations, RNLI Stations.
+- Displayed but disabled pending backend dataset coverage: Disaster Response, Lifeguard Stations, Doctors/Clinics.
+- A small bounded viewport cache is used and stale requests are cancelled.
+- No building purchase/creation or dispatch action is performed by Realism Map.
+- Existing 3.0.43.144 per-mission Ambulance limit and all later fixes are preserved.
