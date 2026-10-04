@@ -5,13 +5,13 @@
   "changelogCommit": "b9cb246f9614342b11d50028c3afbbbb6fb64c35",
   "status": "Prepared candidate; not submitted to a browser store.",
   "validation": {
-    "browserFixtureChecks": 12,
+    "browserFixtureChecks": 14,
     "liveGameReadOnlyInspected": true,
     "liveGamePurchasesVerified": false
   },
   "store": {
     "zip": "Nexus-3.0.43.207-Building-Upgrades.zip",
-    "sha256": "aba234031828534bb2ea817fa17f19cb77e469b73a3356c393bcbee8e15c94b0",
+    "sha256": "7c6fd904f00615e4fa57a2e5a1f631ea801a74f1f120e9cf1e999a0a5c5461f2",
     "files": 148
   },
   "files": {
@@ -92,7 +92,7 @@
     "nexus-building-delete.js": "b475fd5ce16ef5ec28e5f44c118e117b5b92337afeb34d31784b8a652ab4702f",
     "nexus-building-overview.js": "b1a2560a38b31aa26bc9df92d25b6627010c5807970d78d8b548d60d631b1235",
     "nexus-building-upgrades-audit.mjs": "02bac968e42b8c12cda89399e7d01edb7189462657d7de589c9c3ae12e2fcd9e",
-    "nexus-building-upgrades-core.js": "f20357e44bdf0cecd93d22d151dc21e27157947355e977b3315a5469122b4e10",
+    "nexus-building-upgrades-core.js": "f17db3f143db3414d44b6b8259c8fe420f6739de2d56c4540153b6be5887689f",
     "nexus-building-upgrades.js": "17907024e43355dfd3a299a4e303bcfaebf6b5092f9d157528cb46280889123c",
     "nexus-comfort-data.js": "f84ee95924df48c7cc68116eb72bbb7af2eb825e4ef960704f593f063d9965fa",
     "nexus-comfort.js": "d71030145c8115d6acce655bf892f98e16fadd50cfc00dd9125276cbae7b3252",
@@ -166,7 +166,7 @@
   },
   "local": {
     "zip": "Nexus-207-Building-Upgrades.zip",
-    "sha256": "dbd811e6b3e950ee23e774fd0fd862095f5f40b48b48a5cec1e62b0cff0ae227",
+    "sha256": "dd808fae757dd81c2224ca954041e262c0f04b1100eb25a29bcd16fc15f3d712",
     "files": 149
   }
 }

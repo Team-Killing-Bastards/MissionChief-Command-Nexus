@@ -24,7 +24,7 @@
    const method=(a?.getAttribute('data-method')||'get').toLowerCase();
    const started=!!row.querySelector('.extension-timer,[data-end-time],.label-success,.label-danger,a[href*="/extension_ready/"],a[data-method="delete"][href^="/building_specializations/"]');
    const reason=clean([...row.querySelectorAll('.text-danger')].map(n=>n.textContent).join('; '));
-   result.push({kind,key,name,path,cost,method,started,available:!!a&&!disabled(a)&&!reason&&cost!==null&&method==='post',reason:reason||(!a?(started?'Already built or under construction':'Not offered by the game'):disabled(a)?'Game prerequisites not met':cost===null?'Credit price unavailable':method!=='post'?'Purchase method not recognised':'')});
+   result.push({kind,key,name,path,cost,method,started,available:!!a&&!started&&!disabled(a)&&!reason&&cost!==null&&method==='post',reason:reason||(started?'Already built or under construction':!a?(started?'Already built or under construction':'Not offered by the game'):disabled(a)?'Game prerequisites not met':cost===null?'Credit price unavailable':method!=='post'?'Purchase method not recognised':'')});
   }
   return result;
  }
