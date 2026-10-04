@@ -4,6 +4,16 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-211-choose-upgrades-first
+
+**Choose upgrades before selecting stations · 3.0.43.211**
+
+Building upgrades now supports choosing the requested work before a full station scan. Filter by dispatch centre, building type or name, then use Load upgrade choices to read one example per matching building type. These dropdowns include owned and blocked options as scan intentions; the example does not establish availability or price at other stations. Choose extensions, specialisations or a target level, then click Scan and select needed.
+
+The scan uses manually checked buildings, or all filtered matches if none are checked. Each station is read separately. Stations with eligible requested work are selected; work already built or under construction and options with unmet game prerequisites are excluded, with reasons beside each row. A station needing only some of the requested choices remains selected for those eligible choices. A station whose read fails remains selected for attention and prevents a purchase until resolved or explicitly deselected. No scan or selection action spends credits.
+
+Changing requested bulk work requires another scan before review when automatic selection is in use. Re-scanning retains the original scope so previously excluded stations can be reconsidered. Editing a station checkbox starts a new manual scope. Review re-reads the selected stations and preserves individual row overrides, the editable credit budget, native price checks and durable no-resend checkpoints. No live game purchases or store publication were performed for this candidate.
+
 ## v3-0-43-210-upgrade-response-verification
 
 **Verify purchases before interpreting page warnings · 3.0.43.210**

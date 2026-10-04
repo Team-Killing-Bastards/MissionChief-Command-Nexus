@@ -1,0 +1,28 @@
+MISSIONCHIEF COMMAND NEXUS — LOCAL FIX 3.0.43.141
+
+Live fault corrected
+- 3.0.43.140 used data-mission-participation-filter as if it identified who owned a Planned Appearance.
+- That field describes participation state, not mission ownership, so Nexus could show Marty's own planned appearances while missing planned appearances shared by other alliance members.
+
+3.0.43.141 behaviour
+- Planned Appearance ownership now comes from MissionChief's actual mission object user_id.
+- Nexus captures that owner evidence read-only through MissionChief's supported virtual-list filter callback (additionalMissionsFiltersFuncs). The callback always returns true and therefore never filters or changes MissionChief's native mission list.
+- MissionChief's missionMarkerAdd / missionMarkerAddSingle object flow remains a bounded compatibility fallback for non-VL/legacy rendering.
+- A Planned Appearance is admitted to Nexus Alliance missions only when its captured owner user_id is different from the signed-in MissionChief user_id.
+- Marty's own Planned Appearances are excluded even if they have been shared with the alliance.
+- Another alliance member's Planned Appearance is included when MissionChief owner authority proves it is foreign/shared.
+- If owner authority has not been captured yet, Nexus fails closed and does not guess from participation state.
+- The Alliance panel refreshes as soon as new owner evidence is captured.
+- Planned Appearance rows remain labelled `Planned appearance`.
+- The Ocean-only/offshore exclusion and pre-dispatch guard from 3.0.43.139 remain active.
+- Fire Station Open Day (type 526) remains eligible.
+- MissionChief's own mission list is not hidden, modified or reordered by this fix.
+
+Versions
+- Extension: 3.0.43.141
+- Mission Finder: 10.6.188 (unchanged)
+- Unit Naming: 3.3.29 (unchanged)
+
+Regressions
+- regressions/check-alliance-planned-appearances-v3140.mjs
+- regressions/check-alliance-planned-owner-authority-v3141.mjs
