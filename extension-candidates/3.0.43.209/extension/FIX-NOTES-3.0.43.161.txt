@@ -1,0 +1,10 @@
+MissionChief Command Nexus local build 3.0.43.161
+
+STAGING LAUNCHER VISIBILITY FIX
+
+- Built from the local .160 staging-area package, preserving its profile, placement, duration and unit-sending features.
+- The staging icon now mounts beside the Realism Map button as soon as that header button appears, even if the game map is still loading.
+- It also mounts in the active game frame, matching the Realism launcher behaviour.
+- If the map is not ready when Choose point is pressed, the panel displays a clear loading message.
+- A profile storage load problem no longer silently hides the launcher.
+- Both version and version_name read 3.0.43.161.
