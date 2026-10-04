@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import path from 'node:path';
+import {fileURLToPath,pathToFileURL} from 'node:url';
+const root=path.resolve(process.env.NEXUS_CANDIDATE_ROOT||fileURLToPath(new URL('./extension/',import.meta.url)));
+const {createUpgradeAuditHandler}=await import(pathToFileURL(path.join(root,'nexus-building-upgrades-audit.mjs')));
+const data={};let fail=false;
+const api={runtime:{id:'fixture'},storage:{local:{async get(key){return {[key]:data[key]};},async set(value){if(fail)throw Error('quota');Object.assign(data,structuredClone(value));}}}};
+const handler=createUpgradeAuditHandler(api),sender={id:'fixture',frameId:0,tab:{id:1},url:'https://www.missionchief.co.uk/'};
+function request(message,who=sender){return new Promise(resolve=>{const used=handler(message,who,resolve);if(!used)resolve(null);});}
+const message={type:'NEXUS_UPGRADE_AUDIT_SAVE',player:'555',value:{entries:[{id:'1',kind:'extension',cost:100000,name:'Foam',path:'/buildings/1/extension/credits/3',state:'pending'}]}};
+assert.equal((await request(message)).ok,true);
+assert.equal((await request({type:'NEXUS_UPGRADE_AUDIT_GET',player:'555'})).value.entries[0].state,'pending');
+assert.equal((await request({type:'NEXUS_UPGRADE_AUDIT_GET',player:'556'})).value,null);
+assert.equal((await request({type:'NEXUS_UPGRADE_AUDIT_GET',player:'555'},{...sender,url:'https://police.missionchief.co.uk/'})).value,null);
+for(const who of [{...sender,id:'other'}, {...sender,frameId:1},{...sender,url:'https://example.com/'},{...sender,tab:null}])assert.equal(await request(message,who),null);
+assert.equal((await request({...message,player:'bad'})).ok,false);
+assert.equal((await request({...message,value:{entries:[{...message.value.entries[0],state:'sent'}]}})).ok,false);
+assert.equal((await request({...message,value:{entries:[],extra:'x'.repeat(3000001)}})).ok,false);
+fail=true;assert.equal((await request(message)).ok,false);assert.equal(data['nexusBuildingUpgradeAuditV1:https://www.missionchief.co.uk:555'].entries[0].state,'pending');
+console.log('Upgrade checkpoints: trusted sender, player/origin isolation, bounds and storage failure passed.');
