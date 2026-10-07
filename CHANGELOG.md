@@ -1,6 +1,6 @@
 # Changelog
 
-Current MV3 extension candidates: [extension change notes](docs/extension-changelog.md). The entries below track the canonical userscript.
+Current product: [Chrome extension](https://chromewebstore.google.com/detail/missionchief-command-nexu/pheccockibcappcdgonjjfcmlkemmaln) · [Extension change notes](docs/extension-changelog.md). The entries below are the **historical userscript changelog**, not current installation or update instructions.
 
 All notable changes to MissionChief Command Nexus are documented here.
 

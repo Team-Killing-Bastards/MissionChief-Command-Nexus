@@ -2,7 +2,7 @@
 
 Selected recent extension changes. Each linked entry is bundled with its release. The update notice shows entries newer than the version previously installed in this browser.
 
-3.0.43.205 is a prepared release candidate; this record does not mean it has been published to a browser store.
+The [Chrome Web Store](https://chromewebstore.google.com/detail/missionchief-command-nexu/pheccockibcappcdgonjjfcmlkemmaln) lists 3.0.43.205, checked on 7 October 2026. Browser rollout can lag Store approval. These notes describe the versioned source; the listing version alone does not verify package byte parity.
 
 ## v3-0-43-205-update-notes
 

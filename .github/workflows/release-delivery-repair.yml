@@ -1,11 +1,13 @@
-name: Repair release delivery
+name: Legacy userscript delivery repair
 
 on:
-  pull_request_target:
-    types:
-      - closed
   workflow_dispatch:
     inputs:
+      legacy_recovery:
+        description: Explicitly authorize historical userscript notification recovery
+        type: boolean
+        default: false
+        required: false
       release_tag:
         description: Release tag to repair, such as v1.0.8. Leave blank for the current main version.
         required: false
@@ -22,10 +24,7 @@ permissions:
 jobs:
   resend:
     name: Resend release and capture Discord receipt
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.pull_request.merged == true &&
-       github.event.pull_request.head.ref == 'agent/release-delivery-receipt')
+    if: github.event_name == 'workflow_dispatch' && inputs.legacy_recovery == true
     runs-on: ubuntu-latest
     timeout-minutes: 15
 

@@ -1,98 +1,43 @@
-# Migration Guide
+# Migration to the Chrome extension
 
-This document covers the transition from the two legacy MartyBlyth userscripts to the merged MissionChief Command Nexus installation.
+The supported installation is [MissionChief Command Nexus on the Chrome Web Store](https://chromewebstore.google.com/detail/missionchief-command-nexu/pheccockibcappcdgonjjfcmlkemmaln). Tampermonkey, Violentmonkey, Greasy Fork and raw userscript downloads are no longer the installation route.
 
-## Legacy installations
+## Before switching
 
-The previous tools were distributed separately:
+1. Stop Auto Mode and any naming, assignment or other batch operation.
+2. Record installed versions and export settings/register data wherever the existing UI offers an export.
+3. Keep those backups privately. Do not delete browser or site storage to perform the migration.
+4. Disable the old combined Command Nexus userscript and both standalone scripts: Mission Finder 2026 Trained Personal Update and MissionChief Unit, Station & Personnel Tools.
+5. Disable any duplicate unpacked Nexus extension. Export its data before uninstalling it.
 
-1. **Mission Finder 2026 Trained Personal Update**
-2. **MissionChief Unit, Station & Personnel Tools**
+## Install and verify
 
-Command Nexus now contains both systems in one `.user.js` file. The supported operating state is one enabled Command Nexus installation, not three scripts running together.
-
-## Before installing Command Nexus
-
-1. Record the versions of both legacy scripts.
-2. Export or record important settings where the legacy interface provides an export.
-3. Keep a temporary backup of the legacy scripts or their source links.
-4. Do not delete browser storage manually.
-5. Choose a low-risk MissionChief session for the first test.
-
-## Installation transition
-
-1. Disable both legacy standalone scripts.
-2. Install the canonical Command Nexus source:
-
-   ```text
-   https://raw.githubusercontent.com/Team-Killing-Bastards/MissionChief-Command-Nexus/main/src/missionchief-command-nexus.user.js
-   ```
-
-3. Reload MissionChief.
-4. Confirm the Command Nexus administration controls appear only once.
-5. Open one simple mission and confirm the Mission Operations controls appear only once.
-6. Run an administrative preview on the smallest practical scope.
-7. Run Unit Finder on a simple mission without dispatching automatically.
-8. Confirm expected settings and training intelligence remain available.
-9. Keep the legacy scripts disabled until several normal sessions complete successfully.
-
-> [!WARNING]
-> Do not enable Command Nexus alongside either legacy script. Duplicate panels, observers, timers, vehicle selection or submissions may occur.
-
-## Current storage position
-
-The current Command Nexus `3.0.43` source enforces mission-only Worker A and personal patient/prisoner transport-only Worker B at every transport, recovery and observer gate and retains versioned keys from both established engines plus V3 pipeline/session keys for sole-owner dispatch, adaptive page warming, recovery, low-supply pause, continuity and bounded endurance telemetry. Runtime recycling and fatal teardown clear only ephemeral/operational worker state; station, unit, personnel, training and durable setting keys are preserved. A complete formal migration matrix has not yet been proven for every combination of stored data.
-
-Development must therefore distinguish between:
-
-- Legacy settings that remain directly readable.
-- Shared training-registry data already used by both engines.
-- Conflicting preferences that need explicit precedence rules.
-- Unknown or malformed data that must not be deleted silently.
+1. Open the Store link above and select **Add to Chrome**.
+2. Reload all MissionChief tabs.
+3. Check the version in `chrome://extensions` and confirm Nexus appears once.
+4. Review settings, collector-upload preferences and optional Discord sync.
+5. Check saved profiles and the personnel register. Use supported import or sync controls where available; do not assume userscript storage or a different extension identity transfers automatically.
+6. Run a small administration preview and a manual Unit Finder check before resuming automation.
 
 ## Migration test matrix
 
-Each row requires evidence before migration coverage can be claimed complete:
+| Starting state | Required evidence |
+|---|---|
+| Legacy combined userscript | Disabled script; one extension UI; settings/register checked |
+| One or both standalone Marty scripts | Both disabled; no duplicate mission or administration controls |
+| Unpacked or different-store extension | Backup retained; duplicate disabled; extension identity and data checked |
+| Clean Chrome profile | Safe initialization; collector notice and user controls available |
+| Existing Chrome Store installation | Browser update received; open tabs refreshed; settings retained |
+| Multiple PCs with optional Discord sync | Correct account/player profile; explicit settings choice; local data checked |
 
-| Starting state | Required result | Status |
-|---|---|---|
-| Mission Finder only | Mission controls and saved preferences remain usable | Not fully evidenced |
-| Unit, Station & Personnel Tools only | Administration and training data remain usable | Not fully evidenced |
-| Both legacy scripts | One Command Nexus installation replaces both without duplicate behaviour | Not fully evidenced |
-| Clean browser profile | Command Nexus initializes with safe defaults | Not fully evidenced |
-| Existing shared training registry | Qualification-aware mission selection can consume valid records | Implemented; live matrix pending |
-| Malformed or old storage | Script fails safely without deleting unrelated data | Pending |
-
-Test evidence should record the exact Command Nexus commit, legacy versions, domain, browser, userscript manager and outcome.
+Record the extension version, source commit where available, browser, OS, installation source and result. These checks are required evidence, not a claim that every historical storage combination has been validated.
 
 ## Rollback
 
-During migration validation or incident recovery:
+Stop automation, disable the affected extension and preserve exports and sanitized diagnostics. Report the installed version and failure. Store recovery should ship a corrected higher version after review; do not run old and new Nexus copies together or erase storage as a workaround. Re-enabling an obsolete userscript is not the normal supported rollback route.
 
-1. Stop any active automation or batch process.
-2. Disable Command Nexus.
-3. Re-enable the previous legacy scripts.
-4. Reload MissionChief and confirm each legacy interface appears once.
-5. Restore exported settings only when necessary and documented.
-6. Preserve the failed Command Nexus version, console output and reproduction steps for investigation.
+## Legacy reference
 
-Command Nexus should not destructively rewrite or remove legacy data merely because the user rolls back.
+Command Nexus `3.0.43` in `src/missionchief-command-nexus.user.js` is retained for historical source and regression coverage. It is not the Chrome extension version or installation source.
 
-## Developer requirements for storage changes
-
-Any pull request that changes storage keys, data shape or migration behaviour must include:
-
-- Old and new key names.
-- Expected old and new data shapes.
-- Validation and fallback behaviour.
-- Conflict-resolution precedence.
-- Rollback behaviour.
-- A version increase.
-- Tests for clean, valid legacy, conflicting and malformed states.
-- Changelog and migration-document updates.
-
-## Completion gate
-
-Migration cannot be marked complete until all supported starting states have documented evidence and no known path can corrupt settings, lose training intelligence or create duplicate execution.
-
-See [Developer Handoff](DEVELOPER_HANDOFF.md) and [Testing Strategy](TESTING.md).
+Storage changes must document old/new formats, precedence, malformed-data handling, cancellation and recovery. See [Testing](TESTING.md) and [Developer Handoff](DEVELOPER_HANDOFF.md).

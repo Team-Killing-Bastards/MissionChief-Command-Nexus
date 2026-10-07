@@ -82,7 +82,7 @@ if (/^\s{2}push:\s*\n\s{4}tags:/m.test(releaseWorkflow)) {
 
 requireText(
   releaseWorkflow,
-  "if: inputs.operation == 'publish-release'",
+  "if: inputs.legacy_recovery == true && inputs.operation == 'publish-release'",
   'explicit publish operation gate'
 );
 requireText(
@@ -98,7 +98,7 @@ requireText(
 requireText(
   repositoryQuality,
   'uses: ./.github/workflows/release.yml',
-  'trusted post-merge automatic publisher'
+  'explicit legacy recovery publisher'
 );
 
 requireText(

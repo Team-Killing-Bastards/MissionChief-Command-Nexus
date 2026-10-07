@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+import json
 import sys
 from pathlib import Path
 from urllib.parse import unquote, urlparse
@@ -215,8 +216,8 @@ def check_readme_presentation() -> None:
             "use repository-hosted or GitHub-native presentation"
         )
 
-    if "actions/workflows/validate-userscript.yml/badge.svg" not in readme:
-        fail("README must display the GitHub-native userscript validation badge")
+    if "actions/workflows/extension-candidates.yml/badge.svg" not in readme:
+        fail("README must display the GitHub-native extension validation badge")
 
     if "actions/workflows/repository-quality.yml/badge.svg" not in readme:
         fail("README must display the GitHub-native repository quality badge")
@@ -283,10 +284,19 @@ def check_userscript_metadata_and_version() -> None:
         fail("README has no Current version field")
     if not source_match:
         fail("src/README.md has no Command Nexus version field")
-    if readme_match.group(1) != canonical_version:
+    state = json.loads((ROOT / "project-state.json").read_text(encoding="utf-8"))
+    distribution = state["distribution"]
+    manifest = json.loads((ROOT / distribution["sourceDirectory"] / "manifest.json").read_text(encoding="utf-8"))
+    if distribution["version"] != manifest["version"]:
+        fail("Current distribution version does not match extension manifest")
+    if distribution["installUrl"] not in readme:
+        fail("README must link to the current Chrome Web Store installation")
+    if re.search(r"https?://(?:greasyfork\.org|raw\.githubusercontent\.com)[^\s)\"]+", readme):
+        fail("README must not link to a legacy userscript installation")
+    if readme_match.group(1) != manifest["version"]:
         fail(
-            "README version does not match canonical userscript: "
-            f"{readme_match.group(1)} != {canonical_version}"
+            "README version does not match current extension manifest: "
+            f"{readme_match.group(1)} != {manifest['version']}"
         )
     if source_match.group(1) != canonical_version:
         fail(
@@ -318,7 +328,7 @@ def check_current_documentation() -> None:
             f"Mission Finder `V{mission_finder}`",
         ),
         "docs/ROADMAP.md": (
-            f"Current production baseline — v{canonical_version}",
+            f"Retained userscript baseline — v{canonical_version}",
             f"Mission Finder `V{mission_finder}`",
             "Phase 7 — Formal release (completed)",
         ),

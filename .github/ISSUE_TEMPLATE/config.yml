@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Install or update the Chrome extension
+    url: https://chromewebstore.google.com/detail/missionchief-command-nexu/pheccockibcappcdgonjjfcmlkemmaln
+    about: The supported installation and update channel for MissionChief Command Nexus.
   - name: Support guidance
     url: https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/blob/main/SUPPORT.md
     about: Read the support requirements before opening an issue.

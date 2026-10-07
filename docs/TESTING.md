@@ -4,7 +4,9 @@ MissionChief Command Nexus can rename resources, assign personnel and dispatch v
 
 ## Automated validation
 
-The repository currently provides two permanent validation paths.
+Validate the current extension using [extension-candidates/3.0.43.205/README.md](../extension-candidates/3.0.43.205/README.md). `extension-candidates.yml` checks package provenance, JavaScript, changelog targets and update-notice state transitions. Run browser fixtures and bounded live game tests for affected runtime behavior. A successful package build does not establish Store publication or live safety.
+
+The following repository and retained-userscript gates remain mandatory for their respective sources.
 
 ### Repository integrity
 
@@ -12,7 +14,7 @@ The repository currently provides two permanent validation paths.
 python3 scripts/check_repository.py
 ```
 
-This checks required repository files, attribution, local documentation links, README anchors and presentation contracts, userscript metadata, canonical source presence and README/source version parity.
+This checks required repository files, attribution, local documentation links, README anchors and presentation contracts, userscript metadata, canonical source presence and README/extension manifest parity and retained userscript version consistency.
 
 ### Userscript validation
 
@@ -57,9 +59,9 @@ Before changing behaviour, record how the current canonical version behaves in t
 - Command Nexus version and commit.
 - MissionChief domain.
 - Browser and version.
-- Userscript manager and version.
+- Extension installation source (Store or unpacked).
 - Operating system or device.
-- Other enabled userscripts.
+- Other enabled extensions and userscripts.
 - Relevant settings and stored-data starting state.
 
 ### 2. Isolated logic checks

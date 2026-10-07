@@ -25,3 +25,5 @@ Use the next four-digit number and include: status, date, context, decision, loc
 
 7. [ADR-0007: Independent verified Edge Store delivery](0007-edge-store-release.md)
 8. [ADR-0008: VPS-backed PostGIS is the Realism Map data authority](0008-realism-map-vps-data-plane.md)
+
+9. [ADR-0009: Chrome Store is the current distribution authority](0009-chrome-distribution.md)

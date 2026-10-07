@@ -9,42 +9,26 @@ Read the generated [Current Project State](PROJECT_STATE.md) first. This documen
 
 | Item | Current state |
 |---|---|
-| Repository | `Team-Killing-Bastards/MissionChief-Command-Nexus` |
-| Default branch | `main` |
-| Canonical userscript | `src/missionchief-command-nexus.user.js` |
+| Public installation | [Chrome Web Store](https://chromewebstore.google.com/detail/missionchief-command-nexu/pheccockibcappcdgonjjfcmlkemmaln) |
+| Current extension version | `3.0.43.205` (listing checked 7 October 2026) |
+| Versioned extension source | `extension-candidates/3.0.43.205/extension` |
+| Build and test entry point | [extension-candidates/3.0.43.205/README.md](../extension-candidates/3.0.43.205/README.md) |
+| Technical owner / release authority | MartyBlyth |
+| Current-state record | `project-state.json` → generated `docs/PROJECT_STATE.md` |
 | Command Nexus version | `3.0.43` |
 | Mission Finder baseline | `V10.6.180` |
-| Resource Administration module | `V4.2.9` |
-| Unit / Station / Personnel UI versions | `3.3.28` / `1.3.23` / `1.3.12` |
-| Current-state record | `project-state.json` → generated `docs/PROJECT_STATE.md` |
-| Userscript author metadata | `MartyBlyth` |
-| MissionChief domains | `www.missionchief.co.uk` and `police.missionchief.co.uk` |
-| Distribution source | Canonical userscript on trusted `main` |
-| Automated validation | Syntax, canonical versions, repository integrity and the complete permanent regression suite |
-| Release delivery | Reconciled GitHub Release assets, Greasy Fork synchronization and one verified Discord receipt per version |
 
-The repository contains one installable userscript. The Resource Administration and Mission Operations engines share one metadata block and outer installation guard while retaining isolated startup boundaries.
+The last two rows describe the retained **legacy userscript**, not the current extension. Its source and tests remain for provenance and regression coverage. The older `browser-extension` `.82` pipeline is also historical; do not use it to rebuild the current package.
 
 ## Current implementation shape
 
-```text
-MissionChief Command Nexus
-├── Resource Administration Engine
-│   ├── Unit and station naming
-│   ├── Personnel assignment
-│   ├── Training profiles
-│   └── Shared vehicle-training registry
-└── Mission Operations Engine
-    ├── Requirement and patient parsing
-    ├── Unit Finder and Mission Update
-    ├── Qualification-aware selection
-    ├── Auto Mode and dispatch
-    └── Queue and transport continuation
-```
+Manifest V3 defines the extension service worker, popup, collector options page, content-script modules and isolated/main-world bridges. The versioned package contains the Nexus runtime, mission and administration features, account/profile sync, station checks and update notices. Read the actual manifest and module source before editing a feature; old single-file userscript descriptions do not define the whole extension.
 
-The single-file shape is deliberate. Logical consolidation may continue, but established behavior must remain protected by executable regressions before structural refactoring.
+## Retained userscript implementation record
 
-## What is already complete
+The following implementation details and pending live-evidence items describe the retained baseline. Verify them against the current extension before treating them as current behavior or active work.
+
+### What was implemented in the userscript baseline
 
 - One canonical `.user.js` source and one metadata block are published from `main`.
 - Duplicate-initialisation protection and independent engine startup isolation are retained.
@@ -82,9 +66,9 @@ These remain evidence questions rather than claims of missing implementation:
 
 1. Fetch and verify current `main`, then create a focused branch.
 2. Preserve unrelated work and change the smallest justified surface.
-3. If `src/missionchief-command-nexus.user.js` changes, increase `@version`, update the relevant component version and add a changelog release entry.
+3. Start from the versioned extension. Increase its four-part manifest version and update provenance and extension change notes when packaged bytes change. Legacy userscript changes keep their separate `@version` checks.
 4. Add or update a permanent behavioral regression without pinning release numbers.
-5. Run the complete local gate:
+5. Run the versioned extension package/validation checks from its build guide, then the retained-source and repository gate:
 
    ```bash
    node --check src/missionchief-command-nexus.user.js
@@ -94,9 +78,9 @@ These remain evidence questions rather than claims of missing implementation:
    git diff --check
    ```
 
-6. Test the affected live behavior at the smallest safe scope and record domain, browser, userscript manager and interacting scripts.
+6. Test the affected live behavior at the smallest safe scope and record domain, browser, installation source and interacting extensions/scripts.
 7. Merge an approved pull request to `main`; use direct main maintenance only when explicitly agreed.
-8. For a new userscript version, verify GitHub assets, Greasy Fork and the single Discord delivery receipt. Repository-only work must not create a duplicate release.
+8. Follow the Chrome [release process](RELEASE_PROCESS.md). Repository-only work must not publish a package or announce a release.
 9. Record the actual PR, merge commit, validation and delivery outcome in the project operating records.
 
 ## High-risk areas
@@ -110,7 +94,7 @@ These remain evidence questions rather than claims of missing implementation:
 - Storage, migration and rollback behavior.
 - Observers, intervals, timeouts, cross-window ownership and cleanup.
 
-## Current engineering priorities
+## Retained engineering priorities — recheck against current extension
 
 1. Complete issue [#396](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/396): reduce long-session memory growth without slowing the hot mission or transport path.
 2. Live-validate the 3.0.43 role-aware wake-recovery and managed Worker A admission contract.
@@ -130,10 +114,10 @@ MartyBlyth controls source-code direction and final release approval. Repository
 - [Generated current project state](PROJECT_STATE.md)
 - [Decision register](decisions/README.md)
 - [Evidence register](evidence/README.md)
-- [Canonical source](../src/missionchief-command-nexus.user.js)
+- [Current extension source](../extension-candidates/3.0.43.205/extension)
 - [Architecture](ARCHITECTURE.md)
 - [Roadmap](ROADMAP.md)
 - [Testing strategy](TESTING.md)
 - [Migration guide](MIGRATION.md)
 - [Release process](RELEASE_PROCESS.md)
-- [Greasy Fork setup](GREASY_FORK_SETUP.md)
+- [Extension build guide](../extension-candidates/3.0.43.205/README.md)

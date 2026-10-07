@@ -1,3 +1,10 @@
+# Archived Greasy Fork release setup
+
+**Legacy reference only. Do not use these instructions for new installations or Chrome releases.** Install [the Chrome extension](https://chromewebstore.google.com/detail/missionchief-command-nexu/pheccockibcappcdgonjjfcmlkemmaln); maintainers should use the [current release process](RELEASE_PROCESS.md). Legacy publication requires explicit manual recovery and is not triggered by normal merges.
+
+<details>
+<summary>Historical userscript synchronization procedure</summary>
+
 # Greasy Fork Automated Release Setup
 
 This guide connects the approved `main` branch of MissionChief Command Nexus to Greasy Fork.
@@ -176,3 +183,5 @@ To roll back a bad publication, restore the last known-good code on a new branch
 - Greasy Fork API and webhook information: <https://greasyfork.org/en/help/api>
 - GitHub repository webhook instructions: <https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks>
 - GitHub webhook delivery management: <https://docs.github.com/en/webhooks/using-webhooks>
+
+</details>

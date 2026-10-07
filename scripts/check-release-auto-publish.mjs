@@ -28,30 +28,22 @@ function requirePublisherText(text, label) {
   }
 }
 
-requireText(
-  "push:\n    branches:\n      - main",
-  'normal main pushes can reconcile release state'
-);
-requireText(
-  "pull_request_target:\n    types:\n      - closed",
-  'trusted merged-PR close events reconcile release state'
-);
-requireText(
-  "github.event_name == 'pull_request_target' &&",
-  'release-state job recognises trusted PR close events'
-);
-requireText(
-  "github.event.pull_request.merged == true) ||",
-  'closed but unmerged PRs cannot publish'
-);
-requireText(
-  "github.event_name == 'push' ||",
-  'release-state job retains main-push recovery'
-);
-requireText(
-  "github.event_name == 'workflow_dispatch'",
-  'manual recovery remains available'
-);
+requireText("if: github.event_name == 'workflow_dispatch' && inputs.legacy_recovery == true", 'legacy recovery requires explicit manual opt-in');
+requireText('legacy_recovery: true', 'reusable publisher receives explicit legacy authorization');
+if (workflow.includes('pull_request_target:')) fail('Normal merged PRs must not trigger legacy publication');
+requirePublisherText("if: inputs.legacy_recovery == true && inputs.operation == 'publish-release'", 'publisher requires legacy opt-in');
+requirePublisherText("inputs.legacy_recovery == true && inputs.operation == 'prepare-version'", 'version preparation requires legacy opt-in');
+for (const [file, input, job] of [
+  ['.github/workflows/release-delivery-repair.yml', 'legacy_recovery', 'resend'],
+  ['.github/workflows/edge-extension.yml', 'publish_chrome', 'publish-chrome'],
+  ['.github/workflows/edge-extension.yml', 'publish_edge', 'publish'],
+]) {
+  const text = await readFile(file, 'utf8');
+  const body = text.split(`  ${job}:`)[1]?.split(/\n  [a-z][a-z-]*:/)[0] || '';
+  const gate = body.match(/^    if: (.+)$/m)?.[1] || '';
+  if (!gate.includes("github.event_name == 'workflow_dispatch'") || !gate.includes(`inputs.${input} == true`)) fail(`${file} ${job} must be explicit manual opt-in`);
+}
+
 requireText(
   'uses: ./.github/workflows/release.yml',
   'canonical verified publisher remains authoritative'
@@ -130,5 +122,5 @@ if (publisherCount !== 1) {
 }
 
 console.log(
-  'Merged-PR, main-push and manual release reconciliation with tag-safe immutable-source and receipt-aware completion checks passed.'
+  'Manual-only legacy recovery, historical Store publication guards, immutable-source and receipt-aware completion checks passed.'
 );

@@ -1,6 +1,6 @@
 # Support
 
-MissionChief Command Nexus currently provides one merged v1.0.1 userscript from the canonical `main` source. It remains a development baseline until the compatibility, migration and release gates are completed and approved by MartyBlyth.
+MissionChief Command Nexus is a Chrome extension. Install and update through the [Chrome Web Store](https://chromewebstore.google.com/detail/missionchief-command-nexu/pheccockibcappcdgonjjfcmlkemmaln). Greasy Fork and userscript-manager installations are legacy and should be disabled when using the extension.
 
 ## Supported support routes
 
@@ -25,8 +25,8 @@ Support requests should include:
 
 - Command Nexus version and commit.
 - MissionChief domain.
-- Browser, operating system and userscript manager versions.
-- Other enabled userscripts.
+- Browser, operating system and installation source.
+- Other enabled extensions and userscripts.
 - Relevant mission, station, vehicle, personnel or training type.
 - Starting state, including selected resources, active automation and migration state where relevant.
 - Exact reproduction steps.
@@ -51,9 +51,9 @@ Do not repeatedly reproduce a destructive defect merely to gather more evidence.
 
 ## Current support boundaries
 
-- Current `main` and the latest publicly synchronized build receive best-effort support.
+- The current Chrome Store extension receives best-effort support; development builds must identify their exact source and version.
 - Compatibility is claimed only for environments with recorded evidence.
-- Mobile, Safari and interacting-script combinations remain unsupported until validated.
+- The Chrome listing does not establish mobile, Safari or other-browser support; each environment requires separate evidence.
 - Older versions may be investigated when the issue remains reproducible on the current baseline.
 - The project cannot provide MissionChief account recovery, official game support, alliance administration or guarantees about actions taken by the game operator.
 - No response-time guarantee is offered.

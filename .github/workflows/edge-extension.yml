@@ -1,4 +1,4 @@
-name: Build and publish Chrome extension
+name: Historical extension pipeline (manual publication)
 on:
   push:
     branches: [main]
@@ -7,6 +7,11 @@ on:
     paths: ['browser-extension/**', '.github/workflows/edge-extension.yml']
   workflow_dispatch:
     inputs:
+      publish_chrome:
+        description: Explicitly submit the historical browser-extension package after separate review
+        type: boolean
+        required: false
+        default: false
       publish_edge:
         description: Also submit to Edge only when separately requested
         type: boolean
@@ -83,7 +88,7 @@ jobs:
           EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
           EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
   publish-chrome:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.publish_chrome == true
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 15

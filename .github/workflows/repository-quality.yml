@@ -1,15 +1,18 @@
 name: Repository quality
-# Merged PRs are the trusted publication hinge; main pushes and manual dispatch remain recovery paths.
+# Normal repository events validate only; userscript delivery is explicit legacy recovery.
 
 on:
   push:
     branches:
       - main
   pull_request:
-  pull_request_target:
-    types:
-      - closed
   workflow_dispatch:
+    inputs:
+      legacy_recovery:
+        description: Recover an explicitly requested historical userscript release (not Chrome)
+        type: boolean
+        default: false
+        required: false
 
 permissions:
   contents: read
@@ -21,7 +24,6 @@ concurrency:
 jobs:
   integrity:
     name: Repository integrity
-    if: github.event_name != 'pull_request_target'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -59,13 +61,8 @@ jobs:
         run: node scripts/check-release-auto-publish.mjs
 
   release-state:
-    name: Detect unpublished canonical version
-    if: >-
-      (github.event_name == 'pull_request_target' &&
-       github.event.action == 'closed' &&
-       github.event.pull_request.merged == true) ||
-      github.event_name == 'push' ||
-      github.event_name == 'workflow_dispatch'
+    name: Inspect legacy userscript recovery
+    if: github.event_name == 'workflow_dispatch' && inputs.legacy_recovery == true
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -156,7 +153,7 @@ jobs:
           } >> "${GITHUB_STEP_SUMMARY}"
 
   publish-release:
-    name: Publish, verify and announce canonical release
+    name: Recover legacy userscript delivery
     needs: release-state
     if: needs.release-state.outputs.should_publish == 'true'
     permissions:
@@ -164,8 +161,9 @@ jobs:
       pull-requests: write
     uses: ./.github/workflows/release.yml
     with:
+      legacy_recovery: true
       operation: publish-release
       release_tag: ${{ needs.release-state.outputs.release_tag }}
-      release_notes: Automatic verified release after trusted repository event.
+      release_notes: Explicit manual legacy userscript recovery.
     secrets:
       DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}

@@ -1,8 +1,13 @@
-name: Create GitHub release
+name: Legacy userscript release recovery
 
 on:
   workflow_dispatch:
     inputs:
+      legacy_recovery:
+        description: Explicitly authorize historical userscript recovery, not a Chrome release
+        type: boolean
+        default: false
+        required: false
       operation:
         description: 'Choose prepare-version first, then publish-release after the version PR is merged.'
         required: true
@@ -22,6 +27,11 @@ on:
         type: string
   workflow_call:
     inputs:
+      legacy_recovery:
+        description: Explicitly authorize historical userscript recovery, not a Chrome release
+        type: boolean
+        default: false
+        required: false
       operation:
         description: 'prepare-version or publish-release'
         required: true
@@ -53,7 +63,7 @@ jobs:
     name: Prepare release version
     if: >-
       (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call') &&
-      inputs.operation == 'prepare-version'
+      inputs.legacy_recovery == true && inputs.operation == 'prepare-version'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -235,7 +245,7 @@ jobs:
 
   release:
     name: Package, reconcile, verify and announce userscript release
-    if: inputs.operation == 'publish-release'
+    if: inputs.legacy_recovery == true && inputs.operation == 'publish-release'
     runs-on: ubuntu-latest
     timeout-minutes: 35
 

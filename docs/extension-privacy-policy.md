@@ -1,6 +1,6 @@
 # MissionChief Command Nexus — Privacy
 
-Updated 27 September 2026 · Prepared for Version 3.0.43.205 · Publisher: MartyBlyth
+Updated 27 September 2026 · Version 3.0.43.205 · Publisher: MartyBlyth
 
 ## Optional Discord account sync and update notices
 

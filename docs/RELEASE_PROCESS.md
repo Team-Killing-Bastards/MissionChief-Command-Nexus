@@ -1,158 +1,44 @@
-# Release Process
+# Chrome extension release process
 
-Releases are controlled by **MartyBlyth**, the project developer and final technical authority. Conroy1988 may assist with repository administration, documentation, packaging verification and release presentation; that assistance does not constitute technical approval.
+## Current distribution
 
-## Versioning
+[Chrome Web Store listing](https://chromewebstore.google.com/detail/missionchief-command-nexu/pheccockibcappcdgonjjfcmlkemmaln) is the supported installation and update channel. The public listing was checked on 7 October 2026 and reports `3.0.43.205`. The corresponding versioned source is [extension-candidates/3.0.43.205](../extension-candidates/3.0.43.205/README.md).
 
-Command Nexus uses Semantic Versioning:
+MartyBlyth remains the technical owner and final release authority. A GitHub merge, a ZIP, a Store submission, Store approval and delivery to browsers are different states. Do not report an update as live based only on CI or an upload response.
 
-- `MAJOR`: incompatible behaviour, storage or migration changes.
-- `MINOR`: backward-compatible functionality.
-- `PATCH`: backward-compatible fixes.
+## Prepare and validate
 
-The canonical userscript must use `MAJOR.MINOR.PATCH` in `@version`. Every externally synchronized publication requires a version higher than the currently served build.
+1. Start from the current versioned extension, not the retained `.82` pipeline or `.user.js` baseline.
+2. Use a higher valid four-part manifest version for changed distributable bytes. Preserve the established Store ID and approved permissions.
+3. Update the extension changelog, bundled update notes, package provenance and relevant privacy/migration documentation.
+4. Run repository checks and the versioned extension checks. The current commands are:
 
-Documentation-only and repository-administration changes do not require a userscript version increase unless `src/missionchief-command-nexus.user.js` changes.
+   ```bash
+   python3 scripts/check_workflow_yaml.py
+   python3 scripts/check_repository.py
+   node scripts/check-project-state.mjs
+   python3 extension-candidates/3.0.43.205/package.py
+   node extension-candidates/3.0.43.205/validate.mjs
+   NEXUS_SKIP_BROWSER=1 node extension-candidates/3.0.43.205/check-update-notes.mjs
+   ```
 
-## Authoritative source
+5. Run affected runtime regressions and browser/live tests. Record exact environments and untested limitations.
+6. Review the exact commit and package before requesting publication.
 
-The only distributable source is:
+## Submission and rollout
 
-```text
-src/missionchief-command-nexus.user.js
-```
+Submit the verified ZIP to the existing Chrome item `pheccockibcappcdgonjjfcmlkemmaln` only when a Store release is requested. Preserve its identity so existing installations receive updates. Record the package hash, manifest version and submission result. Then verify Store approval, the public listing and the installed version separately. An announcement needs its own authorization and delivery record; documentation maintenance must not send one.
 
-External synchronization must fetch the raw `main` file documented in [GREASY_FORK_SETUP.md](GREASY_FORK_SETUP.md). Feature branches, pull-request refs, copied text files and GitHub Release assets are not live publication sources.
+The older [browser-extension](../browser-extension/README.md) workflow builds `.82` and must not be mistaken for a builder for the versioned `.205` source. Its publication now requires an explicit manual input; editing documentation cannot submit that old package. Future automation must deliberately point to the reviewed current package before it becomes the normal release path. Edge submission remains a separate decision.
 
-## Development path
+## Repository-only maintenance
 
-Substantial source work should use a focused branch and pull request even though trusted organisation owners retain direct `main` push access.
+Installation links, documentation, issue templates and project records can change without bumping an extension or userscript version when packaged bytes are unchanged. Keep the current extension package and provenance intact. Normal pushes and merges run validation, not legacy userscript publication or Discord announcements.
 
-```text
-Current main
-    ↓
-Focused source branch
-    ↓
-Version increase + changelog
-    ↓
-Automated and live validation
-    ↓
-MartyBlyth approval
-    ↓
-Approved main source
-```
+The retained userscript workflows are labelled legacy. Recovery requires a manual dispatch with `legacy_recovery` enabled and a specific recovery purpose. They still verify immutable source, assets, Greasy Fork parity and duplicate-delivery receipts if deliberately used; they are not the Chrome release pipeline.
 
-Direct `main` commits are appropriate for agreed maintenance, documentation and emergencies, but they do not remove the need for versioning, validation or technical approval when userscript behaviour changes.
+## Completion record and recovery
 
-## Required automated checks
+Record the exact source commit, version, package hash, checks, approval, submission/review status, Store observation and rollout evidence. A version match is not proof that local bytes equal the Store package. Stop unsafe automation first; deliver corrected behavior as a higher extension version instead of reusing a published version.
 
-Run from the repository root:
-
-```bash
-node --check src/missionchief-command-nexus.user.js
-node scripts/validate-userscript.mjs
-node scripts/render-project-state.mjs --check
-node scripts/check-project-state.mjs
-for check in scripts/check-*.mjs; do node "$check"; done
-python3 scripts/check_repository.py
-git diff --check
-```
-
-The userscript pull-request workflow discovers and runs the complete permanent regression suite. It also requires a higher `@version` than the base branch when source code changes. Canonical release and component-version assertions belong only to `validate-userscript.mjs`; behavioral checks must remain version-agnostic.
-
-## Required live checks
-
-Select the relevant tests from [TESTING.md](TESTING.md). A release candidate must cover, where affected:
-
-- Manual Unit Finder and Mission Update.
-- Patient and ambulance demand.
-- Specialist medical demand.
-- Trained-personnel and qualification-sensitive missions.
-- Dispatch, Dispatch & Share and Auto Mode.
-- Mission upgrades.
-- Queue and transport continuation.
-- Preview and bounded administrative writes.
-- Personnel assignment and verification.
-- Stop, cancellation and navigation cleanup.
-- Legacy migration and rollback.
-- Long-session stability.
-
-Record exact domains, browsers, userscript managers, operating systems and interacting scripts.
-
-## Release-candidate checklist
-
-- [ ] Intended source changes are complete.
-- [ ] `@version` is increased and correct.
-- [ ] `CHANGELOG.md` is complete.
-- [ ] Automated checks pass.
-- [ ] Required live regression checks pass.
-- [ ] Migration and stored-data impact are tested.
-- [ ] Known limitations and compatibility evidence are documented.
-- [ ] No credentials, webhook URLs, account data or temporary debug output remain.
-- [ ] Clean installation and update behaviour are verified.
-- [ ] The exact approved source commit is recorded.
-- [ ] MartyBlyth approves the release candidate.
-
-## External synchronization
-
-The supported publication flow is:
-
-1. Merge the approved source to trusted `main`.
-2. Repository Quality validates trusted main and inspects the canonical version's release state.
-3. If the version is already complete, reconciliation stops without duplicate assets or notifications.
-4. If the version is new or incomplete, the reusable release workflow validates, packages and reconciles the release.
-5. Greasy Fork synchronization fetches the raw canonical userscript and accepts only valid higher versions.
-6. Verify the served version and code, then perform a clean install or update test.
-7. Verify one Discord delivery receipt for the version.
-
-A successful webhook or workflow response proves delivery activity, not correct publication. Verify the served source and recorded receipts directly.
-
-## GitHub Release packaging
-
-For a new canonical version, release reconciliation:
-
-1. Requires a matching tag, for example `v1.0.123` for `@version 1.0.123`.
-2. Confirms the tagged commit is contained in trusted `main`.
-3. Runs repository, syntax, metadata and permanent regression validation.
-4. Copies the canonical source to a versioned `.user.js` asset.
-5. Generates and verifies the SHA-256 checksum asset.
-6. Creates or repairs the GitHub Release idempotently.
-7. Records the verified external-delivery outcome.
-
-A GitHub tag or release does not by itself prove the external userscript was published. The approved `main` source, synchronization result and served-source verification together provide that evidence.
-
-## Release notes
-
-Release notes must include:
-
-- User-visible changes and why they matter.
-- Migration and stored-data impact.
-- Tested MissionChief domains.
-- Tested browsers and userscript managers.
-- Interacting scripts used during testing.
-- Known limitations and unsupported environments.
-- Exact source commit.
-- Exact asset checksum.
-- Rollback guidance.
-
-## Emergency stop and rollback
-
-To suspend automatic external publication:
-
-1. Deactivate the repository synchronization webhook.
-2. Switch external synchronization to manual where available.
-3. Investigate on a branch.
-
-Do not lower or reuse a published version. Restore the last known-good behaviour in a new, higher patch version, run all required checks, obtain approval, publish through `main`, and verify the resulting update.
-
-For a serious live defect, prioritize stopping unsafe dispatch, repeated submissions, bulk writes or stored-data changes over preserving automation continuity.
-
-## Completion record
-
-For every production release, record the pull request, merge commit, public version, tag, release URL, checksums, tested environments, Greasy Fork result, Discord receipt and approval outcome in the relevant GitHub issue or release record.
-
-After a production release or an owner-approved operating-contract change, update `project-state.json` with what actually merged—not the planned state. Regenerate `docs/PROJECT_STATE.md`, run `node scripts/check-project-state.mjs`, and add or supersede an ADR when the reason or locked behaviour changed. Then update the connected Google Memory Bank and Rules documents with a concise pointer to the verified repository state, PR, merge commit, delivery outcome and live-validation status. Read both records back before declaring the work complete.
-
-Repository-only maintenance must record that the canonical userscript was unchanged and that release reconciliation correctly avoided a duplicate publication. Raw diagnostics remain evidence; they are not pasted into current state.
-
-Start with [Current Project State](PROJECT_STATE.md), then [Developer Handoff](DEVELOPER_HANDOFF.md), when resuming development.
+Update `project-state.json` and regenerate `docs/PROJECT_STATE.md`. Google Memory Bank and Rules documents provide historical navigation; they must not override current source, verified release evidence or the repository state.

@@ -1,5 +1,7 @@
 # Source Directory
 
+> **Legacy userscript source.** Install the [Chrome extension](https://chromewebstore.google.com/detail/missionchief-command-nexu/pheccockibcappcdgonjjfcmlkemmaln). Current extension development starts in [the versioned extension guide](../extension-candidates/3.0.43.205/README.md). The versions, architecture and validation below describe the retained userscript only.
+
 The authoritative distributable source for MissionChief Command Nexus is:
 
 ```text
@@ -74,7 +76,7 @@ Before publishing a source change:
 
 Changes involving dispatch, patient demand, trained-personnel matching, personnel assignment, bulk naming, storage migration, queue continuation or lifecycle cleanup require explicit evidence and rollback notes.
 
-Start with [Developer Handoff](../docs/DEVELOPER_HANDOFF.md). Publication details are in [Greasy Fork Automated Release Setup](../docs/GREASY_FORK_SETUP.md).
+Start with [Developer Handoff](../docs/DEVELOPER_HANDOFF.md). Current publication details are in [Chrome extension release process](../docs/RELEASE_PROCESS.md).
 
 ### Nexus visual system
 

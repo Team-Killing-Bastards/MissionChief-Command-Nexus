@@ -1,4 +1,4 @@
-# Nexus extension 3.0.43.205 candidate
+# Nexus extension 3.0.43.205
 
 This directory versions the complete current MV3 extension, promoted from the locally tested .204 build. It is independent of the historical .82 pipeline under browser-extension. The canonical userscript remains unchanged.
 
@@ -7,7 +7,7 @@ This directory versions the complete current MV3 extension, promoted from the lo
 - [Package hashes and file provenance](provenance.json)
 - [Update-notice regression test](check-update-notes.mjs)
 
-**Not submitted to Chrome or Edge.** The existing store-publishing path was not changed or triggered. Updating the production store remains a separate next step.
+**Chrome Store lists 3.0.43.205**, verified on 7 October 2026: [install or update](https://chromewebstore.google.com/detail/missionchief-command-nexu/pheccockibcappcdgonjjfcmlkemmaln). This supersedes the preparation-time “not submitted” status. The matching version does not independently prove Store-package byte parity. No Edge publication is asserted. Future Store submission remains a separate release action; see [release process](../../docs/RELEASE_PROCESS.md).
 
 The new notice appears once per update in a visible MissionChief home tab. Changes since the previous version are included; fresh installations receive no update popup. Each item links to its GitHub entry. Nexus Tools → Overview → What’s changed reopens all recent notes. Extension-local storage and a short session claim prevent duplicate notices across tabs and service-worker restarts. The seen version is not synced to another PC.
 

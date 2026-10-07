@@ -24,7 +24,7 @@ Use GitHub's private vulnerability reporting feature when available. If private 
 - Minimal reproduction steps.
 - Potential impact and affected data or actions.
 - Whether the issue can repeat dispatch, rename, assignment or storage changes.
-- Whether Stop or disabling the userscript prevents continuation.
+- Whether Stop or disabling the extension prevents continuation.
 - Any known mitigation or safe rollback.
 
 Never include MissionChief credentials, session cookies, personal information, private alliance data, webhook tokens or unrelated browser storage.
@@ -48,7 +48,7 @@ General incorrect vehicle selection, ordinary compatibility problems and non-sen
 ## Safe handling
 
 - Do not repeatedly reproduce destructive behaviour.
-- Disable the userscript or affected webhook when necessary to contain impact.
+- Disable the extension or affected integration when necessary to contain impact.
 - Preserve sanitized logs and the exact affected commit.
 - Do not create public proof-of-concept instructions before remediation.
 - Coordinate publication timing with MartyBlyth.
@@ -61,4 +61,4 @@ Conroy1988 may assist with private repository administration and documentation, 
 
 ## Disclaimer
 
-MissionChief Command Nexus is an independent community userscript and is not affiliated with, endorsed by or officially supported by MissionChief or its operators.
+MissionChief Command Nexus is an independent community extension and is not affiliated with, endorsed by or officially supported by MissionChief or its operators.

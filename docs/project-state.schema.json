@@ -9,6 +9,7 @@
     "schemaVersion",
     "lastUpdated",
     "project",
+    "distribution",
     "authority",
     "canonical",
     "production",
@@ -23,6 +24,63 @@
     "$schema": { "const": "./docs/project-state.schema.json" },
     "schemaVersion": { "const": 1 },
     "lastUpdated": { "type": "string", "format": "date" },
+    "distribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "channel",
+        "storeId",
+        "installUrl",
+        "version",
+        "listingVerifiedOn",
+        "listingUpdatedOn",
+        "sourceDirectory",
+        "packageGuide",
+        "verification",
+        "legacyRecordScope"
+      ],
+      "properties": {
+        "channel": {
+          "const": "chrome-web-store"
+        },
+        "storeId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "installUrl": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "listingVerifiedOn": {
+          "type": "string",
+          "minLength": 1
+        },
+        "listingUpdatedOn": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceDirectory": {
+          "type": "string",
+          "minLength": 1
+        },
+        "packageGuide": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verification": {
+          "type": "string",
+          "minLength": 1
+        },
+        "legacyRecordScope": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "project": {
       "type": "object",
       "additionalProperties": false,

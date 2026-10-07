@@ -1,7 +1,7 @@
 {
   "$schema": "./docs/project-state.schema.json",
   "schemaVersion": 1,
-  "lastUpdated": "2026-09-27",
+  "lastUpdated": "2026-10-07",
   "project": {
     "name": "MissionChief Command Nexus",
     "repository": "Team-Killing-Bastards/MissionChief-Command-Nexus",
@@ -11,13 +11,13 @@
     "documentationSupport": "Conroy1988"
   },
   "authority": {
-    "conflictRule": "The canonical userscript and verified release artifacts win over summaries. project-state.json is the current operating index; accepted ADRs explain locked decisions. Historical handovers, the Google Memory Bank and conversation memory must not silently override them.",
+    "conflictRule": "Current extension source and verified Store release evidence take precedence for the Chrome product. distribution records the public channel separately from the retained canonical/production userscript records. Historical handovers, the Google Memory Bank and conversation memory cannot silently override them.",
     "precedence": [
       {
         "rank": 1,
-        "source": "Canonical userscript on trusted main and its verified release artifacts",
-        "path": "src/missionchief-command-nexus.user.js",
-        "purpose": "Implemented behaviour and distributable source"
+        "source": "Current versioned extension source and verified Store release evidence",
+        "path": "extension-candidates/3.0.43.205/extension/manifest.json",
+        "purpose": "Current extension entry points and version; source equality with a Store package requires separate evidence"
       },
       {
         "rank": 2,
@@ -180,6 +180,13 @@
       "file": "docs/decisions/0008-realism-map-vps-data-plane.md",
       "status": "accepted",
       "introducedIn": "Realism Map Phase 1 (2026-09-20)"
+    },
+    {
+      "id": "ADR-0009",
+      "title": "Chrome Store is the current distribution authority",
+      "status": "accepted",
+      "introducedIn": "3.0.43.205",
+      "file": "docs/decisions/0009-chrome-distribution.md"
     }
   ],
   "evidence": [
@@ -335,9 +342,10 @@
     }
   ],
   "handover": {
-    "nextAction": "Review the versioned MV3 extension 3.0.43.205 candidate and update notes before the separately requested Chrome Web Store submission. See extension-candidates/3.0.43.205/README.md. The canonical userscript and historical .82 automated store pipeline are unchanged.",
+    "nextAction": "Maintain the Chrome extension from extension-candidates/3.0.43.205, update extension notes and provenance for future changes, and follow docs/RELEASE_PROCESS.md for any separately requested Store submission. Do not rebuild the old .82 pipeline or publish the retained userscript as the current product.",
     "readOrder": [
       "project-state.json",
+      "extension-candidates/3.0.43.205/README.md",
       "extension-candidates/3.0.43.205/README.md",
       "docs/extension-changelog.md",
       "docs/PROJECT_STATE.md",
@@ -353,5 +361,17 @@
       "src/missionchief-command-nexus.user.js"
     ],
     "updateRule": "Edit project-state.json, run node scripts/render-project-state.mjs, then run node scripts/check-project-state.mjs. Do not hand-edit docs/PROJECT_STATE.md. After merge or release, update the Google Memory Bank with a concise pointer to the verified repository state and read it back."
+  },
+  "distribution": {
+    "channel": "chrome-web-store",
+    "storeId": "pheccockibcappcdgonjjfcmlkemmaln",
+    "installUrl": "https://chromewebstore.google.com/detail/missionchief-command-nexu/pheccockibcappcdgonjjfcmlkemmaln",
+    "version": "3.0.43.205",
+    "listingVerifiedOn": "2026-10-07",
+    "listingUpdatedOn": "2026-09-27",
+    "sourceDirectory": "extension-candidates/3.0.43.205/extension",
+    "packageGuide": "extension-candidates/3.0.43.205/README.md",
+    "verification": "Public listing reports this version; Store-package byte parity has not been independently audited.",
+    "legacyRecordScope": "canonical and production retain the historical userscript source/release record; they do not describe current Chrome distribution."
   }
 }
