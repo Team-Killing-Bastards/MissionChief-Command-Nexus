@@ -1,5 +1,7 @@
 # Release reconciliation
 
+> **Archived userscript recovery contract.** Normal pushes and merges no longer run this delivery path. Use [the Chrome extension release process](../docs/RELEASE_PROCESS.md) for current work. The procedure below is available only through explicit manual legacy recovery.
+
 MissionChief Command Nexus treats a release as complete only when all of the following are true for the current userscript version on `main`:
 
 - the matching immutable GitHub tag and Release exist;

@@ -1,6 +1,6 @@
 # Command Nexus Documentation
 
-This directory separates current operating guidance from versioned historical records. The current baseline is Command Nexus `3.0.43` with Mission Finder `V10.6.180`, enforcing mission-only Worker A and on-demand transport-only Worker B through immutable frame-role admission.
+Install [the Chrome extension](https://chromewebstore.google.com/detail/missionchief-command-nexu/pheccockibcappcdgonjjfcmlkemmaln). The Store lists `3.0.43.205`; its versioned source and packaging guide are in [extension-candidates/3.0.43.205](../extension-candidates/3.0.43.205/README.md). Command Nexus `3.0.43` with Mission Finder `V10.6.180` is the retained userscript baseline, not the current installation.
 
 ## Current operational documentation
 
@@ -13,9 +13,12 @@ This directory separates current operating guidance from versioned historical re
 - [Testing Strategy](TESTING.md) — complete automated gate, live workflow coverage and evidence rules.
 - [Migration Guide](MIGRATION.md) — safe transition from legacy installations and rollback expectations.
 - [Release Process](RELEASE_PROCESS.md) — versioning, approval, trusted-main reconciliation and completion records.
-- [Greasy Fork Automated Release Setup](GREASY_FORK_SETUP.md) — synchronization configuration, verification and recovery.
+- [Extension changelog](extension-changelog.md) — recent changes and stable update-notice anchors.
+- [Extension privacy policy](extension-privacy-policy.md) — local data, collector uploads and optional account sync.
 
 ## Historical records
+
+- [Archived Greasy Fork setup](GREASY_FORK_SETUP.md) — superseded distribution instructions.
 
 These files preserve the exact state and recovery context of a past version. They are not current operating instructions and should remain immutable except for a clearly marked archival correction.
 
@@ -27,9 +30,9 @@ These files preserve the exact state and recovery context of a past version. The
 
 - [Main README](../README.md)
 - [Machine-readable project state](../project-state.json)
-- [Canonical userscript](../src/missionchief-command-nexus.user.js)
+- [Current extension source](../extension-candidates/3.0.43.205/extension)
 - [Source directory guide](../src/README.md)
-- [Changelog](../CHANGELOG.md)
+- [Legacy userscript changelog](../CHANGELOG.md)
 - [Contributing guide](../CONTRIBUTING.md)
 - [Support policy](../SUPPORT.md)
 - [Security policy](../SECURITY.md)

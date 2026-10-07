@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the architecture in the current MissionChief Command Nexus v3.0.43 source and the direction for future consolidation.
+The current product is a Manifest V3 Chrome extension in [extension-candidates/3.0.43.205](../extension-candidates/3.0.43.205/README.md). The retained MissionChief Command Nexus v3.0.43 userscript is the earlier architectural baseline documented below.
 
 > Source-code direction and final technical decisions remain with **MartyBlyth**, the project developer. Conroy1988 provides repository and documentation support only.
 
@@ -8,7 +8,11 @@ This document describes the architecture in the current MissionChief Command Nex
 
 ## Current architecture
 
-The canonical distributable is a single userscript:
+The current distributable is a ZIP rooted at `manifest.json`. The manifest registers service-worker modules, popup/options pages and content scripts with explicit execution worlds. Read [extension-candidates/3.0.43.205/extension/manifest.json](../extension-candidates/3.0.43.205/extension/manifest.json) for the actual entry points. Optional account sync, collector uploads, station checks and update notices are extension modules.
+
+### Retained userscript architecture
+
+The older single-file baseline is:
 
 ```text
 src/missionchief-command-nexus.user.js

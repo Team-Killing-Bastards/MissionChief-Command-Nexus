@@ -54,6 +54,19 @@ requireCondition(state.project?.repository === 'Team-Killing-Bastards/MissionChi
 requireCondition(state.project?.defaultBranch === 'main', 'The project-state default branch must remain main.');
 requireCondition(state.project?.canonicalUserscript === SOURCE_PATH, 'The canonical userscript path is incorrect.');
 
+const distribution = state.distribution;
+requireCondition(distribution?.channel === 'chrome-web-store', 'Chrome Web Store must be the current distribution channel.');
+requireCondition(distribution?.storeId === 'pheccockibcappcdgonjjfcmlkemmaln', 'Chrome item identity must remain stable.');
+requireCondition(distribution?.installUrl === 'https://chromewebstore.google.com/detail/missionchief-command-nexu/pheccockibcappcdgonjjfcmlkemmaln', 'Incorrect current install URL.');
+requireCondition(/^\d{4}-\d{2}-\d{2}$/.test(distribution?.listingVerifiedOn || ''), 'Store verification date is required.');
+requireCondition(/^\d+\.\d+\.\d+\.\d+$/.test(distribution?.version || ''), 'Extension version must have four parts.');
+try {
+  const manifest = JSON.parse(fs.readFileSync(`${distribution.sourceDirectory}/manifest.json`, 'utf8'));
+  requireCondition(manifest.manifest_version === 3, 'Current source must use Manifest V3.');
+  requireCondition(manifest.version === distribution.version, 'Distribution version must match the referenced manifest.');
+  requireFile(distribution.packageGuide);
+} catch (error) { failures.push(`Cannot validate current extension source: ${error.message}`); }
+
 const source = fs.readFileSync(SOURCE_PATH, 'utf8');
 const metadataVersion = source.match(/^\/\/\s+@version\s+([^\s]+)\s*$/m)?.[1] || '';
 requireCondition(VERSION_PATTERN.test(metadataVersion), `Could not read a valid @version from ${SOURCE_PATH}.`);
@@ -91,7 +104,7 @@ const precedence = state.authority?.precedence || [];
 requireCondition(precedence.length >= 4, 'Authority precedence must contain at least four records.');
 requireCondition(unique(precedence.map((item) => item.rank)), 'Authority precedence ranks must be unique.');
 requireCondition([...precedence].sort((a, b) => a.rank - b.rank).every((item, index) => item.rank === index + 1), 'Authority precedence ranks must be consecutive starting at 1.');
-requireCondition(precedence[0]?.path === SOURCE_PATH, 'The canonical userscript must remain first in authority precedence.');
+requireCondition(precedence[0]?.path === `${state.distribution?.sourceDirectory}/manifest.json`, 'Current extension manifest must lead authority precedence.');
 requireCondition(precedence.some((item) => item.path === STATE_PATH), 'project-state.json is missing from authority precedence.');
 
 const decisionIds = (state.lockedDecisions || []).map((item) => item.id);

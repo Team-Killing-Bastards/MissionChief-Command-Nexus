@@ -1,11 +1,13 @@
 # Project Roadmap
 
-MissionChief Command Nexus is an actively released userscript. This roadmap records the production baseline and the remaining engineering priorities; it is not a pre-release plan.
+MissionChief Command Nexus is now a [Chrome extension](https://chromewebstore.google.com/detail/missionchief-command-nexu/pheccockibcappcdgonjjfcmlkemmaln). The Store lists `3.0.43.205`. Current priorities are evidence-backed extension stability, safe migration, accurate change notes and a release process that submits the reviewed current package. Reassess older issue priorities against the current extension before implementation.
+
+The completed checklist and engineering backlog below are retained userscript records, not a claim that the userscript is current production.
 
 **Developer and technical owner:** MartyBlyth  
 **Repository and documentation support:** Conroy1988
 
-## Current production baseline — v3.0.43
+## Retained userscript baseline — v3.0.43
 
 - [x] Publish one canonical userscript on trusted `main`.
 - [x] Publish Command Nexus `3.0.43` with Mission Finder `V10.6.180`, mission-only Worker A, exact personal transport-only Worker B, prisoner-release terminal handling and role-aware wake recovery.

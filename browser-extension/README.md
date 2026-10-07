@@ -1,5 +1,7 @@
 # Nexus Edge and Chrome extension
 
+> **Historical .82 build pipeline.** The current public product is the [Chrome extension](https://chromewebstore.google.com/detail/missionchief-command-nexu/pheccockibcappcdgonjjfcmlkemmaln), whose listing reports `3.0.43.205`. Start current work from [the versioned source](../extension-candidates/3.0.43.205/README.md). The historical release flow below is retained for provenance; its publisher is manual opt-in only and must not submit `.82` as the current update. Do not confuse this directory with the current Store package.
+
 This is the source and reproducible build for the Edge and Chrome Store editions. The canonical Tampermonkey edition remains at `src/missionchief-command-nexus.user.js` in the repository root; its release process is independent.
 
 Version **3.0.43.72** promotes the local crew/register accuracy, alliance sorting, guarded loading, storage and worker-memory fixes, and large-first coastguard helicopter preference. See [the cumulative release notes](STORE-3.0.43.72.md). Its application payloads are pinned in `reference/store-72.json`; all twenty-five verification stages run before publication.

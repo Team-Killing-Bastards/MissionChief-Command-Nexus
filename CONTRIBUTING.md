@@ -10,14 +10,14 @@ Before changing source code:
 
 1. Read [Current Project State](docs/PROJECT_STATE.md) and its linked accepted decisions.
 2. Read [Developer Handoff](docs/DEVELOPER_HANDOFF.md).
-3. Read the relevant open issue and the [master v1.0.x tracker](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/10).
+3. Read the relevant open issue and the [current issue queue](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues).
 4. Pull the latest `main` branch.
-5. Confirm the current version in `src/missionchief-command-nexus.user.js`.
+5. Confirm the current extension manifest and distribution record in `project-state.json`.
 6. Record current behaviour in the same MissionChief environment before modifying it.
 
 ## Repository workflow
 
-Trusted organisation owners retain direct `main` push access for maintenance and emergency work. Substantial userscript development should still use a focused branch and pull request because the PR workflow provides version-increase validation, review context and an evidence record.
+Trusted organisation owners retain direct `main` push access for maintenance and emergency work. Extension development should still use a focused branch and pull request because the PR workflow provides version-increase validation, review context and an evidence record.
 
 Recommended branch names:
 
@@ -32,13 +32,7 @@ Avoid combining unrelated source, formatting and documentation work in one pull 
 
 ## Canonical source
 
-The installable source is:
-
-```text
-src/missionchief-command-nexus.user.js
-```
-
-Do not add a second distributable userscript, duplicate metadata block or alternative production source without prior technical agreement.
+The current extension source is `extension-candidates/3.0.43.205/extension`; follow its [build guide](extension-candidates/3.0.43.205/README.md). The userscript under `src` and the older `browser-extension` pipeline are retained references, not installation sources. Preserve the Chrome item identity and document any new permissions.
 
 ## Current project-state maintenance
 
@@ -55,8 +49,8 @@ Do not hand-edit `docs/PROJECT_STATE.md`; it is generated. Important architectur
 
 Every source change intended for publication must:
 
-- Increase `@version` using `MAJOR.MINOR.PATCH`.
-- Update `CHANGELOG.md` with user-visible behaviour.
+- Increase the four-part extension manifest version when packaged bytes change.
+- Update `docs/extension-changelog.md` and bundled update notes with user-visible behavior.
 - Preserve MartyBlyth as the userscript `@author` unless he explicitly changes that metadata.
 - Preserve existing stored settings or include a documented migration and rollback path.
 - Avoid credentials, account data, webhook URLs and private alliance information.
@@ -64,11 +58,11 @@ Every source change intended for publication must:
 - Include cancellation and cleanup for new long-running work.
 - Include sanitized validation evidence.
 
-Documentation-only and repository-administration changes must not increase the userscript version unless the userscript source also changes.
+Documentation-only changes do not need a package version increase. Deliberate legacy userscript maintenance retains its separate `@version` and `CHANGELOG.md` checks.
 
 ## Required local checks
 
-Run from the repository root:
+Run the versioned extension checks in [extension-candidates/3.0.43.205/README.md](extension-candidates/3.0.43.205/README.md), plus the following repository and retained-source checks from the root:
 
 ```bash
 node --check src/missionchief-command-nexus.user.js
@@ -88,9 +82,9 @@ Record:
 - Command Nexus version and commit.
 - MissionChief domain.
 - Browser and version.
-- Userscript manager and version.
+- Extension installation source (Store or unpacked).
 - Operating system or device.
-- Other enabled userscripts.
+- Other enabled extensions and userscripts.
 - Exact reproduction or test steps.
 - Expected and actual behaviour.
 - Whether the workflow was preview, manual assisted, automatic or a live write.

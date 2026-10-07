@@ -21,9 +21,10 @@ Closes #
 
 ## Version and changelog
 
-- [ ] Userscript source is unchanged; no version increase is required.
-- [ ] Userscript source changed and `@version` was increased.
-- [ ] `CHANGELOG.md` describes the user-visible change.
+- [ ] Packaged extension bytes are unchanged; no manifest version increase is required.
+- [ ] Packaged bytes changed; the four-part manifest version, provenance and extension change notes were updated.
+- [ ] Versioned extension validation and affected runtime tests passed.
+- [ ] Any deliberate legacy userscript change has its own `@version` and historical changelog update.
 
 ## User impact
 
@@ -50,9 +51,9 @@ Record the exact environment:
 | Command Nexus version/commit | |
 | MissionChief domain | |
 | Browser/version | |
-| Userscript manager/version | |
+| Store or unpacked installation | |
 | OS/device | |
-| Other enabled userscripts | |
+| Other enabled extensions and userscripts | |
 | Test scope | |
 | Result | |
 
