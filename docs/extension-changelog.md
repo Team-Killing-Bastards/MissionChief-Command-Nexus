@@ -4,6 +4,16 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-213-patient-tail-recovery
+
+**Keep patient transports separate from shortages and release verified empty medical missions · 3.0.43.213**
+
+The .212 export shows UTI, Multiple Seizures and secondary Smoke Inhalation missions stopped with zero selected vehicles while their native warning still says “Transport is needed!”. These are not evidence of zero remaining patients. Transport-only medical missions now stop before unnecessary vehicle-list loading and hand live personal radio requests to the existing guarded Worker B path. If no live request is available, they are rechecked after one mission advance instead of the ordinary 20-advance zero-selection delay. Existing units stay assigned while transport remains pending. This does not guarantee that MissionChief accepts a transport request or supplies an available destination.
+
+For these named patient-only missions, Auto Mode can return assigned units independently of the surplus-ambulance toggle, but only with confirmed personal ownership, an explicit zero total patient count, no patient cards or transport links, and no remaining native alerts or requirement rows. A fresh mission response is required before releasing a unit, between releases and afterwards. Only cancellation links supplied by the current native mission vehicle rows are used. Mission changes, missing/unknown evidence, new patients, foreign or unusable links, network failures and uncertain outcomes stop further releases. An exact-route 404 allows moving on without another cancellation; it is recorded as a mission no longer available, not a confirmed reward or completion. The next mission opens without recording another dispatch. A document may attempt cleanup only once.
+
+Forty-one isolated checks cover patient-count distinctions, reported transport-only names, native cancellation and fresh verification, duplicate prevention, ownership, manual stop and mission-switch races, changed patients, failed or uncertain releases, disappearance after the last unit, and the actual controller handoff to Worker B. The .212 Any vehicle correction, personal priority, memory cleanup and Alliance Auto safeguards are retained. All test traffic is intercepted. Live MissionChief completion and transport acceptance remain unverified until the installed candidate is tested.
+
 ## v3-0-43-212-any-vehicle-ambulance
 
 **Dispatch the ambulance selected for Any vehicle · 3.0.43.212**
