@@ -4,6 +4,16 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-214-startup-transport-handoff
+
+**Handle an immediate transport stop during Auto Mode startup · 3.0.43.214**
+
+The .213 patient-tail check can stop Multiple Seizures immediately while transport remains pending, before the controller observes a running Auto Mode button. The supplied live export shows that automatic stop followed by two start attempts and the misleading “V2 Auto Mode did not confirm that it started” error. This was a regression in .213's early-stop integration.
+
+The worker supplies a document-local handoff signal. Before retrying startup, the controller accepts only the current worker document and mission, the specific patient-transport-pending signal created after the current start attempt, and its matching fresh automatic stop record. It then invokes the existing guarded recovery and Worker B handoff. Without a live radio request the one-advance deferral remains. Patient transport context can use this verified path; prisoner contexts, manual stops, stale records and unrelated failures cannot. Genuine unconfirmed startups retain their bounded retry and error behaviour.
+
+Twenty controller checks reproduce the .213 failure and exercise the actual recovery path and rejection cases. Forty-one intercepted Edge patient-tail checks also exercise the signal creation. Existing ambulance coverage, cleanup, memory, priority and Alliance safeguards are retained. No live dispatch, transport or cancellation was performed; install .214 and verify the next game run before treating the runtime fix as confirmed.
+
 ## v3-0-43-213-patient-tail-recovery
 
 **Keep patient transports separate from shortages and release verified empty medical missions · 3.0.43.213**
