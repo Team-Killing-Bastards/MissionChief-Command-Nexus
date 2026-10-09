@@ -1,0 +1,21 @@
+Nexus inline features include UK vehicle reference data derived from LSS-Manager/LSSM-V.4
+https://github.com/LSS-Manager/LSSM-V.4
+Upstream commit: 677fd601c0421bfbf5c226ff1f560b36e587c4d0
+Original data authors: LSS-Manager contributors. Licence: CC BY-NC-SA 4.0.
+https://creativecommons.org/licenses/by-nc-sa/4.0/
+The data in nexus-comfort-data.js is adapted to names, minimum/maximum crew and training labels.
+The adapted reference data retains the same licence; full licence included in LSS-REFERENCE-LICENSE.txt.
+No LSS runtime, logo, Vue, Pinia, fonts, or whole-account reactive cache is bundled.
+User preferences and vehicle groups come from the user-supplied LSS export.
+
+Local .30 also includes UK rank thresholds/names adapted from src/i18n/en_GB.ts at the same upstream commit and under the same CC BY-NC-SA 4.0 licence. Currency UI logic and inline SVG icons are independently implemented.
+
+Local .31 adapts daily-credit category matching rules, names and colours from LSS-Manager/LSSM-V.4 src/modules/dailyCreditsSummary/i18n/en_GB.ts at commit 677fd601c0421bfbf5c226ff1f560b36e587c4d0, CC BY-NC-SA 4.0. UK mission names are reduced from the local LSS catalog snapshot fetched 2026-09-10 (SHA-256 e183b61ff4718931c21596c2a5a9bfd4eb945c2300107dd92ef8bb5e0f67a39f); only names are bundled for classification. LSS project: https://github.com/LSS-Manager/LSSM-V.4 . Attribution and the same licence are retained for adapted reference data. The UI, filtering, arithmetic and lifecycle implementation are new; no Vue, Pinia, chart framework or LSS runtime is included.
+
+Local .33 includes mission type and overlay average-credit pairs adapted from the local LSS UK mission catalog snapshot dated 2026-09-10 (SHA-256 e183b61ff4718931c21596c2a5a9bfd4eb945c2300107dd92ef8bb5e0f67a39f), under the same CC BY-NC-SA 4.0 attribution/share-alike terms as the existing adapted mission reference. LSS project: https://github.com/LSS-Manager/LSSM-V.4 . Runtime UI is independently implemented; no LSS hooks, reactive stores or framework are added.
+
+Local .37 adapts UK vehicle requirement names, substitutions and equipment mappings from src/modules/extendedCallWindow/i18n/en_GB.json at the same LSSM-V.4 commit 677fd601c0421bfbf5c226ff1f560b36e587c4d0 under CC BY-NC-SA 4.0. These reduced reference mappings are in nexus-requirement-data.js; original author attribution and full licence remain included. Tick rendering and lifecycle code are independently implemented.
+
+Local .38 adapts native navigation selectors/route behaviour from LSSM-V.4 src/modules/enhancedTransportRequests at commit 677fd601c0421bfbf5c226ff1f560b36e587c4d0 under CC BY-NC-SA 4.0. The new nexus-transport-shortcuts.js adds independent settings, manual-frame guards, visibility lifecycle and navigation-loop protection. Full licence and author attribution remain included.
+
+Local .39 adapts UK crew/training reference data and building extension state selectors from LSSM-V.4 at commit 677fd601c0421bfbf5c226ff1f560b36e587c4d0 under CC BY-NC-SA 4.0. Sources: src/i18n/en_GB/vehicles.ts, schoolings.ts, extendedBuilding/assets/personnelDemands.ts and expansions.ts. Changes: reduced data, EOD Commander key alias correction, compact native layout, assigned-training coverage and bounded per-building personnel read. Full licence and author attribution remain included.
