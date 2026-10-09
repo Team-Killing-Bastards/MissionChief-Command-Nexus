@@ -10,7 +10,7 @@ permissions:
 jobs:
   candidate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -131,6 +131,22 @@ jobs:
       - name: Preserve Auto Mode and Alliance Auto behavior in 211
         env:
           NEXUS_CANDIDATE_ROOT: extension-candidates/3.0.43.211/extension
+        run: |
+          node extension-candidates/3.0.43.206/check-upgrade-priority.mjs
+          node extension-candidates/3.0.43.206/check-memory.mjs
+          node extension-candidates/3.0.43.206/check-vehicle-claims.mjs
+          node extension-candidates/3.0.43.206/check-alliance-auto.mjs
+          node extension-candidates/3.0.43.206/check-alliance-storage-failure.mjs
+      - name: Verify Nexus 212 package, manifest and Any vehicle ready-state correction
+        run: |
+          python extension-candidates/3.0.43.212/package.py
+          node extension-candidates/3.0.43.212/validate.mjs
+          node extension-candidates/3.0.43.212/check-any-vehicle.mjs
+          node extension-candidates/3.0.43.212/check-update-notes.mjs
+          node extension-candidates/3.0.43.212/check-upgrade-audit.mjs
+      - name: Preserve Auto Mode and Alliance Auto behavior in 212
+        env:
+          NEXUS_CANDIDATE_ROOT: extension-candidates/3.0.43.212/extension
         run: |
           node extension-candidates/3.0.43.206/check-upgrade-priority.mjs
           node extension-candidates/3.0.43.206/check-memory.mjs
