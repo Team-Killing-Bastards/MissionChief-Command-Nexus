@@ -4,6 +4,18 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-216-native-cancel-all-patient-cleanup
+
+**Use the game's Cancel All Units action for empty medical missions · 3.0.43.216**
+
+Fixes the missing mission-level action in .215. The user confirmed that pressing native Cancel All Units removes the reported medical missions even when they have no assigned units. The old cleanup returned individual vehicles and, with an empty unit list, advanced without sending any cancellation. The correction reads a fresh zero-patient mission and sends its exact native Cancel All Units link once, including when the assigned-unit count is zero. It uses the normal HTML request path and checks the mission again afterwards. Individual vehicle cancellation links are retained only as evidence that any assigned rows belong to cancellable own units; they are no longer called by this cleanup.
+
+Scope remains personal UTI, Multiple Seizures and Smoke Inhalation missions, independent of the surplus-ambulance toggle. Explicit zero total patients, no patient cards (including hidden cards), no actual transport links, no other requirements and no unrelated visible warnings are required immediately before the action. Unknown/foreign units, missing or mismatched native Cancel All links, real patients, changed mission, lost execution ownership or manual stop block the request. Failed or uncertain cancellation is not retried automatically. Real transport requests still use the existing Worker B handoff.
+
+Missing ownership capture now refreshes the existing read-only native evidence. If it still lacks an owner record, the exact native personal emergency card and mission link can provide positive ownership evidence, with a known current player. An explicit foreign owner, alliance event or planned mission vetoes that fallback. Ownership failures are recorded as blocked cleanup rather than being silent. Submitted and verified actions are logged separately. A fresh response with no assigned units confirms unit release; only an exact mission-route 404 is reported as the mission becoming unavailable. A successful HTTP response or an empty unit list is not reported as proof of mission closure.
+
+Eighty-six intercepted Edge and controller checks reproduce .215 advancing without cancellation, then test native Cancel All with zero and two assigned units, stale transport banners, native ownership capture recovery and personal-list fallback. Patient/requirement safety, redirect and HTTP failures, uncertain outcomes, duplicate protection and Worker B handoff are retained. Startup-handoff, Any vehicle, queue priority, bounded memory, vehicle claims and Alliance safeguards are checked separately. No new permissions, extension identity or automatic scans. The .216 installed live Auto Mode path remains unverified; the user's manual result confirms which native action is needed. No store submission.
+
 ## v3-0-43-215-zero-patient-transport-cleanup
 
 **Release units when a medical transport warning has no patients · 3.0.43.215**
