@@ -4,6 +4,18 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-215-zero-patient-transport-cleanup
+
+**Release units when a medical transport warning has no patients · 3.0.43.215**
+
+Corrects .214 treating a leftover Transport is needed banner as an actual patient transport request before checking the total patient count. A live Multiple Seizures mission showed 0 Patient, no patient cards or transport links, and two ambulances on scene. Its prison-loading error was a hidden native placeholder, which the old check also read as active. Zero total patients now take priority when no actual patients, transport links, visible unrelated warnings or requirement rows remain. Hidden alert placeholders and hidden ancestors are excluded consistently from both active and freshly fetched documents; hidden patient cards still prevent cancellation.
+
+For the existing UTI, Multiple Seizures and Smoke Inhalation cleanup scope, every cancellation still requires verified personal ownership, current execution ownership and a fresh zero-patient response. Only native assigned-vehicle cancellation links are used, with fresh reads between releases and afterwards. A real patient, real transport link, missing vehicles/personnel, an unknown warning, mission switch, manual stop or uncertain response prevents further cancellations. This is independent of the surplus-ambulance setting. If the game removes its patient counter after the last unit is released, a final read with no assigned units, cards, transport links or other demands verifies the release and allows advancing; that exception never authorises a first or additional cancellation.
+
+An attended live check used MissionChief's native Cancel All Units action on Multiple Seizures #263665884 and verified that both assigned ambulances were removed. The game still showed its transport warning and kept the mission available. Unit release is verified; automatic game-side mission closure is not promised. The .215 extension was tested separately in intercepted fixtures and is not yet verified installed in the live browser.
+
+Sixty isolated patient-tail checks reproduce .214's wrong branch with the observed markup, then verify zero-patient cleanup, counter removal after release, real transport preservation, hidden placeholders, visible error blocks, ownership and race safeguards. The twenty startup-handoff checks and previous Any vehicle, personal queue, memory and Alliance safeguards are retained. Compact initial/final patient evidence is included in cleanup diagnostics. No new permissions, extension identity, automatic scans or store submission.
+
 ## v3-0-43-214-startup-transport-handoff
 
 **Handle an immediate transport stop during Auto Mode startup · 3.0.43.214**
