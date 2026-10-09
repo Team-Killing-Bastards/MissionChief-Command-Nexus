@@ -1,0 +1,24 @@
+MISSIONCHIEF COMMAND NEXUS — LOCAL FIX 3.0.43.137
+
+Patient summary placement and specialist count display
+
+Requested behaviour
+- Move the Nexus Patients / Awaiting resources box into Nexus · Missing requirements.
+- Keep it below the existing Original game requirements disclosure.
+- Ambulance Officer and Mass Casualty Equipment should display as 1 when required, regardless of how many patient alerts repeat the same specialist requirement.
+
+3.0.43.137 behaviour
+- The existing #nx-patients summary is no longer inserted above the mission header/general-info area.
+- It is now rendered inside #nx-missing, immediately after the Original game requirements details row when that row is present.
+- Existing patient totals, Awaiting resources count, Ambulance counts and Critical Care counts are unchanged.
+- Ambulance Officer display count is capped to 1.
+- Mass Casualty Equipment / Mass Casualty Equipment Unit display count is capped to 1.
+- This display now matches Mission Finder's existing specialist dispatch rules, which already cap Ambulance Officer and Mass Casualty Equipment at one unit each.
+- The #nx-patients id and badge structure are retained so the existing attended-patient Ambulance/Critical Care fallback can continue reading the same summary.
+
+Retained from 3.0.43.136
+- Hidden/filtered/already-attended mission discovery for Type-5 Ambulance auto-release.
+- The auto-release setting remains default OFF and remains independent of Auto Mode.
+- Only exact vehicle type 5 ordinary Ambulances can be returned; CFR type 22 and every other EMS type remain protected.
+- Live Ambulance/Critical Care shortage and patient-linked safety gates remain unchanged.
+- Dispatch Centre per-type vehicle numbering, Police IRV role groups, Community First Responder naming, resizable Nexus Tools and prior patient Ambulance fixes remain unchanged.

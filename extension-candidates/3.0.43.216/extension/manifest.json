@@ -1,0 +1,385 @@
+{
+  "manifest_version": 3,
+  "name": "MissionChief Command Nexus",
+  "description": "MissionChief UK mission controls, vehicle selection, transport, naming and personnel tools, with optional gameplay reporting.",
+  "version": "3.0.43.216",
+  "minimum_chrome_version": "111",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "alarms",
+    "identity"
+  ],
+  "host_permissions": [
+    "https://nexus.blyth.scot/*"
+  ],
+  "background": {
+    "service_worker": "analytics-worker.mjs",
+    "type": "module"
+  },
+  "options_page": "collector.html",
+  "action": {
+    "default_title": "MissionChief Command Nexus",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/nexus-16.png",
+      "32": "icons/nexus-32.png",
+      "48": "icons/nexus-48.png",
+      "128": "icons/nexus-128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-station-profiles-store.js",
+        "nexus-station-profiles-data.js",
+        "nexus-station-profiles-core.js",
+        "nexus-station-profiles-ui.js",
+        "nexus-staging-profiles-editor.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false,
+      "world": "ISOLATED"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-settings.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "ISOLATED"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-register-storage.js",
+        "nexus-personnel-store.js",
+        "nexus-storage-guard.js",
+        "nexus-dispatch-trace.js",
+        "nexus-settings-main.js",
+        "collector-game.js",
+        "nexus-auto-stop-store.js",
+        "nexus-vehicle-claims.js",
+        "nexus-runtime.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "collector-bridge.js",
+        "nexus-account-bridge.js",
+        "nexus-connection-status.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": false,
+      "world": "ISOLATED"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "rules-bridge.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "ISOLATED"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-responsive.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true,
+      "world": "ISOLATED"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-settings-defaults.js",
+        "nexus-building-delete.js",
+        "nexus-tools-core.js",
+        "nexus-building-upgrades-core.js",
+        "nexus-building-upgrades.js",
+        "nexus-tools.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false,
+      "world": "ISOLATED"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-comfort-data.js",
+        "nexus-settings-apply.js",
+        "nexus-currency-ranks.js",
+        "nexus-currency.js",
+        "nexus-command-toolbar.js",
+        "nexus-requirement-data.js",
+        "nexus-requirement-ticks.js",
+        "nexus-building-data.js",
+        "nexus-building-core.js",
+        "nexus-personnel-reader.js",
+        "nexus-crew-register.js",
+        "nexus-assign-crew.js",
+        "nexus-building-overview.js",
+        "nexus-dispatch-centre-rename.js",
+        "nexus-comfort.js",
+        "nexus-transport-shortcuts.js",
+        "nexus-home-market.js"
+      ],
+      "world": "MAIN",
+      "run_at": "document_idle",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/credits/daily*",
+        "https://police.missionchief.co.uk/credits/daily*"
+      ],
+      "js": [
+        "nexus-credit-page-chrome.js",
+        "nexus-daily-data.js",
+        "nexus-daily-core.js",
+        "nexus-daily.js"
+      ],
+      "world": "ISOLATED",
+      "run_at": "document_idle",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/credits/overview*",
+        "https://police.missionchief.co.uk/credits/overview*"
+      ],
+      "js": [
+        "nexus-credit-page-chrome.js",
+        "nexus-overview-core.js",
+        "nexus-overview.js"
+      ],
+      "world": "ISOLATED",
+      "run_at": "document_idle",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-mission-rewards-data.js",
+        "nexus-mission-rewards.js"
+      ],
+      "world": "ISOLATED",
+      "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-schooling-filters.js"
+      ],
+      "world": "MAIN",
+      "run_at": "document_idle",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/schoolings*",
+        "https://police.missionchief.co.uk/schoolings*"
+      ],
+      "js": [
+        "nexus-course-list-filters.js",
+        "nexus-schooling-actions.js"
+      ],
+      "world": "ISOLATED",
+      "run_at": "document_idle",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-alliance-owner-capture.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": false,
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-alliance-core.js",
+        "nexus-alliance-results-store.js",
+        "nexus-alliance-support.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false,
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-compact-missions.js",
+        "nexus-fixed-navigation.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false,
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-real-locations-bridge.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true,
+      "world": "ISOLATED"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-station-profiles-store.js",
+        "nexus-station-profiles-data.js",
+        "nexus-realism-setup.js",
+        "nexus-real-locations.js",
+        "nexus-staging-map.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "collector-register.js",
+        "nexus-profile-sync.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false,
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-station-rename.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/buildings/*",
+        "https://police.missionchief.co.uk/buildings/*"
+      ],
+      "js": [
+        "nexus-station-profiles-store.js",
+        "nexus-station-profiles-data.js",
+        "nexus-station-profiles-core.js",
+        "nexus-station-profiles-engine.js",
+        "nexus-station-profiles-ui.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-hospital-beds.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false,
+      "world": "ISOLATED"
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "js": [
+        "nexus-update-notes.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false,
+      "world": "ISOLATED"
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'"
+  },
+  "icons": {
+    "16": "icons/nexus-16.png",
+    "32": "icons/nexus-32.png",
+    "48": "icons/nexus-48.png",
+    "128": "icons/nexus-128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/nexus-48.png"
+      ],
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ]
+    }
+  ],
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAo+hAstw8QBGHACdMO+5CDVqlRiuz8+7DO83PEL4OmTQcNeSKD2Bir4urEuJSK/lbYEC9jIG9ItkeVKEh/F6U6asA0GmodgvVvgktgXaVob98fn5tQbQsx1Cbv1miMglPZm8ib0J70RJlDgbf3sy/4wm0TLKU2wOmuwXgUyTPYCsnHxF1jvOhrjtq77qH08IKgkh9s8LZH3lSNVUnGqROul48zxd0lF7ezEq50EZzUZN8VU4rBh9ZiPuO8oIa7uucSGW27DK9INtgFc0uKcL8BtxxDfmb4bqDnaCY5+Cfl6LEubGQRH2sOFGqyeS1CKTnypwu+HwU3UzoRMF6h/+SpQIDAQAB"
+}

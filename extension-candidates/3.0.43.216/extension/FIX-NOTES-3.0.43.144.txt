@@ -1,0 +1,41 @@
+MissionChief Command Nexus 3.0.43.144 — Per-mission Ambulance allocation limit
+
+Base:
+- Built directly from Nexus-143-Alliance-Live-Map-Planned-Appearances.zip.
+- Extension: 3.0.43.144
+- Mission Finder: 10.6.189
+- Unit Naming: 3.3.29
+- Station Naming: 1.3.23
+- Personnel Assignment: 1.3.13
+
+New Mission control settings:
+- Limit Ambulances per mission — default OFF.
+- Maximum Ambulances per mission — default 20, range 1-99.
+
+Locked behaviour:
+- The cap applies only to ordinary MissionChief Ambulances, exact vehicle type 5.
+- Ambulance Officer, Mass Casualty Equipment, HEMS and every other EMS type are outside the cap.
+- The cap is enforced in fresh Unit Finder, patient Ambulance selection, late-patient recovery, Mission Update and Auto Mode through the shared vehicle-selection path.
+- Nexus keeps a mission-lifetime ledger of unique Type-5 vehicle IDs in sessionStorage.
+- Type-5 Ambulances already driving to or on the mission are absorbed into that ledger.
+- Type-5 Ambulances selected for a Nexus/native dispatch are committed before the dispatch navigation.
+- Once a Type-5 Ambulance has been committed to a mission, it keeps consuming one slot while transporting to hospital, while temporarily absent from the mission DOM, and when it later returns to the mission.
+- Returning the same vehicle ID does not consume another slot.
+- Each mission ID has its own allocation.
+- The ledger is bounded to 160 missions and entries expire after 48 hours; MissionChief mission IDs are not reused, so stale entries cannot cap a different mission.
+- Turning the setting OFF restores the existing uncapped behaviour immediately.
+
+Threshold interaction:
+- Ambulance Officer demand continues to be calculated from the original game/patient requirement before the cap.
+- Mass Casualty Equipment now also retains the recorded uncapped ordinary Ambulance demand, so a mission requesting 77 Ambulances can still trigger the configured MCE rule even when the per-mission Ambulance cap is 20.
+
+Example with limit 20:
+- Mission requests 77 Ambulances -> Nexus selects at most 20 unique Type-5 Ambulances for the mission lifetime.
+- If 6 of those 20 take patients to hospital and disappear from the mission vehicle tables, the allocation remains 20/20.
+- If Auto Mode or Mission Update revisits while those 6 are away, Nexus sends 0 replacement Ambulances.
+- When those same ambulance IDs return, they are recognised as the same 20 allocated units.
+
+Validation:
+- JavaScript/MJS syntax: 96 files passed.
+- Permanent regression suite: 24/24 passed.
+- New regression: regressions/check-ambulance-mission-limit-v3144.mjs.
