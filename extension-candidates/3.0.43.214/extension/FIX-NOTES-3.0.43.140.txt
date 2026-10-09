@@ -1,0 +1,26 @@
+MISSIONCHIEF COMMAND NEXUS — LOCAL FIX 3.0.43.140
+
+Requested change
+- Capture shared Planned Appearances, including Fire Station Open Day, in the Nexus Alliance missions table.
+
+3.0.43.140 behaviour
+- Nexus Alliance missions now scans MissionChief's native Planned Appearances container: #mission_list_sicherheitswache.
+- A planned appearance is admitted only when native alliance/shared evidence exists.
+- The primary planned-row signal is MissionChief's data-mission-participation-filter. A non-empty value other than `own` is treated as shared/alliance participation evidence.
+- Existing explicit alliance/shared classes or data attributes are also accepted.
+- Own planned appearances are excluded.
+- Planned rows with no trustworthy alliance/participation evidence fail closed and remain excluded rather than being guessed as shared.
+- Captured rows are labelled `Planned appearance` in the Nexus Alliance missions panel.
+- The existing Alliance panel MutationObserver now refreshes when MissionChief adds, removes or updates planned appearances.
+- The existing participation verification through /api/vehicles remains unchanged.
+- The existing exact Ocean-only/offshore mission filter from 3.0.43.139 remains active, including the pre-dispatch guard.
+- Fire Station Open Day mission type 526 is not part of the Ocean-only exclusion set and remains eligible.
+- MissionChief's native mission lists are not changed or hidden by Nexus.
+
+Versions
+- Extension: 3.0.43.140
+- Mission Finder: 10.6.188 (unchanged)
+- Unit Naming: 3.3.29 (unchanged)
+
+Regression
+- regressions/check-alliance-planned-appearances-v3140.mjs

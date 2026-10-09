@@ -1,0 +1,30 @@
+MISSIONCHIEF COMMAND NEXUS — LOCAL FIX 3.0.43.139
+
+Requested change
+- Remove offshore missions from the Nexus Alliance mission table without altering MissionChief's native mission list or other dispatch logic.
+
+3.0.43.139 behaviour
+- The Nexus Alliance missions panel now excludes missions whose MissionChief definition is restricted to Ocean vehicles only.
+- Filtering uses exact mission_type_id values for the current Ocean-only UK mission definitions.
+- Unknown mission type IDs fail open: Nexus does not hide a mission based on its name alone. This avoids accidentally removing a valid mixed-access mission.
+- Mixed Regular + Ocean missions are deliberately NOT filtered. Current examples include EPIRB Activation (Marina) and High Risk Missing Person (Coastal), because regular support vehicles remain valid there.
+- The native MissionChief alliance mission list is untouched.
+- Select all, visible mission counts and normal Nexus alliance support operate only on the filtered Nexus list.
+- A second guard immediately before support dispatch fails closed if an Ocean-only mission somehow reaches the queue after rendering.
+
+Current exact Ocean-only mission type IDs
+- 544 Investigate Flare
+- 553 Evacuation from Cruise Liner
+- 554 Evacuation from Cruise Liner MAJOR
+- 561 Broken Down Boat
+- 562 Medivac from vessel
+- 598 EPIRB Activation (Offshore)
+- 600 Yacht crew with head injury
+- 761 Dis-Masted Yacht Offshore
+- 766 Dis-Masted sailing boat (inshore)
+- 787 Vessel Taking on Water (including its additive helicopter overlay)
+
+Versions
+- Extension: 3.0.43.139
+- Mission Finder: 10.6.188 (unchanged)
+- Unit Naming: 3.3.29 (unchanged)

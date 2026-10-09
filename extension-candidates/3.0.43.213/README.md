@@ -1,5 +1,8 @@
 # Nexus 3.0.43.213 Patient mission recovery
 
+Known live regression: an immediate transport-only stop can precede startup
+confirmation and halt the controller. Use .214 for the corrected handoff.
+
 Based on .212. Keeps the Any vehicle ambulance fix and building upgrades.
 
 The supplied .212 export's UTI, Multiple Seizures and secondary Smoke Inhalation
