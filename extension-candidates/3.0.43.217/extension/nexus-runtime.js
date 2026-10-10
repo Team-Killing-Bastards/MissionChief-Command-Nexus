@@ -56640,10 +56640,10 @@ async function handleAutoPrisonerReleaseAfterActions() {
             const match = text.match(/(?:^|[^\w])([\d,]+)\s+Patients?\b/i);
             return match ? Number(match[1].replaceAll(',','')) : null;
         }).filter(value => value !== null);
-        const countSource = counts.length ? 'rendered-total' : 'native-literal';
+        let countSource = counts.length ? 'rendered-total' : 'unknown';
         if (!counts.length) {
             const initialCount = nexusPatientTailInitialCount(missionDocument);
-            if (initialCount !== null) counts.push(initialCount);
+            if (initialCount !== null) { counts.push(initialCount); countSource = 'native-literal'; }
         }
         const cards = missionDocument.querySelectorAll('.mission_patient').length;
         // Native pages contain hidden error placeholders (notably prisons-load-error).
