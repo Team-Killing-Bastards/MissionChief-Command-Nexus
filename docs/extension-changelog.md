@@ -4,6 +4,20 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-217-verified-empty-transport-cleanup
+
+**Complete empty transport missions and find CRV in rules · 3.0.43.217**
+
+An attended native test of personal UTI #263753131 confirmed the reported two-action behaviour: with zero total patients, no assigned units and no actual transport links or other demands, the first Cancel All Units returned a native Cancel All success flash but left Transport is needed. Its total-patient counter disappeared. A second native Cancel All completed the mission, returning the exact positive completion page and changing its personal mission card to mission_deleted. This is native-game evidence; the installed .217 Auto Mode path remains unverified.
+
+The cleanup now permits at most two native Cancel All actions. The second requires an explicitly confirmed first response and a fresh empty result with zero assigned units and only a stale transport banner. Real patients, hidden patient cards, transport links, other requirements, unrelated errors, changed mission, lost ownership or a manual stop prevent the second action. An uncertain request is never retried. If the stale warning still remains after two actions, Auto stops for inspection. Native completion pages and exact-route 404s are recognised on a fresh mission read; HTTP success and zero assigned units alone are not reported as mission closure. Diagnostics record both attempt numbers and the verified outcome.
+
+Raw native HTML can initialise its patient counter through an inline script. Detached response parsing now reads only the literal total and untreated numbers, bound to the current mission form and mission ID, without executing scripts. Rendered totals take priority. Known native Cancel All and successful-dispatch flashes no longer block cleanup; unknown visible warnings still do. The user's zero-patient stale-transport rule now applies to verified personal emergency missions, while the existing real-transport Worker B handoff remains limited to its known patient mission cases. The surplus-ambulance toggle is independent.
+
+Requirement rules can find type 57 Coastguard Rescue Vehicle using CRV, CRVs, its full name or its type ID. The dropdown shows the CRV alias. Existing CRV type matching and custom-rule precedence are preserved. Live inspection of the nearby South Queensferry vessel-aground mission #263757356 found a game-level conflict: its own requirements page requires one CRV while also listing Restricted Vehicle Types: Ocean, and its native list contains only boats and coastguard helicopters. Free Granton type-57 CRVs were absent and the native CRV AAO was unavailable. This release does not claim to fix that native restriction or manufacture unavailable vehicle rows. The earlier Canterbury range diagnosis applied to a different mission.
+
+Validation uses intercepted Edge fixtures for the observed native two-action sequence, raw counters, success flashes, changing patients/units/requirements, unconfirmed responses and the hard two-action limit. CRV checks exercise the production requirement reader, native type selection, final coverage gate and the actual rules page search/save. Existing startup, Any vehicle, queue, memory, vehicle claims and Alliance checks are retained. No new permissions, extension identity or scans. No store submission.
+
 ## v3-0-43-216-native-cancel-all-patient-cleanup
 
 **Use the game's Cancel All Units action for empty medical missions · 3.0.43.216**
