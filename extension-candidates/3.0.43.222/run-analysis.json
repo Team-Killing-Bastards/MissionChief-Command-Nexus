@@ -1,0 +1,18 @@
+{
+  "source": "missionchief-command-nexus-v3-1791729606333.json",
+  "version": "3.0.43.221",
+  "running": true,
+  "elapsedSeconds": 654,
+  "recordedDispatches": 29,
+  "observedDispatchesPerHour": 159.63,
+  "averageSecondsPerRecordedDispatch": 22.55,
+  "dispatchClaimDeferredMissionOccupancyMs": [
+    130644,
+    141190
+  ],
+  "limits": [
+    "Occupancy includes work before idle waiting; do not treat the entire duration as removable delay.",
+    "Recorded dispatches are not proof of server acceptance, full vehicle/personnel coverage or mission completion.",
+    "No measured .222 live throughput yet."
+  ]
+}
