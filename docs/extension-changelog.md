@@ -4,6 +4,16 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-220-auto-throughput
+
+**Reduce unnecessary Auto Mode vehicle loading and repeat selection · 3.0.43.220**
+
+Fresh missions with ordinary patients can now stop loading vehicle pages once the available pool covers the mission requirements, ambulances and configured Ambulance Officer / Mass Casualty Equipment support. The ambulance proof respects the existing per-mission limit, while support thresholds still use uncapped patient demand. The normal Unit Finder, final coverage checks and full-list fallback remain in place. Live patient alerts, attended missions, trained-personnel requirements and uncertain coverage retain the complete-list path. Diagnostics now identify which condition required that path.
+
+The Auto Mode supervisor and loop check the existing dispatch claim before starting selection again on the same submitted mission. They leave the claim, native navigation, transport handling and controller recovery intact. This removes repeated loading and selection during a pending handoff without sending another dispatch.
+
+The supplied .219 run recorded seven dispatches in 344 seconds, about 73 per hour, with 38 extra vehicle pages and approximately 147 seconds in vehicle loading. Deterministic regressions reproduce the old mixed-patient full-load path and supervisor restart, and verify the new coverage and claim guards. These are local fixture results, not proof of 150 dispatches per hour in the live game. Toolkit's share of the main-thread workload is not established by that export. No new permissions, extension identity, scanning or polling; no store submission.
+
 ## v3-0-43-219-background-control-startup
 
 **Make Auto Mode controls ready without a screen repaint · 3.0.43.219**

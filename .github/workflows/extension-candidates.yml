@@ -11,6 +11,11 @@ jobs:
   candidate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        group: ['205-208', '209-212', '213-216', '217-220']
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -20,18 +25,24 @@ jobs:
         with:
           python-version: '3.12'
       - name: Verify exact source bytes and package
+        if: matrix.group == '205-208'
         run: python extension-candidates/3.0.43.205/package.py
       - name: Check JavaScript and changelog targets
+        if: matrix.group == '205-208'
         run: node extension-candidates/3.0.43.205/validate.mjs
       - name: Test update notification state and tab races
+        if: matrix.group == '205-208'
         run: node extension-candidates/3.0.43.205/check-update-notes.mjs
         env:
           NEXUS_SKIP_BROWSER: '1'
       - name: Verify Nexus 206 exact source and package
+        if: matrix.group == '205-208'
         run: python extension-candidates/3.0.43.206/package.py
       - name: Validate Nexus 206 source and changelog
+        if: matrix.group == '205-208'
         run: node extension-candidates/3.0.43.206/validate.mjs
       - name: Check priority, memory lifecycle and vehicle claims
+        if: matrix.group == '205-208'
         run: |
           node extension-candidates/3.0.43.206/check-upgrade-priority.mjs
           node extension-candidates/3.0.43.206/check-memory.mjs
@@ -42,21 +53,27 @@ jobs:
         working-directory: browser-extension
         run: npx playwright install --with-deps chromium
       - name: Verify background alliance queue and Settings toggle
+        if: matrix.group == '205-208'
         run: node extension-candidates/3.0.43.206/check-alliance-auto.mjs
       - name: Verify durable dispatch checkpoint failures
+        if: matrix.group == '205-208'
         run: node extension-candidates/3.0.43.206/check-alliance-storage-failure.mjs
       - name: Verify Nexus 206 update notice
+        if: matrix.group == '205-208'
         run: node extension-candidates/3.0.43.206/check-update-notes.mjs
       - name: Verify Nexus 207 package, manifest, changelog and checkpoint isolation
+        if: matrix.group == '205-208'
         run: |
           python extension-candidates/3.0.43.207/package.py
           node extension-candidates/3.0.43.207/validate.mjs
           node extension-candidates/3.0.43.207/check-upgrade-audit.mjs
       - name: Verify building upgrades and update notice
+        if: matrix.group == '205-208'
         run: |
           node extension-candidates/3.0.43.207/check-building-upgrades.mjs
           node extension-candidates/3.0.43.207/check-update-notes.mjs
       - name: Preserve Nexus 206 behavior in 207
+        if: matrix.group == '205-208'
         env:
           NEXUS_CANDIDATE_ROOT: extension-candidates/3.0.43.207/extension
         run: |
@@ -66,15 +83,18 @@ jobs:
           node extension-candidates/3.0.43.206/check-alliance-auto.mjs
           node extension-candidates/3.0.43.206/check-alliance-storage-failure.mjs
       - name: Verify Nexus 208 package, manifest and upgrade checkpoint isolation
+        if: matrix.group == '205-208'
         run: |
           python extension-candidates/3.0.43.208/package.py
           node extension-candidates/3.0.43.208/validate.mjs
           node extension-candidates/3.0.43.208/check-upgrade-audit.mjs
       - name: Verify native level quotes, scan failures, bulk review and update notice
+        if: matrix.group == '205-208'
         run: |
           node extension-candidates/3.0.43.208/check-building-upgrades.mjs
           node extension-candidates/3.0.43.208/check-update-notes.mjs
       - name: Preserve Auto Mode and Alliance Auto behavior in 208
+        if: matrix.group == '205-208'
         env:
           NEXUS_CANDIDATE_ROOT: extension-candidates/3.0.43.208/extension
         run: |
@@ -84,15 +104,18 @@ jobs:
           node extension-candidates/3.0.43.206/check-alliance-auto.mjs
           node extension-candidates/3.0.43.206/check-alliance-storage-failure.mjs
       - name: Verify Nexus 209 package, manifest and upgrade checkpoint isolation
+        if: matrix.group == '209-212'
         run: |
           python extension-candidates/3.0.43.209/package.py
           node extension-candidates/3.0.43.209/validate.mjs
           node extension-candidates/3.0.43.209/check-upgrade-audit.mjs
       - name: Verify changing specialisation prices, budgets, safe resumption and update notice
+        if: matrix.group == '209-212'
         run: |
           node extension-candidates/3.0.43.209/check-building-upgrades.mjs
           node extension-candidates/3.0.43.209/check-update-notes.mjs
       - name: Preserve Auto Mode and Alliance Auto behavior in 209
+        if: matrix.group == '209-212'
         env:
           NEXUS_CANDIDATE_ROOT: extension-candidates/3.0.43.209/extension
         run: |
@@ -102,15 +125,18 @@ jobs:
           node extension-candidates/3.0.43.206/check-alliance-auto.mjs
           node extension-candidates/3.0.43.206/check-alliance-storage-failure.mjs
       - name: Verify Nexus 210 package, manifest and upgrade checkpoint isolation
+        if: matrix.group == '209-212'
         run: |
           python extension-candidates/3.0.43.210/package.py
           node extension-candidates/3.0.43.210/validate.mjs
           node extension-candidates/3.0.43.210/check-upgrade-audit.mjs
       - name: Verify purchase results, unrelated page warnings and update notice
+        if: matrix.group == '209-212'
         run: |
           node extension-candidates/3.0.43.210/check-building-upgrades.mjs
           node extension-candidates/3.0.43.210/check-update-notes.mjs
       - name: Preserve Auto Mode and Alliance Auto behavior in 210
+        if: matrix.group == '209-212'
         env:
           NEXUS_CANDIDATE_ROOT: extension-candidates/3.0.43.210/extension
         run: |
@@ -120,15 +146,18 @@ jobs:
           node extension-candidates/3.0.43.206/check-alliance-auto.mjs
           node extension-candidates/3.0.43.206/check-alliance-storage-failure.mjs
       - name: Verify Nexus 211 package, manifest and upgrade checkpoint isolation
+        if: matrix.group == '209-212'
         run: |
           python extension-candidates/3.0.43.211/package.py
           node extension-candidates/3.0.43.211/validate.mjs
           node extension-candidates/3.0.43.211/check-upgrade-audit.mjs
       - name: Verify choose-first scan selection and update notice
+        if: matrix.group == '209-212'
         run: |
           node extension-candidates/3.0.43.211/check-building-upgrades.mjs
           node extension-candidates/3.0.43.211/check-update-notes.mjs
       - name: Preserve Auto Mode and Alliance Auto behavior in 211
+        if: matrix.group == '209-212'
         env:
           NEXUS_CANDIDATE_ROOT: extension-candidates/3.0.43.211/extension
         run: |
@@ -138,6 +167,7 @@ jobs:
           node extension-candidates/3.0.43.206/check-alliance-auto.mjs
           node extension-candidates/3.0.43.206/check-alliance-storage-failure.mjs
       - name: Verify Nexus 212 package, manifest and Any vehicle ready-state correction
+        if: matrix.group == '209-212'
         run: |
           python extension-candidates/3.0.43.212/package.py
           node extension-candidates/3.0.43.212/validate.mjs
@@ -145,6 +175,7 @@ jobs:
           node extension-candidates/3.0.43.212/check-update-notes.mjs
           node extension-candidates/3.0.43.212/check-upgrade-audit.mjs
       - name: Preserve Auto Mode and Alliance Auto behavior in 212
+        if: matrix.group == '209-212'
         env:
           NEXUS_CANDIDATE_ROOT: extension-candidates/3.0.43.212/extension
         run: |
@@ -154,6 +185,7 @@ jobs:
           node extension-candidates/3.0.43.206/check-alliance-auto.mjs
           node extension-candidates/3.0.43.206/check-alliance-storage-failure.mjs
       - name: Verify Nexus 213 patient mission recovery
+        if: matrix.group == '213-216'
         run: |
           python extension-candidates/3.0.43.213/package.py
           node extension-candidates/3.0.43.213/validate.mjs
@@ -162,6 +194,7 @@ jobs:
           node extension-candidates/3.0.43.213/check-update-notes.mjs
           node extension-candidates/3.0.43.213/check-upgrade-audit.mjs
       - name: Preserve personal and Alliance behavior in 213
+        if: matrix.group == '213-216'
         env:
           NEXUS_CANDIDATE_ROOT: extension-candidates/3.0.43.213/extension
         run: |
@@ -171,6 +204,7 @@ jobs:
           node extension-candidates/3.0.43.206/check-alliance-auto.mjs
           node extension-candidates/3.0.43.206/check-alliance-storage-failure.mjs
       - name: Verify Nexus 214 immediate patient transport handoff
+        if: matrix.group == '213-216'
         run: |
           python extension-candidates/3.0.43.214/package.py
           node extension-candidates/3.0.43.214/validate.mjs
@@ -180,6 +214,7 @@ jobs:
           node extension-candidates/3.0.43.214/check-update-notes.mjs
           node extension-candidates/3.0.43.214/check-upgrade-audit.mjs
       - name: Preserve personal and Alliance behavior in 214
+        if: matrix.group == '213-216'
         env:
           NEXUS_CANDIDATE_ROOT: extension-candidates/3.0.43.214/extension
         run: |
@@ -189,6 +224,7 @@ jobs:
           node extension-candidates/3.0.43.206/check-alliance-auto.mjs
           node extension-candidates/3.0.43.206/check-alliance-storage-failure.mjs
       - name: Verify Nexus 215 zero-patient transport cleanup
+        if: matrix.group == '213-216'
         run: |
           python extension-candidates/3.0.43.215/package.py
           node extension-candidates/3.0.43.215/validate.mjs
@@ -198,6 +234,7 @@ jobs:
           node extension-candidates/3.0.43.215/check-update-notes.mjs
           node extension-candidates/3.0.43.215/check-upgrade-audit.mjs
       - name: Preserve personal and Alliance behavior in 215
+        if: matrix.group == '213-216'
         env:
           NEXUS_CANDIDATE_ROOT: extension-candidates/3.0.43.215/extension
         run: |
@@ -207,6 +244,7 @@ jobs:
           node extension-candidates/3.0.43.206/check-alliance-auto.mjs
           node extension-candidates/3.0.43.206/check-alliance-storage-failure.mjs
       - name: Verify Nexus 216 native Cancel All patient cleanup
+        if: matrix.group == '213-216'
         run: |
           python extension-candidates/3.0.43.216/package.py
           node extension-candidates/3.0.43.216/validate.mjs
@@ -216,6 +254,7 @@ jobs:
           node extension-candidates/3.0.43.216/check-update-notes.mjs
           node extension-candidates/3.0.43.216/check-upgrade-audit.mjs
       - name: Preserve personal and Alliance behavior in 216
+        if: matrix.group == '213-216'
         env:
           NEXUS_CANDIDATE_ROOT: extension-candidates/3.0.43.216/extension
         run: |
@@ -225,6 +264,7 @@ jobs:
           node extension-candidates/3.0.43.206/check-alliance-auto.mjs
           node extension-candidates/3.0.43.206/check-alliance-storage-failure.mjs
       - name: Verify Nexus 217 empty transport cleanup and CRV rules
+        if: matrix.group == '217-220'
         run: |
           python extension-candidates/3.0.43.217/package.py
           node extension-candidates/3.0.43.217/validate.mjs
@@ -235,6 +275,7 @@ jobs:
           node extension-candidates/3.0.43.217/check-update-notes.mjs
           node extension-candidates/3.0.43.217/check-upgrade-audit.mjs
       - name: Preserve personal and Alliance behavior in 217
+        if: matrix.group == '217-220'
         env:
           NEXUS_CANDIDATE_ROOT: extension-candidates/3.0.43.217/extension
         run: |
@@ -244,6 +285,7 @@ jobs:
           node extension-candidates/3.0.43.206/check-alliance-auto.mjs
           node extension-candidates/3.0.43.206/check-alliance-storage-failure.mjs
       - name: Verify Nexus 218 optional local startup diagnostics
+        if: matrix.group == '217-220'
         run: |
           python extension-candidates/3.0.43.218/package.py
           node extension-candidates/3.0.43.218/validate.mjs
@@ -255,6 +297,7 @@ jobs:
           node extension-candidates/3.0.43.218/check-update-notes.mjs
           node extension-candidates/3.0.43.218/check-upgrade-audit.mjs
       - name: Preserve personal and Alliance behavior in 218
+        if: matrix.group == '217-220'
         env:
           NEXUS_CANDIDATE_ROOT: extension-candidates/3.0.43.218/extension
         run: |
@@ -264,6 +307,7 @@ jobs:
           node extension-candidates/3.0.43.206/check-alliance-auto.mjs
           node extension-candidates/3.0.43.206/check-alliance-storage-failure.mjs
       - name: Verify Nexus 219 background control startup
+        if: matrix.group == '217-220'
         run: |
           python extension-candidates/3.0.43.219/package.py
           node extension-candidates/3.0.43.219/validate.mjs
@@ -276,8 +320,33 @@ jobs:
           node extension-candidates/3.0.43.219/check-update-notes.mjs
           node extension-candidates/3.0.43.219/check-upgrade-audit.mjs
       - name: Preserve personal and Alliance behavior in 219
+        if: matrix.group == '217-220'
         env:
           NEXUS_CANDIDATE_ROOT: extension-candidates/3.0.43.219/extension
+        run: |
+          node extension-candidates/3.0.43.206/check-upgrade-priority.mjs
+          node extension-candidates/3.0.43.206/check-memory.mjs
+          node extension-candidates/3.0.43.206/check-vehicle-claims.mjs
+          node extension-candidates/3.0.43.206/check-alliance-auto.mjs
+          node extension-candidates/3.0.43.206/check-alliance-storage-failure.mjs
+      - name: Verify Nexus 220 throughput and dispatch safeguards
+        if: matrix.group == '217-220'
+        run: |
+          python extension-candidates/3.0.43.220/package.py
+          node extension-candidates/3.0.43.220/validate.mjs
+          node extension-candidates/3.0.43.220/check-throughput.mjs
+          node extension-candidates/3.0.43.220/check-background-startup.mjs
+          node extension-candidates/3.0.43.220/check-startup-diagnostics.mjs
+          node extension-candidates/3.0.43.220/check-startup-handoff.mjs
+          node extension-candidates/3.0.43.220/check-patient-tail.mjs
+          node extension-candidates/3.0.43.220/check-any-vehicle.mjs
+          node extension-candidates/3.0.43.220/check-crv.mjs
+          node extension-candidates/3.0.43.220/check-update-notes.mjs
+          node extension-candidates/3.0.43.220/check-upgrade-audit.mjs
+      - name: Preserve personal and Alliance behavior in 220
+        if: matrix.group == '217-220'
+        env:
+          NEXUS_CANDIDATE_ROOT: extension-candidates/3.0.43.220/extension
         run: |
           node extension-candidates/3.0.43.206/check-upgrade-priority.mjs
           node extension-candidates/3.0.43.206/check-memory.mjs

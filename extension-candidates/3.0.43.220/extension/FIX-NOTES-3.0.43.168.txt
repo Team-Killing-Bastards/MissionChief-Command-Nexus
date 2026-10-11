@@ -1,0 +1,24 @@
+Nexus 3.0.43.168 - MCE selection and diagnostic review
+
+Adds configured Mass Casualty Equipment to fresh mission requirements and
+late patient selection, using the normal vehicle selection and shortage path.
+Threshold 15 means 16+ required ambulances. Exactly one MCE is requested.
+Uncapped demand is retained, duplicate demand sources are not added together,
+and OFF does not remove explicit game MCE requirements.
+Corrects runtime/export/collector version labels left at .142 in .167.
+Missing threshold settings now default to 20 in both execution paths.
+
+Export reviewed: missionchief-command-nexus-v3-1790027418694.json.
+The supplied ZIP is .167; its runtime matches local build-167 exactly.
+126 dispatches recorded, 28 skips. This is not proof every required unit sent.
+All 126 mission-value captures lacked credit evidence; zero is not actual income.
+No HTTP failures in the retained 2000 trace events; older events were dropped
+by the bounded trace buffer. No storage-quota recovery reported.
+Two retained vehicle-list loads took about 4.7 seconds each, neither failed.
+Whole-page heap: 927878638 bytes (about 885 MiB). No sampled run memory trend
+was present, so this snapshot cannot establish or exclude a memory leak.
+Local memory tests cover throttling, bounded history/weak probes, state restore
+and storage-error isolation. No live Auto Mode soak test has been performed.
+
+Install: extract, reload the local extension, refresh all MissionChief tabs.
+Existing Auto Mode pacing, staging, dispatch and transport behavior retained.
