@@ -72,4 +72,3 @@ try {
 } finally {await browser.close();}
 }
 console.log('PASS update/new install, multi-tab claims, worker restart, abandoned tab, repeat reload, later update, downgrade, multi-PC, manual reopen, sender checks and storage failures.' + (process.env.NEXUS_SKIP_BROWSER?'':' Desktop/mobile render and Escape also passed.'));
-
