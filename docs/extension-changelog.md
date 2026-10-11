@@ -4,6 +4,16 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-223-crew-check-throughput
+
+**Reuse verified crews and avoid repeating completed shortage searches · 3.0.43.223**
+
+Auto Mode reuses complete, account-scoped live crew evidence across mission loads within the existing ten-minute freshness limit. New checks save only changed vehicle records in one database commit per scan instead of saving the entire register after every six reads. Request concurrency stays at six, failed or incomplete reads remain unverified, and each request has an eight-second deadline. Parsed assignment documents are released after their scalar crew data is extracted.
+
+The existing full-list final search remains. If it finishes with complete crew evidence and still cannot cover a trained-personnel requirement, the same stopped worker can use that result instead of reloading and repeating the mission once more. Changed requirements, vehicle availability or selection, register changes, unfinished loading, stale proof and a different worker document invalidate that shortcut. Uncertain reads and other resource shortages retain the existing recovery path. The temporary skip cooldown and transport priority remain.
+
+The final unit and staffing coverage calculations, exact compatible vehicle types, per-person qualification combinations, seat limits and duplicate-dispatch protections are preserved. No nominal or untrained seat substitutes for qualified personnel. Local production-function and isolated Edge fixtures verify cold scans, fresh reuse, changed assignments, failed reads, database errors, account isolation and shortage recovery. These checks do not establish live sustained throughput; the target remains below twenty seconds per recorded dispatch, without sacrificing coverage. No browser-store submission.
+
 ## v3-0-43-222-idle-dispatch-handoff
 
 **Move past idle restored dispatches sooner · 3.0.43.222**
