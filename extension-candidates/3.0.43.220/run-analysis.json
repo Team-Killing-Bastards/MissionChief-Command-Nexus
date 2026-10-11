@@ -1,0 +1,37 @@
+{
+  "input": "missionchief-command-nexus-v3-1791711146533.json",
+  "inputSha256": "3cfec5ce9263edbbe09c40a23a2b4895ca525c1c3eb7e0033e9c0718cbf07be1",
+  "version": "3.0.43.219",
+  "generatedAt": "2026-10-11T09:32:26.517Z",
+  "userContext": {
+    "tabVisible": true,
+    "toolkitEnabled": true
+  },
+  "elapsedSeconds": 344,
+  "successfulDispatchCount": 7,
+  "dispatchesPerHour": 73.3,
+  "uniqueMissionCount": 10,
+  "loading": {
+    "loads": 23,
+    "pagesLoaded": 38,
+    "loadingMs": 147240,
+    "partialLoads": 0,
+    "fullLoads": 23,
+    "failedLoads": 0
+  },
+  "loadedVehicleCountRange": [
+    3571,
+    3941
+  ],
+  "usedJSHeapSize": 130985030,
+  "pipelineMemoryPeakBytes": 218354294,
+  "pipelineMemoryPressureActivations": 0,
+  "runtimeRecycles": 0,
+  "transportServiceCleared": 3,
+  "limits": [
+    "Loading and CPU durations may overlap; do not sum them.",
+    "Toolkit CPU contribution is not attributable from this export.",
+    "Five-minute sample cannot establish sustained throughput.",
+    "No live .220 result is included."
+  ]
+}

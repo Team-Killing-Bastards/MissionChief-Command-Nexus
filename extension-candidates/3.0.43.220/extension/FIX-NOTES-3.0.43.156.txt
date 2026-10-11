@@ -1,0 +1,12 @@
+MissionChief Command Nexus local build 3.0.43.156
+
+REALISM BUILD VERIFICATION / POPUP FIX
+
+- Keeps the rich marker Build card open after a single build attempt; successful marker state is updated in place instead of rebuilding the whole Realism layer.
+- Strengthens MissionChief build verification using the POST redirect building ID when available, caption/coordinate evidence, and a longer /api/buildings propagation window.
+- Accepts a unique new same-building-type record even if MissionChief omits/stales coordinates in the API response.
+- Multi Build now stops immediately when a build outcome is uncertain, so no further build requests are sent until the user checks MissionChief.
+- Explicit MissionChief form validation errors remain normal failures; uncertain HTTP/timeout/verification states remain fail-closed with no automatic retry.
+- Both manifest version and version_name are 3.0.43.156.
+
+All 3.0.43.155 auto building type, floating Realism controls, same-type Multi Build, dispatch/start-vehicle selections, VPS/PostGIS overlays and earlier Nexus behavior remain preserved.

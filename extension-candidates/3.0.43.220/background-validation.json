@@ -1,0 +1,101 @@
+{
+  "version": "3.0.43.220",
+  "scope": "Isolated held-animation fixtures; document visibility is simulated, not a live Edge background run",
+  "cases": [
+    {
+      "label": "desktop",
+      "old": {
+        "found": false,
+        "heldCallbacks": 1,
+        "visibility": "hidden"
+      },
+      "ready": {
+        "found": true,
+        "heldCallbacks": 0,
+        "visibility": "visible",
+        "rect": {
+          "left": 390,
+          "top": 305
+        },
+        "clicks": 1,
+        "events": [
+          "immediate"
+        ],
+        "timerCount": 0
+      },
+      "disabledRejected": true,
+      "intentionallyHiddenRejected": true,
+      "missingRejected": true,
+      "saved": {
+        "left": "390px",
+        "top": "305px"
+      },
+      "detachedEvents": 0,
+      "documentVisibility": "visible"
+    },
+    {
+      "label": "hidden-tab",
+      "old": {
+        "found": false,
+        "heldCallbacks": 1,
+        "visibility": "hidden"
+      },
+      "ready": {
+        "found": true,
+        "heldCallbacks": 0,
+        "visibility": "visible",
+        "rect": {
+          "left": 390,
+          "top": 305
+        },
+        "clicks": 1,
+        "events": [
+          "immediate"
+        ],
+        "timerCount": 0
+      },
+      "disabledRejected": true,
+      "intentionallyHiddenRejected": true,
+      "missingRejected": true,
+      "saved": {
+        "left": "390px",
+        "top": "305px"
+      },
+      "detachedEvents": 0,
+      "documentVisibility": "hidden"
+    },
+    {
+      "label": "small-screen",
+      "old": {
+        "found": false,
+        "heldCallbacks": 1,
+        "visibility": "hidden"
+      },
+      "ready": {
+        "found": true,
+        "heldCallbacks": 0,
+        "visibility": "visible",
+        "rect": {
+          "left": 35,
+          "top": 230
+        },
+        "clicks": 1,
+        "events": [
+          "immediate"
+        ],
+        "timerCount": 0
+      },
+      "disabledRejected": true,
+      "intentionallyHiddenRejected": true,
+      "missingRejected": true,
+      "saved": {
+        "left": "35px",
+        "top": "230px"
+      },
+      "detachedEvents": 0,
+      "documentVisibility": "hidden"
+    }
+  ],
+  "passed": true,
+  "checks": 52
+}
