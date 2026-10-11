@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        group: ['205-208', '209-212', '213-216', '217-220']
+        group: ['205-208', '209-212', '213-216', '217-220', '221-224']
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -347,6 +347,32 @@ jobs:
         if: matrix.group == '217-220'
         env:
           NEXUS_CANDIDATE_ROOT: extension-candidates/3.0.43.220/extension
+        run: |
+          node extension-candidates/3.0.43.206/check-upgrade-priority.mjs
+          node extension-candidates/3.0.43.206/check-memory.mjs
+          node extension-candidates/3.0.43.206/check-vehicle-claims.mjs
+          node extension-candidates/3.0.43.206/check-alliance-auto.mjs
+          node extension-candidates/3.0.43.206/check-alliance-storage-failure.mjs
+      - name: Verify Nexus 221 acknowledged startup and dispatch safeguards
+        if: matrix.group == '221-224'
+        run: |
+          python extension-candidates/3.0.43.221/package.py
+          node extension-candidates/3.0.43.221/validate.mjs
+          node extension-candidates/3.0.43.221/check-startup-readiness.mjs
+          node extension-candidates/3.0.43.221/check-startup-readiness-browser.mjs
+          node extension-candidates/3.0.43.221/check-throughput.mjs
+          node extension-candidates/3.0.43.221/check-background-startup.mjs
+          node extension-candidates/3.0.43.221/check-startup-diagnostics.mjs
+          node extension-candidates/3.0.43.221/check-startup-handoff.mjs
+          node extension-candidates/3.0.43.221/check-patient-tail.mjs
+          node extension-candidates/3.0.43.221/check-any-vehicle.mjs
+          node extension-candidates/3.0.43.221/check-crv.mjs
+          node extension-candidates/3.0.43.221/check-update-notes.mjs
+          node extension-candidates/3.0.43.221/check-upgrade-audit.mjs
+      - name: Preserve personal and Alliance behavior in 221
+        if: matrix.group == '221-224'
+        env:
+          NEXUS_CANDIDATE_ROOT: extension-candidates/3.0.43.221/extension
         run: |
           node extension-candidates/3.0.43.206/check-upgrade-priority.mjs
           node extension-candidates/3.0.43.206/check-memory.mjs

@@ -1,0 +1,432 @@
+{
+  "version": "3.0.43.221",
+  "passed": true,
+  "checks": 157,
+  "scope": "Deterministic production-function fixtures; simulated clock and fleet, no live game throughput claim",
+  "results": {
+    "oldMixed": {
+      "result": {
+        "ready": true,
+        "count": 4,
+        "signature": "1000,1001,1100,1200",
+        "elapsed": 700,
+        "loadClicked": true,
+        "clickedPages": 2
+      },
+      "clicks": 2,
+      "elapsedMs": 1700,
+      "reason": "fresh mission requirements: live authority, patients, pending requirements or inactive mission"
+    },
+    "mixedPatients": {
+      "result": {
+        "ready": true,
+        "count": 2,
+        "signature": "1000,1001",
+        "elapsed": 700,
+        "partial": true,
+        "loadClicked": false,
+        "clickedPages": 0
+      },
+      "clicks": 0,
+      "elapsedMs": 700,
+      "reason": "fresh mission requirements: loaded pool covers 2 required vehicle slots"
+    },
+    "ambulanceNextPage": {
+      "result": {
+        "ready": true,
+        "count": 2,
+        "signature": "1000,1100",
+        "elapsed": 700,
+        "partial": true,
+        "loadClicked": true,
+        "clickedPages": 1
+      },
+      "clicks": 1,
+      "elapsedMs": 1200,
+      "reason": "fresh mission requirements: loaded pool covers 2 required vehicle slots"
+    },
+    "missingAmbulance": {
+      "result": {
+        "ready": true,
+        "count": 3,
+        "signature": "1000,1100,1200",
+        "elapsed": 700,
+        "loadClicked": true,
+        "clickedPages": 2
+      },
+      "clicks": 2,
+      "elapsedMs": 1700,
+      "reason": "fresh mission requirements: Ambulance: need 1, loaded 0"
+    },
+    "simpleMedical": {
+      "result": {
+        "ready": true,
+        "count": 1,
+        "signature": "1000",
+        "elapsed": 700,
+        "partial": true,
+        "loadClicked": false,
+        "clickedPages": 0
+      },
+      "clicks": 0,
+      "elapsedMs": 700,
+      "reason": "fresh mission requirements: loaded pool covers 1 required vehicle slot"
+    },
+    "patientIncrease": {
+      "result": {
+        "ready": true,
+        "count": 3,
+        "signature": "1000,1001,1100",
+        "elapsed": 700,
+        "partial": true,
+        "loadClicked": true,
+        "clickedPages": 1
+      },
+      "clicks": 1,
+      "elapsedMs": 1900,
+      "reason": "fresh mission requirements: loaded pool covers 3 required vehicle slots"
+    },
+    "patientAlert": {
+      "result": {
+        "ready": true,
+        "count": 4,
+        "signature": "1000,1001,1100,1200",
+        "elapsed": 700,
+        "loadClicked": true,
+        "clickedPages": 2
+      },
+      "clicks": 2,
+      "elapsedMs": 1700,
+      "reason": "fresh mission requirements: live patient requirements need full search"
+    },
+    "trained": {
+      "result": {
+        "ready": true,
+        "count": 4,
+        "signature": "1000,1001,1100,1200",
+        "elapsed": 700,
+        "loadClicked": true,
+        "clickedPages": 2
+      },
+      "clicks": 2,
+      "elapsedMs": 1700,
+      "reason": "fresh mission requirements: trained/personnel requirement requires full search"
+    },
+    "liveAuthority": {
+      "result": {
+        "ready": true,
+        "count": 4,
+        "signature": "1000,1001,1100,1200",
+        "elapsed": 700,
+        "loadClicked": true,
+        "clickedPages": 2
+      },
+      "clicks": 2,
+      "elapsedMs": 1700,
+      "reason": "fresh mission requirements: current live shortages take priority"
+    },
+    "explicitShortage": {
+      "result": {
+        "ready": true,
+        "count": 4,
+        "signature": "1000,1001,1100,1200",
+        "elapsed": 700,
+        "loadClicked": true,
+        "clickedPages": 2
+      },
+      "clicks": 2,
+      "elapsedMs": 1700,
+      "reason": "fresh mission requirements: current live shortages take priority"
+    },
+    "attended": {
+      "result": {
+        "ready": true,
+        "count": 4,
+        "signature": "1000,1001,1100,1200",
+        "elapsed": 700,
+        "loadClicked": true,
+        "clickedPages": 2
+      },
+      "clicks": 2,
+      "elapsedMs": 1700,
+      "reason": "fresh mission requirements: attended mission needs full search"
+    },
+    "currentWithPatients": {
+      "result": {
+        "ready": true,
+        "count": 4,
+        "signature": "1000,1001,1100,1200",
+        "elapsed": 700,
+        "loadClicked": true,
+        "clickedPages": 2
+      },
+      "clicks": 2,
+      "elapsedMs": 1700,
+      "reason": "current live shortages: live patient requirements need full search"
+    },
+    "currentWithoutPatients": {
+      "result": {
+        "ready": true,
+        "count": 2,
+        "signature": "1000,1001",
+        "elapsed": 700,
+        "partial": true,
+        "loadClicked": false,
+        "clickedPages": 0
+      },
+      "clicks": 0,
+      "elapsedMs": 700,
+      "reason": "current live shortages: loaded pool covers 1 required vehicle slot"
+    },
+    "failedRead": {
+      "result": {
+        "ready": true,
+        "count": 4,
+        "signature": "1000,1001,1100,1200",
+        "elapsed": 700,
+        "loadClicked": true,
+        "clickedPages": 2
+      },
+      "clicks": 2,
+      "elapsedMs": 1700,
+      "reason": "fresh mission requirements: requirements could not be read"
+    },
+    "pendingRules": {
+      "result": {
+        "ready": true,
+        "count": 4,
+        "signature": "1000,1001,1100,1200",
+        "elapsed": 700,
+        "loadClicked": true,
+        "clickedPages": 2
+      },
+      "clicks": 2,
+      "elapsedMs": 1700,
+      "reason": "fresh mission requirements: custom rules are still loading"
+    },
+    "invalidPatients": {
+      "result": {
+        "ready": true,
+        "count": 4,
+        "signature": "1000,1001,1100,1200",
+        "elapsed": 700,
+        "loadClicked": true,
+        "clickedPages": 2
+      },
+      "clicks": 2,
+      "elapsedMs": 1700,
+      "reason": "fresh mission requirements: patient count is not verified"
+    },
+    "alreadySelected": {
+      "result": {
+        "ready": true,
+        "count": 4,
+        "signature": "1000,1001,1100,1200",
+        "elapsed": 700,
+        "loadClicked": true,
+        "clickedPages": 2
+      },
+      "clicks": 2,
+      "elapsedMs": 1700,
+      "reason": "fresh mission requirements: existing selection"
+    },
+    "vanishingVehicles": {
+      "result": {
+        "ready": true,
+        "count": 4,
+        "signature": "1000,1001,1100,1101",
+        "elapsed": 700,
+        "partial": true,
+        "loadClicked": true,
+        "clickedPages": 1
+      },
+      "clicks": 1,
+      "elapsedMs": 1900,
+      "reason": "fresh mission requirements: loaded pool covers 2 required vehicle slots"
+    },
+    "duplicateVehicleId": {
+      "result": {
+        "ready": true,
+        "count": 3,
+        "signature": "1000,1000,1100",
+        "elapsed": 700,
+        "partial": true,
+        "loadClicked": true,
+        "clickedPages": 1
+      },
+      "clicks": 1,
+      "elapsedMs": 1200,
+      "reason": "fresh mission requirements: loaded pool covers 2 required vehicle slots"
+    },
+    "sharedVehicle": {
+      "result": {
+        "ready": true,
+        "count": 2,
+        "signature": "1000,1100",
+        "elapsed": 700,
+        "partial": true,
+        "loadClicked": true,
+        "clickedPages": 1
+      },
+      "clicks": 1,
+      "elapsedMs": 1200,
+      "reason": "fresh mission requirements: loaded pool covers 2 required vehicle slots"
+    },
+    "ruleOverride": {
+      "result": {
+        "ready": true,
+        "count": 2,
+        "signature": "1000,1100",
+        "elapsed": 700,
+        "partial": true,
+        "loadClicked": true,
+        "clickedPages": 1
+      },
+      "clicks": 1,
+      "elapsedMs": 1200,
+      "reason": "fresh mission requirements: loaded pool covers 1 required vehicle slot"
+    },
+    "oldLarge": {
+      "result": {
+        "ready": true,
+        "count": 38,
+        "signature": "1000,1001,1002,1003,1004,1005,1006,1007,1008,1009,1010,1011,1012,1013,1014,1015,1016,1017,1018,1019,1020,1021,1022,1023,1024,1025,1026,1027,1028,1029,1030,1031,1032,1100,1200,1300,1400,1500",
+        "elapsed": 700,
+        "loadClicked": true,
+        "clickedPages": 5
+      },
+      "clicks": 5,
+      "elapsedMs": 3200,
+      "reason": "fresh mission requirements: live authority, patients, pending requirements or inactive mission"
+    },
+    "largeCapped": {
+      "result": {
+        "ready": true,
+        "count": 33,
+        "signature": "1000,1001,1002,1003,1004,1005,1006,1007,1008,1009,1010,1011,1012,1013,1014,1015,1016,1017,1018,1019,1020,1021,1022,1023,1024,1025,1026,1027,1028,1029,1030,1031,1032",
+        "elapsed": 700,
+        "partial": true,
+        "loadClicked": false,
+        "clickedPages": 0
+      },
+      "clicks": 0,
+      "elapsedMs": 700,
+      "reason": "fresh mission requirements: loaded pool covers 33 required vehicle slots"
+    },
+    "uncappedSupport": {
+      "result": {
+        "ready": true,
+        "count": 5,
+        "signature": "1000,1001,1002,1100,1200",
+        "elapsed": 700,
+        "partial": true,
+        "loadClicked": true,
+        "clickedPages": 2
+      },
+      "clicks": 2,
+      "elapsedMs": 1700,
+      "reason": "fresh mission requirements: loaded pool covers 5 required vehicle slots"
+    },
+    "missingMCE": {
+      "result": {
+        "ready": true,
+        "count": 6,
+        "signature": "1000,1001,1002,1003,1100,1200",
+        "elapsed": 700,
+        "loadClicked": true,
+        "clickedPages": 2
+      },
+      "clicks": 2,
+      "elapsedMs": 1700,
+      "reason": "fresh mission requirements: Mass Casualty Equipment: need 1, loaded 0"
+    },
+    "supportDisabled": {
+      "result": {
+        "ready": true,
+        "count": 3,
+        "signature": "1000,1001,1002",
+        "elapsed": 700,
+        "partial": true,
+        "loadClicked": false,
+        "clickedPages": 0
+      },
+      "clicks": 0,
+      "elapsedMs": 700,
+      "reason": "fresh mission requirements: loaded pool covers 3 required vehicle slots"
+    },
+    "limitOff": {
+      "result": {
+        "ready": true,
+        "count": 6,
+        "signature": "1000,1001,1002,1003,1100,1101",
+        "elapsed": 700,
+        "partial": true,
+        "loadClicked": true,
+        "clickedPages": 1
+      },
+      "clicks": 1,
+      "elapsedMs": 1200,
+      "reason": "fresh mission requirements: loaded pool covers 6 required vehicle slots"
+    },
+    "missionChanged": {
+      "result": {
+        "ready": false,
+        "count": 2,
+        "signature": "1000,1001",
+        "elapsed": 700,
+        "timedOut": true,
+        "loadClicked": false,
+        "clickedPages": 0,
+        "reason": "selective loading cancelled or mission changed"
+      },
+      "clicks": 0,
+      "elapsedMs": 700,
+      "reason": "fresh mission requirements: inactive mission or changed ownership"
+    },
+    "manualStop": {
+      "result": {
+        "ready": false,
+        "count": 2,
+        "signature": "1000,1001",
+        "elapsed": 700,
+        "timedOut": true,
+        "loadClicked": false,
+        "clickedPages": 0,
+        "reason": "selective loading cancelled or mission changed"
+      },
+      "clicks": 0,
+      "elapsedMs": 700,
+      "reason": "fresh mission requirements: inactive mission or changed ownership"
+    },
+    "lostOwnership": {
+      "result": {
+        "ready": false,
+        "count": 2,
+        "signature": "1000,1001",
+        "elapsed": 0,
+        "timedOut": true,
+        "loadClicked": false,
+        "clickedPages": 0,
+        "reason": "selective loading cancelled or mission changed"
+      },
+      "clicks": 0,
+      "elapsedMs": 0,
+      "reason": "fresh mission requirements: inactive mission or changed ownership"
+    },
+    "spinner": {
+      "result": {
+        "ready": false,
+        "count": 3,
+        "signature": "1000,1001,1100",
+        "elapsed": 13000,
+        "timedOut": true,
+        "loadClicked": true,
+        "clickedPages": 1,
+        "reason": "additional vehicle page 1 made no confirmed progress"
+      },
+      "clicks": 1,
+      "elapsedMs": 13000,
+      "reason": "fresh mission requirements: loaded pool covers 2 required vehicle slots"
+    }
+  }
+}
