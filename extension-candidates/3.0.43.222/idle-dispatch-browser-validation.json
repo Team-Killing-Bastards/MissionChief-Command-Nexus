@@ -1,0 +1,6 @@
+{
+  "version": "3.0.43.222",
+  "passed": true,
+  "checks": 15,
+  "scope": "Isolated Edge map and actual reloaded iframe, real session/local storage and document time origins, controlled controller clock. All routes intercepted; no live game actions."
+}

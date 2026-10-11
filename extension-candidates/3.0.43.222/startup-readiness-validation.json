@@ -1,0 +1,12 @@
+{
+  "version": "3.0.43.222",
+  "passed": true,
+  "checks": 58,
+  "oldReproduced": {
+    "readinessDelayMs": 7000,
+    "startRequests": 2,
+    "loopContinuations": 2,
+    "error": "V2 Auto Mode did not confirm that it started."
+  },
+  "scope": "Production functions with controlled promises and a simulated clock. Confirms a startup race; supplied export did not record register readiness, so the exact cause of that run remains unproven."
+}
