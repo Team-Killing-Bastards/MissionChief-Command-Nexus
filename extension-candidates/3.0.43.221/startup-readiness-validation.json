@@ -1,7 +1,7 @@
 {
   "version": "3.0.43.221",
   "passed": true,
-  "checks": 54,
+  "checks": 58,
   "oldReproduced": {
     "readinessDelayMs": 7000,
     "startRequests": 2,

@@ -5,7 +5,7 @@
   "changelogCommit": "1a5dbd665c62948bdda557e8cc19726544041c57",
   "status": "Local candidate; acknowledged-start race reproduced and fixed in production-function and isolated Edge tests. Exact trigger of supplied stop and installed long-run behavior are unverified. No store submission.",
   "validation": {
-    "startupReadinessChecks": 54,
+    "startupReadinessChecks": 58,
     "startupBrowserChecks": 11,
     "throughputChecks": 157,
     "backgroundStartupChecks": 52,
@@ -20,7 +20,7 @@
   "store": {
     "zip": "Nexus-3.0.43.221-Auto-Start-Readiness.zip",
     "files": 149,
-    "sha256": "a3796e82bc02e8864748fbb244ce95a32fce62b814d609080def5e0e71ff40ab"
+    "sha256": "725545846df2368a34d39bf716bab98821d04cf3a5b894128dab4e60df2068c2"
   },
   "files": {
     "account.css": "87450e2334face340cb3fc887e97655a78b0e6207da76e5b4216fdaabbee1a71",
@@ -134,7 +134,7 @@
     "nexus-requirement-data.js": "05e7a9c3a1f57325294b1ddc8da1da0cd915dc83c5f0def5c5920fbc0f5e3feb",
     "nexus-requirement-ticks.js": "a5340473f060ee97b25ffd9f74eb54d75c905f4f61dccf89e248419820393cb6",
     "nexus-responsive.js": "76c516bf6ad3c9c536469240627b34105a3eb38dafb3cda227374d5a5f56fcc9",
-    "nexus-runtime.js": "472fb0ad707ab2b14df7f16deda0d334bd85904d452d43fbdc68bc130bf7052c",
+    "nexus-runtime.js": "c60ccd4c4972c79fc528b277a8193da38bada21fb630494603172b15bd63535f",
     "nexus-schooling-actions.js": "c9d623457d953642ace25b2f6bca751fba6819236dc74ce033899b1f9d4c58c7",
     "nexus-schooling-filters.js": "ef923e94906e4583bfffae8256157ddea8d80e377c52049dcf920ea91746b9cb",
     "nexus-settings-apply.js": "6a760903e66d376af894dfabd93b71eafd777de778569c5b656cabbc959106d7",

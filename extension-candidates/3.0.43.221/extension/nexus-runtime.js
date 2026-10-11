@@ -51755,7 +51755,11 @@ registryVehicleCount
         if (mfAutoStartup && ['loading-register', 'starting'].includes(mfAutoStartup.phase)) {
             return mfAutoStartup.promise;
         }
-        if (autoModeRunning && !isManualAutoStopActive()) return Promise.resolve(true);
+        if (autoModeRunning && !isManualAutoStopActive() &&
+            (autoModeLoopActive || mfAutoStartup?.phase === 'running')) {
+            updateAutoModeButton();
+            return Promise.resolve(true);
+        }
         const job = {phase: 'loading-register', missionId: String(getCurrentMissionIdForQueueRestart() || ''),
             startedAt: Date.now(), managed: isMfV3ManagedActiveFrame()};
         mfAutoStartup = job;
