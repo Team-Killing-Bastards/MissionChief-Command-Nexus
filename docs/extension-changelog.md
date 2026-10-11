@@ -4,6 +4,14 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-219-background-control-startup
+
+**Make Auto Mode controls ready without a screen repaint · 3.0.43.219**
+
+Opening a mission centres and reveals its Nexus control panel synchronously. Previously, the panel and its Auto Mode button stayed hidden until two animation callbacks ran. Browsers can suspend those callbacks in an inactive tab, leaving the controller active but unable to find its control until the game tab becomes visible again. Startup no longer depends on those callbacks. Real hidden, disabled, disconnected and missing controls are still rejected; dispatch ownership and duplicate-dispatch checks are unchanged.
+
+The held-animation regression reproduces the old blocked control and verifies the new control is immediately available at desktop and small-screen sizes. This fixes a confirmed code dependency, not every source of background slowdown: Edge can still throttle timers or put inactive tabs to sleep. Long-running background behavior in the user's installed game remains to be verified. The optional .218 diagnostic switch and bounded export are retained.
+
 ## v3-0-43-218-optional-startup-diagnostics
 
 **Optional local startup diagnostic capture · 3.0.43.218**
