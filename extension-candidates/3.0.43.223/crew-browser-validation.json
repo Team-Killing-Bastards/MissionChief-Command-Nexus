@@ -1,0 +1,45 @@
+{
+  "checks": 79,
+  "cold": {
+    "scan": {
+      "refreshed": true,
+      "pagesRead": 66,
+      "qualifyingVehicles": 66,
+      "complete": true
+    },
+    "selected": true,
+    "count": 66,
+    "commits": 1,
+    "elapsedMs": 119,
+    "rows": 66
+  },
+  "fresh": {
+    "scan": {
+      "refreshed": false,
+      "pagesRead": 0,
+      "qualifyingVehicles": 66,
+      "complete": true
+    },
+    "selected": true,
+    "count": 66,
+    "commits": 0,
+    "elapsedMs": 7,
+    "rows": 66
+  },
+  "changed": {
+    "scan": {
+      "refreshed": true,
+      "pagesRead": 1,
+      "qualifyingVehicles": 66,
+      "complete": true
+    },
+    "selected": false,
+    "count": 65,
+    "commits": 2,
+    "elapsedMs": 10,
+    "rows": 66
+  },
+  "requests": 67,
+  "liveGameVerified": false,
+  "scope": "Isolated Edge fixture; actual assignment parser and IndexedDB; all routes intercepted"
+}
