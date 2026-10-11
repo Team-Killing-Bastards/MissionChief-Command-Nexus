@@ -1,0 +1,15 @@
+{
+  "sourceFile": "missionchief-command-nexus-v3-1791727461007.json",
+  "sourceSha256": "61052da45639f2492699ea0d8b5e17dc128a8189dc695a51b59f465b508e2834",
+  "version": "3.0.43.220",
+  "stoppedAtUTC": "2026-10-11T13:53:01.497Z",
+  "lastMission": "Investigate Flare",
+  "lastMissionId": "263976611",
+  "dispatches": 566,
+  "runSeconds": 13856,
+  "dispatchesPerHour": 147.06,
+  "memoryPressureActivations": 0,
+  "failure": "V2 Auto Mode did not confirm that it started.",
+  "observed": "Start control was enabled, visible, connected and remained Start after two requests following a full-page recycle.",
+  "unproven": "The export did not record personnel readiness or a start-handler error. Delayed register readiness reproduces this failure in the unchanged .220 code; that is not proof it caused the supplied run."
+}

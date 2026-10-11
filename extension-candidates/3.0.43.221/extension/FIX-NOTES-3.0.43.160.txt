@@ -1,0 +1,12 @@
+MissionChief Command Nexus local build 3.0.43.160
+
+STAGING AREA PROFILES
+
+- Built from the locally verified .159 package. Existing gameplay and Realism features are retained.
+- Adds a purple staging-area launcher beside the Realism Map icon in the top-left header, using the game's own staging-area icon.
+- Nexus Tools > Profiles now includes saved staging profiles with 24-hour, 2-day, 3-day and 7-day durations and per-vehicle-type counts.
+- Select a profile, choose a map point and press Build and send. Nexus reads the native New building form, creates type 14, verifies the game register, sets and checks the duration, then submits available selected units through the native staging dispatch form.
+- Existing matching staging areas at the chosen point are reused to avoid a duplicate build.
+- A missing vehicle type/count stops before dispatch; the newly built staging area remains for inspection.
+- Uncertain build or dispatch outcomes are not retried automatically.
+- Version and version_name both read 3.0.43.160.
