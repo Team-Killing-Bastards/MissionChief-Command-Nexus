@@ -4,6 +4,16 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-222-idle-dispatch-handoff
+
+**Move past idle restored dispatches sooner · 3.0.43.222**
+
+A mission can reload with its previous dispatch claim still active. Auto Mode correctly avoids sending again, but the controller previously waited for its generic two-minute no-progress deadline before deferring that mission. It can now use the existing deferral after ten seconds of unchanged, confirmed inactivity in a later document. The claim must predate that document, the current worker must own the mission, and selection, register startup, queue navigation and transport must be inactive. Missing or unreadable evidence keeps the established recovery checks.
+
+The same-document dispatch path is unchanged: an in-flight request cannot use this shortcut. The final dispatch claim is preserved, no Dispatch click is replayed, and the existing retry cooldown is retained. Vehicle coverage, trained personnel, transport, startup readiness and ordinary selection deadlines are unchanged. The proof is sampled by the existing watchdog, with no extra timer, network request or persistent write; retained evidence contains only controller-owned scalar values.
+
+The supplied .221 run recorded 29 dispatches in 10m54s: about 160/hour, or 22.6 seconds per recorded dispatch. Two restored aircraft missions occupied about 4m32s combined before dispatch-claim deferral. The target is below 20 seconds on average (more than 180 dispatches/hour), ideally around 18 seconds / 200 per hour. The export does not prove server acceptance or complete mission coverage, and not all of that occupancy is removable waiting. Production-function and isolated Edge tests reproduce the old delay and verify the shorter guarded deferral. Sustained live throughput remains to be measured. No store submission.
+
 ## v3-0-43-221-auto-start-readiness
 
 **Acknowledge register readiness when Auto Mode starts · 3.0.43.221**
