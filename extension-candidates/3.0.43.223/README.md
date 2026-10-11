@@ -15,6 +15,8 @@ Run `check-crew-throughput.mjs` for actual production-function fixtures and `che
 
 The 66-vehicle fixture preserves all required trained occupants, changes eleven database commits to one, and reuses the evidence on the next document with zero assignment reads. Changed assignments prevent full coverage. Fixture timings are not a prediction of game speed.
 
+Validation completed: 91 production-function assertions, the isolated Edge crew fixture, and all 21 regression scripts passed. Desktop and mobile update notices were visually inspected. Rebuilding from the committed Git archive reproduced all 149 extension files and the delivered ZIP exactly: SHA-256 `451007dc44d8c351ca67a3080c94c52839c3fdd5eba997f06ddf9732a1bfc0fb`. GitHub CI and the live game run are separate from these local results.
+
 ## Install and measure
 
 Stop Auto Mode, extract the ZIP into a fresh folder, disable the previous Nexus copy and load the new extension folder unpacked. Refresh all MissionChief tabs and confirm 3.0.43.223. Run with normal settings for 20-30 minutes, including a normal recycle, then export. Check recorded dispatch intervals, staffing shortages, `trained-crew-check` timings and the completed-shortage-recheck log. The target is sustained under twenty seconds per recorded dispatch; it has not been established by a live .223 run. No browser-store submission.
