@@ -4,6 +4,16 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-221-auto-start-readiness
+
+**Acknowledge register readiness when Auto Mode starts · 3.0.43.221**
+
+Auto Mode now acknowledges its asynchronous start, including the wait for the local personnel register. The controller allows that acknowledged wait up to a bounded deadline instead of issuing a second toggle after 2.5 seconds and stopping after another 2.5 seconds. Repeated requests share a single start. A ready register adds no deliberate delay. Managed workers receive a directed start request; the native button remains available for manual use.
+
+Stop, worker removal, suspension, changed mission or lost ownership prevents a late register response from restarting selection. Register errors and a 30-second readiness timeout are reported explicitly; the controller also bounds a nonresponsive acknowledged start. Missing or invalid acknowledgements retain the existing bounded start checks. Exports retain startup phase and error after the worker is removed. Vehicle selection, coverage verification, transport handling and duplicate-dispatch claims are unchanged.
+
+The supplied .220 export recorded 566 dispatches over 3 hours 51 minutes (about 147 per hour), then a startup confirmation failure after a full-page recycle on Investigate Flare. Its enabled Start control was present and there was no memory-pressure stop. That export did not capture register readiness or the start handler error, so it does not prove the underlying trigger. Production-function tests reproduce the old timeout and two pending continuations when readiness is delayed; the candidate fixes that demonstrated race. Installed long-run behavior still requires verification. No store submission.
+
 ## v3-0-43-220-auto-throughput
 
 **Reduce unnecessary Auto Mode vehicle loading and repeat selection · 3.0.43.220**
