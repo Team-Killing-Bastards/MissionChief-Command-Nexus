@@ -4,6 +4,18 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-218-optional-startup-diagnostics
+
+**Optional local startup diagnostic capture · 3.0.43.218**
+
+Nexus Tools → Settings → Diagnostics adds Diagnostic capture, off by default. Save applies it while a run is active. Enable it before reproducing an Auto Mode startup error, then export Auto Mode diagnostics before Retry or refresh. Turn it off afterwards. Existing bounded evidence remains in this game tab's export until the page is refreshed; this per-browser capture setting is excluded from cloud settings sync.
+
+The additional startupDiagnostics section stores at most 200 scalar snapshots at lifecycle changes, before a clean retry, before an error and before worker removal. It records the Auto Mode button's actual presence, bounded labels, disabled/connected state, computed display/visibility/opacity, hidden ancestors, panel presence, worker generation/document serial, ownership, document visibility and the panel reveal callback stages. A mounted but hidden control can therefore be distinguished from a missing or disabled control and a different mission document. Records exclude credentials, full DOM, URL queries and network bodies; they are not uploaded.
+
+Disabled capture returns before DOM/style inspection or snapshot construction. Enabled collection is event-driven, deduplicated and bounded, with no extra polling, capture timers or storage writes. Disabling removes capture-only lifecycle and visibility listeners. Two cheap configuration listeners remain to apply settings changes. Worker-removal evidence is copied into parent-owned scalar history before the worker is disposed; no worker Document, Window, frame or element references are retained in that history.
+
+This is diagnostic instrumentation, not a claim that the reported .205 hidden-panel mechanism caused the user's failure or that a live-game startup defect is fixed. Dispatch decisions, qualification checks, ownership, duplicate-dispatch latches, cancellation logic and discovery timeouts are unchanged from .217. Validation uses isolated Edge fixtures for Settings, toggling, disabled overhead, retention, held/released original reveal callbacks, hidden/missing/disabled/wrong-mission controls, real worker-removal code and the existing full-runtime diagnostic export. Native window-state checks are recorded with their actual observed document visibility rather than assuming minimisation makes it hidden. No store submission.
+
 ## v3-0-43-217-verified-empty-transport-cleanup
 
 **Complete empty transport missions and find CRV in rules · 3.0.43.217**

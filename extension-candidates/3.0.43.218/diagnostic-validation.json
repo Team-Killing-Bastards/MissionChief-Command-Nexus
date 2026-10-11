@@ -1,0 +1,324 @@
+{
+  "scope": "Isolated fixtures, no live game or account; diagnostic collection only",
+  "cases": [
+    {
+      "case": "Mounted hidden panel before retry",
+      "record": {
+        "at": 1791706003557,
+        "reason": "pre-clean-a-only-retry",
+        "missionId": "101",
+        "documentMatchesExpectedMission": true,
+        "workerGeneration": 3,
+        "documentSerial": 7,
+        "workerRole": "MISSION_A",
+        "frameName": "mcn-v3-active-worker-7-101",
+        "ownership": "ACTIVE",
+        "ownershipSource": "fixture",
+        "readyState": "complete",
+        "documentVisibility": "visible",
+        "topDocument": false,
+        "wrapperPresent": true,
+        "panelPresent": true,
+        "wrapperStyle": {
+          "display": "block",
+          "visibility": "hidden",
+          "opacity": "1"
+        },
+        "buttonPresent": true,
+        "controls": [
+          {
+            "id": "auto-mode-box",
+            "text": "Auto Mode: Start",
+            "title": "Auto Mode: Start",
+            "ariaLabel": "Auto Mode: Start",
+            "disabled": false,
+            "connected": true,
+            "sameDocument": true,
+            "display": "inline-block",
+            "visibility": "hidden",
+            "opacity": "1",
+            "hiddenAncestors": {
+              "items": [
+                {
+                  "tag": "DIV",
+                  "id": "control-panel",
+                  "hidden": false,
+                  "ariaHidden": "",
+                  "display": "block",
+                  "visibility": "hidden",
+                  "opacity": "1"
+                },
+                {
+                  "tag": "DIV",
+                  "id": "mission-finder-wrapper",
+                  "hidden": false,
+                  "ariaHidden": "",
+                  "display": "block",
+                  "visibility": "hidden",
+                  "opacity": "1"
+                }
+              ],
+              "ancestryTruncated": false
+            }
+          }
+        ],
+        "panelReveal": {
+          "scheduledAt": 1791706003556,
+          "firstCallbackAt": 0,
+          "completedAt": 0,
+          "mode": "animation"
+        }
+      }
+    },
+    {
+      "case": "Original reveal callbacks completed",
+      "record": {
+        "at": 1791706003565,
+        "reason": "panel-reveal-completed",
+        "missionId": "101",
+        "documentMatchesExpectedMission": true,
+        "workerGeneration": 0,
+        "documentSerial": 0,
+        "workerRole": "",
+        "frameName": "mcn-v3-active-worker-7-101",
+        "ownership": "ACTIVE",
+        "ownershipSource": "fixture",
+        "readyState": "complete",
+        "documentVisibility": "visible",
+        "topDocument": false,
+        "wrapperPresent": true,
+        "panelPresent": true,
+        "wrapperStyle": {
+          "display": "block",
+          "visibility": "visible",
+          "opacity": "1"
+        },
+        "buttonPresent": true,
+        "controls": [
+          {
+            "id": "auto-mode-box",
+            "text": "Auto Mode: Start",
+            "title": "Auto Mode: Start",
+            "ariaLabel": "Auto Mode: Start",
+            "disabled": false,
+            "connected": true,
+            "sameDocument": true,
+            "display": "inline-block",
+            "visibility": "visible",
+            "opacity": "1",
+            "hiddenAncestors": {
+              "items": [],
+              "ancestryTruncated": false
+            }
+          }
+        ],
+        "panelReveal": {
+          "scheduledAt": 1791706003556,
+          "firstCallbackAt": 1791706003565,
+          "completedAt": 1791706003565,
+          "mode": "animation"
+        }
+      }
+    },
+    {
+      "case": "Scalar evidence retained before real removal path",
+      "record": {
+        "at": 1791706003729,
+        "reason": "before-worker-removal",
+        "missionId": "101",
+        "documentMatchesExpectedMission": true,
+        "workerGeneration": 3,
+        "documentSerial": 7,
+        "workerRole": "MISSION_A",
+        "frameName": "mcn-v3-active-worker-7-101",
+        "ownership": "ACTIVE",
+        "ownershipSource": "fixture",
+        "readyState": "complete",
+        "documentVisibility": "visible",
+        "topDocument": false,
+        "wrapperPresent": true,
+        "panelPresent": true,
+        "wrapperStyle": {
+          "display": "block",
+          "visibility": "visible",
+          "opacity": "1"
+        },
+        "buttonPresent": true,
+        "controls": [
+          {
+            "id": "auto-mode-box",
+            "text": "Auto Mode: Start",
+            "title": "",
+            "ariaLabel": "",
+            "disabled": false,
+            "connected": true,
+            "sameDocument": true,
+            "display": "inline-block",
+            "visibility": "visible",
+            "opacity": "1",
+            "hiddenAncestors": {
+              "items": [],
+              "ancestryTruncated": false
+            }
+          }
+        ],
+        "panelReveal": {
+          "scheduledAt": 1791706003556,
+          "firstCallbackAt": 1791706003565,
+          "completedAt": 1791706003565,
+          "mode": "animation"
+        }
+      }
+    }
+  ],
+  "disabled100000CallsMs": 2.774000000000001,
+  "browser": "155.0.4283.45",
+  "enabled500MountedSnapshotsMs": 4.399999999906868,
+  "enabled500SnapshotsMs": 0.8000000002793968,
+  "boundedExportBytes": 79720,
+  "exportVerified": true,
+  "headlessVisibility": "visible",
+  "windowStates": [
+    {
+      "requested": "foreground",
+      "visibility": "visible",
+      "record": {
+        "at": 1791706006499,
+        "reason": "foreground",
+        "missionId": "101",
+        "documentMatchesExpectedMission": true,
+        "workerGeneration": 0,
+        "documentSerial": 0,
+        "workerRole": "",
+        "frameName": "",
+        "ownership": "",
+        "ownershipSource": "",
+        "readyState": "complete",
+        "documentVisibility": "visible",
+        "topDocument": true,
+        "wrapperPresent": true,
+        "panelPresent": true,
+        "wrapperStyle": {
+          "display": "block",
+          "visibility": "visible",
+          "opacity": "1"
+        },
+        "buttonPresent": true,
+        "controls": [
+          {
+            "id": "auto-mode-box",
+            "text": "Auto Mode: Start",
+            "title": "",
+            "ariaLabel": "",
+            "disabled": false,
+            "connected": true,
+            "sameDocument": true,
+            "display": "inline-block",
+            "visibility": "visible",
+            "opacity": "1",
+            "hiddenAncestors": {
+              "items": [],
+              "ancestryTruncated": false
+            }
+          }
+        ],
+        "panelReveal": null
+      }
+    },
+    {
+      "requested": "background",
+      "visibility": "visible",
+      "record": {
+        "at": 1791706006821,
+        "reason": "background",
+        "missionId": "101",
+        "documentMatchesExpectedMission": true,
+        "workerGeneration": 0,
+        "documentSerial": 0,
+        "workerRole": "",
+        "frameName": "",
+        "ownership": "",
+        "ownershipSource": "",
+        "readyState": "complete",
+        "documentVisibility": "visible",
+        "topDocument": true,
+        "wrapperPresent": true,
+        "panelPresent": true,
+        "wrapperStyle": {
+          "display": "block",
+          "visibility": "visible",
+          "opacity": "1"
+        },
+        "buttonPresent": true,
+        "controls": [
+          {
+            "id": "auto-mode-box",
+            "text": "Auto Mode: Start",
+            "title": "",
+            "ariaLabel": "",
+            "disabled": false,
+            "connected": true,
+            "sameDocument": true,
+            "display": "inline-block",
+            "visibility": "visible",
+            "opacity": "1",
+            "hiddenAncestors": {
+              "items": [],
+              "ancestryTruncated": false
+            }
+          }
+        ],
+        "panelReveal": null
+      }
+    },
+    {
+      "requested": "minimized",
+      "visibility": "visible",
+      "record": {
+        "at": 1791706007192,
+        "reason": "minimized",
+        "missionId": "101",
+        "documentMatchesExpectedMission": true,
+        "workerGeneration": 0,
+        "documentSerial": 0,
+        "workerRole": "",
+        "frameName": "",
+        "ownership": "",
+        "ownershipSource": "",
+        "readyState": "complete",
+        "documentVisibility": "visible",
+        "topDocument": true,
+        "wrapperPresent": true,
+        "panelPresent": true,
+        "wrapperStyle": {
+          "display": "block",
+          "visibility": "visible",
+          "opacity": "1"
+        },
+        "buttonPresent": true,
+        "controls": [
+          {
+            "id": "auto-mode-box",
+            "text": "Auto Mode: Start",
+            "title": "",
+            "ariaLabel": "",
+            "disabled": false,
+            "connected": true,
+            "sameDocument": true,
+            "display": "inline-block",
+            "visibility": "visible",
+            "opacity": "1",
+            "hiddenAncestors": {
+              "items": [],
+              "ancestryTruncated": false
+            }
+          }
+        ],
+        "panelReveal": null
+      }
+    }
+  ],
+  "minimizedWindowState": "minimized",
+  "checks": 57,
+  "passed": true
+}
