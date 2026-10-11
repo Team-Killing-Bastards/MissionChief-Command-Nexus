@@ -5,7 +5,7 @@
   "changelogCommit": "b756dff7d8b220403410bc18645fd0bc8025d73e",
   "status": "Local candidate. Restored idle dispatch deferral reproduced in production-function and isolated Edge tests; live sustained throughput is not yet measured. No store submission.",
   "validation": {
-    "idleDispatchChecks": 271,
+    "idleDispatchChecks": 323,
     "idleDispatchBrowserChecks": 15,
     "startupReadinessChecks": 58,
     "startupBrowserChecks": 11,
@@ -31,7 +31,7 @@
   "store": {
     "zip": "Nexus-3.0.43.222-Idle-Dispatch-Handoff.zip",
     "files": 149,
-    "sha256": "d3f2f37a4faddb8863ab0ffd1da40f62a60244e1624fa17a02c375339adc9b0c"
+    "sha256": "bb3d44ed670c16ba4893676907c3b914dde3932932deb648d0dddf1ddb35d3f4"
   },
   "files": {
     "account.css": "87450e2334face340cb3fc887e97655a78b0e6207da76e5b4216fdaabbee1a71",
@@ -145,7 +145,7 @@
     "nexus-requirement-data.js": "4e30beaa16fc05e2a5558e5adcaf9a6b1c763f8fe41c85f7197b7c580fa6f72a",
     "nexus-requirement-ticks.js": "dc473b3e446711254dccf8e522b165b8c8a111627ec5877e64ce25ebcde29eee",
     "nexus-responsive.js": "88cbfef7a68785f2a4e6824461b35ad419c948e6496cba32a1453a0a0c992957",
-    "nexus-runtime.js": "43725f6bb121e6196369fa8ec3b96eae297efd2a4f7f83ce0854850529026082",
+    "nexus-runtime.js": "775fce6edd62bc6938185e5427c8ceb9c768879be84a51044538cdb9a195cdfb",
     "nexus-schooling-actions.js": "b3333691ef9317102f50cfd4d5faa0dbe9c5119f7541422386ede4b84f7986b7",
     "nexus-schooling-filters.js": "7d4754d575f41fc9f7d2ca68b4b6c0db42665393f0f9b56948427334a73eaa11",
     "nexus-settings-apply.js": "c58cdd931e22755b84f74ae70579d4a465ee96300846e6f5a3a1b27d196da626",

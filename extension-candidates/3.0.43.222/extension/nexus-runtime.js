@@ -7991,14 +7991,21 @@ function nexusCheckMissionProgress(doc, href, context = {}) {
     const claim = JSON.parse(storage.getItem('mf_auto_dispatch_latch_v1') || 'null');
     if (claim && String(claim.missionId) === id) unsafe = 'existing dispatch claim';
     if (idleClaimReady && !normalDeadlineReached && !failed &&
-        Number(claim?.claimedAt) !== inheritedClaim.claimedAt) return reset();
+        Number(claim?.claimedAt) !== inheritedClaim.claimedAt) {
+      probe.inheritedClaim = null; probe.idleClaimSince = 0;
+      return false;
+    }
     if (sharedV2QueueGuardIsActive(readSharedV2QueueGuardState())) unsafe = 'pending queue handoff';
   } catch { unsafe = 'dispatch state could not be verified'; }
   state.nexusProgressAttempts ||= {};
   if (state.nexusProgressAttempts[id]) unsafe = 'repeat stall after worker recovery';
   // Bound the recovery registry without evicting prior protection during a run.
   if (Object.keys(state.nexusProgressAttempts).length >= 100) unsafe = 'recovery limit reached';
-  if (idleClaimReady && !normalDeadlineReached && !failed && unsafe !== 'existing dispatch claim') return reset();
+  if (idleClaimReady && !normalDeadlineReached && !failed && unsafe !== 'existing dispatch claim') {
+    // Do not restart the generic deadline when the shortcut is unavailable.
+    probe.inheritedClaim = null; probe.idleClaimSince = 0;
+    return false;
+  }
   const event = {missionId:id, status, unchangedMs:now-probe.unchangedSince,
     idleRestoredClaimMs:idleClaimReady ? now-probe.idleClaimSince : 0,
     action:unsafe === 'existing dispatch claim' ? 'defer-claimed-mission' : unsafe ? 'stop' : 'reload-current-mission', reason:unsafe || (failed ? 'Auto loop error: ' + String(failure.message).slice(0,240) : 'unchanged ' + (ready ? 'ready state for 45 seconds' : 'selection state for two minutes'))};

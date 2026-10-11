@@ -112,6 +112,14 @@ const controllerGuards={
 for(const [name,mutate] of Object.entries(controllerGuards)) {
  const h=fixture();mutate(h);eq(h.tick(),false,name);eq(h.tick(15000),false,name);eq(h.calls.length,0,name+' no actions');eq(h.writes(),0,name+' no writes');
 }
+// Refusing the shortcut must not repeatedly restart the original stop deadline.
+for(const name of ['repeated recovery','recovery bound']) {
+ const h=fixture();controllerGuards[name](h);h.tick();
+ for(let elapsed=5000;elapsed<120000;elapsed+=5000)eq(h.tick(5000),false,name+' remains bounded');
+ eq(h.tick(5000),true,name+' reaches original deadline');
+ eq(h.calls.filter(c=>c[0]==='error').length,1,name+' keeps fail-closed stop');
+ eq(h.calls.filter(c=>c[0]==='create').length,0,name+' never reopens');
+}
 {const h=fixture();eq(h.tick(0,{kind:'PATIENT'}),false);eq(h.tick(15000,{kind:'PATIENT'}),false);eq(h.calls.length,0);}
 // Any evidence change starts a fresh 10-second observation, even with the same URL.
 for(const [name,change] of Object.entries({
