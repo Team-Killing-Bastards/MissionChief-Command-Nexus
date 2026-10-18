@@ -4,6 +4,16 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-230-worker-load-recovery
+
+**Recover an initial mission page load without stopping the queue · 3.0.43.230**
+
+The initial Worker A frame's 30-second loading deadline no longer automatically ends the whole run when its canonical mission page has not started. A proven pre-dispatch load gets one fresh worker, followed by a timed mission deferral if loading fails again. Other missions and eligible personal transport can continue. A deferred page becomes eligible after one minute, increasing to at most five minutes on repeated failures, without requiring successful mission advances. The existing low-supply pause still requires two actionable missions.
+
+An operational mission whose frame load event was delayed is adopted in place through the normal ownership and startup path. Active selection, an issued start, selected vehicles, an unreadable or matching dispatch claim, action routes, login/cross-origin pages and transport workers cannot authorise a fresh load retry. Previous dispatch claims remain intact, obsolete callbacks cannot remove replacement workers, and manual Stop prevents recovery. No normal loading limit is increased, and healthy missions gain no additional timer, scan or request. Unit quantities, vehicle alternatives, trained personnel and final dispatch checks are unchanged. The station Assign crew fix from .229 is included.
+
+The supplied .228 export records the initial load of Large public disturbance at 15:48:37.895 UTC followed by the fatal timeout at 15:49:08.096 UTC. It does not establish the network or browser cause of the missing load. Production-function tests reproduce the old fatal path; isolated Edge tests cover a stalled initial request, repeat failure and queue continuation, delayed load-event adoption and manual Stop. These are not live dispatch or endurance verification. No store submission.
+
 ## v3-0-43-229-station-crew
 
 **Show verified crew progress and bound station assignment waits · 3.0.43.229**
