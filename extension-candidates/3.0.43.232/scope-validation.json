@@ -1,0 +1,13 @@
+{
+  "checks": 153,
+  "allowedRuntimeFunctions": [
+    "redirectAfterRecoverableSkip",
+    "nexusPatientTailMatchesMission",
+    "nexusPatientTailCleanupRecord",
+    "nexusHandlePatientMissionTail"
+  ],
+  "dispatchSelectionTrainingUnchanged": true,
+  "stationCrewFixRetained": true,
+  "initialWorkerRecoveryRetained": true,
+  "permissionsUnchanged": true
+}
