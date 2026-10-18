@@ -4,6 +4,18 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-226-background-event-items
+
+**Collect native event items while background missions run · 3.0.43.226**
+
+The event-item collector now runs independently of the heavy mission runtime. Main map pages can coordinate claims from Auto Mode's mission frames even when the game tab is not foreground. This repairs the gap where the map skipped the heavy runtime while mission frames were prevented from starting its collector.
+
+Each document checks the game's existing event-item link when it is ready, with one delayed check on mission pages for content arriving just afterwards. There is no recurring scan, vehicle-table observer or extra fleet loading. Claim requests run separately from dispatch, one at a time, with a five-second timeout, a bounded waiting queue and bounded scalar history shared by the tab's frames. No mission document or DOM node is retained by that history. Closing a worker does not hold up its claim or dispatch. Duplicate and uncertain requests are not automatically replayed.
+
+The existing Event Scanner setting remains enabled by default. Turning it off cancels waiting work and aborts the current claim. The run export includes enabled state, requests, HTTP acknowledgements, failures and timeouts. An HTTP acknowledgement is not proof of an increase in the event score. No game or browser can guarantee continued work while a tab is suspended or the browser is closed.
+
+The previous recurring collector is removed. Unit selection, trained-personnel coverage, transport, recovery and dispatch guards are unchanged. Local intercepted browser tests cover hidden frames, missing and late items, duplicate frames, closed workers, slow/error/redirect responses, settings changes and bounded queues. Live event-score and throughput verification remain outstanding.
+
 ## v3-0-43-225-shortage-recovery
 
 **Prefer OSUs with HazMat alternatives, and keep shortage recovery specific to the mission · 3.0.43.225**
