@@ -82,6 +82,16 @@ jobs:
           node extension-candidates/3.0.43.206/check-vehicle-claims.mjs
           node extension-candidates/3.0.43.206/check-alliance-auto.mjs
           node extension-candidates/3.0.43.206/check-alliance-storage-failure.mjs
+      - name: Verify Nexus 224 police alternative order and dispatch safeguards
+        if: matrix.group == '221-224'
+        run: |
+          python extension-candidates/3.0.43.224/package.py
+          node extension-candidates/3.0.43.224/validate.mjs
+          node extension-candidates/3.0.43.224/check-police-alternatives.mjs
+          node extension-candidates/3.0.43.224/check-crew-throughput.mjs
+          node extension-candidates/3.0.43.224/check-throughput.mjs
+          node extension-candidates/3.0.43.224/check-any-vehicle.mjs
+          node extension-candidates/3.0.43.224/check-crv.mjs
       - name: Verify Nexus 208 package, manifest and upgrade checkpoint isolation
         if: matrix.group == '205-208'
         run: |

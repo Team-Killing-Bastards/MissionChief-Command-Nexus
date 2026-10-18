@@ -4,6 +4,16 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-224-police-alternative-order
+
+**ATC, then ARV, then Police Car for the combined vehicle requirement · 3.0.43.224**
+
+For “Police Cars or Armed Response Vehicles (ARVs)”, Nexus now fills the requested total using Armed Traffic Cars (type 25) first, Armed Response Vehicles (type 13) next, and ordinary Police Cars (type 8) last. Arrival time still determines the order within each type. Partial fleets combine to meet the same total: for three required vehicles, two available ATCs and one ARV are enough; if no armed vehicles are available, three Police Cars can cover this vehicle requirement.
+
+Exact type IDs drive both selection and selected-vehicle counts. Older single-type saved mappings for this combined wording cannot suppress its alternatives. Disabled or quarantined vehicles are excluded, existing selections are counted, and a pool smaller than the requirement remains a shortfall. Other saved rules and plain Police Car, Traffic Car and armed-personnel requirements are unchanged.
+
+Separate trained-personnel coverage, per-person qualifications, seat limits, staffing blocks and duplicate-dispatch protections remain required. This change does not let ordinary Police Cars satisfy an armed-personnel requirement. The update adds no polling, network scans or background timers.
+
 ## v3-0-43-223-crew-check-throughput
 
 **Reuse verified crews and avoid repeating completed shortage searches · 3.0.43.223**
