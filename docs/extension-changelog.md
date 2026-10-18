@@ -4,6 +4,16 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-229-station-crew
+
+**Show verified crew progress and bound station assignment waits · 3.0.43.229**
+
+Station Assign crew shows each binding as soon as a fresh game read verifies it. It saves the register once per checked vehicle, including a stopped partial fill, instead of holding the next person behind a full-register save after every assignment. The writer submits only the changed vehicle and verifies the committed record while preserving other vehicles and newer evidence.
+
+Game reads, assignment responses and register waits have a 15-second deadline with a specific stage message. After an interrupted assignment response, Nexus reads the native assignment page; it never blindly repeats the binding toggle. An unverified outcome stops further assignments until the station is refreshed. Training, current bindings, capacity, station identity and status-6 exclusions remain checked. Auto Mode selection and dispatch are unchanged.
+
+Isolated Edge tests reproduce the old zero-progress hang with a successful first binding and a never-settling register save. They verify complete and partial fills, multiple vehicles, Stop, response/body timeouts, register failures and preservation of other records. A live read of Dromore confirmed two bound trained people out of six seats; the original hanging document was not accessible, so its exact waiting step is not established. No store submission.
+
 ## v3-0-43-228-shortage-wait
 
 **Continue sooner after a verified unit shortage · 3.0.43.228**
