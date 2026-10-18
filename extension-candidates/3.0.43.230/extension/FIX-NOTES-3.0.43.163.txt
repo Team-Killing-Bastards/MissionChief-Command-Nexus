@@ -1,0 +1,9 @@
+MissionChief Command Nexus local build 3.0.43.163
+
+STAGING PROFILE SELECTION FIX
+
+- Built from the local .162 package; existing staging and gameplay behaviour remains.
+- The staging map panel reads the player ID from the top game frame, matching the Profiles editor, so saved profiles load in the map frame.
+- The Choose point button stays disabled until a profile is selected.
+- Empty profile lists and load errors now show clear instructions instead of silently leaving the dropdown empty.
+- Version and version_name both read 3.0.43.163.

@@ -1,0 +1,18 @@
+{
+  "initialWorkerLoadChecks": 135,
+  "initialWorkerLoadBrowserChecks": 40,
+  "priorAutomaticRecoveryChecks": 121,
+  "priorAutomaticRecoveryBrowserChecks": 12,
+  "throughputChecks": 156,
+  "trainedCrewChecks": 91,
+  "inheritedStationCrewChecks": 477,
+  "inheritedStationCrewBrowserCases": 26,
+  "syntaxFiles": 93,
+  "scopeChecks": 150,
+  "permissionsUnchanged": true,
+  "dispatchSelectionTrainingUnchanged": true,
+  "stationCrewFixByteIdenticalTo229": true,
+  "liveFailureObserved": true,
+  "liveFixedBuildVerified": false,
+  "allFixtureRequestsIntercepted": true
+}

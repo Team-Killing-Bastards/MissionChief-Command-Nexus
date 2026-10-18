@@ -1,0 +1,190 @@
+{
+  "checks": 40,
+  "cases": 4,
+  "allRequestsIntercepted": true,
+  "liveRecoveryVerified": false,
+  "results": [
+    {
+      "mode": "first-load-stalls",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/"
+        },
+        {
+          "method": "GET",
+          "path": "/missions/101"
+        },
+        {
+          "method": "GET",
+          "path": "/missions/101"
+        }
+      ],
+      "wanted": true,
+      "phase": "ACTIVE",
+      "missionId": "101",
+      "events": [
+        {
+          "event": "phase",
+          "phase": "LOADING"
+        },
+        {
+          "missionId": "101",
+          "missionName": "Fixture 101",
+          "category": "WORKER_LOADING",
+          "workerGeneration": 2,
+          "documentSerial": 0,
+          "path": "",
+          "readyState": "",
+          "waitedMs": 1000,
+          "event": "worker-load-fresh-retry"
+        },
+        {
+          "event": "phase",
+          "phase": "LOADING"
+        },
+        {
+          "event": "adopt",
+          "missionId": "101"
+        }
+      ],
+      "frames": 1,
+      "claim": "{\"missionId\":\"99\",\"claimedAt\":1000}"
+    },
+    {
+      "mode": "both-loads-stall",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/"
+        },
+        {
+          "method": "GET",
+          "path": "/missions/101"
+        },
+        {
+          "method": "GET",
+          "path": "/missions/101"
+        },
+        {
+          "method": "GET",
+          "path": "/missions/102"
+        }
+      ],
+      "wanted": true,
+      "phase": "ACTIVE",
+      "missionId": "102",
+      "events": [
+        {
+          "event": "phase",
+          "phase": "LOADING"
+        },
+        {
+          "missionId": "101",
+          "missionName": "Fixture 101",
+          "category": "WORKER_LOADING",
+          "workerGeneration": 2,
+          "documentSerial": 0,
+          "path": "",
+          "readyState": "",
+          "waitedMs": 1000,
+          "event": "worker-load-fresh-retry"
+        },
+        {
+          "event": "phase",
+          "phase": "LOADING"
+        },
+        {
+          "missionId": "101",
+          "missionName": "Fixture 101",
+          "category": "WORKER_LOADING",
+          "workerGeneration": 5,
+          "documentSerial": 0,
+          "path": "",
+          "readyState": "",
+          "waitedMs": 1000,
+          "event": "worker-load-deferred"
+        },
+        {
+          "event": "skip",
+          "missionId": "101",
+          "category": "WORKER_LOADING",
+          "retryAfterAt": 1792339852899
+        },
+        {
+          "event": "phase",
+          "phase": "LOADING"
+        },
+        {
+          "event": "adopt",
+          "missionId": "102"
+        }
+      ],
+      "frames": 1,
+      "claim": "{\"missionId\":\"99\",\"claimedAt\":1000}"
+    },
+    {
+      "mode": "missing-load-event",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/"
+        },
+        {
+          "method": "GET",
+          "path": "/missions/101"
+        }
+      ],
+      "wanted": true,
+      "phase": "ACTIVE",
+      "missionId": "101",
+      "events": [
+        {
+          "event": "phase",
+          "phase": "LOADING"
+        },
+        {
+          "missionId": "101",
+          "missionName": "Fixture 101",
+          "category": "WORKER_LOADING",
+          "workerGeneration": 2,
+          "documentSerial": 0,
+          "path": "/missions/101",
+          "readyState": "complete",
+          "waitedMs": 1000,
+          "event": "worker-load-event-recovered"
+        },
+        {
+          "event": "adopt",
+          "missionId": "101"
+        }
+      ],
+      "frames": 1,
+      "claim": "{\"missionId\":\"99\",\"claimedAt\":1000}"
+    },
+    {
+      "mode": "manual-stop",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/"
+        },
+        {
+          "method": "GET",
+          "path": "/missions/101"
+        }
+      ],
+      "wanted": false,
+      "phase": "LOADING",
+      "missionId": "101",
+      "events": [
+        {
+          "event": "phase",
+          "phase": "LOADING"
+        }
+      ],
+      "frames": 1,
+      "claim": "{\"missionId\":\"99\",\"claimedAt\":1000}"
+    }
+  ]
+}

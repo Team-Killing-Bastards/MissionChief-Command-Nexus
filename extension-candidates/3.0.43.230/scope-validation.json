@@ -1,0 +1,16 @@
+{
+  "checks": 150,
+  "allowedRuntimeFunctions": [
+    "isTimedMissionLoadingSkip",
+    "missionSkipRemaining",
+    "registerRecoverableMissionSkip",
+    "redirectAfterRecoverableSkip",
+    "lowQueueResumeExcludedMissionId",
+    "recoverInitialMissionWorkerLoad",
+    "createWorker",
+    "renderControllerSkips"
+  ],
+  "dispatchSelectionTrainingUnchanged": true,
+  "stationCrewFixRetained": true,
+  "permissionsUnchanged": true
+}
