@@ -4,6 +4,14 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-225-shortage-recovery
+
+**Keep shortage rechecks specific to the mission · 3.0.43.225**
+
+Two unsuccessful recovery attempts could previously suppress fresh searches for other missions with the same name and shortage category for up to a week. A temporary lack of available vehicles is not evidence that later missions cannot be covered. Historical outcomes no longer veto another mission's recovery attempt.
+
+The existing one-attempt record for each mission, transport priority, completed crew-search proof, full coverage checks and duplicate-dispatch protection remain. This change adds no work to a successful first selection. It does not change vehicle mappings, relax trained-personnel checks or promise that unavailable vehicles can be dispatched. The supplied .224 export identifies repeated HazMat/CBRN and armed-crew shortfalls, but does not retain enough candidate evidence to establish why the first selection failed. Live resolution remains to be verified.
+
 ## v3-0-43-224-police-alternative-order
 
 **ATC, then ARV, then Police Car for the combined vehicle requirement · 3.0.43.224**
