@@ -1,0 +1,10 @@
+{
+  "checks": 91,
+  "baselineColdReads": 66,
+  "candidateColdReads": 66,
+  "baselineColdCommits": 11,
+  "candidateColdCommits": 1,
+  "freshNextDocumentReads": 0,
+  "maxConcurrentReads": 6,
+  "liveGameVerified": false
+}

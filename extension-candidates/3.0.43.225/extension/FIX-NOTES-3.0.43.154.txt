@@ -1,0 +1,12 @@
+MissionChief Command Nexus 3.0.43.154 LOCAL
+
+Realism marker Build menu visibility fix
+
+- Fixes the rich Realism marker card creating the Build <details> section but never appending it to the visible popup.
+- The Build bar now appears directly under OpenStreetMap / Google Maps in every supported Realism marker popup.
+- Expanding Build exposes MissionChief-native Building Type, Dispatch Center, Starting Vehicle and same-building-type Multi Build controls.
+- Keeps the .153 hidden same-origin native New building form workflow and build verification logic unchanged.
+- Keeps the .152 floating Realism launcher/panel and VPS/PostGIS viewport overlays unchanged.
+- Adds a permanent regression that fails if the Build details section is created but not mounted into the popup.
+
+This is a local test build based on 3.0.43.153. It does not alter the published canonical 3.0.43 userscript release.

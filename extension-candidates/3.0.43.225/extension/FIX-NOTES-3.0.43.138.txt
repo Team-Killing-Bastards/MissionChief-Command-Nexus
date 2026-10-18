@@ -1,0 +1,20 @@
+MISSIONCHIEF COMMAND NEXUS — LOCAL FIX 3.0.43.138
+
+Requested changes
+- Keep Nexus Patients / Awaiting resources under Original game requirements, but remove its own nested border/box line.
+- Keep the Mass Casualty Equipment automatic rule active at a default threshold of 20 Ambulances.
+- Add Mass Casualty Equipment ON/OFF and numeric threshold controls directly under the Ambulance Officer settings.
+
+3.0.43.138 behaviour
+- #nx-patients is visually integrated into Nexus · Missing requirements and no longer carries the nx-box class.
+- Ambulance Officer and Mass Casualty Equipment summary badges remain capped to 1.
+- New setting: Automatically include 1 Mass Casualty Equipment. Default ON to preserve existing behaviour.
+- New threshold setting: Mass Casualty Equipment when Ambulances exceed. Default 20, range 0–99.
+- When enabled, the existing V3 threshold assist adds exactly one exact type-33 Mass Casualty Equipment when selected exact type-5 Ambulances are greater than the configured threshold and no type-33 MCE is already selected.
+- Turning the setting OFF only disables the automatic Ambulance-count threshold assist. Explicit MissionChief/patient MCE demand remains handled normally.
+- Existing Ambulance Officer settings and 3.0.43.136/137 hidden-mission Type-5 Ambulance release/CFR protections remain intact.
+
+Versions
+- Extension: 3.0.43.138
+- Mission Finder: 10.6.188
+- Unit Naming: 3.3.29

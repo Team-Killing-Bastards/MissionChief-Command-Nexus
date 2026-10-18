@@ -1,0 +1,14 @@
+{
+  "recoveryChecks": 26,
+  "oldSuppressionReproduced": true,
+  "policeAlternativeChecks": 51,
+  "hazmatAlternativeChecks": 59,
+  "crewFunctionChecks": 91,
+  "throughputRegressionChecks": 156,
+  "isolatedAnyVehicleBrowserChecks": 20,
+  "isolatedCrvBrowserChecks": 17,
+  "javascriptManifestAndChangelog": "passed",
+  "runtimeChangesLimitedToRecoveryAndHazmatFallback": true,
+  "nonRuntimeFilesOnlyVersionAndUpdateNoticeChanges": true,
+  "liveGameVerified": false
+}

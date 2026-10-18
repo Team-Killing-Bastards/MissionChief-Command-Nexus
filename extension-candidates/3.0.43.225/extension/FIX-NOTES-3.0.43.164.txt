@@ -1,0 +1,9 @@
+MissionChief Command Nexus local build 3.0.43.164
+
+STAGING PROFILE STORAGE BRIDGE FIX
+
+- Built from the local .163 package. Staging and other gameplay features remain.
+- The map panel reads staging profiles directly from the same IndexedDB record used by the Profiles editor when the extension storage helper is unavailable in the game frame.
+- The map no longer requires the separate vehicle catalog script merely to validate saved numeric vehicle types.
+- Browser regression saves a profile using the real store module, then loads and selects it from a child game frame without that helper.
+- Version and version_name both read 3.0.43.164.
