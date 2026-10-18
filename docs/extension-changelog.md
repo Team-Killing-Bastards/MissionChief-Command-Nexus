@@ -4,6 +4,16 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-227-auto-recovery
+
+**Continue after dispatch reloads and recover vehicle loading · 3.0.43.227**
+
+When a final Dispatch reloads the same mission before its delayed queue callback, the replacement document can now resume the queue handoff. It must be the confirmed active worker, fully loaded, with that mission's unexpired dispatch claim created before the document. Active selection, startup, transport, shared dispatch transitions, changed ownership and explicit Stop block the shortcut. The existing dispatch claim is retained; no Dispatch is replayed. Personal transport receives priority, otherwise the next mission opens or the existing low-queue automatic resume takes over. An actionable submitted mission keeps its existing deferral rather than being treated as a confirmed success. Same-document in-flight requests retain their existing recovery safeguards.
+
+Vehicle-list readiness failures now have their own recovery category. After a short confirmation, one fresh mission read is allowed only before dispatch; Unit Finder and the complete unit and trained-crew checks run again normally. A repeated loading failure is deferred with a one-minute cooldown, increasing to at most five minutes for repeated failures. It becomes eligible again without requiring successful mission advances, so a queue of loading failures cannot remain locked behind its own skip counters. The panel displays the timed retry and exports retain the specific loading reason, row and page counts.
+
+Vehicle pagination and readiness requirements, partial-list coverage proof, full-list fallback, unit counts, exact vehicle alternatives, trained occupants, seat limits and final dispatch checks are unchanged. Healthy missions gain no deliberate wait, extra scan or network request. The prior background event collector is retained. Production-function and isolated browser tests reproduce the old blocked handoff and loading classification and verify automatic continuation, no duplicate dispatch, transport priority, cooldown expiry and unchanged coverage. These fixtures do not establish live-game throughput or unattended endurance. No browser-store submission.
+
 ## v3-0-43-226-background-event-items
 
 **Collect native event items while background missions run · 3.0.43.226**
