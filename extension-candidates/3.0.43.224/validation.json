@@ -1,0 +1,10 @@
+{
+  "policeAlternativeChecks": 51,
+  "crewFunctionChecks": 91,
+  "throughputRegressionChecks": 156,
+  "isolatedAnyVehicleBrowserChecks": 20,
+  "isolatedCrvBrowserChecks": 17,
+  "javascriptManifestAndChangelog": "passed",
+  "finalDispatchAndCoverageFunctionsUnchanged": true,
+  "liveGameVerified": false
+}
