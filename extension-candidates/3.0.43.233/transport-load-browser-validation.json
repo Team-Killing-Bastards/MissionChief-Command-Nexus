@@ -1,0 +1,596 @@
+{
+  "checks": 87,
+  "cases": 8,
+  "allRequestsIntercepted": true,
+  "acceleratedFixtureDeadlines": true,
+  "liveRecoveryVerified": false,
+  "results": [
+    {
+      "mode": "normal",
+      "requests": [
+        {
+          "path": "/",
+          "method": "GET"
+        },
+        {
+          "path": "/vehicles/11",
+          "method": "GET"
+        }
+      ],
+      "wanted": true,
+      "phase": "TRANSPORT_SERVICE",
+      "role": "TRANSPORT_B",
+      "serviceKey": "11:101",
+      "events": [
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_LOADING"
+        },
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_SERVICE"
+        },
+        {
+          "event": "adopt",
+          "role": "TRANSPORT_B",
+          "path": "https://www.missionchief.co.uk/vehicles/11"
+        }
+      ],
+      "history": [
+        {
+          "at": "2026-10-18T19:25:34.156Z",
+          "event": "transport-worker-b-start",
+          "source": "mission-wait",
+          "lowQueuePaused": false,
+          "key": "11:101",
+          "vehicleId": "11",
+          "missionId": "101",
+          "missionName": "Fixture 101",
+          "url": "https://www.missionchief.co.uk/vehicles/11"
+        }
+      ],
+      "frames": 1,
+      "originalRetained": true,
+      "deferred": [],
+      "claim": "{\"missionId\":\"99\",\"claimedAt\":1}",
+      "clickLock": "100"
+    },
+    {
+      "mode": "stalled",
+      "requests": [
+        {
+          "path": "/",
+          "method": "GET"
+        },
+        {
+          "path": "/vehicles/11",
+          "method": "GET"
+        },
+        {
+          "path": "/missions/102",
+          "method": "GET"
+        }
+      ],
+      "wanted": true,
+      "phase": "ACTIVE",
+      "role": "MISSION_A",
+      "serviceKey": "",
+      "events": [
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_LOADING"
+        },
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_SERVICE"
+        },
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_RETURN"
+        },
+        {
+          "event": "phase",
+          "phase": "LOADING"
+        },
+        {
+          "event": "adopt",
+          "role": "MISSION_A",
+          "path": "https://www.missionchief.co.uk/missions/102"
+        }
+      ],
+      "history": [
+        {
+          "at": "2026-10-18T19:25:35.470Z",
+          "event": "transport-worker-b-start",
+          "source": "mission-wait",
+          "lowQueuePaused": false,
+          "key": "11:101",
+          "vehicleId": "11",
+          "missionId": "101",
+          "missionName": "Fixture 101",
+          "url": "https://www.missionchief.co.uk/vehicles/11"
+        },
+        {
+          "at": "2026-10-18T19:25:37.279Z",
+          "key": "11:101",
+          "vehicleId": "11",
+          "missionId": "101",
+          "workerGeneration": 2,
+          "path": "",
+          "readyState": "",
+          "waitedMs": 1800,
+          "event": "transport-worker-b-load-deferred",
+          "loadFailures": 1,
+          "retryAfterAt": 1792351540279
+        },
+        {
+          "at": "2026-10-18T19:25:37.279Z",
+          "event": "transport-worker-b-complete",
+          "reason": "load-timeout-deferred",
+          "outcome": "deferred",
+          "key": "11:101",
+          "vehicleId": "11",
+          "missionId": "101"
+        }
+      ],
+      "frames": 1,
+      "originalRetained": false,
+      "deferred": [
+        "11:101"
+      ],
+      "claim": "{\"missionId\":\"99\",\"claimedAt\":1}",
+      "clickLock": "100"
+    },
+    {
+      "mode": "no-load-event",
+      "requests": [
+        {
+          "path": "/",
+          "method": "GET"
+        },
+        {
+          "path": "/vehicles/11",
+          "method": "GET"
+        }
+      ],
+      "wanted": true,
+      "phase": "TRANSPORT_SERVICE",
+      "role": "TRANSPORT_B",
+      "serviceKey": "11:101",
+      "events": [
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_LOADING"
+        },
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_SERVICE"
+        },
+        {
+          "event": "adopt",
+          "role": "TRANSPORT_B",
+          "path": "https://www.missionchief.co.uk/vehicles/11"
+        }
+      ],
+      "history": [
+        {
+          "at": "2026-10-18T19:25:37.618Z",
+          "event": "transport-worker-b-start",
+          "source": "mission-wait",
+          "lowQueuePaused": false,
+          "key": "11:101",
+          "vehicleId": "11",
+          "missionId": "101",
+          "missionName": "Fixture 101",
+          "url": "https://www.missionchief.co.uk/vehicles/11"
+        },
+        {
+          "at": "2026-10-18T19:25:39.423Z",
+          "key": "11:101",
+          "vehicleId": "11",
+          "missionId": "101",
+          "workerGeneration": 2,
+          "path": "/vehicles/11",
+          "readyState": "complete",
+          "waitedMs": 1800,
+          "event": "transport-worker-b-load-event-recovered"
+        }
+      ],
+      "frames": 1,
+      "originalRetained": true,
+      "deferred": [],
+      "claim": "{\"missionId\":\"99\",\"claimedAt\":1}",
+      "clickLock": "100"
+    },
+    {
+      "mode": "action-in-flight",
+      "requests": [
+        {
+          "path": "/",
+          "method": "GET"
+        },
+        {
+          "path": "/vehicles/11",
+          "method": "GET"
+        },
+        {
+          "path": "/vehicles/11/patient/9",
+          "method": "POST"
+        },
+        {
+          "path": "/never",
+          "method": "GET"
+        }
+      ],
+      "wanted": true,
+      "phase": "TRANSPORT_SERVICE",
+      "role": "TRANSPORT_B",
+      "serviceKey": "11:101",
+      "events": [
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_LOADING"
+        },
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_SERVICE"
+        },
+        {
+          "event": "adopt",
+          "role": "TRANSPORT_B",
+          "path": "https://www.missionchief.co.uk/vehicles/11/patient/9"
+        }
+      ],
+      "history": [
+        {
+          "at": "2026-10-18T19:25:39.647Z",
+          "event": "transport-worker-b-start",
+          "source": "mission-wait",
+          "lowQueuePaused": false,
+          "key": "11:101",
+          "vehicleId": "11",
+          "missionId": "101",
+          "missionName": "Fixture 101",
+          "url": "https://www.missionchief.co.uk/vehicles/11"
+        },
+        {
+          "at": "2026-10-18T19:25:41.450Z",
+          "key": "11:101",
+          "vehicleId": "11",
+          "missionId": "101",
+          "workerGeneration": 2,
+          "path": "/vehicles/11/patient/9",
+          "readyState": "interactive",
+          "waitedMs": 1800,
+          "event": "transport-worker-b-load-event-recovered"
+        }
+      ],
+      "frames": 1,
+      "originalRetained": true,
+      "deferred": [],
+      "claim": "{\"missionId\":\"99\",\"claimedAt\":1}",
+      "clickLock": "100"
+    },
+    {
+      "mode": "cleared",
+      "requests": [
+        {
+          "path": "/",
+          "method": "GET"
+        },
+        {
+          "path": "/vehicles/11",
+          "method": "GET"
+        },
+        {
+          "path": "/missions/102",
+          "method": "GET"
+        }
+      ],
+      "wanted": true,
+      "phase": "ACTIVE",
+      "role": "MISSION_A",
+      "serviceKey": "",
+      "events": [
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_LOADING"
+        },
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_SERVICE"
+        },
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_RETURN"
+        },
+        {
+          "event": "phase",
+          "phase": "LOADING"
+        },
+        {
+          "event": "adopt",
+          "role": "MISSION_A",
+          "path": "https://www.missionchief.co.uk/missions/102"
+        }
+      ],
+      "history": [
+        {
+          "at": "2026-10-18T19:25:41.647Z",
+          "event": "transport-worker-b-start",
+          "source": "mission-wait",
+          "lowQueuePaused": false,
+          "key": "11:101",
+          "vehicleId": "11",
+          "missionId": "101",
+          "missionName": "Fixture 101",
+          "url": "https://www.missionchief.co.uk/vehicles/11"
+        },
+        {
+          "at": "2026-10-18T19:25:43.451Z",
+          "key": "11:101",
+          "vehicleId": "11",
+          "missionId": "101",
+          "workerGeneration": 2,
+          "path": "",
+          "readyState": "",
+          "waitedMs": 1800,
+          "event": "transport-worker-b-load-request-cleared"
+        },
+        {
+          "at": "2026-10-18T19:25:43.452Z",
+          "event": "transport-worker-b-complete",
+          "reason": "load-request-cleared",
+          "outcome": "finished",
+          "key": "11:101",
+          "vehicleId": "11",
+          "missionId": "101"
+        }
+      ],
+      "frames": 1,
+      "originalRetained": false,
+      "deferred": [],
+      "claim": "{\"missionId\":\"99\",\"claimedAt\":1}",
+      "clickLock": "100"
+    },
+    {
+      "mode": "pending-other",
+      "requests": [
+        {
+          "path": "/",
+          "method": "GET"
+        },
+        {
+          "path": "/vehicles/11",
+          "method": "GET"
+        },
+        {
+          "path": "/vehicles/12",
+          "method": "GET"
+        }
+      ],
+      "wanted": true,
+      "phase": "TRANSPORT_SERVICE",
+      "role": "TRANSPORT_B",
+      "serviceKey": "12:103",
+      "events": [
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_LOADING"
+        },
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_SERVICE"
+        },
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_LOADING"
+        },
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_SERVICE"
+        },
+        {
+          "event": "adopt",
+          "role": "TRANSPORT_B",
+          "path": "https://www.missionchief.co.uk/vehicles/12"
+        }
+      ],
+      "history": [
+        {
+          "at": "2026-10-18T19:25:43.787Z",
+          "event": "transport-worker-b-start",
+          "source": "mission-wait",
+          "lowQueuePaused": false,
+          "key": "11:101",
+          "vehicleId": "11",
+          "missionId": "101",
+          "missionName": "Fixture 101",
+          "url": "https://www.missionchief.co.uk/vehicles/11"
+        },
+        {
+          "at": "2026-10-18T19:25:45.594Z",
+          "key": "11:101",
+          "vehicleId": "11",
+          "missionId": "101",
+          "workerGeneration": 2,
+          "path": "",
+          "readyState": "",
+          "waitedMs": 1800,
+          "event": "transport-worker-b-load-deferred",
+          "loadFailures": 1,
+          "retryAfterAt": 1792351548594
+        },
+        {
+          "at": "2026-10-18T19:25:45.595Z",
+          "event": "transport-worker-b-complete",
+          "reason": "load-timeout-deferred",
+          "outcome": "deferred",
+          "key": "11:101",
+          "vehicleId": "11",
+          "missionId": "101"
+        },
+        {
+          "at": "2026-10-18T19:25:45.595Z",
+          "event": "transport-worker-b-start",
+          "source": "transport-queue-drain",
+          "lowQueuePaused": false,
+          "key": "12:103",
+          "vehicleId": "12",
+          "missionId": "103",
+          "missionName": "Fixture 103",
+          "url": "https://www.missionchief.co.uk/vehicles/12"
+        }
+      ],
+      "frames": 1,
+      "originalRetained": false,
+      "deferred": [
+        "11:101"
+      ],
+      "claim": "{\"missionId\":\"99\",\"claimedAt\":1}",
+      "clickLock": "100"
+    },
+    {
+      "mode": "no-missions-retry",
+      "requests": [
+        {
+          "path": "/",
+          "method": "GET"
+        },
+        {
+          "path": "/vehicles/11",
+          "method": "GET"
+        },
+        {
+          "path": "/vehicles/11",
+          "method": "GET"
+        }
+      ],
+      "wanted": true,
+      "phase": "TRANSPORT_SERVICE",
+      "role": "TRANSPORT_B",
+      "serviceKey": "11:101",
+      "events": [
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_LOADING"
+        },
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_SERVICE"
+        },
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_LOADING"
+        },
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_SERVICE"
+        },
+        {
+          "event": "adopt",
+          "role": "TRANSPORT_B",
+          "path": "https://www.missionchief.co.uk/vehicles/11"
+        }
+      ],
+      "history": [
+        {
+          "at": "2026-10-18T19:25:45.829Z",
+          "event": "transport-worker-b-start",
+          "source": "mission-wait",
+          "lowQueuePaused": false,
+          "key": "11:101",
+          "vehicleId": "11",
+          "missionId": "101",
+          "missionName": "Fixture 101",
+          "url": "https://www.missionchief.co.uk/vehicles/11"
+        },
+        {
+          "at": "2026-10-18T19:25:47.635Z",
+          "key": "11:101",
+          "vehicleId": "11",
+          "missionId": "101",
+          "workerGeneration": 2,
+          "path": "",
+          "readyState": "",
+          "waitedMs": 1800,
+          "event": "transport-worker-b-load-deferred",
+          "loadFailures": 1,
+          "retryAfterAt": 1792351550635
+        },
+        {
+          "at": "2026-10-18T19:25:47.636Z",
+          "event": "transport-worker-b-complete",
+          "reason": "load-timeout-deferred",
+          "outcome": "deferred",
+          "key": "11:101",
+          "vehicleId": "11",
+          "missionId": "101"
+        },
+        {
+          "at": "2026-10-18T19:25:50.639Z",
+          "event": "transport-worker-b-start",
+          "source": "low-queue-rescan",
+          "lowQueuePaused": true,
+          "key": "11:101",
+          "vehicleId": "11",
+          "missionId": "101",
+          "missionName": "Fixture 101",
+          "url": "https://www.missionchief.co.uk/vehicles/11"
+        }
+      ],
+      "frames": 1,
+      "originalRetained": false,
+      "deferred": [
+        "11:101"
+      ],
+      "claim": "{\"missionId\":\"99\",\"claimedAt\":1}",
+      "clickLock": "100"
+    },
+    {
+      "mode": "manual-stop",
+      "requests": [
+        {
+          "path": "/",
+          "method": "GET"
+        },
+        {
+          "path": "/vehicles/11",
+          "method": "GET"
+        }
+      ],
+      "wanted": false,
+      "phase": "TRANSPORT_SERVICE",
+      "role": "TRANSPORT_B",
+      "serviceKey": "11:101",
+      "events": [
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_LOADING"
+        },
+        {
+          "event": "phase",
+          "phase": "TRANSPORT_SERVICE"
+        }
+      ],
+      "history": [
+        {
+          "at": "2026-10-18T19:25:50.882Z",
+          "event": "transport-worker-b-start",
+          "source": "mission-wait",
+          "lowQueuePaused": false,
+          "key": "11:101",
+          "vehicleId": "11",
+          "missionId": "101",
+          "missionName": "Fixture 101",
+          "url": "https://www.missionchief.co.uk/vehicles/11"
+        }
+      ],
+      "frames": 1,
+      "originalRetained": true,
+      "deferred": [],
+      "claim": "{\"missionId\":\"99\",\"claimedAt\":1}",
+      "clickLock": "100"
+    }
+  ]
+}

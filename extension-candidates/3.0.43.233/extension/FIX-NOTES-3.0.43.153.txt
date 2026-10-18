@@ -1,0 +1,15 @@
+MissionChief Command Nexus 3.0.43.153 LOCAL
+
+Realism Map native background building workflow
+
+- Keeps the 3.0.43.152 Realism launcher beside Alliance missions and its draggable floating service-toggle panel.
+- Keeps rich Realism location cards and the single-building-type Multi Build workflow.
+- Adds a hidden same-origin MissionChief New building form context so Build controls work from the normal map without opening the New building screen first.
+- Building Type, Dispatch Center and Starting Vehicle options are sourced from MissionChief's own live New building form rather than hard-coded option lists.
+- Building Type changes are mirrored into the hidden native form so MissionChief can refresh compatible Starting Vehicle choices.
+- Single and Multi Build submissions reuse MissionChief's own form fields/CSRF state, then verify every result against /api/buildings before marking success.
+- Build outcomes remain fail-closed: uncertain results are reported and are not retried automatically.
+- The background builder is isolated off-screen and removed on page unload.
+- Existing VPS/PostGIS viewport loading, overlay caching, draggable controls and all 3.0.43.152 behaviour are preserved.
+
+This is a local test build based on 3.0.43.152. It does not alter the published canonical 3.0.43 userscript release.

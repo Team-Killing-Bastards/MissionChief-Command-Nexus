@@ -1,0 +1,13 @@
+{
+  "checks": 153,
+  "allowedRuntimeFunctions": [
+    "startTransportOnlyWorker",
+    "returnToTopMissionAfterTransport",
+    "recoverInitialTransportWorkerLoad",
+    "createWorker"
+  ],
+  "dispatchSelectionTrainingUnchanged": true,
+  "stationCrewFixRetained": true,
+  "initialWorkerRecoveryRetained": true,
+  "permissionsUnchanged": true
+}

@@ -1,0 +1,18 @@
+MissionChief Command Nexus 3.0.43.149 — Realism Map direct service toggles
+
+Realism Map UI
+- Built from 3.0.43.148.
+- Removes the standalone “Realism Map” launcher button completely.
+- Removes the collapsible/scrolling Realism Map menu.
+- Shows every Realism service as its own always-visible toggle directly inside the native New building form.
+- Active service toggles are highlighted blue; inactive supported services remain dark.
+- Unsupported dataset types remain visible but disabled: Disaster Response, Lifeguard Stations and Doctors/Clinics.
+- Keeps Clear all and Refresh actions beneath the service toggles.
+- Existing saved service selections are restored automatically and their overlays reload when the New building form appears.
+
+Behaviour preserved
+- Uses the Nexus VPS/PostGIS viewport API.
+- Pan/zoom continues to refresh selected overlays with debounce and bounded cache.
+- Marker cleanup and request cancellation remain unchanged.
+- No construction, purchasing or dispatch action is performed by the Realism Map controls.
+- All 3.0.43.148 behaviour outside the Realism entry UI is preserved, including the per-mission Ambulance allocation limit.
