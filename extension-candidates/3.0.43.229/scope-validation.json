@@ -1,0 +1,10 @@
+{
+  "checks": 149,
+  "autoModeUnchangedExceptVersion": true,
+  "permissionsUnchanged": true,
+  "changed": [
+    "nexus-assign-crew.js",
+    "nexus-crew-register.js",
+    "nexus-update-notes-data.mjs"
+  ]
+}

@@ -1,0 +1,270 @@
+{
+  "checks": 477,
+  "cases": 26,
+  "liveGameVerified": false,
+  "allBrowserRequestsIntercepted": true,
+  "deadlineMs": 15000,
+  "testDeadlineMs": 200,
+  "results": [
+    {
+      "mode": "normal",
+      "posts": 6,
+      "assignmentReads": 14,
+      "vehicleReads": 8,
+      "registerWrites": 1,
+      "status": "Finished: 6 crew assigned across 1 checked vehicles. Register updated for 1 vehicles.",
+      "elapsedMs": 202,
+      "lastPostAt": 133
+    },
+    {
+      "mode": "one-already-bound",
+      "posts": 5,
+      "assignmentReads": 11,
+      "vehicleReads": 6,
+      "registerWrites": 1,
+      "status": "Finished: 5 crew assigned across 1 checked vehicles. Register updated for 1 vehicles.",
+      "elapsedMs": 99,
+      "lastPostAt": 78
+    },
+    {
+      "mode": "no-trained-staff",
+      "posts": 0,
+      "assignmentReads": 1,
+      "vehicleReads": 1,
+      "registerWrites": 1,
+      "status": "Finished: 0 crew assigned across 1 checked vehicles. Register updated for 1 vehicles.",
+      "elapsedMs": 70,
+      "lastPostAt": null
+    },
+    {
+      "mode": "bound-elsewhere",
+      "posts": 0,
+      "assignmentReads": 1,
+      "vehicleReads": 1,
+      "registerWrites": 1,
+      "status": "Finished: 0 crew assigned across 1 checked vehicles. Register updated for 1 vehicles.",
+      "elapsedMs": 52,
+      "lastPostAt": null
+    },
+    {
+      "mode": "status-six",
+      "posts": 0,
+      "assignmentReads": 0,
+      "vehicleReads": 0,
+      "registerWrites": 0,
+      "status": "Finished: 0 crew assigned across 0 checked vehicles. Register updated for 0 vehicles. No active specialist vehicles to fill.",
+      "elapsedMs": 45,
+      "lastPostAt": null
+    },
+    {
+      "mode": "limited-capacity",
+      "posts": 2,
+      "assignmentReads": 5,
+      "vehicleReads": 3,
+      "registerWrites": 1,
+      "status": "Finished: 2 crew assigned across 1 checked vehicles. Register updated for 1 vehicles.",
+      "elapsedMs": 72,
+      "lastPostAt": 52
+    },
+    {
+      "mode": "partial-trained-staff",
+      "posts": 2,
+      "assignmentReads": 5,
+      "vehicleReads": 3,
+      "registerWrites": 1,
+      "status": "Finished: 2 crew assigned across 1 checked vehicles. Register updated for 1 vehicles.",
+      "elapsedMs": 70,
+      "lastPostAt": 52
+    },
+    {
+      "mode": "wrong-station",
+      "posts": 0,
+      "assignmentReads": 0,
+      "vehicleReads": 1,
+      "registerWrites": 0,
+      "status": "Stopped: 0 crew assignments verified. Vehicle no longer belongs to this station. Refresh before trying again.",
+      "elapsedMs": 48,
+      "lastPostAt": null
+    },
+    {
+      "mode": "count-changed",
+      "posts": 0,
+      "assignmentReads": 1,
+      "vehicleReads": 1,
+      "registerWrites": 0,
+      "status": "Stopped: 0 crew assignments verified. Crew changed while reading; stopped to avoid an incorrect assignment. Refresh before trying again.",
+      "elapsedMs": 46,
+      "lastPostAt": null
+    },
+    {
+      "mode": "missing-token",
+      "posts": 0,
+      "assignmentReads": 1,
+      "vehicleReads": 1,
+      "registerWrites": 1,
+      "status": "Stopped: 0 crew assignments verified. Assignment security token unavailable. Refresh before trying again.",
+      "elapsedMs": 58,
+      "lastPostAt": null
+    },
+    {
+      "mode": "paginated",
+      "posts": 0,
+      "assignmentReads": 0,
+      "vehicleReads": 0,
+      "registerWrites": 0,
+      "status": "Stopped: 0 crew assignments verified. Personnel list is paginated; assignments stopped. Refresh before trying again.",
+      "elapsedMs": 43,
+      "lastPostAt": null
+    },
+    {
+      "mode": "stop-after-one",
+      "posts": 1,
+      "assignmentReads": 2,
+      "vehicleReads": 1,
+      "registerWrites": 1,
+      "status": "Stopped: 1 crew assigned across 1 checked vehicles. Register updated for 1 vehicles.",
+      "elapsedMs": 57,
+      "lastPostAt": 47
+    },
+    {
+      "mode": "accepted-http-error",
+      "posts": 6,
+      "assignmentReads": 13,
+      "vehicleReads": 7,
+      "registerWrites": 1,
+      "status": "Finished: 6 crew assigned across 1 checked vehicles. Register updated for 1 vehicles.",
+      "elapsedMs": 95,
+      "lastPostAt": 78
+    },
+    {
+      "mode": "accepted-redirect",
+      "posts": 6,
+      "assignmentReads": 13,
+      "vehicleReads": 7,
+      "registerWrites": 1,
+      "status": "Finished: 6 crew assigned across 1 checked vehicles. Register updated for 1 vehicles.",
+      "elapsedMs": 84,
+      "lastPostAt": 69
+    },
+    {
+      "mode": "accepted-timeout",
+      "posts": 6,
+      "assignmentReads": 13,
+      "vehicleReads": 7,
+      "registerWrites": 1,
+      "status": "Finished: 6 crew assigned across 1 checked vehicles. Register updated for 1 vehicles.",
+      "elapsedMs": 1313,
+      "lastPostAt": 1097
+    },
+    {
+      "mode": "accepted-body-timeout",
+      "posts": 6,
+      "assignmentReads": 13,
+      "vehicleReads": 7,
+      "registerWrites": 1,
+      "status": "Finished: 6 crew assigned across 1 checked vehicles. Register updated for 1 vehicles.",
+      "elapsedMs": 1310,
+      "lastPostAt": 1093
+    },
+    {
+      "mode": "two-vehicles",
+      "posts": 2,
+      "assignmentReads": 6,
+      "vehicleReads": 4,
+      "registerWrites": 2,
+      "status": "Finished: 2 crew assigned across 2 checked vehicles. Register updated for 2 vehicles.",
+      "elapsedMs": 77,
+      "lastPostAt": 59
+    },
+    {
+      "mode": "unconfirmed-post",
+      "posts": 1,
+      "assignmentReads": 2,
+      "vehicleReads": 1,
+      "registerWrites": 0,
+      "status": "Stopped: 0 crew assignments verified. Assignment outcome could not be verified; no retry was sent. Refresh before trying again.",
+      "elapsedMs": 50,
+      "lastPostAt": 40
+    },
+    {
+      "mode": "verification-timeout",
+      "posts": 1,
+      "assignmentReads": 1,
+      "vehicleReads": 1,
+      "registerWrites": 0,
+      "status": "Stopped: 0 crew assignments verified. Reading current game crew timed out. Refresh before trying again.",
+      "elapsedMs": 257,
+      "lastPostAt": 43
+    },
+    {
+      "mode": "next-read-timeout",
+      "posts": 1,
+      "assignmentReads": 2,
+      "vehicleReads": 1,
+      "registerWrites": 1,
+      "status": "Stopped: 1 crew assignments verified. Reading current game crew timed out. Refresh before trying again.",
+      "elapsedMs": 256,
+      "lastPostAt": 40
+    },
+    {
+      "mode": "register-timeout",
+      "posts": 6,
+      "assignmentReads": 13,
+      "vehicleReads": 7,
+      "registerWrites": 1,
+      "status": "Stopped: 6 crew assignments verified. Saving verified crew to the register; game assignments are already verified timed out. Refresh before trying again.",
+      "elapsedMs": 315,
+      "lastPostAt": 74
+    },
+    {
+      "mode": "register-rejected",
+      "posts": 6,
+      "assignmentReads": 13,
+      "vehicleReads": 7,
+      "registerWrites": 1,
+      "status": "Stopped: 6 crew assignments verified. Crew assigned, but training register could not be saved. Refresh before trying again.",
+      "elapsedMs": 92,
+      "lastPostAt": 75
+    },
+    {
+      "mode": "register-conflict",
+      "posts": 6,
+      "assignmentReads": 13,
+      "vehicleReads": 7,
+      "registerWrites": 1,
+      "status": "Stopped: 6 crew assignments verified. Training register save could not be verified. Refresh before trying again.",
+      "elapsedMs": 83,
+      "lastPostAt": 71
+    },
+    {
+      "mode": "ready-timeout",
+      "posts": 0,
+      "assignmentReads": 0,
+      "vehicleReads": 0,
+      "registerWrites": 0,
+      "status": "Stopped: 0 crew assignments verified. Loading the personnel register timed out. Refresh before trying again.",
+      "elapsedMs": 242,
+      "lastPostAt": null
+    },
+    {
+      "mode": "profile-accepted-error",
+      "posts": 6,
+      "assignmentReads": 13,
+      "vehicleReads": 7,
+      "registerWrites": 7,
+      "status": "Fixture OSU: Checking the binding after an interrupted game response…\nFixture OSU: Checking the binding after an interrupted game response…\nFixture OSU: Checking the binding after an interrupted game response…\nFixture OSU: Checking the binding after an interrupted game response…\nFixture OSU: Checking the binding after an interrupted game response…\nFixture OSU: Checking the binding after an interrupted game response…\nFixture OSU: 6/6 qualified crew; 6/6 total",
+      "elapsedMs": 68,
+      "lastPostAt": 40
+    },
+    {
+      "mode": "profile-unconfirmed",
+      "posts": 1,
+      "assignmentReads": 2,
+      "vehicleReads": 1,
+      "registerWrites": 0,
+      "status": "Fixture OSU: Checking the new crew binding…\nStopped: Assignment outcome could not be verified; no retry was sent",
+      "elapsedMs": 26,
+      "lastPostAt": 9
+    }
+  ]
+}
