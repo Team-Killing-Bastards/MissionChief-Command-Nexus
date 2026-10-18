@@ -1,0 +1,16 @@
+MissionChief Command Nexus 3.0.43.151 LOCAL
+
+Realism Map rich marker cards + single-type Multi Build
+
+- Replaces the minimal OSM popup with a richer Nexus location card showing service type, OSM-listed status, name, address, coordinates/OSM identity, OpenStreetMap and Google Maps links.
+- Adds a collapsible Build section using the live New building form options for Building Type, Dispatch Center and Starting Vehicle.
+- Uses known MissionChief UK building-type IDs to preselect the matching building type where possible (Fire, Police, Ambulance, Dispatch Center, Hospital, Prison, Lifeboat, Coastguard, Mountain Rescue, GP Surgery).
+- Adds Multi Build. The first location is the MASTER and its build panel is pinned open while the map pans.
+- One Multi Build batch is locked to one MissionChief building type. Only compatible Realism markers can be added to the active batch.
+- Selected markers gain a tick, the master gains a star, and already verified-built markers gain a green state.
+- Changing the master building type clears all non-master selections so mixed building types cannot be batched accidentally.
+- Multi Build reuses the master Building Type / Dispatch Center / Starting Vehicle configuration for every selected location.
+- Building creation is sequential and fail-closed: no automatic retries; every result is verified against /api/buildings and reported per location.
+- Existing full-width Realism service toggles, VPS/PostGIS viewport loading, pan/zoom debounce, bounded cache, marker cleanup and unsupported-type disabling are preserved.
+
+This is a local test build based on 3.0.43.150. It does not alter the published canonical 3.0.43 userscript release.

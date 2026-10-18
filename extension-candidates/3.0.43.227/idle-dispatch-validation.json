@@ -1,0 +1,8 @@
+{
+  "version": "3.0.43.223",
+  "passed": true,
+  "checks": 323,
+  "oldIdleDeferralMs": 124999,
+  "newIdleDeferralMs": 10000,
+  "scope": "Production-function fixtures with controlled clocks and explicit inherited claim. No live throughput claim."
+}

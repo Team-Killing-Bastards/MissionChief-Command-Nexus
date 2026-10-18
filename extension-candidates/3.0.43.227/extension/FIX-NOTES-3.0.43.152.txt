@@ -1,0 +1,15 @@
+MissionChief Command Nexus 3.0.43.152 LOCAL
+
+Realism Map detached floating controls
+
+- Removes the Realism service-toggle UI from the MissionChief New building form.
+- Adds a compact map icon immediately to the right of the Alliance missions launcher when that launcher is available; falls back beside the Nexus map controller if Alliance support is disabled.
+- Clicking the icon opens/closes a separate Nexus Realism Map floating panel.
+- The panel is draggable by its header and remembers its screen position in localStorage.
+- Floating panel contains the existing direct service toggles, Clear all, Refresh, status text and OSM attribution.
+- Closing the floating panel does not clear enabled overlays; the icon can reopen the same controls.
+- Existing VPS/PostGIS viewport loading, automatic pan/zoom refresh, bounded cache and marker cleanup are preserved.
+- Rich marker cards and the 3.0.43.151 single-building-type Multi Build workflow are preserved.
+- Realism no longer depends on the New building form for its launcher/toggle visibility. Build controls inside marker cards still use the native New building form when that form is available.
+
+This is a local test build based on 3.0.43.151. It does not alter the published canonical 3.0.43 userscript release.
