@@ -4,6 +4,20 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-234-alliance-batches
+
+**Choose Alliance Auto value limits, batch size and fixed pauses · 3.0.43.234**
+
+Alliance missions now has Minimum credits, Missions per batch and Pause (minutes) controls, also available in Nexus Tools > Settings > Alliance support. A minimum includes missions equal to the threshold and excludes lower or unknown values. Zero keeps the existing all-values behavior; the existing value-range, supported-mission, offshore and vehicle filters still apply. The minimum applies to the displayed list and manual selections as well as automatic support.
+
+Alliance Auto starts with eligible missions, attempts up to the chosen batch size, then waits the chosen number of minutes after the batch finishes. The default is up to 10 missions followed by a 10-minute pause; the feature remains off by default. A partial batch or failed candidate still consumes its batch slot and the pause, instead of immediately replacing it with more work. The panel shows batch progress and the next scheduled batch time. Manual support remains available during the automatic pause.
+
+A small saved timestamp and the existing exclusive alliance dispatch lock preserve the pause across refreshes and tabs in the same browser profile. The schedule is checked again inside that lock. Changing settings cannot extend the current batch beyond its original limit, and a reduced limit applies before the next mission. Stop still verifies a dispatch already sent before ending the queue; unconfirmed results retain their existing protection against repeat dispatch. The three preferences use the existing Discord settings sync, while running cadence stays local to each browser profile.
+
+Personal Auto Mode, Worker B recovery, zero-patient closure, vehicle coverage and trained-crew logic are unchanged. Paused hidden alliance panels avoid repeated list/register refreshes from mission mutations. The scheduler uses one existing timer and no countdown polling or added background network request.
+
+Validation uses isolated Edge fixtures with all requests intercepted, including minimum equality, unknown values, saved controls, batches and timed resumption, concurrent tabs, reloads, manual support, Stop, shortages, uncertain dispatches, in-flight preference changes and storage failure. Package scope checks retain personal runtime byte-for-byte apart from its version label. Live-game pacing and long-run throughput still require an attended run. Local candidate; no browser-store submission.
+
 ## v3-0-43-233-transport-worker-loading
 
 **Recover Worker B loading without stopping Auto Mode · 3.0.43.233**
