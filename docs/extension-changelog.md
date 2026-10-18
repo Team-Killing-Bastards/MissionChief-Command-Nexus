@@ -4,6 +4,18 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-233-transport-worker-loading
+
+**Recover Worker B loading without stopping Auto Mode · 3.0.43.233**
+
+Worker B previously used the generic 30-second iframe loading deadline and stopped the entire controller when it expired. Its initial load now uses the existing 18-second transport side-pass budget. If the expected same-origin vehicle or transport document is already usable, Nexus adopts that document in place and gives the existing transport watcher its normal service window. A delayed load event does not recreate an already active destination page or submit transport again.
+
+A genuinely unready canonical vehicle page is released and its exact personal Radio request is deferred. Other eligible transports are serviced first, then personal missions continue. The existing rescan and mission-boundary paths retry the request automatically from its canonical vehicle page after the cooldown; no completed mission or manual Retry is required. Recent repeated load failures back off from 30 seconds to a maximum of five minutes, using bounded existing transport history. The entry point also enforces the cooldown so late handoff callbacks cannot immediately reopen the failed request.
+
+Recovery keeps run intent and existing transport/dispatch locks. It does not replay destination or release URLs. A cleared Radio request returns to normal work. A stale worker, manual Stop, wrong request identity, unexpected origin/login/vehicle, unreadable click state, or an unobservable in-flight action cannot authorise unsafe load recovery. Deferred transports are identified as deferred rather than reported as successfully transported.
+
+Normal successful page loads gain no additional timer, network request, scan or deliberate delay. Vehicle quantities, alternatives, trained-staff and final dispatch checks are unchanged, as is the .232 empty-mission closure fix. Production-function and isolated Edge tests cover the old whole-run stop, continuation, timed retries with no mission supply, other pending transports, delayed events, an in-flight POST, late callbacks and manual Stop. All browser-test requests are intercepted. Live-game recovery and endurance remain unverified. Local candidate; no browser-store submission.
+
 ## v3-0-43-232-empty-mission-closure
 
 **Finish verified empty patient missions without relying on a success flash · 3.0.43.232**
