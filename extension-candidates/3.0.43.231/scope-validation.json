@@ -1,0 +1,17 @@
+{
+  "checks": 153,
+  "allowedRuntimeFunctions": [
+    "verifiedPatientTailCleanupStop",
+    "handleUnconfirmedAutoStart",
+    "maybeHandleRecoverableAutoStop",
+    "redirectAfterRecoverableSkip",
+    "renderControllerSkips",
+    "nexusPatientTailCleanupRecord",
+    "nexusStopPatientTailForReview",
+    "nexusHandlePatientMissionTail"
+  ],
+  "dispatchSelectionTrainingUnchanged": true,
+  "stationCrewFixRetained": true,
+  "initialWorkerRecoveryRetained": true,
+  "permissionsUnchanged": true
+}

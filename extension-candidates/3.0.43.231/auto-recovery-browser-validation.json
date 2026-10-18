@@ -1,0 +1,25 @@
+{
+  "handoffMs": 3.100000001490116,
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/"
+    },
+    {
+      "method": "GET",
+      "path": "/missions/101"
+    },
+    {
+      "method": "POST",
+      "path": "/missions/101"
+    },
+    {
+      "method": "GET",
+      "path": "/missions/102"
+    }
+  ],
+  "errors": [],
+  "checks": 12,
+  "liveGameVerified": false,
+  "allRequestsIntercepted": true
+}
