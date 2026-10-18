@@ -4,6 +4,14 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-228-shortage-wait
+
+**Continue sooner after a verified unit shortage · 3.0.43.228**
+
+The final Unit Finder message “No vehicles were dispatched” now qualifies for the existing three-second recovery window when it is the current, recorded stop from the confirmed active mission document. Previously this wording fell through to the twelve-second window, including repeated shortage visits. A running control, incomplete selection, stale or detached document, mismatched stop record or existing dispatch claim prevents the shortcut. Proof is checked again during the wait; if it changes, the ordinary recovery window starts again.
+
+One bounded fresh search, transport priority and the existing skip cooldown remain. Vehicle quantities, complete-list fallback, trained-personnel checks, alternative vehicle order and duplicate-dispatch safeguards are unchanged. Healthy missions gain no new wait, scan or request. This shortens confirmed failure handling; it does not establish that a reported shortage is genuine or guarantee a particular hourly dispatch rate.
+
 ## v3-0-43-227-auto-recovery
 
 **Continue after dispatch reloads and recover vehicle loading · 3.0.43.227**
