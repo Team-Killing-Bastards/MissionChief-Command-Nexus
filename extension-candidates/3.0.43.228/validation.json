@@ -1,0 +1,20 @@
+{
+  "shortageWaitChecks": 73,
+  "shortageWaitBrowserChecks": 8,
+  "automaticRecoveryChecks": 121,
+  "automaticRecoveryBrowserChecks": 12,
+  "throughputChecks": 156,
+  "crewChecks": 91,
+  "hazmatChecks": 59,
+  "policeChecks": 51,
+  "idleDispatchChecks": 323,
+  "startupReadinessChecks": 58,
+  "packageScopeChecks": 150,
+  "syntaxFiles": 93,
+  "selectionAndCrewUnchanged": true,
+  "permissionsUnchanged": true,
+  "allBrowserRequestsIntercepted": true,
+  "liveGameVerified": false,
+  "patientTailChecks": 118,
+  "startupHandoffChecks": 20
+}

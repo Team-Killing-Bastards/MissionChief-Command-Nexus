@@ -1,0 +1,8 @@
+{
+  "patientTailChecks": 118,
+  "startupHandoffChecks": 20,
+  "commands": ["node check-patient-tail.mjs", "node check-startup-handoff.mjs"],
+  "exitCode": 0,
+  "allBrowserRequestsIntercepted": true,
+  "liveGameVerified": false
+}

@@ -1,0 +1,27 @@
+{
+  "inputFile": "missionchief-command-nexus-v3-1792334612353.json",
+  "inputSha256": "02788141995bdc44102c4b5122f92eea5d105f63e4828b93d09dcd4c58c5e3c2",
+  "version": "3.0.43.227",
+  "generatedAt": "2026-10-18T14:43:32.324Z",
+  "startedAt": "2026-10-18T14:05:48.005Z",
+  "elapsedSeconds": 2264,
+  "recordedDispatches": 63,
+  "recordedDispatchesPerHour": 100.2,
+  "skipRecords": 44,
+  "distinctSkippedMissions": 22,
+  "skipRecordsMentioningPoliceCars": 34,
+  "retainedResourceWaits": 36,
+  "retainedResourceWaitMs": 428479,
+  "transportAttempts": 46,
+  "transportCleared": 46,
+  "postDispatchSoftRecoveries": 0,
+  "postDispatchHardRecoveries": 0,
+  "dispatchTimingSamples": 0,
+  "limitations": [
+    "Counters do not prove server acceptance or complete mission fulfilment.",
+    "Recovery history is bounded; the retained wait total is not the whole run.",
+    "The export cannot establish why each vehicle candidate was unavailable or excluded.",
+    "Zero dispatch timing samples prevents a reliable dispatch-stage percentile.",
+    "Recent loading statistics start at 14:27 and do not cover all earlier loads."
+  ]
+}
