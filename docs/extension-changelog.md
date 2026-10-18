@@ -4,6 +4,18 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-231-patient-cleanup-recovery
+
+**Continue other missions when an empty patient mission cannot be closed · 3.0.43.231**
+
+An unverified Cancel All Units result on a zero-patient mission now defers that mission and releases the stopped worker so other personal missions and eligible transports can continue. The handoff requires the current mission document, its matching automatic stop and a stopped Auto control; stale signals, manual Stop, active selection, transport activity and matching or unreadable dispatch claims cannot authorise recovery. The same handoff works when cleanup finishes before startup confirmation.
+
+Before sending a native cancellation, Nexus saves a small guard in this game tab's session storage. Worker replacement, page refresh and a queue recheck cannot repeat an uncertain cancellation. Subsequent attempts only read the mission to check for closure. A verified completion or exact-route 404 clears the guard. Unresolved records do not expire into a new cancellation, are capped at 200, and a storage failure blocks the action rather than sending an unremembered request. The existing second cancellation remains available only within the original verified two-step cleanup, after explicit first-action confirmation and a fresh empty result.
+
+Compact response evidence records HTTP status, success-flash recognition, patient-state classification and remaining-unit counts without saving response HTML. Unit quantities, alternatives, trained-crew requirements, final dispatch checks, the .229 station crew fix and .230 initial-load recovery are retained. Normal missions gain no network request or timer; the new guard lookup is a small local session read.
+
+The supplied .230 export shows Smoke Inhalation (caused by "Hotel fire (major)") receiving HTTP 200 for Cancel All Units at 18:24:46 UTC, followed by an unverified result and a stopped inner Auto loop at 18:24:47 UTC. The outer controller retained run intent until the 18:31:43 export. It does not contain the response body, so rejection by the game versus different confirmation markup is unproven. Isolated regression tests reproduce this stop and check queue/transport continuation and cancellation guards; this is not live-game or endurance verification. Local candidate; no store submission.
+
 ## v3-0-43-230-worker-load-recovery
 
 **Recover an initial mission page load without stopping the queue · 3.0.43.230**
