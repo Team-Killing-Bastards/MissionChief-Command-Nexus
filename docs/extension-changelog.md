@@ -4,6 +4,18 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 3.0.43.206 is a prepared release candidate; this record does not mean it has been published to a browser store.
 
+## v3-0-43-232-empty-mission-closure
+
+**Finish verified empty patient missions without relying on a success flash · 3.0.43.232**
+
+The first native Cancel All Units response no longer has to contain the exact temporary “Cancel All” success message before Nexus can finish cleanup. After a successful same-route response, a separate fresh read must identify the exact mission through its native form and prove that no patients, assigned units, actual transport links, other requirements or visible errors remain. Only then may Nexus send the one remaining native cancellation. A second action is also allowed when the empty mission remains without a transport warning; an empty table alone is no longer reported as completed.
+
+Cleanup succeeds only after a fresh exact-route read confirms the mission has gone (404) or returns the native completion page. Two cancellation attempts remain the hard limit for that mission in this game tab's session, including across worker replacement. A saved successful first response allows the last step to continue after restart, with all fresh checks repeated. A legacy .231 first-attempt record requires a fresh explicit zero count. New uncertain/failed requests and missions already sent both steps are only checked for closure; they cannot replay cancellation. Storage failures prevent an unremembered action.
+
+The supplied .230 export proves a successful HTTP response and a fresh empty result followed by rejection of the first-response confirmation. It does not retain the response body, so the exact markup difference is unproven. Browser fixtures reproduce the old missing-flash failure and exercise successful closure, restart continuation, changed patients/units/ownership, errors, wrong mission forms and the two-step limit. The original live stuck mission has already gone; this candidate has not yet been verified closing a new live zero-patient mission.
+
+Normal mission selection, vehicle quantities, trained-staff requirements, dispatch checks, station crew assignment and worker recovery are unchanged. No network request or timer is added to normal missions. Local candidate; no browser-store submission.
+
 ## v3-0-43-231-patient-cleanup-recovery
 
 **Continue other missions when an empty patient mission cannot be closed · 3.0.43.231**
