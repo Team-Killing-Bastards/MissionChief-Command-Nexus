@@ -6,11 +6,15 @@ Selected recent extension changes. Each linked entry is bundled with its release
 
 ## v3-0-43-225-shortage-recovery
 
-**Keep shortage rechecks specific to the mission · 3.0.43.225**
+**Prefer OSUs with HazMat alternatives, and keep shortage recovery specific to the mission · 3.0.43.225**
 
 Two unsuccessful recovery attempts could previously suppress fresh searches for other missions with the same name and shortage category for up to a week. A temporary lack of available vehicles is not evidence that later missions cannot be covered. Historical outcomes no longer veto another mission's recovery attempt.
 
-The existing one-attempt record for each mission, transport priority, completed crew-search proof, full coverage checks and duplicate-dispatch protection remain. This change adds no work to a successful first selection. It does not change vehicle mappings, relax trained-personnel checks or promise that unavailable vehicles can be dispatched. The supplied .224 export identifies repeated HazMat/CBRN and armed-crew shortfalls, but does not retain enough candidate evidence to establish why the first selection failed. Live resolution remains to be verified.
+HazMat/CBRN requirements prefer Operational Support Units (type 39), then HazMat Units (type 7), then CBRN Vehicles (type 32), filling only the remaining demand. Arrival time orders vehicles within each type. Existing single-type saved mappings for this capability cannot suppress its alternatives. A specifically named CBRN Vehicle requirement accepts OSUs and CBRN Vehicles, without assuming a HazMat-only vehicle is eligible.
+
+HazMat rows stay separate from shared OSU rows: specialist alternatives do not count as Welfare or breathing-apparatus support. OSUs selected for either row can still cover their shared capabilities, avoiding redundant OSU selection.
+
+The existing one-attempt record for each mission, transport priority, completed crew-search proof, trained-personnel checks, full coverage and duplicate-dispatch protection remain. There is no new polling, timer or network scan. The supplied .224 export identifies repeated HazMat/CBRN and armed-crew shortfalls, but does not retain enough candidate evidence to establish why the first selection failed. The reported manual successes used OSUs, so the new specialist fallback alone does not explain that discrepancy. Live resolution remains to be verified.
 
 ## v3-0-43-224-police-alternative-order
 
