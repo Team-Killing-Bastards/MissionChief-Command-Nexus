@@ -1,0 +1,15 @@
+{
+  "eventCollectorBrowserChecks": 43,
+  "scopeAndFileChecks": 149,
+  "hazmatChecks": 59,
+  "policeChecks": 51,
+  "crewChecks": 91,
+  "throughputChecks": 156,
+  "anyVehicleBrowserChecks": 20,
+  "crvBrowserChecks": 17,
+  "javascriptManifestAndChangelog": "passed",
+  "dispatchAndCrewCodeUnchanged": true,
+  "permissionsUnchanged": true,
+  "allBrowserTrafficIntercepted": true,
+  "liveGameVerified": false
+}

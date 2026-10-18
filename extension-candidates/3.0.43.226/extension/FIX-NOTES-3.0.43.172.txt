@@ -1,0 +1,9 @@
+Nexus .172 - Native alliance event capture
+
+Fixes .171 excluding native Event missions whose user_id is null and which
+have no alliance_id. Uses MissionChief's native null-owner classification,
+with current map evidence. Incomplete records lacking a user_id field do not
+count as events. Existing personal/other-alliance exclusions remain.
+
+Includes .170 MCE and .171 map-list changes. Reload extension and game page.
+Local regression verified; live map verification remains outstanding.
