@@ -1,0 +1,12 @@
+{
+  "checks": 189,
+  "syntaxFiles": 93,
+  "files": 150,
+  "personalRuntimeVersionOnly": true,
+  "workerBRecoveryRetained": true,
+  "patientCleanupRetained": true,
+  "trainedCrewAndSelectionUnchanged": true,
+  "permissionsUnchanged": true,
+  "cloudPreferencesAllowlisted": true,
+  "liveGameVerified": false
+}

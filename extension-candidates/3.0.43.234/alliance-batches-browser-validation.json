@@ -1,0 +1,20 @@
+{
+  "version": "3.0.43.234",
+  "realGame": false,
+  "cases": [
+    "Saved controls, exact minimum, unknown/zero exclusion, batch limit, scheduled resume, distinct units and personal independence",
+    "Reload persistence, shared browser pause, manual support and cross-tab lock",
+    "Stop during pending participation",
+    "Shortages consume batch slots and respect pause",
+    "Unconfirmed dispatch still pauses without replay",
+    "Corrupt saved schedule blocks automatic sends",
+    "Lowering batch size takes effect before the next mission",
+    "In-flight minimum change is checked before the dispatch checkpoint",
+    "Stop verifies the current dispatch and cancels remaining batch",
+    "Failed pause checkpoint prevents dispatch",
+    "Simultaneous tabs respect one combined batch",
+    "Minimum and existing value range combine, including zero minimum"
+  ],
+  "checks": 59,
+  "allRequestsIntercepted": true
+}
