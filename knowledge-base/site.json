@@ -1,0 +1,29 @@
+{
+  "name": "Command Nexus",
+  "base": "/guide",
+  "origin": "https://nexus.blyth.scot",
+  "revision": "2026-10-24",
+  "edition": "Review edition",
+  "sourceVersion": "3.0.43.235",
+  "sourceCommit": "e0160800",
+  "sourceDirectory": "extension-candidates/3.0.43.235/extension",
+  "storeVersion": "Unverified today; GitHub main records 3.0.43.205, checked 7 October 2026",
+  "publicationReady": false,
+  "screenshotMode": "No current screenshots included: connected browser access was rejected and isolated browser capture failed to launch",
+  "articles": [
+    "index",
+    "quick-start",
+    "getting-started",
+    "account",
+    "interface",
+    "vehicles",
+    "personnel",
+    "profiles",
+    "dispatch",
+    "automode",
+    "alliance",
+    "advanced",
+    "troubleshooting",
+    "downloads"
+  ]
+}
