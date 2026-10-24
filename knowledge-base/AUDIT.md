@@ -52,3 +52,9 @@ No collector/API, PostgreSQL, Caddy, production container, extension permissions
 ## Production status
 
 Not deployed. Stats navigation and extension Help links are proposals only. No availability or unchanged-health claim is made for inaccessible production services.
+
+## Additional connection evidence
+
+The account's registered Desktop Commander device named vps-daa24069 is offline (reported last seen 667 hours ago). Reconnect that existing authorised VPS device to continue the live configuration audit. This does not prove the Nexus service or VPS itself is offline.
+
+Documentation is saved in draft PR #449. The final review PDFs contain 6 and 16 pages respectively. Persistent PDF transfer failed because the upload helper could not resolve its service; local PDF copies remain available.
