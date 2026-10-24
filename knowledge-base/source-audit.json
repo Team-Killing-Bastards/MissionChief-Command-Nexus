@@ -1,0 +1,712 @@
+{
+  "sourceVersion": "3.0.43.235",
+  "sourceCommit": "e0160800",
+  "sourceDirectory": "extension-candidates/3.0.43.235/extension",
+  "storeParity": "Not verified",
+  "captured": "2026-10-24",
+  "contentScripts": [
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "world": "ISOLATED",
+      "files": [
+        "nexus-station-profiles-store.js",
+        "nexus-station-profiles-data.js",
+        "nexus-station-profiles-core.js",
+        "nexus-station-profiles-ui.js",
+        "nexus-staging-profiles-editor.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "world": "ISOLATED",
+      "files": [
+        "nexus-settings.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "world": "MAIN",
+      "files": [
+        "nexus-register-storage.js",
+        "nexus-personnel-store.js",
+        "nexus-storage-guard.js",
+        "nexus-dispatch-trace.js",
+        "nexus-settings-main.js",
+        "nexus-startup-diagnostics.js",
+        "collector-game.js",
+        "nexus-auto-stop-store.js",
+        "nexus-vehicle-claims.js",
+        "nexus-event-collector.js",
+        "nexus-runtime.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "world": "ISOLATED",
+      "files": [
+        "collector-bridge.js",
+        "nexus-account-bridge.js",
+        "nexus-connection-status.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "world": "ISOLATED",
+      "files": [
+        "rules-bridge.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "world": "ISOLATED",
+      "files": [
+        "nexus-responsive.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "world": "ISOLATED",
+      "files": [
+        "nexus-settings-defaults.js",
+        "nexus-building-delete.js",
+        "nexus-tools-core.js",
+        "nexus-building-upgrades-core.js",
+        "nexus-building-upgrades.js",
+        "nexus-tools.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "world": "MAIN",
+      "files": [
+        "nexus-comfort-data.js",
+        "nexus-settings-apply.js",
+        "nexus-currency-ranks.js",
+        "nexus-currency.js",
+        "nexus-command-toolbar.js",
+        "nexus-requirement-data.js",
+        "nexus-requirement-ticks.js",
+        "nexus-building-data.js",
+        "nexus-building-core.js",
+        "nexus-personnel-reader.js",
+        "nexus-crew-register.js",
+        "nexus-assign-crew.js",
+        "nexus-building-overview.js",
+        "nexus-dispatch-centre-rename.js",
+        "nexus-comfort.js",
+        "nexus-transport-shortcuts.js",
+        "nexus-home-market.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/credits/daily*",
+        "https://police.missionchief.co.uk/credits/daily*"
+      ],
+      "world": "ISOLATED",
+      "files": [
+        "nexus-credit-page-chrome.js",
+        "nexus-daily-data.js",
+        "nexus-daily-core.js",
+        "nexus-daily.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/credits/overview*",
+        "https://police.missionchief.co.uk/credits/overview*"
+      ],
+      "world": "ISOLATED",
+      "files": [
+        "nexus-credit-page-chrome.js",
+        "nexus-overview-core.js",
+        "nexus-overview.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "world": "ISOLATED",
+      "files": [
+        "nexus-mission-rewards-data.js",
+        "nexus-mission-rewards.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "world": "MAIN",
+      "files": [
+        "nexus-schooling-filters.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/schoolings*",
+        "https://police.missionchief.co.uk/schoolings*"
+      ],
+      "world": "ISOLATED",
+      "files": [
+        "nexus-course-list-filters.js",
+        "nexus-schooling-actions.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "world": "MAIN",
+      "files": [
+        "nexus-alliance-owner-capture.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "world": "MAIN",
+      "files": [
+        "nexus-alliance-core.js",
+        "nexus-alliance-results-store.js",
+        "nexus-alliance-support.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "world": "MAIN",
+      "files": [
+        "nexus-compact-missions.js",
+        "nexus-fixed-navigation.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "world": "ISOLATED",
+      "files": [
+        "nexus-real-locations-bridge.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "world": "MAIN",
+      "files": [
+        "nexus-station-profiles-store.js",
+        "nexus-station-profiles-data.js",
+        "nexus-realism-setup.js",
+        "nexus-real-locations.js",
+        "nexus-staging-map.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "world": "MAIN",
+      "files": [
+        "collector-register.js",
+        "nexus-profile-sync.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "world": "MAIN",
+      "files": [
+        "nexus-station-rename.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/buildings/*",
+        "https://police.missionchief.co.uk/buildings/*"
+      ],
+      "world": "MAIN",
+      "files": [
+        "nexus-station-profiles-store.js",
+        "nexus-station-profiles-data.js",
+        "nexus-station-profiles-core.js",
+        "nexus-station-profiles-engine.js",
+        "nexus-station-profiles-ui.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "world": "ISOLATED",
+      "files": [
+        "nexus-hospital-beds.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.missionchief.co.uk/*",
+        "https://police.missionchief.co.uk/*"
+      ],
+      "world": "ISOLATED",
+      "files": [
+        "nexus-update-notes.js"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "account.html",
+      "bytes": 1428,
+      "sha256": "66178f709322b8ecbb2144329c5d0f0598b0a0410f232bdb8ef099717ed63d46"
+    },
+    {
+      "path": "account.js",
+      "bytes": 1267,
+      "sha256": "dbef7a326fe8e845d33e624adbd78ad0904cb36a40faf018709bde0b0910304a"
+    },
+    {
+      "path": "analytics-worker.mjs",
+      "bytes": 1750,
+      "sha256": "61812a4e0c3fe6c6055196ed080bb631a6dbe1289993fa77a520b24d0a687ba7"
+    },
+    {
+      "path": "collector-bridge.js",
+      "bytes": 4091,
+      "sha256": "c0568dbad1ea65f2657a004ad7de79bc571c67387449ae7bdd121fd3639ea9fa"
+    },
+    {
+      "path": "collector-client.mjs",
+      "bytes": 5609,
+      "sha256": "5dd12b6def639e60cb7ab37e1f6a1f1a00dca2f30d2ee231a83ecd5cb49ea1bf"
+    },
+    {
+      "path": "collector-game.js",
+      "bytes": 5840,
+      "sha256": "610762d169f7ece4d3cdb05bcc6f74052d3147df0f7c8ed0eed0939cca4d3f27"
+    },
+    {
+      "path": "collector-register.js",
+      "bytes": 23238,
+      "sha256": "0eaee3ad4f198937b9804531a972327c4b5678bcea353da22385f0ad0ca28cdd"
+    },
+    {
+      "path": "collector.html",
+      "bytes": 3109,
+      "sha256": "ff2a324d8f895db3ecbb4a008e2ba75bae7367efb42897feb2b49f50a3d51042"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 10134,
+      "sha256": "66f2a92bb0e4768ee2dfc237acbba46fa3199755b315cd8211043434a6573fb3"
+    },
+    {
+      "path": "nexus-account-bridge.js",
+      "bytes": 865,
+      "sha256": "312a540395026b069bd10d43e284aa309a1aae7ea19ccd825fcbfc22be33b159"
+    },
+    {
+      "path": "nexus-account-worker.mjs",
+      "bytes": 6990,
+      "sha256": "5ef1f2c6d2258c7fefb851a053b147d2b9e867faa62963270b2ac80c1f302c7f"
+    },
+    {
+      "path": "nexus-alliance-core.js",
+      "bytes": 12272,
+      "sha256": "98bab562c8b434f926c5aa36d793c4094fcb0d6f834e6967c11f4e599bd992a7"
+    },
+    {
+      "path": "nexus-alliance-owner-capture.js",
+      "bytes": 13939,
+      "sha256": "f26dc5f9180ad412273e4d8e48b10989dbd156f14264bb88dcdf343be85374fe"
+    },
+    {
+      "path": "nexus-alliance-results-store.js",
+      "bytes": 4012,
+      "sha256": "001bd48ee6cfca056a1426abb306c961b42017ecd0ff11ce3f9e99ef6c417a51"
+    },
+    {
+      "path": "nexus-alliance-support.js",
+      "bytes": 40666,
+      "sha256": "4881b114833dd18eb12691d17d6ccad76973d99a0b7c4f4cbfa370e54c43b8d5"
+    },
+    {
+      "path": "nexus-assign-crew.js",
+      "bytes": 16944,
+      "sha256": "cc8ce04e33c931863630592a38774b9264ed11a13c5e5941d5d88f8fef14ac82"
+    },
+    {
+      "path": "nexus-auto-stop-store.js",
+      "bytes": 1322,
+      "sha256": "0b2a4c7a1326a5975cf5493125a4b8ec37744fef9c50d67aa045a15477cc4b18"
+    },
+    {
+      "path": "nexus-building-core.js",
+      "bytes": 3751,
+      "sha256": "531eb8a3c53d82669cf8c6c511584f9e0feae74a7a55046217761314dfb272d6"
+    },
+    {
+      "path": "nexus-building-data.js",
+      "bytes": 15237,
+      "sha256": "66d0dd44c662d38ed832163ad8c99c7f71a74582039b18a01755252057261fa1"
+    },
+    {
+      "path": "nexus-building-delete.js",
+      "bytes": 11065,
+      "sha256": "2c22f535273d101bd9fac232d87a72157f536fc4284fa9f793aff9a6f895ca5f"
+    },
+    {
+      "path": "nexus-building-overview.js",
+      "bytes": 21197,
+      "sha256": "14aebfea841b5a43f86a69487855605f88bf75c240256d5633ebd524ea2d538f"
+    },
+    {
+      "path": "nexus-building-upgrades-core.js",
+      "bytes": 6529,
+      "sha256": "2e84b13a5e5a626a463d5860209f7987e23dfa695e1d04882721fb98604b7d7f"
+    },
+    {
+      "path": "nexus-building-upgrades.js",
+      "bytes": 32231,
+      "sha256": "025ea0063a819bfc788604797c0ede219c25c7d2e4c55ce4c04a351bd0eee867"
+    },
+    {
+      "path": "nexus-comfort-data.js",
+      "bytes": 14207,
+      "sha256": "6618317a981679a5cd350408cb9ba6376f40a1174c9e9f2a7b9c353774581f24"
+    },
+    {
+      "path": "nexus-comfort.js",
+      "bytes": 50889,
+      "sha256": "89a869f4365ff3f6ec9493c5b3304a0bb0c12f8291ac9d89f1ef622736879625"
+    },
+    {
+      "path": "nexus-command-toolbar.js",
+      "bytes": 17712,
+      "sha256": "0467ee2cd46c1dea651da7a050feab2032270b0fcf9b92220d1bc04c57de1ce8"
+    },
+    {
+      "path": "nexus-compact-missions.js",
+      "bytes": 4972,
+      "sha256": "60e239c54e03a70c0194f9b022d89663c4b692dbf264c63af38c0b76e4338ad8"
+    },
+    {
+      "path": "nexus-connection-status.js",
+      "bytes": 3986,
+      "sha256": "310602f966ad160fd03a15b23e0846d40cf404153dbf809dad791d576a2ffa32"
+    },
+    {
+      "path": "nexus-course-list-filters.js",
+      "bytes": 13215,
+      "sha256": "400cff1c46549ed8401b1e23fb25d9840f3dae64e7d20f374aa89018ebbff7d0"
+    },
+    {
+      "path": "nexus-credit-page-chrome.js",
+      "bytes": 4802,
+      "sha256": "996fff0e1733c433fd88d9ba2201b2f566ae825540c959f24232bf2cb89172c1"
+    },
+    {
+      "path": "nexus-crew-register.js",
+      "bytes": 2672,
+      "sha256": "7c164dc48671441d8957134589985082250ae7c4982d9d59e9422329ab8f25f9"
+    },
+    {
+      "path": "nexus-currency-ranks.js",
+      "bytes": 1005,
+      "sha256": "205aa22a41a83e3328cecfc2e538bdfc2e6ae7230cadc3cb16469d936fd509cb"
+    },
+    {
+      "path": "nexus-currency.js",
+      "bytes": 14980,
+      "sha256": "9fc382b661c17133d80fdc38605a91c1858be7456556cd952f743fbda5155b4b"
+    },
+    {
+      "path": "nexus-daily-core.js",
+      "bytes": 3595,
+      "sha256": "2c191cc7faee1dc5dd0f5365eec89c98798fb757d43ce8efdee7fb607e484eb9"
+    },
+    {
+      "path": "nexus-daily-data.js",
+      "bytes": 26589,
+      "sha256": "b33deaead3ddc8ce6b27ec58861ab487242be5eed21e3623802969e812fe2f9b"
+    },
+    {
+      "path": "nexus-daily.js",
+      "bytes": 17668,
+      "sha256": "74558c8fbe9ef1dbee3f7fe12d2c5f8a2c798a26fe315e7c3aae63c75d77ddf0"
+    },
+    {
+      "path": "nexus-dispatch-centre-rename.js",
+      "bytes": 31927,
+      "sha256": "2ac19758631e685e1d14b7d3d7579fd312b0694d08a7481d2290ec75e2f37f35"
+    },
+    {
+      "path": "nexus-dispatch-trace.js",
+      "bytes": 5064,
+      "sha256": "f59ffc2caaf8b5edcf00fd3a0b2765e1b215b8827d9cdeb6b437e79bf5dd03e8"
+    },
+    {
+      "path": "nexus-event-collector.js",
+      "bytes": 7600,
+      "sha256": "cd2e9507f549959fee2367951f10a2bdd313b8dd25517fcef5ec14ea3d362504"
+    },
+    {
+      "path": "nexus-fixed-navigation.js",
+      "bytes": 1345,
+      "sha256": "da0445109cb7e876e3bdb10a23b4e22b54c75a80329ee0cf93dfb603f8ffa2a0"
+    },
+    {
+      "path": "nexus-home-market.js",
+      "bytes": 20057,
+      "sha256": "27aa1b794f33aa16de458c8e0a9be85b37d3a5c7275e39333edeb380ffe6e219"
+    },
+    {
+      "path": "nexus-hospital-beds.js",
+      "bytes": 7463,
+      "sha256": "d9dab75662fb9cd3b29cdb3cea7cbb64e25795d2165d0fd124d78095eb146fec"
+    },
+    {
+      "path": "nexus-mission-rewards-data.js",
+      "bytes": 11578,
+      "sha256": "e1169fc6c41bc65893c2eae912d73554b63cab7321056cb411b1636a04b8669b"
+    },
+    {
+      "path": "nexus-mission-rewards.js",
+      "bytes": 7269,
+      "sha256": "870ff4061cfcf602c3dc3c280602b5f5a0fc363e552941b72ed123a1d03d171a"
+    },
+    {
+      "path": "nexus-overview-core.js",
+      "bytes": 2950,
+      "sha256": "b0825d4f440f3d9e20b56a21359b5eead1f13a4ca2fa8aa151ffc19fc97f7287"
+    },
+    {
+      "path": "nexus-overview.js",
+      "bytes": 14926,
+      "sha256": "9dceb67e9c3022f10b515a734d411ab6547972383a981c46128f9dfb29846a14"
+    },
+    {
+      "path": "nexus-personnel-reader.js",
+      "bytes": 7203,
+      "sha256": "16fed6558a33245b9afb309ad06f94efcb5e875834f2d3fea0bc795285753ab3"
+    },
+    {
+      "path": "nexus-personnel-store.js",
+      "bytes": 10318,
+      "sha256": "13496685493215571bf50acf1f0f9ec8cd32b15de377972bd8bd5bb88f0781ce"
+    },
+    {
+      "path": "nexus-profile-sync.js",
+      "bytes": 15745,
+      "sha256": "cd15d517fbc959ee1b3bed1d62fc31445b8089916dbe4c750d5ece8a5b9c2bca"
+    },
+    {
+      "path": "nexus-real-locations-bridge.js",
+      "bytes": 969,
+      "sha256": "0547b9dc41ae71545d999a460ff0dd2d9c294c7324ff691bb3a991f071b4b05c"
+    },
+    {
+      "path": "nexus-real-locations.js",
+      "bytes": 57252,
+      "sha256": "86ecaebf479f093e1a36023221640fbdb46ef784ecde1b97c3a3a5688a05d45c"
+    },
+    {
+      "path": "nexus-realism-setup.js",
+      "bytes": 5388,
+      "sha256": "e75ee1ce4fc6e4b092b0497a2e7ef5656b310ec1a9852e8eb56522f19e14f035"
+    },
+    {
+      "path": "nexus-register-storage.js",
+      "bytes": 4226,
+      "sha256": "07ea1676ebf97d314cbd6bcf1466f79dba6c6684564859278eef674eba1e7a04"
+    },
+    {
+      "path": "nexus-requirement-data.js",
+      "bytes": 6358,
+      "sha256": "4e30beaa16fc05e2a5558e5adcaf9a6b1c763f8fe41c85f7197b7c580fa6f72a"
+    },
+    {
+      "path": "nexus-requirement-ticks.js",
+      "bytes": 15282,
+      "sha256": "dc473b3e446711254dccf8e522b165b8c8a111627ec5877e64ce25ebcde29eee"
+    },
+    {
+      "path": "nexus-responsive.js",
+      "bytes": 9428,
+      "sha256": "88cbfef7a68785f2a4e6824461b35ad419c948e6496cba32a1453a0a0c992957"
+    },
+    {
+      "path": "nexus-runtime.js",
+      "bytes": 2459542,
+      "sha256": "e2c90ba5b2c991e2bc3ee78294ad537efcbfd7fac27723b5729bc11aa5519cb3"
+    },
+    {
+      "path": "nexus-schooling-actions.js",
+      "bytes": 13751,
+      "sha256": "b3333691ef9317102f50cfd4d5faa0dbe9c5119f7541422386ede4b84f7986b7"
+    },
+    {
+      "path": "nexus-schooling-filters.js",
+      "bytes": 19511,
+      "sha256": "7d4754d575f41fc9f7d2ca68b4b6c0db42665393f0f9b56948427334a73eaa11"
+    },
+    {
+      "path": "nexus-settings-apply.js",
+      "bytes": 69,
+      "sha256": "c58cdd931e22755b84f74ae70579d4a465ee96300846e6f5a3a1b27d196da626"
+    },
+    {
+      "path": "nexus-settings-defaults.js",
+      "bytes": 4360,
+      "sha256": "ca31119e2511a953c7ca41554bc2f0e82545cd6325b7ca4fdc43128135417776"
+    },
+    {
+      "path": "nexus-settings-main.js",
+      "bytes": 9917,
+      "sha256": "a0ae6424bfdb6810dab6602e8991587e2832d3473000092407230554b6c50d12"
+    },
+    {
+      "path": "nexus-settings.js",
+      "bytes": 9917,
+      "sha256": "a0ae6424bfdb6810dab6602e8991587e2832d3473000092407230554b6c50d12"
+    },
+    {
+      "path": "nexus-staging-map.js",
+      "bytes": 23796,
+      "sha256": "ab0741cc3a0a3d45bd295f4ca10c02fefcb317c754d8724449d7cd42430a62e7"
+    },
+    {
+      "path": "nexus-staging-profiles-editor.js",
+      "bytes": 5988,
+      "sha256": "ac3c74d682f10fff0596b3899a19e1d373b5714c2b3563931142048a6bb19698"
+    },
+    {
+      "path": "nexus-startup-diagnostics.js",
+      "bytes": 8411,
+      "sha256": "92161bba48ca118ac5b8f169d5e16f623f6acacdb00a8167ea9cff5e0add42d7"
+    },
+    {
+      "path": "nexus-station-profiles-core.js",
+      "bytes": 8118,
+      "sha256": "c047703d786fe2b0b056ab56cb063b0a87b833ad46e1872282ed652cc74199ad"
+    },
+    {
+      "path": "nexus-station-profiles-data.js",
+      "bytes": 16622,
+      "sha256": "ccd714dc9e3b4630fa927aa61a91bba9ded1be137510c529c505de168669bfef"
+    },
+    {
+      "path": "nexus-station-profiles-engine.js",
+      "bytes": 11203,
+      "sha256": "794b939aa312a02dac71d4ff96897e3041b90390424ceb4188598016bddf5d1e"
+    },
+    {
+      "path": "nexus-station-profiles-store.js",
+      "bytes": 2462,
+      "sha256": "8257ccf0de2b03439bd922875cfdeef27213fad0cd396118f9318702880ef2a1"
+    },
+    {
+      "path": "nexus-station-profiles-ui.js",
+      "bytes": 20131,
+      "sha256": "05b5cb4e9975c69e42cf328c90504413578091b79a5b1cc441c62028ec08378c"
+    },
+    {
+      "path": "nexus-station-rename.js",
+      "bytes": 12921,
+      "sha256": "be2a6c01190b932d946736f3eb605d09a53bf87805f0e21eaba29ce703b07eee"
+    },
+    {
+      "path": "nexus-storage-guard.js",
+      "bytes": 4154,
+      "sha256": "e56bde01ec2e75e163a784a434b70c547d1bc53af66423ae33b15ea93b984eee"
+    },
+    {
+      "path": "nexus-tools-core.js",
+      "bytes": 4310,
+      "sha256": "c473771ce1c8d3e847b0a0ac3f1290ecb61338a8f4c90492201ab550612b04be"
+    },
+    {
+      "path": "nexus-tools.js",
+      "bytes": 58107,
+      "sha256": "2bd6507ced7c6e39223662fd9015553a2e277ef5204794cdcdb605b72d914de4"
+    },
+    {
+      "path": "nexus-transport-shortcuts.js",
+      "bytes": 7680,
+      "sha256": "21f727c06b612350d077edf3ac889fd5943d7b579d06a2a9d48bb38939861f48"
+    },
+    {
+      "path": "nexus-update-notes.js",
+      "bytes": 4558,
+      "sha256": "f27ea3aca1ddcb5b0d9c459beef81c154d64b1c8277f08282852c3bc38e442ec"
+    },
+    {
+      "path": "nexus-vehicle-claims.js",
+      "bytes": 2049,
+      "sha256": "e26d6472e351ecd82716698bd7992c0569578029bb42ef79a07164a5e7e027ee"
+    },
+    {
+      "path": "popup.html",
+      "bytes": 703,
+      "sha256": "be12e5ff68e5108db6ea054e5456035960c8ec5678aa3c2543f2fd1b2d34ddb9"
+    },
+    {
+      "path": "rules-bridge.js",
+      "bytes": 987,
+      "sha256": "1de9bcc59811eae8ea80d4e884b85b11eccb30967a1fe6e904d306d3d37877c4"
+    },
+    {
+      "path": "rules-core.mjs",
+      "bytes": 3519,
+      "sha256": "4600039214e9a07db546331f53be4632b05c5b7a609f0fa3d264093b5b426cba"
+    },
+    {
+      "path": "rules.html",
+      "bytes": 3477,
+      "sha256": "38b22ccf751a3cf780374040b4f2d46a9b91d56fd16d27e2b09941f4f19756e0"
+    },
+    {
+      "path": "rules.js",
+      "bytes": 10163,
+      "sha256": "274a738bcad765d7ed180314738412ce0b7a817684b425077009e27d8b78beee"
+    }
+  ]
+}

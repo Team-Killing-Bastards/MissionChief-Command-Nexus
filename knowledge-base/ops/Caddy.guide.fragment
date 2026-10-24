@@ -1,0 +1,16 @@
+# PROPOSAL ONLY. Insert inside the existing nexus.blyth.scot site.
+# Keep all existing handlers, TLS/auth/header policies and proxy routes.
+# Confirm this directory is visible INSIDE the Caddy process/container first.
+redir /guide /guide/ 308
+handle_path /guide/* {
+    root * /srv/nexus-docs/current
+    header X-Content-Type-Options nosniff
+    header Referrer-Policy strict-origin-when-cross-origin
+    header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+    header Cache-Control "no-cache"
+    try_files {path} {path}/index.html =404
+    file_server
+}
+# Leave the existing fallback/reverse_proxy in its existing role.
+# If there are existing path/auth handlers, inspect Caddy's adapted ordering.
+# Do not paste a second site block or replace the existing configuration.
