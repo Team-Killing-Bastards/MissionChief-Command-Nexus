@@ -30,15 +30,15 @@ jobs:
       run:
         working-directory: browser-extension
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: 015044a3627f34769907bc6f77b7d3edeadc71aa
           path: browser-extension/upstream
           persist-credentials: false
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           package-manager-cache: false
@@ -50,7 +50,7 @@ jobs:
         env:
           EDGE_LOGGER_ENDPOINT: ${{ secrets.EDGE_LOGGER_ENDPOINT }}
       - run: node scripts/verify-all.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: verified-edge-${{ github.sha }}
           path: |
@@ -70,14 +70,14 @@ jobs:
       run:
         working-directory: browser-extension
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           package-manager-cache: false
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: verified-edge-${{ github.sha }}
           path: browser-extension
@@ -99,14 +99,14 @@ jobs:
       run:
         working-directory: browser-extension
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           package-manager-cache: false
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: verified-edge-${{ github.sha }}
           path: browser-extension
