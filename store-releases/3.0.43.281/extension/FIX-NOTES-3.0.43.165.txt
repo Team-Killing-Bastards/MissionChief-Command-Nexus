@@ -1,0 +1,11 @@
+MissionChief Command Nexus local build 3.0.43.165
+
+STAGING BUILD VERIFICATION UPDATE
+
+- Checks both the normal building register and the game map building feed after one native staging-area build request.
+- Recognises the returned building ID if MissionChief redirects to the new building.
+- Bounds verification to 30 seconds after the request and displays each check in the panel.
+- Shows MissionChief validation/error text when creation cannot be confirmed.
+- Never sends an automatic second build request. Check the game before manually trying again.
+- Local browser regression covers creation reported through the map feed while the standard building register remains stale.
+- Existing Nexus functions are unchanged.

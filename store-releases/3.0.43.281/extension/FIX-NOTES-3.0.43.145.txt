@@ -1,0 +1,27 @@
+MissionChief Command Nexus 3.0.43.145 — Realism Map Stations launcher
+
+Base:
+- Built directly from Nexus-144-Per-Mission-Ambulance-Limit.zip.
+- Extension: 3.0.43.145
+- Mission Finder: 10.6.189
+- Unit Naming: 3.3.29
+- Station Naming: 1.3.23
+- Personnel Assignment: 1.3.13
+
+New Realism Map launcher:
+- Adds a real `Realism Map` button to the Stations header action area beside/below the native `New building` and `Set a new POI` controls.
+- The launcher reuses the native New building action instead of faking or duplicating the game construction flow.
+- Once the native New building view opens, the existing Nexus Realism Map panel is mounted and can show real-world emergency-service location overlays.
+- The button copies the native New building CSS classes and fills the second action-row slot so it follows the current MissionChief theme.
+- The launcher watches the Stations header for re-renders and restores itself without creating duplicates.
+- Worker/background MissionChief frames remain excluded.
+
+Preserved behaviour:
+- 3.0.43.144 per-mission Ambulance allocation limit is unchanged.
+- Existing Realism Map overlay logic, map markers and offline data pack are unchanged in this build.
+- No automatic building purchase, placement or dispatch action is added.
+
+Validation:
+- JavaScript/MJS syntax: 97 files passed.
+- Permanent regression suite: 25/25 passed.
+- New regression: regressions/check-realism-map-stations-launcher-v3145.mjs.

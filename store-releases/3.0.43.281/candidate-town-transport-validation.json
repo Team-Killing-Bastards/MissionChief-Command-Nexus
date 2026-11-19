@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "checks": [
+    "Lost next-town read is retried once and continues without user action",
+    "Persistent read outage is bounded and makes no writes",
+    "Lost checkpoint reply reconciles saved result without resending the write",
+    "Missing checkpoint is not replayed or treated as permission to purchase",
+    "Lost plan-save acknowledgement is read back without overwriting the plan again",
+    "Synchronous invalid-extension error is reported immediately by the bridge",
+    "Two towns finish with exactly one building, vehicle and name each after read reply loss",
+    "Repeat review/run after recovery skips existing locations and sends no duplicate",
+    "Two towns finish with exactly one building, vehicle and name each after journal reply loss",
+    "Repeat review/run after recovery skips existing locations and sends no duplicate"
+  ]
+}

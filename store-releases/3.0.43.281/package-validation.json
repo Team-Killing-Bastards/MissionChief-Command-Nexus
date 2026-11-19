@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "version": "3.0.43.281",
+  "files": 179,
+  "sha256": "9636e065581da3a86d503ee24e70b7cdd449671c73fc0542c79b9ac70001b701",
+  "candidateFixtureChecks": 147,
+  "onlyCandidateDifference": "Published immutable changelog URL",
+  "itemId": "pheccockibcappcdgonjjfcmlkemmaln"
+}

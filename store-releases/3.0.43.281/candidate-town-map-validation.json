@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "mapLibrary": "Leaflet 1.9.4 (test only)",
+  "checks": [
+    "Real mouse clicks on Leaflet create four handles and a closed area outline",
+    "Finish leaves one visible outline and restores normal map zoom",
+    "Drawn coordinates persist and every rendered town lies within the actual drawn outline",
+    "Panning a real map and switching to OTL cannot change saved towns",
+    "Cancel restores saved boundary without forcing a rescan or losing unticked towns",
+    "Close during drawing removes shapes and towns and preserves pre-existing disabled zoom",
+    "No purchase requests or browser errors"
+  ]
+}

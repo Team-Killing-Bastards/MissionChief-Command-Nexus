@@ -1,0 +1,19 @@
+MissionChief Command Nexus local build 3.0.43.157
+
+Adaptive vehicle page coverage test
+
+- Auto Mode now runs a read-only coverage check against the currently loaded vehicle pool before clicking each additional MissionChief vehicle page.
+- The same coverage check is repeated after every page load. If all direct vehicle requirements can be satisfied by the loaded pool, Nexus stops loading further pages and runs the normal Unit Finder immediately.
+- Coverage uses the normal Unit Finder vehicle matcher instead of a small hard-coded list, so exact/custom/specialist vehicle rules can participate when a valid candidate is already loaded.
+- Explicit current Missing Vehicles/Personnel rows can use the adaptive loader when they resolve to direct vehicle requirements.
+- Patient requirements and trained/personnel requirements deliberately retain complete vehicle-list loading.
+- Existing selections, unresolved/unsafe requirement state, MissionChief authority changes, or an inactive mission also force the complete-list path.
+- A partial-list result is not trusted blindly: normal Unit Finder selection and pre-dispatch verification still run. If the partial pool does not produce a ready selection, Auto Mode loads the complete list and reruns Unit Finder before any dispatch.
+- Status text now shows why another vehicle page is being loaded or why adaptive loading stopped early.
+- Diagnostic counters remain available in window.__NEXUS_SELECTIVE_LOADING__.
+- Mission Finder engine increased to 10.6.190.
+- Extension manifest version and version_name increased to 3.0.43.157.
+
+Test intent
+
+Use Auto Mode on a mixture of ordinary and specialist missions. The expected pattern is: initial pool -> coverage check -> next page only if needed -> coverage check -> stop early when covered. Trained-personnel and patient missions should continue loading the complete list.

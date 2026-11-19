@@ -1,0 +1,15 @@
+MissionChief Command Nexus local build 3.0.43.158
+
+REALISM NATIVE BUILD SUBMISSION FIX
+
+- Uses the newly supplied 3.0.43.157 ZIP as the baseline, preserving the Adaptive Vehicle Page Coverage Test and all unrelated .157 changes.
+- Realism Build now fetches MissionChief's real New building form directly and serializes its native hidden fields, CSRF state, field names and submitter before changing the chosen Realism values.
+- The old fabricated-form fallback is no longer allowed to send a build when MissionChief's native form cannot be read; it fails before POST instead of pretending a station was submitted.
+- Explicit native Building Type availability is checked before submission.
+- Verification now merges /api/buildings with MissionChief's /building/buildings_json map feed, which is the map's own building source and can update sooner.
+- A native MissionChief success flash or returned /buildings/<id> is accepted as direct success evidence; API/map polling remains a fallback for responses without direct success evidence.
+- Verification waits longer for game propagation and still never auto-retries an uncertain build.
+- Multi Build still stops on an uncertain outcome, but verified native successes can continue to the next selected location.
+- Both manifest version and version_name are 3.0.43.158.
+
+All 3.0.43.157 adaptive vehicle page coverage behaviour and all earlier Nexus/Realism functionality are preserved.

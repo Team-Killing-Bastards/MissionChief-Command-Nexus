@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "syntaxFiles": 118,
+  "extensionId": "pheccockibcappcdgonjjfcmlkemmaln",
+  "version": "3.0.43.281",
+  "serviceWorkerLoaded": true,
+  "pages": [
+    "popup.html",
+    "collector.html"
+  ],
+  "noPageErrors": true,
+  "isolatedProfile": true
+}

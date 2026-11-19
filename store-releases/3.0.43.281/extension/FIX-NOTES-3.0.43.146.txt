@@ -1,0 +1,25 @@
+MissionChief Command Nexus 3.0.43.146 — Realism Map Stations launcher visibility fix
+
+Base:
+- Built directly from Nexus-145-Realism-Map-Stations-Button.zip.
+- Extension: 3.0.43.146
+- Mission Finder: 10.6.189
+- Unit Naming: 3.3.29
+- Station Naming: 1.3.23
+- Personnel Assignment: 1.3.13
+
+Fix:
+- Fixes the Realism Map launcher not appearing in the visible Stations header.
+- The launcher no longer assumes the Stations header only exists on the root path. It now mounts wherever the live native `New building` and `Set a new POI` controls are present.
+- When MissionChief exposes duplicate/hidden responsive copies of those controls, Nexus now prefers the visible live pair instead of attaching the launcher to a hidden copy.
+- Placement remains in the same native action group, underneath the `New building` / `Set a new POI` controls.
+- The launcher still reuses the native New building flow; no automatic building purchase or placement is added.
+
+Preserved behaviour:
+- 3.0.43.145 Realism Map panel/overlay behaviour is unchanged.
+- 3.0.43.144 per-mission Ambulance allocation limit remains unchanged.
+- Worker/background MissionChief frames remain excluded.
+
+Validation:
+- JavaScript/MJS syntax: 98 files passed.
+- Permanent regression suite: 26/26 passed, including the new v3.0.43.146 visibility regression.

@@ -1,0 +1,19 @@
+MissionChief Command Nexus local build 3.0.43.166
+
+NATIVE STAGING-AREA BUILD
+
+The staging launcher now loads MissionChief's real New building page in an
+isolated background frame, selects Staging area, fills the name and map point,
+and clicks the native credits/free build control once. The game's type-change,
+click and submit handlers run normally. No detached-form POST is generated.
+
+Creation is verified from the returned staging page or either game building
+list before setting the requested duration and sending available profile units.
+Coins controls are excluded. Failed or uncertain builds are not retried.
+
+Local browser tests cover native handlers, the map feed, the returned staging
+page, a coins-only form, server rejection, profile persistence and unit dispatch.
+Live MissionChief testing was unavailable because the Facebook login failed.
+
+Install this complete ZIP into its own extracted folder, reload the extension,
+then refresh MissionChief. Nexus Tools must show 3.0.43.166.

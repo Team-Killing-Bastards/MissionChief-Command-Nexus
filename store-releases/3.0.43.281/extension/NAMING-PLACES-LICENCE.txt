@@ -1,0 +1,30 @@
+Nexus nearby-place fallback data
+
+Contains information from GeoNames, https://www.geonames.org/
+Source: https://download.geonames.org/export/dump/
+Downloaded 31 October 2026. Countries: GB, IE, IM, JE, GG.
+Licensed under Creative Commons Attribution 4.0:
+https://creativecommons.org/licenses/by/4.0/
+
+Nexus changes: selected current populated-place records, retained ID, name,
+latitude, longitude and country, and converted these fields to compact JSON.
+Home Response town planning additionally retains positive population values in
+nexus-town-populations.json from the same source snapshot to prefer larger
+settlements. These are planning priorities, not current population estimates.
+Historical/abandoned/destroyed places and neighbourhood subdivisions are excluded.
+Nearby means nearest mapped settlement centre by straight-line distance within
+25 km, not a claim of municipal boundaries, road distance or complete coverage.
+GeoNames data is provided without a warranty of accuracy or completeness.
+
+This data licence is separate from the Nexus source-code licence.
+
+Home Response named regions (nexus-town-regions.json):
+UK town membership is derived by intersecting town coordinates with ONS Counties and Unitary Authorities (December 2025) Boundaries UK BGC (20m generalised, clipped to Mean High Water). Downloaded 15 November 2026. Towns outside the supplied boundary geometry are excluded rather than inferred from a place label.
+Source: Office for National Statistics licensed under the Open Government Licence v.3.0
+Contains OS data © Crown copyright and database right 2026
+https://www.ons.gov.uk/methodology/geography/licences
+https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+https://www.data.gov.uk/dataset/563f5079-796d-4190-ac7f-49219a6de896/counties-and-unitary-authorities-december-2025-boundaries-uk-bgc
+
+Ireland, Isle of Man, Jersey and Guernsey membership is joined from the existing GeoNames country archives (31 October 2026), CC BY 4.0. Towns lacking a matched administrative record are excluded from these named-region searches. Map and drawn-area searches remain available for all packaged towns.
+https://download.geonames.org/export/dump/readme.txt

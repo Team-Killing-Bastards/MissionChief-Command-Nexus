@@ -1,0 +1,16 @@
+Nexus 3.0.43.176 - Faster Alliance Missions support queue
+
+Replaces fixed 650ms waits after each vehicle page and 700ms at the end with
+one shared 225ms stability check. Checks loading indicators, disabled controls,
+vehicle identities, availability, mission changes and cancellation each pass.
+Still loads every page before choosing the closest eligible support vehicle.
+Preserves one-vehicle verification, cross-tab lock, existing participation,
+reservation and server confirmation. Does not parallel-dispatch or send twice.
+Includes .168 MCE correction and .167 staging fix.
+
+Deterministic four-page fixture: 3300ms before, 2325ms after (about 30% less).
+That measures the simulated loading path, not live end-to-end throughput.
+Game/network response time and dispatch confirmation still contribute delays.
+No live missions were dispatched during this update.
+
+Extract, reload extension, then refresh MissionChief.

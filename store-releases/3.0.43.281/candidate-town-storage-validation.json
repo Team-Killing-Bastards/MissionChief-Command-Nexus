@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "checks": [
+    "Incomplete migration does not mark ready or discard legacy checkpoints",
+    "All 800 existing records, pending purchases and plan migrate intact",
+    "Worker restart reads only requested checkpoint and no legacy history",
+    "Routine progress updates only one small record, preserving other towns",
+    "Plan revision guards still reject stale tabs without overwriting checkpoints",
+    "Cleared checkpoint stays cleared across restart despite legacy backup",
+    "Scoped history requests are bounded and validated"
+  ],
+  "legacyHistoryBytes": 150996,
+  "routineWriteBytes": 225
+}

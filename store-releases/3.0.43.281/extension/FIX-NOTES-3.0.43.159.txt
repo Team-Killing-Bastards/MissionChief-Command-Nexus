@@ -1,0 +1,11 @@
+MissionChief Command Nexus local build 3.0.43.159
+
+REALISM BUILD OUTCOME VERIFICATION FIX
+
+- Built from the supplied 3.0.43.158 ZIP; unrelated changes are retained.
+- A generic MissionChief error page or HTTP error after submission no longer counts as a definite failure before checking the game building lists.
+- A build is reported successful only after a NEW matching building is visible in /api/buildings or /building/buildings_json.
+- The pre-build building snapshot must be available before submitting, and an old building cannot be mistaken for a new result.
+- If no matching building appears, the result is uncertain; Multi Build stops and does not retry automatically. Check the game before attempting the location again.
+- Both version and version_name are 3.0.43.159.
+- Before submission, a same-type, same-name station already at the selected location is marked as already existing; no second request is sent.

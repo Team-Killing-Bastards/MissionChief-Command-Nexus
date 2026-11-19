@@ -1,0 +1,20 @@
+MissionChief Command Nexus 3.0.43.148 — Realism Map New-building visibility fix
+
+What was wrong in .147
+- .147 removed the old Realism Map panel from New building as intended.
+- The replacement entry point depended on finding and positioning against the Stations "New building" / "Set a new POI" toolbar controls.
+- On the live MissionChief UI that launcher still did not render, leaving the New building view with no visible Realism controls.
+
+What changed
+- Abandons the unreliable fixed-position Stations launcher as the primary entry point.
+- Adds a guaranteed native Realism Map button directly into the visible New building form, immediately after the Back/action row.
+- Clicking Realism Map opens a compact RLM-style checkbox menu in normal document flow; it is not a large table/panel.
+- The old large "Nexus · Realism Map" section remains removed.
+- Supported VPS/PostGIS overlays remain Fire, Police, Ambulance, Control Centers, Hospitals, Prisons, Mountain Rescue, Coastguard and RNLI.
+- Disaster Response, Lifeguard Stations and Doctors/Clinics remain visible but disabled until backend coverage exists.
+- Selecting a supported type loads markers immediately and pan/zoom refresh remains debounced with a bounded cache.
+- No building purchase, construction or dispatch actions are performed.
+
+Preserved
+- All 3.0.43.147 backend bridge/API behaviour.
+- All 3.0.43.144 per-mission Ambulance allocation limit behaviour.

@@ -1,0 +1,31 @@
+name: Verify Chrome store snapshot
+on:
+  push:
+    branches: [main, codex/chrome-store-281]
+    paths: ['store-releases/3.0.43.281/**', '.github/workflows/chrome-store-snapshot.yml']
+  pull_request:
+    paths: ['store-releases/3.0.43.281/**', '.github/workflows/chrome-store-snapshot.yml']
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Verify promotion and reproducible store package
+        run: python store-releases/3.0.43.281/check-package.py
+      - name: Check packaged JavaScript syntax
+        run: find store-releases/3.0.43.281/extension -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -n1 node --check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nexus-3.0.43.281-Chrome-Web-Store
+          path: |
+            store-releases/3.0.43.281/Nexus-3.0.43.281-Chrome-Web-Store.zip
+            store-releases/3.0.43.281/package-validation.json
+          if-no-files-found: error

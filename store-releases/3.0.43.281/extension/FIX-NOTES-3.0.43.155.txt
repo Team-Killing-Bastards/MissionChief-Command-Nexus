@@ -1,0 +1,12 @@
+MissionChief Command Nexus 3.0.43.155 — Realism automatic building type
+
+Changes from 3.0.43.154:
+- Realism Build cards now select and lock the MissionChief building type automatically from the selected Realism service marker.
+- Fire -> Fire Station, Police -> Police Station, Ambulance -> Ambulance Station, Control Center -> Dispatch Center, Hospital -> Hospital, Prison -> Prison, Mountain Rescue -> Mountain Rescue Station, Coastguard -> Coastguard Rescue Station, RNLI -> Lifeboat Station.
+- Building Type is no longer dependent on the hidden New building page and is not manually editable.
+- Dispatch Center choices now load from the authoritative /api/buildings register (building_type 7), so they remain selectable even when the hidden New building page does not load.
+- Starting Vehicle remains selectable through deterministic safe choices for supported station types; No starting vehicle is always available.
+- Build submission keeps native-form compatibility when available but has same-origin fallback field names/action when it is not.
+- Same-building-type Multi Build remains locked to the master marker's automatic building type.
+- Both manifest version and version_name now report 3.0.43.155.
+- Existing floating Realism controls, VPS/PostGIS viewport loading, rich popups, marker selection, batch verification and no-auto-retry safety are preserved.

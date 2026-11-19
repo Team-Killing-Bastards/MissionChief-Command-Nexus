@@ -1,0 +1,28 @@
+{
+  "passed": true,
+  "checks": [
+    "Both versions recognise 12 existing FO locations at zero purchase cost",
+    "Review retains .280 request counts: one fleet read per station, one scoped history read and at most three concurrent fleet checks",
+    "Build skips all already-complete FO locations without another request",
+    "Existing FO locations still allow one OTL location 40 metres beside each",
+    "Untracked renamed building at the same position blocks a duplicate"
+  ],
+  "fixture": "12 completed FO stations, 20ms simulated latency per game read",
+  "before": {
+    "fleetReads": 12,
+    "stateReads": 1,
+    "reads": 15,
+    "maxFleet": 3,
+    "writes": 0,
+    "elapsedMs": 132
+  },
+  "after": {
+    "fleetReads": 12,
+    "stateReads": 1,
+    "reads": 15,
+    "maxFleet": 3,
+    "writes": 0,
+    "elapsedMs": 129
+  },
+  "liveBenchmark": false
+}

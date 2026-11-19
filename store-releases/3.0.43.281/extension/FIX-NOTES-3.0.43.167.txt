@@ -1,0 +1,16 @@
+Nexus 3.0.43.167 - Staging build form correction
+
+Uses the live game's building[name] field and exact build_credits_14 submitter.
+Clears coin/alliance purchase flags. Submits once and checks both building feeds
+and the returned staging page, including when the game shows a generic error.
+
+Live native controls tested on 21 September 2026:
+Created staging area 2692194 for 0 credits, reset duration to 24 hours,
+dispatched RP CAFS 7732288, then released that vehicle successfully.
+The free staging area remains until expiry.
+
+Extension automation tested locally against the observed form, including absent
+game scripts, multiple visible purchase buttons, rejection and stale feeds.
+The updated extension itself has not run inside the signed-in Codex browser.
+
+Extract this ZIP, reload the local extension, then refresh MissionChief fully.

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nexus reporting and account sync</title><link rel="stylesheet" href="popup.css">
+<body style="width:auto;max-width:760px;margin:40px auto;padding:20px">
+<h1>Nexus reporting and account sync</h1>
+<p>Nexus assists with MissionChief UK gameplay. It stores preferences, saved profiles and personnel records locally. Gameplay reporting and optional Discord account sync send the data described below to the Nexus service at https://nexus.blyth.scot.</p>
+<h2>Gameplay reporting</h2>
+<p>Reporting associates observations with the MissionChief username and player ID and a browser installation identifier. Records can include mission names, locations, requirements, shortages, skipped missions, dispatch selections, transport actions, completion evidence, observed game credits, buildings and vehicles, station specialisations, staffing and training counts. Automatic station checks run while the game is open and reporting and register updates are enabled.</p>
+<p>New installations enable gameplay uploading by default and show a notice with an off switch and settings link. Existing upload-off preferences are preserved. The browser registers with generated installation credentials and receives an upload token. No game password, session cookie or payment data is sent to the reporting service.</p>
+<h2>Optional Discord sign-in and sync</h2>
+<p>Choosing Sign in with Discord opens Discord authorisation. The Nexus account uses the Discord user ID and username to identify the account; it does not request access to Discord messages. Account sync transfers supported preferences, saved profiles, requirement rules and personnel-register records, including game personnel identifiers and training combinations. Records are separated by Nexus account, game realm and MissionChief player ID. Use the same Discord account on another browser to access that account's saved settings and register.</p>
+<p>Account sync runs while MissionChief is open when enabled. It synchronises saved records; game-page checks supply new staffing evidence. Sign-in tokens remain in extension storage. Discord credentials and the Discord application secret are not included in the extension.</p>
+<h2>Storage and controls</h2>
+<p>The browser uses local databases for records and pending uploads. Reporting retries after connection failures; storage failures can pause recording and are shown in health information. Upload tokens are excluded from diagnostic exports. Previously uploaded records remain on the service when local data is cleared or the extension is uninstalled.</p>
+<p>Use reporting settings to control uploads and recording. Pausing uploads alone can retain local recording. Use Nexus Tools &gt; Overview for Discord account sync controls, including Sync now, Keep device settings, Use saved cloud settings and Sign out. Disabling sync or signing out does not delete previously saved cloud records. Clearing browser data or uninstalling can remove local settings and unsent records.</p>
+<p><a href="collector.html">Reporting controls</a> · <a href="account.html">Account and sync controls</a></p>
+</body></html>

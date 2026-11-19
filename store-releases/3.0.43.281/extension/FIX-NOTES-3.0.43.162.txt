@@ -1,0 +1,9 @@
+MissionChief Command Nexus local build 3.0.43.162
+
+STAGING LAUNCHER ISOLATION FIX
+
+- Built from the local .161 package. All staging profile, map placement, build, duration and unit-sending functionality remains.
+- Splits the staging profile editor and map launcher into separate extension scripts and execution worlds.
+- The station-profile core can no longer suppress the map launcher on building views.
+- The launcher mounts beside the Realism icon as soon as its header anchor appears, including inside the active game frame.
+- Both version and version_name read 3.0.43.162.

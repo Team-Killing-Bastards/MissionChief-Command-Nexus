@@ -1,0 +1,17 @@
+Nexus 3.0.43.176 - MCE dispatch and patient support
+
+Fixes the final dispatch coverage check ignoring the configured ambulance cap.
+With 30 ambulances committed and a cap of 30, an outstanding patient ambulance
+request no longer vetoes sending selected Mass Casualty Equipment. Missing MCE,
+other vehicle requirements and trained-personnel shortages remain blocking.
+
+Fresh patient-only missions now run configured support thresholds before being
+marked ready, even when no general vehicle requirement rows were found.
+
+Live inspection of mission 261791800 confirmed 30 ambulances and no MCE on scene,
+no travelling units table, and available type-33 MCE units. No live dispatch was
+performed. Regression tests reproduce the previous final-check failure and
+verify the fix. The first dispatch for that mission was not in the supplied log.
+
+Reload the extension, then refresh the MissionChief game page before testing.
+This is a local test build. The Chrome Store .169 submission is unchanged.
